@@ -48,8 +48,11 @@ mvn clean test
 - `net.unit8.raoh`: core abstractions and error model
 - `net.unit8.raoh.builtin`: built-in primitive and collection decoders
 - `net.unit8.raoh.combinator`: applicative combinator internals
-- `net.unit8.raoh.json`: decoders for Jackson `JsonNode`
 - `net.unit8.raoh.map`: decoders for `Map<String, Object>`
+
+### JSON extension (`raoh-json`)
+
+- `net.unit8.raoh.json`: decoders for Jackson `JsonNode`
 
 ### jOOQ extension (`raoh-jooq`)
 

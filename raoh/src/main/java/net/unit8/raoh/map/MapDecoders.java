@@ -4,8 +4,6 @@ import net.unit8.raoh.*;
 import net.unit8.raoh.combinator.*;
 import net.unit8.raoh.builtin.*;
 
-import org.jspecify.annotations.Nullable;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

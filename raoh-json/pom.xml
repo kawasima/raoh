@@ -11,14 +11,33 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>raoh</artifactId>
+    <artifactId>raoh-json</artifactId>
     <packaging>jar</packaging>
 
-    <name>Raoh</name>
-    <description>Parse don't validate - A Java decoder library</description>
+    <name>Raoh JSON</name>
+    <description>Jackson JsonNode decoder for Raoh</description>
     <url>https://github.com/kawasima/raoh</url>
 
     <dependencies>
+        <dependency>
+            <groupId>net.unit8.raoh</groupId>
+            <artifactId>raoh</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+            <version>1.0.0</version>
+            <optional>true</optional>
+        </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

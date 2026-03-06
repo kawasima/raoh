@@ -1,5 +1,6 @@
-package net.unit8.raoh;
+package net.unit8.raoh.json;
 
+import net.unit8.raoh.*;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

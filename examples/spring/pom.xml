@@ -30,7 +30,7 @@
 
         <dependency>
             <groupId>net.unit8.raoh</groupId>
-            <artifactId>raoh</artifactId>
+            <artifactId>raoh-json</artifactId>
             <version>${raoh.version}</version>
         </dependency>
 

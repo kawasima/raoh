@@ -368,8 +368,37 @@ public final class JsonDecoders {
      * @param knownFields the set of allowed field names
      * @return a strict decoder
      */
+    /**
+     * Wraps a decoder to reject unknown fields not in the given set.
+     *
+     * <p>This overrides the core {@link Decoders#strict} to add JsonNode object support:
+     * unknown properties in a JSON object are reported as {@code unknown_field} issues.
+     *
+     * @param <T>         the decoded type
+     * @param dec         the underlying decoder
+     * @param knownFields the set of allowed field names
+     * @return a strict decoder
+     */
     public static <T> Decoder<JsonNode, T> strict(Decoder<JsonNode, T> dec, Set<String> knownFields) {
-        return Decoders.strict(dec, knownFields);
+        return (in, path) -> {
+            var issues = Issues.EMPTY;
+            if (in != null && in.isObject()) {
+                for (var name : in.propertyNames()) {
+                    if (!knownFields.contains(name)) {
+                        issues = issues.add(Issue.of(path.append(name), ErrorCodes.UNKNOWN_FIELD,
+                                "unknown field", Map.of("field", name)));
+                    }
+                }
+            }
+            var decResult = dec.decode(in, path);
+            if (issues.asList().isEmpty()) {
+                return decResult;
+            }
+            return switch (decResult) {
+                case Ok<T> ignored -> Result.err(issues);
+                case Err<T> err -> Result.err(err.issues().merge(issues));
+            };
+        };
     }
 
     // --- Delegate combine to Decoders ---

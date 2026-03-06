@@ -38,6 +38,7 @@
 
     <modules>
         <module>raoh</module>
+        <module>raoh-json</module>
         <module>raoh-jooq</module>
     </modules>
 

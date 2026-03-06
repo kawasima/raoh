@@ -281,13 +281,6 @@ public final class Decoders {
                                 "unknown field", Map.of("field", name)));
                     }
                 }
-            } else if (in instanceof tools.jackson.databind.JsonNode node && node.isObject()) {
-                for (var name : node.propertyNames()) {
-                    if (!knownFields.contains(name)) {
-                        issues = issues.add(Issue.of(path.append(name), ErrorCodes.UNKNOWN_FIELD,
-                                "unknown field", Map.of("field", name)));
-                    }
-                }
             }
 
             var decResult = dec.decode(in, path);
