@@ -745,6 +745,52 @@ combine(
 
 The schema is already the parsing pipeline.
 
+## Elm Decoder Comparison
+
+Raoh also has a strong family resemblance to Elm's `Json.Decode.Decoder`.
+
+The biggest similarities are:
+
+- both treat decoding as a first-class operation
+- both build decoders compositionally
+- both separate raw boundary input from trusted domain values
+- both encourage constructing domain values only after decoding succeeds
+- both feel more like "reading" data than "validating" an already-built object
+
+Rough correspondences:
+
+| Elm | Raoh |
+| --- | --- |
+| `Decoder a` | `Decoder<I, T>` |
+| `field "name" string` | `field("name", string())` |
+| `nullable decoder` | `nullable(decoder)` |
+| `list decoder` | `list(decoder)` |
+| `map` | `map(...)` |
+| `andThen` | `flatMap(...)` |
+| `oneOf` | `oneOf(...)` |
+| building records with `map2`, `map3`, ... | `combine(...).apply(...)` |
+
+The most important differences are:
+
+- Elm decoders are primarily JSON decoders, while Raoh is generic over input type and ships JSON and `Map<String, Object>` boundaries out of the box
+- Elm usually models failure as decoder failure text, while Raoh emphasizes structured issues with `path`, `code`, `message`, and `meta`
+- Raoh has an explicit applicative/monadic split:
+  `combine(...).apply(...)` accumulates independent field errors, while `flatMap(...)` handles dependent parsing
+
+If you know Elm, this Raoh code should feel familiar:
+
+```java
+JsonDecoder<User> user() {
+    return combine(
+            field("id", string().uuid().map(UserId::new)),
+            field("email", string().trim().toLowerCase().email().map(Email::new)),
+            field("age", int_().range(0, 150).map(Age::new))
+    ).apply(User::new);
+}
+```
+
+That is close in spirit to "read fields, decode them, then build a value", which is exactly the workflow Elm decoders promote.
+
 ## Design Direction
 
 The intended workflow is:

@@ -36,7 +36,6 @@ sealed interface Validated<T> permits Valid, Invalid {
         };
     }
 
-    @SuppressWarnings("unchecked")
     static <T> Validated<T> accumulate(Validated<?>[] vals, Function<Object[], T> f) {
         Issues merged = Issues.EMPTY;
         boolean hasError = false;
