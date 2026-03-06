@@ -12,14 +12,13 @@ package net.unit8.raoh;
  * @param <T> the type of the value when present
  */
 public sealed interface Presence<T> {
-    /** The field is absent from the input. @param <T> the value type */
+    /** The field is absent from the input. */
     record Absent<T>() implements Presence<T> {}
-    /** The field is present with an explicit {@code null} value. @param <T> the value type */
+    /** The field is present with an explicit {@code null} value. */
     record PresentNull<T>() implements Presence<T> {}
     /**
      * The field is present with a non-null value.
      * @param value the decoded value
-     * @param <T> the value type
      */
     record Present<T>(T value) implements Presence<T> {}
 }

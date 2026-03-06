@@ -29,7 +29,7 @@
         </dependency>
 
         <dependency>
-            <groupId>net.unit8</groupId>
+            <groupId>net.unit8.raoh</groupId>
             <artifactId>raoh</artifactId>
             <version>${raoh.version}</version>
             <scope>system</scope>
