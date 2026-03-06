@@ -25,7 +25,7 @@ Raoh currently provides:
 - `Result<T>` with `Ok<T>` and `Err<T>`
 - structured diagnostics with `Issue`, `Issues`, and `Path`
 - built-in decoders for strings, numbers, booleans, lists, and maps
-- boundary modules for Jackson `JsonNode` and `Map<String, Object>`
+- boundary modules for Jackson `JsonNode`, `Map<String, Object>`, and jOOQ `Record`
 - applicative composition for accumulating field errors
 - monadic composition for dependent parsing and domain rules
 - utility combinators such as `lazy`, `withDefault`, `recover`, `oneOf`, `strict`, `enumOf`, and `literal`
@@ -43,11 +43,17 @@ mvn clean test
 
 ## Package Layout
 
+### Core (`raoh`)
+
 - `net.unit8.raoh`: core abstractions and error model
 - `net.unit8.raoh.builtin`: built-in primitive and collection decoders
 - `net.unit8.raoh.combinator`: applicative combinator internals
 - `net.unit8.raoh.json`: decoders for Jackson `JsonNode`
 - `net.unit8.raoh.map`: decoders for `Map<String, Object>`
+
+### jOOQ extension (`raoh-jooq`)
+
+- `net.unit8.raoh.jooq`: decoders for jOOQ `Record`
 
 ## Core Model
 
@@ -148,7 +154,7 @@ JsonDecoder<User> user() {
 Use it like this:
 
 ```java
-Result<User> result = user().decode(jsonNode, Path.ROOT);
+Result<User> result = user().decode(jsonNode);
 ```
 
 Success case:
@@ -486,10 +492,10 @@ The `net.unit8.raoh.Decoders` class provides reusable combinators.
 Example:
 
 ```java
-var dec = strict(combine(
+var dec = combine(
         field("name", string()),
         field("age", int_())
-).apply(Person::new), Set.of("name", "age"));
+).strict(Person::new);
 ```
 
 ### `lazy(...)`
@@ -583,6 +589,58 @@ Example:
 JsonDecoder<List<String>> tags =
         field("tags", list(string().trim().nonBlank()).nonempty());
 ```
+
+### `JooqDecoders`
+
+`net.unit8.raoh.jooq.JooqDecoders` works with jOOQ `Record`.
+
+Supported helpers include:
+
+- `string()`, `int_()`, `long_()`, `bool()`, `decimal()`
+- `field(...)`
+- `optionalField(...)`
+- `nullable(...)`
+- `optionalNullableField(...)`
+- `nested(...)`
+- `enumOf(...)`
+- `combine(...)`
+
+This module is a good fit when you fetch data from a database via jOOQ and want to map flat query results (including JOIN results) into nested domain objects.
+
+Example:
+
+```java
+record User(String name, int age) {}
+record Address(String city, String zip) {}
+record UserWithAddress(User user, Address address) {}
+
+JooqRecordDecoder<User> userDecoder = combine(
+        field("name", string()),
+        field("age",  int_())
+).apply(User::new)::decode;
+
+JooqRecordDecoder<Address> addressDecoder = combine(
+        field("city", string()),
+        field("zip",  string())
+).apply(Address::new)::decode;
+
+// SELECT u.name, u.age, a.city, a.zip FROM users u JOIN addresses a ...
+Decoder<Record, UserWithAddress> dec = combine(
+        nested(userDecoder),
+        nested(addressDecoder)
+).apply(UserWithAddress::new);
+```
+
+`nested(dec)` applies another `JooqRecordDecoder` to the same flat record.
+This lets you map a single JOIN result row into a structured domain object.
+
+For LEFT JOIN results where the joined side may be absent, use `optionalNullableField`:
+
+```java
+var presence = optionalNullableField("dept_name", string()).decode(rec);
+```
+
+This returns `Presence.Absent`, `Presence.PresentNull`, or `Presence.Present`, which is useful when a SQL NULL means "no row joined" rather than "explicitly set to null".
 
 ### `MapDecoders`
 
@@ -694,13 +752,17 @@ field("role", withDefault(enumOf(Role.class), Role.MEMBER))
 - strict mode
 
 ```java
-strict(user(), Set.of("id", "email", "age"))
+combine(
+        field("id", userId()),
+        field("email", email()),
+        field("age", age())
+).strict(User::new)
 ```
 
 - single value decoding
 
 ```java
-string().email().decode(node, Path.ROOT)
+string().email().decode(node)
 ```
 
 ## Zod Comparison
@@ -724,7 +786,7 @@ If you know Zod, the closest equivalents are:
 | `.catch(v)` | `recover(dec, v)` |
 | `z.union([...])` | `oneOf(...)` |
 | `z.lazy(() => dec)` | `lazy(() -> dec)` |
-| `.strict()` | `strict(dec, knownFields)` |
+| `.strict()` | `combine(...).strict(f)` |
 | `.transform(...)` | `map(...)` |
 | `.refine(...)` / `.superRefine(...)` | `flatMap(...)` or `flatMapWithPath(...)` |
 | `.pipe(...)` | `pipe(...)` |

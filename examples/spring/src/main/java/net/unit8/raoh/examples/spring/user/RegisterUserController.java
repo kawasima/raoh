@@ -1,6 +1,6 @@
 package net.unit8.raoh.examples.spring.user;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import net.unit8.raoh.Decoder;
 import net.unit8.raoh.Issues;
 import net.unit8.raoh.MessageResolver;
@@ -88,7 +88,7 @@ public class RegisterUserController {
 
     @PostMapping
     public ResponseEntity<?> register(@RequestBody JsonNode body) {
-        return switch (command().decode(body, Path.ROOT)) {
+        return switch (command().decode(body)) {
             case Ok<RegisterUserCommand>(var command) ->
                     ResponseEntity.status(HttpStatus.CREATED).body(new UserResponse(
                             UUID.randomUUID().toString(),
