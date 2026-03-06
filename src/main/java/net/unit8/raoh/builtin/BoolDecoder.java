@@ -2,6 +2,11 @@ package net.unit8.raoh.builtin;
 
 import net.unit8.raoh.*;
 
+/**
+ * A decoder for boolean values.
+ *
+ * @param <I> the input type
+ */
 public class BoolDecoder<I> implements Decoder<I, Boolean> {
 
     private final Decoder<I, Boolean> inner;

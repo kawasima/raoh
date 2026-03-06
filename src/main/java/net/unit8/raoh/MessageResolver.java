@@ -2,10 +2,24 @@ package net.unit8.raoh;
 
 import java.util.Map;
 
+/**
+ * Resolves error codes into human-readable messages.
+ *
+ * <p>Implementations can provide localized or customized messages for each error code.
+ * Use {@link Issues#resolve(MessageResolver)} to apply a resolver to all issues.
+ */
 @FunctionalInterface
 public interface MessageResolver {
+    /**
+     * Resolves an error code into a human-readable message.
+     *
+     * @param code the error code
+     * @param meta additional metadata associated with the issue
+     * @return the resolved message
+     */
     String resolve(String code, Map<String, Object> meta);
 
+    /** A default resolver that provides English messages for all built-in error codes. */
     MessageResolver DEFAULT = (code, meta) -> switch (code) {
         case "required" -> "is required";
         case "too_short" -> "must be at least %s characters".formatted(meta.get("min"));

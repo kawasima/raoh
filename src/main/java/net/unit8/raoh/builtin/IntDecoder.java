@@ -4,6 +4,11 @@ import net.unit8.raoh.*;
 
 import java.util.Map;
 
+/**
+ * A decoder for integer values with a fluent API for numeric constraints.
+ *
+ * @param <I> the input type
+ */
 public class IntDecoder<I> implements Decoder<I, Integer> {
 
     private final Decoder<I, Integer> inner;

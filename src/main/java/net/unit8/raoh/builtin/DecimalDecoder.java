@@ -5,6 +5,11 @@ import net.unit8.raoh.*;
 import java.math.BigDecimal;
 import java.util.Map;
 
+/**
+ * A decoder for {@link BigDecimal} values with a fluent API for numeric constraints.
+ *
+ * @param <I> the input type
+ */
 public class DecimalDecoder<I> implements Decoder<I, BigDecimal> {
 
     private final Decoder<I, BigDecimal> inner;

@@ -6,16 +6,34 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * An immutable collection of {@link Issue}s accumulated during decoding.
+ *
+ * @param list the list of issues
+ */
 public record Issues(List<Issue> list) {
 
+    /** An empty issues instance. */
     public static final Issues EMPTY = new Issues(List.of());
 
+    /**
+     * Returns a new {@code Issues} with the given issue appended.
+     *
+     * @param i the issue to add
+     * @return a new issues instance
+     */
     public Issues add(Issue i) {
         var copy = new ArrayList<>(list);
         copy.add(i);
         return new Issues(List.copyOf(copy));
     }
 
+    /**
+     * Merges this issues with another, combining all issues.
+     *
+     * @param other the other issues to merge
+     * @return a new merged issues instance
+     */
     public Issues merge(Issues other) {
         if (this.list.isEmpty()) return other;
         if (other.list.isEmpty()) return this;
@@ -24,6 +42,12 @@ public record Issues(List<Issue> list) {
         return new Issues(List.copyOf(merged));
     }
 
+    /**
+     * Rebases all issue paths by prepending the given prefix.
+     *
+     * @param prefix the path prefix
+     * @return a new issues instance with rebased paths
+     */
     public Issues rebase(Path prefix) {
         return new Issues(
                 list.stream()
@@ -32,6 +56,12 @@ public record Issues(List<Issue> list) {
         );
     }
 
+    /**
+     * Resolves all issue messages using the given resolver.
+     *
+     * @param resolver the message resolver
+     * @return a new issues instance with resolved messages
+     */
     public Issues resolve(MessageResolver resolver) {
         return new Issues(
                 list.stream()
@@ -40,6 +70,11 @@ public record Issues(List<Issue> list) {
         );
     }
 
+    /**
+     * Flattens issues into a map of JSON Pointer paths to lists of error messages.
+     *
+     * @return a map from path to error messages
+     */
     public Map<String, List<String>> flatten() {
         return list.stream()
                 .collect(Collectors.groupingBy(
@@ -49,6 +84,12 @@ public record Issues(List<Issue> list) {
                 ));
     }
 
+    /**
+     * Formats issues as a nested map structure mirroring the input structure,
+     * with {@code _errors} keys holding the error messages at each level.
+     *
+     * @return a nested map representation of the issues
+     */
     @SuppressWarnings("unchecked")
     public Map<String, Object> format() {
         Map<String, Object> root = new LinkedHashMap<>();
@@ -65,6 +106,12 @@ public record Issues(List<Issue> list) {
         return root;
     }
 
+    /**
+     * Converts issues to a list of maps suitable for JSON serialization.
+     * Each map contains {@code path}, {@code code}, {@code message}, and {@code meta}.
+     *
+     * @return a list of issue maps
+     */
     public List<Map<String, Object>> toJsonList() {
         return list.stream()
                 .map(i -> {
@@ -78,6 +125,11 @@ public record Issues(List<Issue> list) {
                 .toList();
     }
 
+    /**
+     * Groups issues by their JSON Pointer path.
+     *
+     * @return a map from path to list of issues at that path
+     */
     public Map<String, List<Issue>> groupByPath() {
         return list.stream()
                 .collect(Collectors.groupingBy(

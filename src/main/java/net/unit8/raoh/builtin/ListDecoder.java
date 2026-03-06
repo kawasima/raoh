@@ -9,6 +9,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+/**
+ * A decoder for list (array) values with a fluent API for size constraints.
+ *
+ * @param <I> the input type
+ * @param <T> the element type
+ */
 public class ListDecoder<I, T> implements Decoder<I, List<T>> {
 
     private final Decoder<I, List<T>> inner;

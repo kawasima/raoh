@@ -6,6 +6,12 @@ import net.unit8.raoh.Result;
 
 import java.util.Map;
 
+/**
+ * A decoder for string-keyed map (record/object) values with a fluent API for size constraints.
+ *
+ * @param <I> the input type
+ * @param <V> the value type
+ */
 public class RecordDecoder<I, V> implements Decoder<I, Map<String, V>> {
 
     private final Decoder<I, Map<String, V>> inner;

@@ -13,12 +13,30 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * Factory methods for creating decoders that operate on Jackson {@link JsonNode} input.
+ *
+ * <p>This is the primary entry point for building JSON decoders.
+ * Use {@code import static net.unit8.raoh.json.JsonDecoders.*;} to access all factories.
+ *
+ * <pre>{@code
+ * var userDecoder = combine(
+ *     field("name", string().minLength(1)),
+ *     field("age", int_().range(0, 150))
+ * ).apply(User::new);
+ * }</pre>
+ */
 public final class JsonDecoders {
 
     private JsonDecoders() {}
 
     // --- Primitive decoders ---
 
+    /**
+     * Creates a string decoder.
+     *
+     * @return a decoder that extracts a string value from a JSON node
+     */
     public static StringDecoder<JsonNode> string() {
         Decoder<JsonNode, String> base = allowBlankBase();
         return new StringDecoder<>(base, base);
@@ -41,6 +59,11 @@ public final class JsonDecoders {
         };
     }
 
+    /**
+     * Creates an integer decoder.
+     *
+     * @return a decoder that extracts an integer value from a JSON node
+     */
     public static IntDecoder<JsonNode> int_() {
         return new IntDecoder<>((in, path) -> {
             if (in == null || in.isNull() || in.isMissingNode()) {
@@ -58,6 +81,11 @@ public final class JsonDecoders {
         });
     }
 
+    /**
+     * Creates a long integer decoder.
+     *
+     * @return a decoder that extracts a long value from a JSON node
+     */
     public static LongDecoder<JsonNode> long_() {
         return new LongDecoder<>((in, path) -> {
             if (in == null || in.isNull() || in.isMissingNode()) {
@@ -71,6 +99,11 @@ public final class JsonDecoders {
         });
     }
 
+    /**
+     * Creates a boolean decoder.
+     *
+     * @return a decoder that extracts a boolean value from a JSON node
+     */
     public static BoolDecoder<JsonNode> bool() {
         return new BoolDecoder<>((in, path) -> {
             if (in == null || in.isNull() || in.isMissingNode()) {
@@ -84,6 +117,11 @@ public final class JsonDecoders {
         });
     }
 
+    /**
+     * Creates a decimal (BigDecimal) decoder.
+     *
+     * @return a decoder that extracts a decimal value from a JSON node
+     */
     public static DecimalDecoder<JsonNode> decimal() {
         return new DecimalDecoder<>((in, path) -> {
             if (in == null || in.isNull() || in.isMissingNode()) {
@@ -99,6 +137,14 @@ public final class JsonDecoders {
 
     // --- field / optionalField / nullable ---
 
+    /**
+     * Extracts a required field from a JSON object and decodes it.
+     *
+     * @param <T>  the decoded field type
+     * @param name the field name
+     * @param dec  the decoder for the field value
+     * @return a decoder for the named field
+     */
     public static <T> Decoder<JsonNode, T> field(String name, Decoder<JsonNode, T> dec) {
         return (in, path) -> {
             var fieldPath = path.append(name);
@@ -114,6 +160,14 @@ public final class JsonDecoders {
         };
     }
 
+    /**
+     * Extracts an optional field. Returns {@link Optional#empty()} if absent.
+     *
+     * @param <T>  the decoded field type
+     * @param name the field name
+     * @param dec  the decoder for the field value
+     * @return a decoder that produces an {@link Optional}
+     */
     public static <T> Decoder<JsonNode, Optional<T>> optionalField(String name, Decoder<JsonNode, T> dec) {
         return (in, path) -> {
             var fieldPath = path.append(name);
@@ -128,6 +182,13 @@ public final class JsonDecoders {
         };
     }
 
+    /**
+     * Wraps a decoder to accept {@code null} values, returning {@code null} instead of an error.
+     *
+     * @param <T> the decoded type
+     * @param dec the underlying decoder
+     * @return a nullable decoder
+     */
     public static <T> Decoder<JsonNode, T> nullable(Decoder<JsonNode, T> dec) {
         return (in, path) -> {
             if (in == null || in.isNull()) {
@@ -137,6 +198,14 @@ public final class JsonDecoders {
         };
     }
 
+    /**
+     * Extracts a field with tri-state presence semantics (absent / null / present).
+     *
+     * @param <T>  the decoded field type
+     * @param name the field name
+     * @param dec  the decoder for the field value
+     * @return a decoder that produces a {@link Presence} value
+     */
     public static <T> Decoder<JsonNode, Presence<T>> optionalNullableField(String name, Decoder<JsonNode, T> dec) {
         return (in, path) -> {
             var fieldPath = path.append(name);
@@ -156,6 +225,14 @@ public final class JsonDecoders {
 
     // --- list / map ---
 
+    /**
+     * Creates a decoder for JSON arrays, decoding each element with the given decoder.
+     * Element errors are accumulated with path indices (e.g., {@code /items/0}).
+     *
+     * @param <T>        the element type
+     * @param elementDec the decoder for each element
+     * @return a list decoder
+     */
     public static <T> ListDecoder<JsonNode, T> list(Decoder<JsonNode, T> elementDec) {
         return new ListDecoder<>((in, path) -> {
             if (in == null || in.isNull() || in.isMissingNode()) {
@@ -182,6 +259,13 @@ public final class JsonDecoders {
         });
     }
 
+    /**
+     * Creates a decoder for JSON objects as string-keyed maps.
+     *
+     * @param <V>    the value type
+     * @param valDec the decoder for each value
+     * @return a record (map) decoder
+     */
     public static <V> RecordDecoder<JsonNode, V> map(Decoder<JsonNode, V> valDec) {
         return new RecordDecoder<>((in, path) -> {
             if (in == null || in.isNull() || in.isMissingNode()) {
@@ -212,16 +296,37 @@ public final class JsonDecoders {
 
     // --- enumOf / literal ---
 
+    /**
+     * Decodes a JSON string into an enum constant (case-insensitive).
+     *
+     * @param <E> the enum type
+     * @param cls the enum class
+     * @return an enum decoder
+     */
     public static <E extends Enum<E>> Decoder<JsonNode, E> enumOf(Class<E> cls) {
         return Decoders.enumOf(cls, allowBlankString());
     }
 
+    /**
+     * Decodes a JSON string and asserts it equals the expected value.
+     *
+     * @param expected the expected string value
+     * @return a literal decoder
+     */
     public static Decoder<JsonNode, String> literal(String expected) {
         return Decoders.literal(expected, allowBlankString());
     }
 
     // --- discriminate ---
 
+    /**
+     * Creates a decoder that dispatches to different decoders based on a discriminator field.
+     *
+     * @param <T>       the decoded type
+     * @param fieldName the discriminator field name (e.g., {@code "type"})
+     * @param variants  a map from discriminator values to decoders
+     * @return a discriminating decoder
+     */
     public static <T> Decoder<JsonNode, T> discriminate(
             String fieldName,
             Map<String, Decoder<JsonNode, ? extends T>> variants) {
@@ -246,6 +351,14 @@ public final class JsonDecoders {
 
     // --- strict ---
 
+    /**
+     * Wraps a decoder to reject unknown fields not in the given set.
+     *
+     * @param <T>         the decoded type
+     * @param dec         the underlying decoder
+     * @param knownFields the set of allowed field names
+     * @return a strict decoder
+     */
     public static <T> Decoder<JsonNode, T> strict(Decoder<JsonNode, T> dec, Set<String> knownFields) {
         return Decoders.strict(dec, knownFields);
     }

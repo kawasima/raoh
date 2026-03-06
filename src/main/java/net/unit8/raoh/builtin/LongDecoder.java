@@ -4,6 +4,11 @@ import net.unit8.raoh.*;
 
 import java.util.Map;
 
+/**
+ * A decoder for long integer values with a fluent API for numeric constraints.
+ *
+ * @param <I> the input type
+ */
 public class LongDecoder<I> implements Decoder<I, Long> {
 
     private final Decoder<I, Long> inner;

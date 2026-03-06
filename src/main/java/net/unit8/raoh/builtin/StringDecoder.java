@@ -10,6 +10,15 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+/**
+ * A decoder for string values with a fluent API for constraints, transforms, and type conversions.
+ *
+ * <p>Constraints (e.g., {@link #minLength}, {@link #email}) and transforms (e.g., {@link #trim}, {@link #toLowerCase})
+ * are chained to produce new decoders. Type conversions (e.g., {@link #uuid}, {@link #iso8601}) return
+ * decoders of the converted type.
+ *
+ * @param <I> the input type
+ */
 public class StringDecoder<I> implements Decoder<I, String> {
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile(

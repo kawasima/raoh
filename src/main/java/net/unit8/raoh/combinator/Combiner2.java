@@ -7,6 +7,15 @@ import net.unit8.raoh.Result;
 
 import java.util.function.BiFunction;
 
+/**
+ * Combines 2 decoders for applicative-style validation with error accumulation.
+ *
+ * @param <I> the input type
+ * @param <A> the first decoder's output type
+ * @param <B> the second decoder's output type
+ * @param da  the first decoder
+ * @param db  the second decoder
+ */
 public record Combiner2<I, A, B>(Decoder<I, A> da, Decoder<I, B> db) {
 
     public <T> Decoder<I, T> apply(BiFunction<A, B, T> f) {

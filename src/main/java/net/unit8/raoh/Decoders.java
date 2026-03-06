@@ -8,12 +8,29 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+/**
+ * Core combinators and utility decoders that work with any input type.
+ *
+ * <p>For input-specific factories, see {@link net.unit8.raoh.json.JsonDecoders}
+ * and {@link net.unit8.raoh.map.MapDecoders}.
+ */
 public final class Decoders {
 
     private Decoders() {}
 
     // --- combine overloads ---
 
+    /**
+     * Combines two decoders for applicative-style validation.
+     * All decoders run independently and errors are accumulated.
+     *
+     * @param <I> the input type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @return a combiner that can be applied with a function
+     */
     public static <I, A, B> Combiner2<I, A, B> combine(
             Decoder<I, A> da, Decoder<I, B> db) {
         return new Combiner2<>(da, db);
@@ -115,10 +132,28 @@ public final class Decoders {
 
     // --- Utility combinators ---
 
+    /**
+     * Creates a lazily-evaluated decoder. Useful for recursive decoder definitions.
+     *
+     * @param <I>      the input type
+     * @param <T>      the output type
+     * @param supplier supplies the decoder on each invocation
+     * @return a lazy decoder
+     */
     public static <I, T> Decoder<I, T> lazy(Supplier<Decoder<I, T>> supplier) {
         return (in, path) -> supplier.get().decode(in, path);
     }
 
+    /**
+     * Wraps a decoder to use a default value when the field is absent (i.e., all issues are "required").
+     * If the decoder fails with a non-required error, the error is preserved.
+     *
+     * @param <I>      the input type
+     * @param <T>      the output type
+     * @param dec      the underlying decoder
+     * @param fallback the default value
+     * @return a decoder with default-value behavior
+     */
     public static <I, T> Decoder<I, T> withDefault(Decoder<I, T> dec, T fallback) {
         return (in, path) -> {
             var r = dec.decode(in, path);
@@ -131,6 +166,15 @@ public final class Decoders {
         };
     }
 
+    /**
+     * Like {@link #withDefault(Decoder, Object)}, but the default is lazily computed.
+     *
+     * @param <I>      the input type
+     * @param <T>      the output type
+     * @param dec      the underlying decoder
+     * @param fallback supplier for the default value
+     * @return a decoder with default-value behavior
+     */
     public static <I, T> Decoder<I, T> withDefault(Decoder<I, T> dec, Supplier<T> fallback) {
         return (in, path) -> {
             var r = dec.decode(in, path);
@@ -143,6 +187,15 @@ public final class Decoders {
         };
     }
 
+    /**
+     * Wraps a decoder to recover from any error with a fixed fallback value.
+     *
+     * @param <I>      the input type
+     * @param <T>      the output type
+     * @param dec      the underlying decoder
+     * @param fallback the recovery value
+     * @return a decoder that never fails
+     */
     public static <I, T> Decoder<I, T> recover(Decoder<I, T> dec, T fallback) {
         return (in, path) -> {
             var r = dec.decode(in, path);
@@ -153,6 +206,15 @@ public final class Decoders {
         };
     }
 
+    /**
+     * Like {@link #recover(Decoder, Object)}, but computes the fallback from the issues.
+     *
+     * @param <I>      the input type
+     * @param <T>      the output type
+     * @param dec      the underlying decoder
+     * @param fallback function to compute the recovery value from issues
+     * @return a decoder that never fails
+     */
     public static <I, T> Decoder<I, T> recover(Decoder<I, T> dec, Function<Issues, T> fallback) {
         return (in, path) -> {
             var r = dec.decode(in, path);
@@ -163,6 +225,15 @@ public final class Decoders {
         };
     }
 
+    /**
+     * Tries each candidate decoder in order and returns the first successful result.
+     * If all candidates fail, returns an error with all candidate-specific issues.
+     *
+     * @param <I>        the input type
+     * @param <T>        the output type
+     * @param candidates the candidate decoders to try
+     * @return a decoder that succeeds if any candidate succeeds
+     */
     @SafeVarargs
     public static <I, T> Decoder<I, T> oneOf(Decoder<I, ? extends T>... candidates) {
         return (in, path) -> {
@@ -185,6 +256,15 @@ public final class Decoders {
         };
     }
 
+    /**
+     * Wraps a decoder to reject unknown fields not in the given set.
+     *
+     * @param <I>         the input type
+     * @param <T>         the output type
+     * @param dec         the underlying decoder
+     * @param knownFields the set of allowed field names
+     * @return a strict decoder that fails on unknown fields
+     */
     public static <I, T> Decoder<I, T> strict(Decoder<I, T> dec, Set<String> knownFields) {
         return (in, path) -> {
             var issues = Issues.EMPTY;
@@ -218,6 +298,15 @@ public final class Decoders {
         };
     }
 
+    /**
+     * Decodes a string into an enum constant (case-insensitive).
+     *
+     * @param <I>       the input type
+     * @param <E>       the enum type
+     * @param cls       the enum class
+     * @param stringDec the string decoder to use
+     * @return a decoder that produces enum constants
+     */
     public static <I, E extends Enum<E>> Decoder<I, E> enumOf(Class<E> cls, Decoder<I, String> stringDec) {
         return (in, path) -> {
             var r = stringDec.decode(in, path);
@@ -241,6 +330,14 @@ public final class Decoders {
         };
     }
 
+    /**
+     * Decodes a string and asserts it equals the expected value.
+     *
+     * @param <I>       the input type
+     * @param expected  the expected string value
+     * @param stringDec the string decoder to use
+     * @return a decoder that succeeds only when the string matches
+     */
     public static <I> Decoder<I, String> literal(String expected, Decoder<I, String> stringDec) {
         return (in, path) -> {
             var r = stringDec.decode(in, path);
