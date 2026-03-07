@@ -4,7 +4,6 @@ import tools.jackson.databind.JsonNode;
 import net.unit8.raoh.Decoder;
 import net.unit8.raoh.Issues;
 import net.unit8.raoh.MessageResolver;
-import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.Err;
@@ -39,21 +38,7 @@ public class RegisterUserController {
     record EmailAddress(String value) {}
     record Age(int value) {}
     record Address(String city, String postalCode) {}
-    record RegisterUserCommand(EmailAddress email, Age age, UserRole role, Address address, List<String> tags) {
-        static Result<RegisterUserCommand> parse(
-                EmailAddress email,
-                Age age,
-                UserRole role,
-                Address address,
-                List<String> tags) {
-            if (role == UserRole.ADMIN && age.value() < 20) {
-                return Result.fail(Path.ROOT.append("role"),
-                        "out_of_range",
-                        "admin users must be at least 20 years old");
-            }
-            return Result.ok(new RegisterUserCommand(email, age, role, address, tags));
-        }
-    }
+    record RegisterUserCommand(EmailAddress email, Age age, UserRole role, Address address, List<String> tags) {}
 
     record UserResponse(String id, String email, int age, String role, Address address, List<String> tags) {}
 
@@ -82,7 +67,14 @@ public class RegisterUserController {
                 field("role", withDefault(enumOf(UserRole.class), UserRole.MEMBER)),
                 field("address", address()),
                 field("tags", withDefault(list(string().trim().nonBlank()).maxSize(5), List.of()))
-        ).flatMap(RegisterUserCommand::parse);
+        ).apply(RegisterUserCommand::new)
+                .flatMapWithPath((cmd, path) -> {
+                    if (cmd.role() == UserRole.ADMIN && cmd.age().value() < 20) {
+                        return Result.fail(path.append("role"), "out_of_range",
+                                "admin users must be at least 20 years old");
+                    }
+                    return Result.ok(cmd);
+                });
         return dec::decode;
     }
 
