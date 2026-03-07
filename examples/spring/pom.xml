@@ -13,13 +13,13 @@
 
     <groupId>net.unit8.raoh.examples</groupId>
     <artifactId>raoh-spring-example</artifactId>
-    <version>0.3.0-SNAPSHOT</version>
+    <version>0.3.0</version>
     <name>Raoh Spring Example</name>
     <description>Standalone Spring Boot example for Raoh</description>
 
     <properties>
         <java.version>25</java.version>
-        <raoh.version>0.3.0-SNAPSHOT</raoh.version>
+        <raoh.version>0.3.0</raoh.version>
     </properties>
 
     <dependencies>
