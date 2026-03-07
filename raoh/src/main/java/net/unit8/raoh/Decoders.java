@@ -12,7 +12,7 @@ import java.util.function.Supplier;
 /**
  * Core combinators and utility decoders that work with any input type.
  *
- * <p>For input-specific factories, see {@link net.unit8.raoh.json.JsonDecoders}
+ * <p>For input-specific factories, see {@code net.unit8.raoh.json.JsonDecoders}
  * and {@link net.unit8.raoh.map.MapDecoders}.
  */
 public final class Decoders {

@@ -61,7 +61,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      *
      * <p>Use this when you have a custom decoder that already produces a {@code String}
      * and you want to apply further string constraints without building a full decoder from scratch.
-     * Factory methods such as {@link net.unit8.raoh.json.JsonDecoders#string()} already return a
+     * Factory methods such as {@code net.unit8.raoh.json.JsonDecoders#string()} already return a
      * {@link StringDecoder} directly, so {@code from()} is not needed in those cases.
      *
      * @param <I> the input type
@@ -86,7 +86,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
     /**
      * Removes a previously-applied {@link #nonBlank()} constraint, restoring blank-string acceptance.
      *
-     * @throws IllegalStateException if this decoder was not created via {@link net.unit8.raoh.json.JsonDecoders#string()}
+     * @throws IllegalStateException if this decoder was not created via {@code net.unit8.raoh.json.JsonDecoders#string()}
      *         or {@link net.unit8.raoh.map.MapDecoders#string()} (i.e., no base decoder is available to restore)
      */
     public StringDecoder<I> allowBlank() {

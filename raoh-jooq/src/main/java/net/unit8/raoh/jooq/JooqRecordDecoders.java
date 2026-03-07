@@ -13,15 +13,15 @@ import java.util.Optional;
 /**
  * Factory of decoders for {@link org.jooq.Record} input.
  *
- * <p>Usage: {@code import static net.unit8.raoh.jooq.JooqDecoders.*;}
+ * <p>Usage: {@code import static net.unit8.raoh.jooq.JooqRecordDecoders.*;}
  *
  * <p>Primitive decoders receive raw {@code Object} values extracted from
  * a jOOQ {@link org.jooq.Record} by {@link #field}. The raw value is
  * whatever jOOQ maps the SQL type to (e.g. {@link Integer}, {@link String}).
  */
-public final class JooqDecoders {
+public final class JooqRecordDecoders {
 
-    private JooqDecoders() {}
+    private JooqRecordDecoders() {}
 
     // --- Primitive decoders ---
 

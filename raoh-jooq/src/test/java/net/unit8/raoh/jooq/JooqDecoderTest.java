@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.util.Optional;
 
-import static net.unit8.raoh.jooq.JooqDecoders.*;
+import static net.unit8.raoh.jooq.JooqRecordDecoders.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class JooqDecoderTest {
@@ -277,7 +277,7 @@ class JooqDecoderTest {
     void optionalFieldAbsent() {
         var rec = record("name", "Carol");
 
-        var result = JooqDecoders.<String>optionalField("email", string()).decode(rec);
+        var result = JooqRecordDecoders.<String>optionalField("email", string()).decode(rec);
         assertInstanceOf(Ok.class, result);
         assertEquals(Optional.empty(), ((Ok<?>) result).value());
     }
@@ -286,7 +286,7 @@ class JooqDecoderTest {
     void optionalFieldPresent() {
         var rec = record("email", "carol@example.com");
 
-        var result = JooqDecoders.<String>optionalField("email", string()).decode(rec);
+        var result = JooqRecordDecoders.<String>optionalField("email", string()).decode(rec);
         assertInstanceOf(Ok.class, result);
         assertEquals(Optional.of("carol@example.com"), ((Ok<?>) result).value());
     }
@@ -295,7 +295,7 @@ class JooqDecoderTest {
     void optionalNullableFieldAbsent() {
         var rec = record("name", "Dave");
 
-        var result = JooqDecoders.<String>optionalNullableField("email", string()).decode(rec);
+        var result = JooqRecordDecoders.<String>optionalNullableField("email", string()).decode(rec);
         assertInstanceOf(Ok.class, result);
         assertInstanceOf(Presence.Absent.class, ((Ok<?>) result).value());
     }
@@ -304,7 +304,7 @@ class JooqDecoderTest {
     void optionalNullableFieldNull() {
         var rec = record("email", (Object) null);
 
-        var result = JooqDecoders.<String>optionalNullableField("email", string()).decode(rec);
+        var result = JooqRecordDecoders.<String>optionalNullableField("email", string()).decode(rec);
         assertInstanceOf(Ok.class, result);
         assertInstanceOf(Presence.PresentNull.class, ((Ok<?>) result).value());
     }

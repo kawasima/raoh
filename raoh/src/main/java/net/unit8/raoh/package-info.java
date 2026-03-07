@@ -11,7 +11,7 @@
  *
  * <p>For input-specific factories, see:
  * <ul>
- *   <li>{@link net.unit8.raoh.json.JsonDecoders} — for Jackson {@code JsonNode}</li>
+ *   <li>{@code net.unit8.raoh.json.JsonDecoders} — for Jackson {@code JsonNode}</li>
  *   <li>{@link net.unit8.raoh.map.MapDecoders} — for {@code Map<String, Object>}</li>
  * </ul>
  */

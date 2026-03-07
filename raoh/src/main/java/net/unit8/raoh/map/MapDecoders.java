@@ -168,9 +168,9 @@ public final class MapDecoders {
      * {@code addressDecoder} has type {@code Decoder<Map<String,Object>, Address>} but
      * {@code field()} requires {@code Decoder<Object, Address>}.
      *
-     * <p><strong>Note:</strong> {@link net.unit8.raoh.json.JsonDecoders} does not need a
+     * <p><strong>Note:</strong> {@code net.unit8.raoh.json.JsonDecoders} does not need a
      * {@code nested()} equivalent because all decoders there share the same input type
-     * ({@link tools.jackson.databind.JsonNode}).
+     * ({@code tools.jackson.databind.JsonNode}).
      *
      * @param <T> the decoded output type
      * @param dec the inner decoder that expects a {@code Map<String, Object>}

@@ -1,5 +1,6 @@
 package net.unit8.raoh;
 
+import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -88,5 +89,17 @@ public interface Decoder<I, T> {
     default <U> Decoder<I, U> pipe(Decoder<T, U> next) {
         return (in, path) -> this.decode(in, path)
                 .flatMap(t -> next.decode(t, path));
+    }
+
+    /**
+     * Returns a decoder that decodes a {@code List<I>} by applying this decoder to every element,
+     * accumulating all errors rather than short-circuiting on the first failure.
+     *
+     * <p>Equivalent to {@code (items, path) -> Result.traverse(items, this::decode, path)}.
+     *
+     * @return a decoder from {@code List<I>} to {@code List<T>}
+     */
+    default Decoder<List<I>, List<T>> list() {
+        return (items, path) -> Result.traverse(items, this::decode, path);
     }
 }
