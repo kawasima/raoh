@@ -180,6 +180,39 @@ public sealed interface Result<T> permits Ok, Err {
     }
 
     /**
+     * Creates a failed result with a single issue at the root path (no metadata).
+     *
+     * <p>Equivalent to {@code Result.fail(Path.ROOT, code, message)}.
+     * Use this only for errors that apply to the input as a whole, not to a specific field.
+     * For field-level errors, always pass an explicit {@link Path}.
+     *
+     * @param <T>     the value type
+     * @param code    the error code
+     * @param message the error message
+     * @return an {@link Err} result at {@link Path#ROOT}
+     */
+    static <T> Result<T> fail(String code, String message) {
+        return fail(Path.ROOT, code, message);
+    }
+
+    /**
+     * Creates a failed result with a single issue at the root path.
+     *
+     * <p>Equivalent to {@code Result.fail(Path.ROOT, code, message, meta)}.
+     * Use this only for errors that apply to the input as a whole, not to a specific field.
+     * For field-level errors, always pass an explicit {@link Path}.
+     *
+     * @param <T>     the value type
+     * @param code    the error code
+     * @param message the error message
+     * @param meta    additional metadata
+     * @return an {@link Err} result at {@link Path#ROOT}
+     */
+    static <T> Result<T> fail(String code, String message, Map<String, Object> meta) {
+        return fail(Path.ROOT, code, message, meta);
+    }
+
+    /**
      * Creates a failed result with a custom message that will not be overridden by {@link MessageResolver}.
      *
      * @param <T>     the value type
