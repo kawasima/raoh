@@ -263,7 +263,7 @@ public final class JsonDecoders {
                     case Err<T> err -> issues = issues.merge(err.issues());
                 }
             }
-            if (!issues.asList().isEmpty()) {
+            if (!issues.isEmpty()) {
                 return Result.err(issues);
             }
             return Result.ok(List.copyOf(results));
@@ -296,7 +296,7 @@ public final class JsonDecoders {
                     case Err<V> err -> issues = issues.merge(err.issues());
                 }
             }
-            if (!issues.asList().isEmpty()) {
+            if (!issues.isEmpty()) {
                 return Result.err(issues);
             }
             return Result.ok(Map.copyOf(results));
@@ -391,7 +391,7 @@ public final class JsonDecoders {
                 }
             }
             var decResult = dec.decode(in, path);
-            if (issues.asList().isEmpty()) {
+            if (issues.isEmpty()) {
                 return decResult;
             }
             return switch (decResult) {

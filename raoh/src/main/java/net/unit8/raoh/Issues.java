@@ -17,6 +17,15 @@ public record Issues(List<Issue> asList) {
     public static final Issues EMPTY = new Issues(List.of());
 
     /**
+     * Returns {@code true} if this collection contains no issues.
+     *
+     * @return {@code true} if empty
+     */
+    public boolean isEmpty() {
+        return asList.isEmpty();
+    }
+
+    /**
      * Returns a new {@code Issues} with the given issue appended.
      *
      * @param i the issue to add

@@ -343,7 +343,7 @@ public final class MapDecoders {
                     case Err<T> err -> issues = issues.merge(err.issues());
                 }
             }
-            if (!issues.asList().isEmpty()) {
+            if (!issues.isEmpty()) {
                 return Result.err(issues);
             }
             return Result.ok(List.copyOf(results));
@@ -380,7 +380,7 @@ public final class MapDecoders {
                     case Err<V> err -> issues = issues.merge(err.issues());
                 }
             }
-            if (!issues.asList().isEmpty()) {
+            if (!issues.isEmpty()) {
                 return Result.err(issues);
             }
             return Result.ok(Map.copyOf(results));

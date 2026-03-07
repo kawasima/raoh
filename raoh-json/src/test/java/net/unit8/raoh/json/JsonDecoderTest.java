@@ -48,7 +48,7 @@ class JsonDecoderTest {
                         "too many decimal places for " + currency.name(),
                         Map.of("maxScale", currency.fractionDigits(), "actualScale", amount.scale())));
             }
-            return issues.asList().isEmpty()
+            return issues.isEmpty()
                     ? Result.ok(new Money(amount, currency))
                     : Result.err(issues);
         }

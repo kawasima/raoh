@@ -284,7 +284,7 @@ public sealed interface Result<T> permits Ok, Err {
                 case Err<T> err -> accumulated = accumulated.merge(err.issues());
             }
         }
-        return accumulated.asList().isEmpty()
+        return accumulated.isEmpty()
                 ? Result.ok(Collections.unmodifiableList(values))
                 : Result.err(accumulated);
     }

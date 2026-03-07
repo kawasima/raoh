@@ -284,7 +284,7 @@ public final class Decoders {
             }
 
             var decResult = dec.decode(in, path);
-            if (issues.asList().isEmpty()) {
+            if (issues.isEmpty()) {
                 return decResult;
             }
 
@@ -352,7 +352,7 @@ public final class Decoders {
     }
 
     private static boolean shouldUseDefault(Issues issues) {
-        return !issues.asList().isEmpty()
+        return !issues.isEmpty()
                 && issues.asList().stream().allMatch(issue -> issue.code().equals(ErrorCodes.REQUIRED));
     }
 }
