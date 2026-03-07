@@ -1,5 +1,10 @@
 # Raoh
 
+[![Maven Central](https://img.shields.io/maven-central/v/net.unit8.raoh/raoh?label=Maven%20Central)](https://central.sonatype.com/artifact/net.unit8.raoh/raoh)
+[![Javadoc](https://javadoc.io/badge2/net.unit8.raoh/raoh/javadoc.svg)](https://javadoc.io/doc/net.unit8.raoh/raoh)
+[![License](https://img.shields.io/github/license/kawasima/raoh)](https://github.com/kawasima/raoh/blob/main/LICENSE)
+[![Java 25](https://img.shields.io/badge/Java-25-437291?logo=openjdk&logoColor=white)](https://openjdk.org/projects/jdk/25/)
+
 Raoh is a Java decoder library for turning untyped boundary input into typed domain values.
 
 It is built around a parse-don't-validate approach:
