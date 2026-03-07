@@ -1,203 +1,125 @@
 # Raoh Spring Example
 
-This is a standalone Spring Boot application that uses Raoh to decode request JSON inside a `RestController`.
+A Spring Boot application demonstrating Raoh at both the **HTTP boundary** (JSON decoding)
+and the **JDBC boundary** (row decoding with `MapDecoders`).
 
 ## What it shows
 
-- accepting raw `JsonNode` in a controller
-- decoding request bodies with `JsonDecoder<T>`
-- returning typed values on success
-- returning structured `Issues` on failure
-- combining field-level decoding and cross-field domain rules
+| Raoh feature | Where it appears |
+| --- | --- |
+| `JsonDecoders.combine` + `field` | Request body decoding in `MembershipDecoders` |
+| `MapDecoders.combine` + `field` | JDBC row decoding (`USER_ROW`, `GROUP_ROW`, etc.) |
+| `Decoder.list()` | Decoding `List<Map<String, Object>>` from `JdbcClient` |
+| `Result.map2` | Combining user + group-memberships from two queries |
+| `Result.traverse` | Decoding a variable-length list of membership rows |
+| `Decoders.withDefault` | Optional fields with defaults (`description`, `role`) |
+| `StringDecoder` chain | `.trim().nonBlank().maxLength()`, `.toLowerCase().email()` |
+
+## Domain model
+
+```text
+User ──< Membership >── Group
+```
+
+- **User** — `id`, `name`, `email`
+- **Group** — `id`, `name`, `description`
+- **Membership** — `user_id`, `group_id`, `role` (ADMIN / MEMBER)
 
 ## How to run
 
-Because this is a standalone Maven project, it points to the locally built Raoh jar under `../../target`.
-
-From the repository root:
+From the repository root, install the Raoh jars locally:
 
 ```bash
-mvn package
+mvn install -DskipTests
 ```
 
-Then run the example:
+Then start the example:
 
 ```bash
 cd examples/spring
 mvn spring-boot:run
 ```
+
+## REST API
+
+### Users
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST /users` | Create a user | Body: `{ "name": "Alice", "email": "alice@example.com" }` |
+| `GET /users` | List all users | |
+| `GET /users/{id}` | Show user with groups | Uses `Result.map2` + `Result.traverse` |
+
+### Groups
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST /groups` | Create a group | Body: `{ "name": "Engineering", "description": "..." }` |
+| `GET /groups` | List all groups | |
+| `GET /groups/{id}` | Show a group | |
+
+### Memberships
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST /groups/{id}/members` | Add a member | Body: `{ "userId": 1, "role": "ADMIN" }` (role defaults to MEMBER) |
+| `GET /groups/{id}/members` | List group members | |
+| `DELETE /groups/{id}/members/{userId}` | Remove a member | |
 
 ## Quick Manual Check
 
-Start the app first:
+Start the app, then use the following commands.
+
+### 1. Create a user
 
 ```bash
-cd examples/spring
-mvn spring-boot:run
-```
-
-Then use the following commands in another terminal.
-
-### 1. Valid request
-
-```bash
-curl -i \
-  -X POST http://localhost:8080/users \
+curl -s -X POST http://localhost:8080/users \
   -H 'Content-Type: application/json' \
-  -d '{
-    "email": "Alice@Example.com",
-    "age": 24,
-    "address": {
-      "city": "Tokyo",
-      "postalCode": "123-4567"
-    },
-    "tags": ["alpha", "beta"]
-  }'
+  -d '{"name": "Alice", "email": "Alice@Example.COM"}' | jq .
 ```
 
-Expected:
+Expected: `201 Created` with normalized email `alice@example.com`.
 
-- HTTP `201 Created`
-- normalized email (`alice@example.com`)
-- default role (`MEMBER`)
-
-### 2. Invalid email and invalid nested fields
+### 2. Validation errors
 
 ```bash
-curl -i \
-  -X POST http://localhost:8080/users \
+curl -s -X POST http://localhost:8080/users \
   -H 'Content-Type: application/json' \
-  -d '{
-    "email": "bad",
-    "age": 24,
-    "address": {
-      "city": "",
-      "postalCode": "1234"
-    }
-  }'
+  -d '{"name": "", "email": "bad"}' | jq .
 ```
 
-Expected:
+Expected: `400 Bad Request` with issues for `/name` and `/email`.
 
-- HTTP `400 Bad Request`
-- issues for `/email`, `/address/city`, and `/address/postalCode`
-
-### 3. Cross-field domain rule failure
+### 3. Create a group and add a member
 
 ```bash
-curl -i \
-  -X POST http://localhost:8080/users \
+curl -s -X POST http://localhost:8080/groups \
   -H 'Content-Type: application/json' \
-  -d '{
-    "email": "admin@example.com",
-    "age": 17,
-    "role": "admin",
-    "address": {
-      "city": "Tokyo",
-      "postalCode": "123-4567"
-    }
-  }'
+  -d '{"name": "Engineering"}' | jq .
+
+curl -s -X POST http://localhost:8080/groups/1/members \
+  -H 'Content-Type: application/json' \
+  -d '{"userId": 1, "role": "ADMIN"}' | jq .
 ```
 
-Expected:
-
-- HTTP `400 Bad Request`
-- issue for `/role`
-- message saying admin users must be at least 20 years old
-
-### 4. Tags fallback
-
-The controller uses `withDefault(...)` for `tags`, so omitting the field is allowed.
+### 4. Show user with groups
 
 ```bash
-curl -i \
-  -X POST http://localhost:8080/users \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "email": "no-tags@example.com",
-    "age": 30,
-    "address": {
-      "city": "Osaka",
-      "postalCode": "987-6543"
-    }
-  }'
+curl -s http://localhost:8080/users/1 | jq .
 ```
 
-Expected:
+Expected: user record with a `groups` array showing the membership.
 
-- HTTP `201 Created`
-- `"tags": []`
-
-### 5. Too many tags
-
-```bash
-curl -i \
-  -X POST http://localhost:8080/users \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "email": "tags@example.com",
-    "age": 30,
-    "address": {
-      "city": "Nagoya",
-      "postalCode": "111-2222"
-    },
-    "tags": ["a", "b", "c", "d", "e", "f"]
-  }'
-```
-
-Expected:
-
-- HTTP `400 Bad Request`
-- issue for `/tags`
-
-## Endpoint
-
-`POST /users`
-
-Example request:
-
-```json
-{
-  "email": "Alice@Example.com",
-  "age": 24,
-  "role": "member",
-  "address": {
-    "city": "Tokyo",
-    "postalCode": "123-4567"
-  },
-  "tags": ["alpha", "beta"]
-}
-```
-
-Example success response:
-
-```json
-{
-  "id": "generated-user-id",
-  "email": "alice@example.com",
-  "age": 24,
-  "role": "MEMBER",
-  "address": {
-    "city": "Tokyo",
-    "postalCode": "123-4567"
-  },
-  "tags": ["alpha", "beta"]
-}
-```
-
-Example error response:
+## Example error response
 
 ```json
 {
   "issues": [
-    {
-      "path": "/email",
-      "code": "invalid_format",
-      "message": "invalid format",
-      "meta": {}
-    }
+    { "path": "/name", "code": "blank", "message": "must not be blank", "meta": {} },
+    { "path": "/email", "code": "invalid_format", "message": "invalid format", "meta": {} }
   ],
   "errors": {
+    "/name": ["must not be blank"],
     "/email": ["invalid format"]
   }
 }

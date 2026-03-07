@@ -303,4 +303,36 @@ public sealed interface Result<T> permits Ok, Err {
     static <I, T> Result<List<T>> traverse(List<I> items, BiFunction<I, Path, Result<T>> f) {
         return traverse(items, f, Path.ROOT);
     }
+
+    /**
+     * Maps every element of a list through a function that returns a {@link Result},
+     * accumulating all errors rather than short-circuiting on the first failure.
+     *
+     * <p>Unlike {@link #traverse(List, BiFunction)}, this overload does not pass a
+     * {@link Path} to the mapping function. Errors produced by {@code f} retain whatever
+     * path they already have — no index-based path is prepended.
+     *
+     * <p>Use this when the mapping function does not need path context — for example,
+     * when calling a service method that returns a {@link Result}.
+     *
+     * @param <I>   the element input type
+     * @param <T>   the decoded element type
+     * @param items the list of inputs to process
+     * @param f     the mapping function applied to each element
+     * @return a result containing all mapped values, or all accumulated errors
+     */
+    static <I, T> Result<List<T>> traverseResults(List<I> items, Function<I, Result<T>> f) {
+        Issues accumulated = Issues.EMPTY;
+        List<T> values = new ArrayList<>(items.size());
+        for (int i = 0; i < items.size(); i++) {
+            Result<T> r = f.apply(items.get(i));
+            switch (r) {
+                case Ok<T> ok -> values.add(ok.value());
+                case Err<T> err -> accumulated = accumulated.merge(err.issues());
+            }
+        }
+        return accumulated.asList().isEmpty()
+                ? Result.ok(Collections.unmodifiableList(values))
+                : Result.err(accumulated);
+    }
 }

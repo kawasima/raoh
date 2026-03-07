@@ -61,6 +61,37 @@ class TraverseTest {
     }
 
     @Test
+    void traverseResultsAllSucceed() {
+        var result = Result.traverseResults(
+                List.of("1", "2", "3"),
+                s -> {
+                    try {
+                        return Result.ok(Integer.parseInt(s));
+                    } catch (NumberFormatException e) {
+                        return Result.fail("invalid_int", "not a valid integer");
+                    }
+                });
+        assertInstanceOf(Ok.class, result);
+        assertEquals(List.of(1, 2, 3), result.getOrThrow());
+    }
+
+    @Test
+    void traverseResultsAccumulatesErrors() {
+        var result = Result.traverseResults(
+                List.of("1", "bad", "nope"),
+                s -> {
+                    try {
+                        return Result.ok(Integer.parseInt(s));
+                    } catch (NumberFormatException e) {
+                        return Result.fail("invalid_int", "not a valid integer");
+                    }
+                });
+        assertInstanceOf(Err.class, result);
+        var issues = ((Err<?>) result).issues().asList();
+        assertEquals(2, issues.size());
+    }
+
+    @Test
     void decoderListConvenience() {
         Decoder<List<String>, List<Integer>> listDecoder = INT_DECODER.list();
 
