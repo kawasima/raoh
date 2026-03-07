@@ -93,7 +93,7 @@ public final class MembershipDecoders {
     /**
      * Decodes a user row plus a list of group-membership rows into {@link UserWithGroups},
      * demonstrating {@link Result#map2} for merging two independent decode results
-     * and {@link Result#traverse} for decoding a variable-length list.
+     * and {@link Decoder#list()} for decoding a variable-length list.
      *
      * @param userRow   the JDBC row from the users table
      * @param groupRows the JDBC rows from the memberships + groups JOIN
@@ -103,7 +103,7 @@ public final class MembershipDecoders {
             Map<String, Object> userRow,
             List<Map<String, Object>> groupRows) {
         Result<User> userResult = USER_ROW.decode(userRow);
-        Result<List<GroupMembership>> groupsResult = Result.traverse(groupRows, GROUP_MEMBERSHIP_ROW::decode);
+        Result<List<GroupMembership>> groupsResult = GROUP_MEMBERSHIP_ROW.list().decode(groupRows);
         return Result.map2(userResult, groupsResult, UserWithGroups::new);
     }
 

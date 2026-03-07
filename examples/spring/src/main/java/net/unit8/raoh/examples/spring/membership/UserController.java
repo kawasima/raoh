@@ -67,7 +67,7 @@ public class UserController {
      *
      * <p>The response is built by {@link MembershipDecoders#decodeUserWithGroups},
      * which uses {@link Result#map2} to combine independently decoded user and
-     * group-membership data, and {@link Result#traverse} to decode the
+     * group-membership data, and {@link net.unit8.raoh.Decoder#list() Decoder.list()} to decode the
      * variable-length list of memberships.
      *
      * @param id the user ID

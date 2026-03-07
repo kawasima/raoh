@@ -322,17 +322,6 @@ public sealed interface Result<T> permits Ok, Err {
      * @return a result containing all mapped values, or all accumulated errors
      */
     static <I, T> Result<List<T>> traverseResults(List<I> items, Function<I, Result<T>> f) {
-        Issues accumulated = Issues.EMPTY;
-        List<T> values = new ArrayList<>(items.size());
-        for (int i = 0; i < items.size(); i++) {
-            Result<T> r = f.apply(items.get(i));
-            switch (r) {
-                case Ok<T> ok -> values.add(ok.value());
-                case Err<T> err -> accumulated = accumulated.merge(err.issues());
-            }
-        }
-        return accumulated.asList().isEmpty()
-                ? Result.ok(Collections.unmodifiableList(values))
-                : Result.err(accumulated);
+        return traverse(items, (item, path) -> f.apply(item), Path.ROOT);
     }
 }
