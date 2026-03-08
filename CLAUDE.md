@@ -20,7 +20,22 @@ Examples serve as documentation — treat them with the same care as the library
 - The main integration branch is **`develop`**. All feature branches must be based on `develop` and PRs must target `develop`.
 - **`main`** is the release branch only. Never open a PR targeting `main` for feature work.
 - Branch naming: `feature/<short-description>` (e.g., `feature/bool-constraints`).
-- When creating a PR with `gh pr create`, always pass `--base develop` explicitly to avoid defaulting to `main`.
+- **ALWAYS** pass `--base develop` when creating a PR — never omit it, as `gh pr create` defaults to `main`:
+
+  ```sh
+  gh pr create --base develop --title "..." --body "..."
+  ```
+
+- If a PR was accidentally opened against `main`, fix it immediately with `gh pr edit <number> --base develop`.
+
+## Error Code Implementation Checklist
+
+When adding a new error code and its associated decoder constraint, verify all of the following:
+
+- **Meta values must never be null**: `Map.of()` and `List.copyOf()` reject null silently at runtime with `NullPointerException`. If the decoded value may be null (e.g., `nullable(...)` combinator), use `new ArrayList<>(collection)` instead of `List.copyOf()` for meta payloads.
+- **Fallback message must be self-contained**: `Issue.message()` is the pre-resolved message stored at decode time. Users who never call `Issues.resolve()` rely on this string alone. Always include the key variable values (e.g., the missing elements, the duplicate values) in the fallback message — do not assume `resolve()` will be called.
+- **`messages.properties` templates must reference the same meta keys**: The placeholders in `raoh.<code>=...` must match the keys actually put into the meta map by the decoder. Mismatches silently produce literal `{key}` output.
+- **`MessageResolver.DEFAULT` and `messages.properties` must both be updated**: The `ErrorCodesDefaultCoverageTest` reflection test enforces this automatically — a new `ErrorCodes` constant without coverage in both will fail the build.
 
 ## Development Flow
 
