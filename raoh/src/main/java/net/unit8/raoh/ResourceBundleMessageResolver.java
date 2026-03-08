@@ -52,8 +52,8 @@ public class ResourceBundleMessageResolver implements MessageResolver {
 
     @Override
     public String resolve(String code, Map<String, Object> meta, Locale locale) {
-        ResourceBundle bundle = ResourceBundle.getBundle(baseName, locale);
         try {
+            ResourceBundle bundle = ResourceBundle.getBundle(baseName, locale);
             String template = bundle.getString(KEY_PREFIX + code);
             return MessageResolver.interpolate(template, meta);
         } catch (MissingResourceException ignored) {
