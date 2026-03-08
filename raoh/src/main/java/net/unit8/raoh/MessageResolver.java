@@ -15,6 +15,14 @@ import java.util.Map;
  */
 @FunctionalInterface
 public interface MessageResolver {
+
+    /**
+     * The prefix prepended to error codes when building resource bundle / message-source keys.
+     * Both {@link ResourceBundleMessageResolver} and any custom resolver should use this constant
+     * so the key format is defined in one place.
+     */
+    String KEY_PREFIX = "raoh.";
+
     /**
      * Resolves an error code into a human-readable message.
      *
@@ -38,6 +46,27 @@ public interface MessageResolver {
      */
     default String resolve(String code, Map<String, Object> meta, Locale locale) {
         return resolve(code, meta);
+    }
+
+    /**
+     * Replaces named placeholders in a message template with values from the meta map.
+     *
+     * <p>Each {@code {key}} occurrence in {@code template} is replaced by the string
+     * representation of the corresponding value in {@code meta}.
+     * For example, a template {@code "must be at least {min} characters"} with
+     * {@code meta = {"min": 3}} produces {@code "must be at least 3 characters"}.
+     *
+     * @param template the message template containing {@code {key}} placeholders
+     * @param meta     the metadata map supplying placeholder values
+     * @return the template with all placeholders replaced
+     */
+    static String interpolate(String template, Map<String, Object> meta) {
+        for (var entry : meta.entrySet()) {
+            template = template.replace(
+                    "{" + entry.getKey() + "}",
+                    String.valueOf(entry.getValue()));
+        }
+        return template;
     }
 
     /** A default resolver that provides English messages for all built-in error codes. */

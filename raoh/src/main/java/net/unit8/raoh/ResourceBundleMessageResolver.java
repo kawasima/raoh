@@ -52,16 +52,11 @@ public class ResourceBundleMessageResolver implements MessageResolver {
     @Override
     public String resolve(String code, Map<String, Object> meta, Locale locale) {
         ResourceBundle bundle = ResourceBundle.getBundle(baseName, locale);
-        String key = "raoh." + code;
-        if (bundle.containsKey(key)) {
-            String template = bundle.getString(key);
-            for (var entry : meta.entrySet()) {
-                template = template.replace(
-                        "{" + entry.getKey() + "}",
-                        String.valueOf(entry.getValue()));
-            }
-            return template;
+        try {
+            String template = bundle.getString(KEY_PREFIX + code);
+            return MessageResolver.interpolate(template, meta);
+        } catch (java.util.MissingResourceException ignored) {
+            return MessageResolver.DEFAULT.resolve(code, meta);
         }
-        return MessageResolver.DEFAULT.resolve(code, meta);
     }
 }

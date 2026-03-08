@@ -31,20 +31,15 @@ public class SpringMessageResolver implements MessageResolver {
     }
 
     @Override
-    public String resolve(String code, Map<String, Object> meta, Locale locale) {
-        String defaultMessage = MessageResolver.DEFAULT.resolve(code, meta);
-        String template = messageSource.getMessage(
-                "raoh." + code, null, defaultMessage, locale);
-        for (var entry : meta.entrySet()) {
-            template = template.replace(
-                    "{" + entry.getKey() + "}",
-                    String.valueOf(entry.getValue()));
-        }
-        return template;
+    public String resolve(String code, Map<String, Object> meta) {
+        return resolve(code, meta, Locale.getDefault());
     }
 
     @Override
-    public String resolve(String code, Map<String, Object> meta) {
-        return resolve(code, meta, Locale.getDefault());
+    public String resolve(String code, Map<String, Object> meta, Locale locale) {
+        String defaultMessage = MessageResolver.DEFAULT.resolve(code, meta);
+        String template = messageSource.getMessage(
+                KEY_PREFIX + code, null, defaultMessage, locale);
+        return MessageResolver.interpolate(template, meta);
     }
 }
