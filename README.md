@@ -248,6 +248,7 @@ Collection/value-container decoders:
 - `startsWith(...)`
 - `endsWith(...)`
 - `includes(...)`
+- `oneOf(...)`
 - `email()`
 - `url()`
 - `ipv4()`
@@ -263,7 +264,19 @@ Collection/value-container decoders:
 - `iso8601()`
 - `date()`
 - `time()`
+- `localDateTime()`
+- `offsetDateTime()`
 - `StringDecoder.from(...)`
+
+Temporal decoders (`iso8601()`, `date()`, `time()`, `localDateTime()`, `offsetDateTime()`) return a `TemporalDecoder` that supports:
+
+- `before(...)`
+- `after(...)`
+- `between(...)`
+- `past()`
+- `future()`
+- `pastOrPresent()`
+- `futureOrPresent()`
 
 ### Numeric Capabilities
 
@@ -277,6 +290,7 @@ Collection/value-container decoders:
 - `nonNegative()`
 - `nonPositive()`
 - `multipleOf(...)`
+- `oneOf(...)`
 
 `DecimalDecoder` supports:
 
@@ -289,6 +303,13 @@ Collection/value-container decoders:
 - `multipleOf(...)`
 - `scale(...)`
 
+### Boolean Capabilities
+
+`BoolDecoder` supports:
+
+- `isTrue()`
+- `isFalse()`
+
 ### Collection Capabilities
 
 `ListDecoder` supports:
@@ -297,6 +318,9 @@ Collection/value-container decoders:
 - `minSize(...)`
 - `maxSize(...)`
 - `fixedSize(...)`
+- `contains(...)`
+- `containsAll(...)`
+- `unique()`
 - `toSet()`
 
 `RecordDecoder` supports:
@@ -409,104 +433,9 @@ This reads naturally as:
 
 ## Composition Patterns
 
-Raoh offers four distinct composition patterns. Choosing the right one keeps error accumulation correct.
+Raoh offers four distinct composition patterns — `combine(...).apply(...)`, `flatMap(...)`, `Result.map2(...)`, and `Result.traverse(...)` / `Decoder.list()`. Choosing the right one keeps error accumulation correct.
 
-### Pattern 1: Same input, independent fields — `combine(...).apply(...)`
-
-Use this for normal object decoding from a single input source.
-All field errors are accumulated even when multiple fields fail.
-
-```java
-combine(
-        field("name", string().nonBlank()),
-        field("age", int_().range(0, 150))
-).apply(Person::new);
-```
-
-If `name` and `age` are both invalid, you get both errors back.
-
-### Pattern 2: Dependent or sequential parsing — `flatMap(...)`
-
-Use this when the next step depends on a previous result, or when domain rules must run after structure has been decoded.
-
-```java
-record Money(BigDecimal amount, Currency currency) {
-    static Result<Money> parse(BigDecimal amount, Currency currency) {
-        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            return Result.fail(Path.ROOT, "out_of_range", "amount must be positive");
-        }
-        return Result.ok(new Money(amount, currency));
-    }
-}
-
-JsonDecoder<Money> money = combine(
-        field("amount", decimal()),
-        field("currency", enumOf(Currency.class))
-).flatMap(Money::parse);
-```
-
-Inner issues returned by `flatMap(...)` are automatically rebased to the current path.
-
-So if `Money.parse(...)` fails under `/balance`, the issue is reported under `/balance`, not at the root.
-
-**Important:** do not use `flatMap` to compose two independent results just because they happen to be sequential in code.
-If the first result fails, the second result's errors are silently dropped.
-Use `Result.map2` (see below) for independent results from different sources.
-
-### Pattern 3: Different input types — `Result.map2(...)`
-
-Use this when two independent values come from different input sources, such as two database tables,
-and you want to accumulate errors from both even if each fails independently.
-
-```java
-// PersonalName comes from the customer table
-Result<PersonalName> nameResult = PERSONAL_NAME_DECODER.decode(customerRow, path.append("customer"));
-// ContactMethods comes from the contact_methods table
-Result<ContactMethods> cmResult  = CONTACT_METHODS_DECODER.decode(contactRows, path.append("contactMethods"));
-
-return Result.map2(nameResult, cmResult,
-        (name, cms) -> new Customer(name, cms.primary(), cms.secondary()));
-```
-
-If both decoders fail, the issues from both are merged into a single `Err`.
-
-This is the right pattern when:
-
-- the two values come from structurally different inputs (different tables, different API calls)
-- the decoding of one does not depend on the result of the other
-- you want the caller to see all errors at once
-
-**Contrast with `combine`:**
-`combine` composes decoders before decoding — it extracts multiple fields from the same input.
-`Result.map2` combines results after decoding — it merges the outcomes of two already-run decoders.
-
-### Pattern 4: Decoding a list — `Result.traverse(...)` / `Decoder.list()`
-
-Use this to decode a variable-length list where every element must be checked and all errors accumulated.
-
-```java
-// Using Result.traverse directly
-Result<List<Order>> orders = Result.traverse(
-        rows,
-        ORDER_DECODER::decode,
-        path.append("orders"));
-
-// Using the Decoder.list() convenience
-Decoder<List<Record>, List<Order>> listDecoder = ORDER_DECODER.list();
-Result<List<Order>> orders = listDecoder.decode(rows, path.append("orders"));
-```
-
-Each element at index `i` is decoded under the path `orders/0`, `orders/1`, and so on.
-If elements 1 and 3 fail, both errors are reported with their respective paths — no short-circuiting.
-
-### Summary
-
-| Situation | Tool |
-| --- | --- |
-| Multiple fields from the same input | `combine(...).apply(...)` |
-| Next step depends on a previous result | `flatMap(...)` |
-| Two independent results from different inputs | `Result.map2(...)` |
-| Variable-length list, accumulate all errors | `Result.traverse(...)` / `Decoder.list()` |
+See [docs/composition-patterns.md](docs/composition-patterns.md) for details and examples.
 
 ## Error Accumulation Example
 
@@ -630,113 +559,15 @@ recover(field("pageSize", int_().range(1, 100)), 20)
 
 ## Boundary Modules
 
-### `JsonDecoders`
+Raoh ships three boundary modules for different input types:
 
-`net.unit8.raoh.json.JsonDecoders` works with Jackson `JsonNode`.
+- **`JsonDecoders`** — Jackson `JsonNode` (`raoh-json`)
+- **`JooqRecordDecoders`** — jOOQ `Record` (`raoh-jooq`)
+- **`MapDecoders`** — `Map<String, Object>` (`raoh`)
 
-Supported helpers include:
+Each provides the same set of helpers (`string()`, `field(...)`, `combine(...)`, etc.) adapted to its input type.
 
-- `string()`, `int_()`, `long_()`, `bool()`, `decimal()`
-- `field(...)`
-- `optionalField(...)`
-- `nullable(...)`
-- `optionalNullableField(...)`
-- `list(...)`
-- `map(...)`
-- `enumOf(...)`
-- `literal(...)`
-- `discriminate(...)`
-- `strict(...)`
-- `combine(...)`
-
-This module is a good fit when your application boundary is already Jackson-based.
-
-Example:
-
-```java
-JsonDecoder<List<String>> tags =
-        field("tags", list(string().trim().nonBlank()).nonempty());
-```
-
-### `JooqRecordDecoders`
-
-`net.unit8.raoh.jooq.JooqRecordDecoders` works with jOOQ `Record`.
-
-Supported helpers include:
-
-- `string()`, `int_()`, `long_()`, `bool()`, `decimal()`
-- `field(...)`
-- `optionalField(...)`
-- `nullable(...)`
-- `optionalNullableField(...)`
-- `nested(...)`
-- `enumOf(...)`
-- `combine(...)`
-
-This module is a good fit when you fetch data from a database via jOOQ and want to map flat query results (including JOIN results) into nested domain objects.
-
-Example:
-
-```java
-record User(String name, int age) {}
-record Address(String city, String zip) {}
-record UserWithAddress(User user, Address address) {}
-
-JooqRecordDecoder<User> userDecoder = combine(
-        field("name", string()),
-        field("age",  int_())
-).apply(User::new)::decode;
-
-JooqRecordDecoder<Address> addressDecoder = combine(
-        field("city", string()),
-        field("zip",  string())
-).apply(Address::new)::decode;
-
-// SELECT u.name, u.age, a.city, a.zip FROM users u JOIN addresses a ...
-Decoder<Record, UserWithAddress> dec = combine(
-        nested(userDecoder),
-        nested(addressDecoder)
-).apply(UserWithAddress::new);
-```
-
-`nested(dec)` applies another `JooqRecordDecoder` to the same flat record.
-This lets you map a single JOIN result row into a structured domain object.
-
-For LEFT JOIN results where the joined side may be absent, use `optionalNullableField`:
-
-```java
-var presence = optionalNullableField("dept_name", string()).decode(rec);
-```
-
-This returns `Presence.Absent`, `Presence.PresentNull`, or `Presence.Present`, which is useful when a SQL NULL means "no row joined" rather than "explicitly set to null".
-
-### `MapDecoders`
-
-`net.unit8.raoh.map.MapDecoders` works with `Map<String, Object>`.
-
-Supported helpers include:
-
-- `string()`, `int_()`, `long_()`, `bool()`, `decimal()`
-- `field(...)`
-- `optionalField(...)`
-- `nullable(...)`
-- `optionalNullableField(...)`
-- `nested(...)`
-- `list(...)`
-- `map(...)`
-- `enumOf(...)`
-- `literal(...)`
-- `strict(...)`
-- `combine(...)`
-
-This module is a good fit when your application receives already-materialized data structures.
-
-Example:
-
-```java
-MapDecoder<Map<String, BigDecimal>> prices =
-        field("prices", map(decimal()).minSize(1));
-```
+See [docs/boundary-modules.md](docs/boundary-modules.md) for the full API listing and examples.
 
 ## Error Handling
 
@@ -778,46 +609,9 @@ which is convenient for APIs.
 
 ### Locale-Aware Message Resolution
 
-`Issues.resolve(MessageResolver, Locale)` lets you produce localized error messages. The locale is passed at resolution time, not baked into the decoder — so a single decoder can serve multiple locales in a web server.
+Raoh supports locale-aware error messages via `ResourceBundleMessageResolver`. The locale is passed at resolution time, not baked into the decoder — so a single decoder can serve multiple locales.
 
-Raoh ships `ResourceBundleMessageResolver` for standard `java.util.ResourceBundle`-based i18n:
-
-```java
-var resolver = new ResourceBundleMessageResolver("com.example.messages");
-
-switch (decoder.decode(input)) {
-    case Ok(var value) -> handle(value);
-    case Err(var issues) -> {
-        var resolved = issues.resolve(resolver, Locale.JAPANESE);
-        resolved.flatten();
-        // → {"/name": ["必須です"], "/age": ["0から150の範囲で入力してください"]}
-    }
-}
-```
-
-Message templates use named placeholders matching the issue's `meta` keys:
-
-```properties
-# messages.properties (default English)
-raoh.required=is required
-raoh.too_short=must be at least {min} characters
-raoh.out_of_range=must be between {min} and {max}
-
-# messages_ja.properties (Japanese)
-raoh.required=必須です
-raoh.too_short={min}文字以上で入力してください
-raoh.out_of_range={min}から{max}の範囲で入力してください
-```
-
-Raoh includes a default English message bundle at `net.unit8.raoh.messages` covering all built-in error codes. To use it:
-
-```java
-var resolver = new ResourceBundleMessageResolver("net.unit8.raoh.messages");
-```
-
-For Spring applications, see the `SpringMessageResolver` adapter in the `examples/spring` module, which delegates to Spring's `MessageSource` and integrates with `Accept-Language` header-based locale injection.
-
-Existing code using `resolve(MessageResolver)` (without locale) continues to work unchanged.
+See [docs/locale-aware-messages.md](docs/locale-aware-messages.md) for setup instructions and examples.
 
 ## Supported Usage Patterns
 
@@ -877,93 +671,9 @@ combine(
 string().email().decode(node)
 ```
 
-## Zod Comparison
+## Comparisons
 
-If you know Zod, the closest equivalents are:
-
-| Zod | Raoh |
-| --- | --- |
-| `z.string()` | `string()` |
-| `z.number().int()` | `int_()` |
-| `z.number()` | `decimal()` |
-| `z.boolean()` | `bool()` |
-| `z.enum([...])` | `enumOf(MyEnum.class)` |
-| `z.literal("x")` | `literal("x")` |
-| `z.array(dec)` | `list(dec)` |
-| `z.record(dec)` | `map(dec)` |
-| `z.object({...})` | `combine(field(...), ...).apply(...)` |
-| `.optional()` | `optionalField(name, dec)` |
-| `.nullable()` | `nullable(dec)` |
-| `.default(v)` | `withDefault(dec, v)` |
-| `.catch(v)` | `recover(dec, v)` |
-| `z.union([...])` | `oneOf(...)` |
-| `z.lazy(() => dec)` | `lazy(() -> dec)` |
-| `.strict()` | `combine(...).strict(f)` |
-| `.transform(...)` | `map(...)` |
-| `.refine(...)` / `.superRefine(...)` | `flatMap(...)` or `flatMapWithPath(...)` |
-| `.pipe(...)` | `pipe(...)` |
-
-The important difference is conceptual:
-
-- Zod schemas are usually described as validators with parsing
-- Raoh is designed first as a decoder from boundary input into domain values
-
-So the typical Raoh shape is:
-
-```java
-combine(
-        field("email", string().trim().toLowerCase().email().map(Email::new)),
-        field("age", int_().range(0, 150).map(Age::new))
-).apply(User::new);
-```
-
-The schema is already the parsing pipeline.
-
-## Elm Decoder Comparison
-
-Raoh also has a strong family resemblance to Elm's `Json.Decode.Decoder`.
-
-The biggest similarities are:
-
-- both treat decoding as a first-class operation
-- both build decoders compositionally
-- both separate raw boundary input from trusted domain values
-- both encourage constructing domain values only after decoding succeeds
-- both feel more like "reading" data than "validating" an already-built object
-
-Rough correspondences:
-
-| Elm | Raoh |
-| --- | --- |
-| `Decoder a` | `Decoder<I, T>` |
-| `field "name" string` | `field("name", string())` |
-| `nullable decoder` | `nullable(decoder)` |
-| `list decoder` | `list(decoder)` |
-| `map` | `map(...)` |
-| `andThen` | `flatMap(...)` |
-| `oneOf` | `oneOf(...)` |
-| building records with `map2`, `map3`, ... | `combine(...).apply(...)` |
-
-The most important differences are:
-
-- Elm decoders are primarily JSON decoders, while Raoh is generic over input type and ships JSON and `Map<String, Object>` boundaries out of the box
-- Elm usually models failure as decoder failure text, while Raoh emphasizes structured issues with `path`, `code`, `message`, and `meta`
-- Raoh has an explicit applicative/monadic split:
-  `combine(...).apply(...)` accumulates independent field errors, while `flatMap(...)` handles dependent parsing
-
-If you know Elm, this Raoh code should feel familiar:
-
-```java
-JsonDecoder<User> user() {
-    return combine(
-            field("id", string().uuid().map(UserId::new)),
-            field("email", string().trim().toLowerCase().email().map(Email::new)),
-            field("age", int_().range(0, 150).map(Age::new))
-    ).apply(User::new);
-}
-```
-
-That is close in spirit to "read fields, decode them, then build a value", which is exactly the workflow Elm decoders promote.
+For mapping tables between Raoh and other libraries (Zod, Elm), see [docs/comparisons.md](docs/comparisons.md).
 
 ## Design Direction
 
