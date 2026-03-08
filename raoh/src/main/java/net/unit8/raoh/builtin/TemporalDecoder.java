@@ -14,16 +14,18 @@ import java.util.Map;
  * <p><strong>Boundary semantics</strong></p>
  * <ul>
  *   <li>{@link #before(Comparable) before} and {@link #after(Comparable) after} are <strong>exclusive</strong>,
- *       consistent with {@code isBefore}/{@code isAfter} in {@code java.time}.</li>
+ *       based on the type's natural ordering ({@link Comparable#compareTo compareTo}).</li>
  *   <li>{@link #between(Comparable, Comparable) between} is <strong>inclusive</strong> on both ends,
  *       consistent with SQL {@code BETWEEN}.</li>
  *   <li>For inclusive before/after, use {@link Decoder#flatMap} directly.</li>
  * </ul>
  *
  * <p><strong>Note on {@link java.time.OffsetDateTime}</strong></p>
- * <p>{@link java.time.OffsetDateTime#compareTo} compares by instant first, then by offset.
- * Two values representing the same instant with different offsets (e.g.,
- * {@code 10:00+09:00} and {@code 01:00Z}) are not considered equal by {@code compareTo}.
+ * <p>{@link java.time.OffsetDateTime#compareTo} follows the type's natural ordering, which
+ * differs from {@code isBefore}/{@code isAfter}: {@code compareTo} compares by instant first,
+ * then by offset as a tiebreaker, so two values representing the same instant with different
+ * offsets (e.g., {@code 10:00+09:00} and {@code 01:00Z}) are <em>not</em> considered equal.
+ * This means exclusive boundaries may behave unexpectedly when comparing across offsets.
  *
  * @param <I> the input type
  * @param <T> the temporal type (must be {@link Comparable} to itself)
