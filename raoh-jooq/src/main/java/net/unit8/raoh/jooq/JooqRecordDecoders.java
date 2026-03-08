@@ -160,7 +160,7 @@ public final class JooqRecordDecoders {
                 return Result.ok(d);
             }
             return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected date",
-                    Map.of("expected", "LocalDate", "actual", in.getClass().getSimpleName()));
+                    Map.of("expected", "date", "actual", in.getClass().getSimpleName()));
         });
     }
 
@@ -178,7 +178,7 @@ public final class JooqRecordDecoders {
                 return Result.ok(t);
             }
             return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected time",
-                    Map.of("expected", "LocalTime", "actual", in.getClass().getSimpleName()));
+                    Map.of("expected", "time", "actual", in.getClass().getSimpleName()));
         });
     }
 
@@ -196,7 +196,7 @@ public final class JooqRecordDecoders {
                 return Result.ok(dt);
             }
             return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected date-time",
-                    Map.of("expected", "LocalDateTime", "actual", in.getClass().getSimpleName()));
+                    Map.of("expected", "date-time", "actual", in.getClass().getSimpleName()));
         });
     }
 
@@ -214,7 +214,7 @@ public final class JooqRecordDecoders {
                 return Result.ok(i);
             }
             return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected instant",
-                    Map.of("expected", "Instant", "actual", in.getClass().getSimpleName()));
+                    Map.of("expected", "instant", "actual", in.getClass().getSimpleName()));
         });
     }
 
@@ -232,7 +232,7 @@ public final class JooqRecordDecoders {
                 return Result.ok(odt);
             }
             return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected offset date-time",
-                    Map.of("expected", "OffsetDateTime", "actual", in.getClass().getSimpleName()));
+                    Map.of("expected", "offset-date-time", "actual", in.getClass().getSimpleName()));
         });
     }
 
