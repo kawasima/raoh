@@ -1,5 +1,6 @@
 package net.unit8.raoh;
 
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -57,6 +58,19 @@ public record Issue(Path path, String code, String message, Map<String, Object> 
     public Issue resolve(MessageResolver resolver) {
         return customMessage ? this
                 : new Issue(path, code, resolver.resolve(code, meta), meta, true);
+    }
+
+    /**
+     * Resolves this issue's message using the given resolver and locale,
+     * unless it has a custom message.
+     *
+     * @param resolver the message resolver
+     * @param locale   the target locale for the message
+     * @return a new issue with the resolved message, or this issue if already custom
+     */
+    public Issue resolve(MessageResolver resolver, Locale locale) {
+        return customMessage ? this
+                : new Issue(path, code, resolver.resolve(code, meta, locale), meta, true);
     }
 
     /**

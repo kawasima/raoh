@@ -3,6 +3,7 @@ package net.unit8.raoh;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -77,6 +78,21 @@ public record Issues(List<Issue> asList) {
         return new Issues(
                 asList.stream()
                         .map(i -> i.resolve(resolver))
+                        .toList()
+        );
+    }
+
+    /**
+     * Resolves all issue messages using the given resolver and locale.
+     *
+     * @param resolver the message resolver
+     * @param locale   the target locale for the messages
+     * @return a new issues instance with resolved messages
+     */
+    public Issues resolve(MessageResolver resolver, Locale locale) {
+        return new Issues(
+                asList.stream()
+                        .map(i -> i.resolve(resolver, locale))
                         .toList()
         );
     }

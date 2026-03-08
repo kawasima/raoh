@@ -1,13 +1,16 @@
 package net.unit8.raoh.examples.spring.membership;
 
 import net.unit8.raoh.*;
+import net.unit8.raoh.examples.spring.SpringMessageResolver;
 import net.unit8.raoh.examples.spring.membership.MembershipDecoders.CreateUserCommand;
 import tools.jackson.databind.JsonNode;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -23,24 +26,31 @@ import java.util.Map;
 public class UserController {
 
     private final UserRepository users;
+    private final MessageResolver resolver;
 
     /**
      * Creates a new controller.
      *
-     * @param users the user repository
+     * @param users         the user repository
+     * @param messageSource the Spring message source for locale-aware error messages
      */
-    public UserController(UserRepository users) {
+    public UserController(UserRepository users, MessageSource messageSource) {
         this.users = users;
+        this.resolver = new SpringMessageResolver(messageSource);
     }
 
     /**
      * Creates a new user from a JSON request body.
      *
-     * @param body the raw JSON input
+     * <p>The {@code locale} parameter is automatically injected by Spring from
+     * the {@code Accept-Language} header, enabling locale-aware error messages.
+     *
+     * @param body   the raw JSON input
+     * @param locale the client's locale from the {@code Accept-Language} header
      * @return 201 with the created user, or 400 with validation issues
      */
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody JsonNode body) {
+    public ResponseEntity<?> create(@RequestBody JsonNode body, Locale locale) {
         // Decode returns a sealed Result: Ok (valid command) or Err (accumulated issues).
         // Pattern matching on the sealed type ensures both cases are handled at compile time.
         return switch (MembershipDecoders.CREATE_USER.decode(body)) {
@@ -51,7 +61,7 @@ public class UserController {
             }
             // Err carries all accumulated validation Issues (e.g. both name and email errors).
             case Err<CreateUserCommand>(var issues) ->
-                    ResponseEntity.badRequest().body(errorBody(issues));
+                    ResponseEntity.badRequest().body(errorBody(issues, resolver, locale));
         };
     }
 
@@ -86,13 +96,15 @@ public class UserController {
     /**
      * Builds a structured error response body from Raoh issues.
      *
-     * @param issues the validation issues
+     * @param issues   the validation issues
+     * @param resolver the message resolver
+     * @param locale   the target locale for error messages
      * @return a map containing both the flat and list representations
      */
-    static Map<String, Object> errorBody(Issues issues) {
+    static Map<String, Object> errorBody(Issues issues, MessageResolver resolver, Locale locale) {
         // resolve() turns raw Issues into human-readable messages using the given resolver.
-        // MessageResolver.DEFAULT provides built-in English messages for standard constraints.
-        var resolved = issues.resolve(MessageResolver.DEFAULT);
+        // The locale is passed through to support Accept-Language–based message resolution.
+        var resolved = issues.resolve(resolver, locale);
         var body = new LinkedHashMap<String, Object>();
         // toJsonList() produces a list of {path, message} objects for structured clients.
         body.put("issues", resolved.toJsonList());
