@@ -307,7 +307,6 @@ class MapDecoderTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     void listUniqueNullDuplicate() {
         // Test unique() directly at the ListDecoder level to avoid List.copyOf restriction in MapDecoders.list()
         var dec = new net.unit8.raoh.builtin.ListDecoder<List<String>, String>(
