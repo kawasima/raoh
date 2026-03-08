@@ -307,6 +307,23 @@ class MapDecoderTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void listUniqueNullDuplicate() {
+        // Test unique() directly at the ListDecoder level to avoid List.copyOf restriction in MapDecoders.list()
+        var dec = new net.unit8.raoh.builtin.ListDecoder<List<String>, String>(
+                (in, path) -> Result.ok(in)).unique();
+        var input = new java.util.ArrayList<String>();
+        input.add(null);
+        input.add("a");
+        input.add(null);
+        var result = dec.decode(input, Path.ROOT);
+        switch (result) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> assertEquals(ErrorCodes.DUPLICATE_ELEMENT, issues.asList().getFirst().code());
+        }
+    }
+
+    @Test
     void listElementErrors() {
         var dec = field("items", list(int_().positive()));
         var result = dec.decode(Map.of("items", List.of(1, -2, 3, -4)));
