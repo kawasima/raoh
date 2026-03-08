@@ -6,6 +6,7 @@ import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -140,7 +141,7 @@ public class ListDecoder<I, T> implements Decoder<I, List<T>> {
                 }
             }
             if (duplicates != null) {
-                var duplicatesList = new ArrayList<>(duplicates);
+                var duplicatesList = Collections.unmodifiableList(new ArrayList<>(duplicates));
                 var meta = Map.<String, Object>of("duplicates", duplicatesList);
                 return Result.fail(path, ErrorCodes.DUPLICATE_ELEMENT,
                         "must not contain duplicates: %s".formatted(duplicatesList), meta);
