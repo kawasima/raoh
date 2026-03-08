@@ -56,6 +56,11 @@ public final class ErrorCodes {
     /** Collection size does not match the required exact size. */
     public static final String INVALID_SIZE = "invalid_size";
 
+    // --- Value ---
+
+    /** Value does not satisfy a required value constraint (e.g., must be {@code true} or {@code false}). */
+    public static final String INVALID_VALUE = "invalid_value";
+
     // --- Format ---
 
     /** Value does not match the required format (e.g., email, URL, UUID). */
