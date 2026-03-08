@@ -267,10 +267,28 @@ class MapDecoderTest {
             case Ok(var v) -> fail("Expected Err, got Ok: " + v);
             case Err(var issues) -> {
                 var issue = issues.asList().getFirst();
-                assertEquals(ErrorCodes.MISSING_ELEMENT, issue.code());
+                assertEquals(ErrorCodes.MISSING_ELEMENTS, issue.code());
                 assertEquals(List.of("write"), issue.meta().get("missing"));
             }
         }
+    }
+
+    @Test
+    void listContainsAllEmptyThrows() {
+        assertThrows(IllegalArgumentException.class,
+                () -> list(string()).containsAll());
+    }
+
+    @Test
+    void listContainsNullThrows() {
+        assertThrows(NullPointerException.class,
+                () -> list(string()).contains(null));
+    }
+
+    @Test
+    void listUniqueEmpty() {
+        var dec = field("items", list(string()).unique());
+        assertOk(dec.decode(Map.of("items", List.of())));
     }
 
     @Test
