@@ -2,6 +2,7 @@ package net.unit8.raoh;
 
 import java.util.Locale;
 import java.util.Map;
+import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
 /**
@@ -55,7 +56,7 @@ public class ResourceBundleMessageResolver implements MessageResolver {
         try {
             String template = bundle.getString(KEY_PREFIX + code);
             return MessageResolver.interpolate(template, meta);
-        } catch (java.util.MissingResourceException ignored) {
+        } catch (MissingResourceException ignored) {
             return MessageResolver.DEFAULT.resolve(code, meta);
         }
     }

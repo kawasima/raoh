@@ -116,12 +116,14 @@ public class GroupController {
                     yield ResponseEntity.notFound().build();
                 }
                 // Business-level validation that cannot be expressed in the decoder itself.
-                // Issue.of() creates a structured error with a JSON-pointer path ("/userId"),
-                // a machine-readable code ("not_found"), and a human-readable message.
+                // withCustomMessage() marks the message as final so the MessageResolver will
+                // not override it — important for application-defined codes like "not_found"
+                // that are not in the built-in ErrorCodes / message bundle.
                 if (users.findById(cmd.userId().value()).isEmpty()) {
                     yield ResponseEntity.badRequest().body(UserController.errorBody(
                             new Issues(java.util.List.of(
-                                    Issue.of(Path.ROOT.append("userId"), "not_found", "user not found"))),
+                                    Issue.of(Path.ROOT.append("userId"), "not_found", "")
+                                            .withCustomMessage("user not found"))),
                             resolver, locale));
                 }
                 groups.addMember(new GroupId(id), cmd.userId(), cmd.role());
