@@ -11,7 +11,10 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -144,6 +147,25 @@ public class StringDecoder<I> implements Decoder<I, String> {
                 return message != null
                         ? Result.failCustom(path, ErrorCodes.INVALID_LENGTH, message, meta)
                         : Result.fail(path, ErrorCodes.INVALID_LENGTH, "must be exactly %d characters".formatted(n), meta);
+            }
+            return Result.ok(value);
+        });
+    }
+
+    /**
+     * Restricts the decoded value to one of the specified allowed values.
+     *
+     * @param allowed the set of allowed string values
+     * @return a new decoder that fails with {@link ErrorCodes#NOT_ALLOWED} if the value is not in the set
+     */
+    public StringDecoder<I> oneOf(String... allowed) {
+        var allowedSet = Set.of(allowed);
+        var sortedAllowed = List.copyOf(new TreeSet<>(allowedSet));
+        var message = "must be one of %s".formatted(sortedAllowed);
+        return chain((value, path) -> {
+            if (!allowedSet.contains(value)) {
+                var meta = Map.<String, Object>of("allowed", sortedAllowed, "actual", value);
+                return Result.fail(path, ErrorCodes.NOT_ALLOWED, message, meta);
             }
             return Result.ok(value);
         });

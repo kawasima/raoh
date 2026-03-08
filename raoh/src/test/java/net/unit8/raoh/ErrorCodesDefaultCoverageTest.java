@@ -6,6 +6,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.ResourceBundle;
@@ -25,9 +26,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 class ErrorCodesDefaultCoverageTest {
 
     /** Shared meta map with enough keys to satisfy any built-in placeholder. */
-    private static final Map<String, Object> FULL_META = Map.of(
-            "min", 1, "max", 10, "expected", "foo", "actual", "bar",
-            "divisor", 2, "maxScale", 3, "length", 5, "size", 5
+    private static final Map<String, Object> FULL_META = Map.ofEntries(
+            Map.entry("min", 1), Map.entry("max", 10),
+            Map.entry("expected", "foo"), Map.entry("actual", "bar"),
+            Map.entry("divisor", 2), Map.entry("maxScale", 3),
+            Map.entry("length", 5), Map.entry("size", 5),
+            Map.entry("allowed", List.of("a", "b"))
     );
 
     /**

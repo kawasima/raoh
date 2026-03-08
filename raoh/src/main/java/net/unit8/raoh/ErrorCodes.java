@@ -76,6 +76,11 @@ public final class ErrorCodes {
     /** Input contains a field that is not declared in the known-fields list. */
     public static final String UNKNOWN_FIELD = "unknown_field";
 
+    // --- Allowed values ---
+
+    /** Value is not in the set of allowed values. */
+    public static final String NOT_ALLOWED = "not_allowed";
+
     // --- Union ---
 
     /** None of the candidates in a {@code oneOf} decoder matched the input. */
