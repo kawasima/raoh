@@ -82,14 +82,18 @@ public interface MessageResolver {
             if (max != null) yield "must be at most %s".formatted(max);
             yield "out of range";
         }
+        case ErrorCodes.INVALID_LENGTH  -> "must be exactly %s characters".formatted(meta.get("expected"));
         case ErrorCodes.INVALID_FORMAT  -> "invalid format";
         case ErrorCodes.TYPE_MISMATCH   -> "expected %s".formatted(meta.get("expected"));
+        case ErrorCodes.INVALID_VALUE   -> "must be %s".formatted(meta.get("expected"));
         case ErrorCodes.TOO_SMALL       -> "must have at least %s elements".formatted(meta.get("min"));
         case ErrorCodes.TOO_BIG         -> "must have at most %s elements".formatted(meta.get("max"));
+        case ErrorCodes.INVALID_SIZE    -> "must have exactly %s elements".formatted(meta.get("expected"));
         case ErrorCodes.NOT_MULTIPLE_OF -> "must be a multiple of %s".formatted(meta.get("divisor"));
         case ErrorCodes.ONE_OF_FAILED   -> "no variant matched";
         case ErrorCodes.UNKNOWN_FIELD   -> "unknown field";
         case ErrorCodes.INVALID_SCALE   -> "too many decimal places (max %s)".formatted(meta.get("maxScale"));
+        case ErrorCodes.MISSING_FIELD   -> "field is missing";
         default -> "validation failed: " + code;
     };
 }
