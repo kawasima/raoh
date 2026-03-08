@@ -97,7 +97,8 @@ public class ListDecoder<I, T> implements Decoder<I, List<T>> {
      * Requires the list to contain all specified elements.
      *
      * @param elements the elements that must all be present
-     * @return a new decoder that fails with {@link ErrorCodes#MISSING_ELEMENT} if any element is absent
+     * @return a new decoder that fails with {@link ErrorCodes#MISSING_ELEMENTS} if any element is absent
+     * @throws IllegalArgumentException if {@code elements} is empty
      */
     @SafeVarargs
     public final ListDecoder<I, T> containsAll(T... elements) {
