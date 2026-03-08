@@ -76,6 +76,14 @@ public final class ErrorCodes {
     /** Input contains a field that is not declared in the known-fields list. */
     public static final String UNKNOWN_FIELD = "unknown_field";
 
+    // --- Collection content ---
+
+    /** List does not contain a required element. */
+    public static final String MISSING_ELEMENT = "missing_element";
+
+    /** List contains duplicate elements. */
+    public static final String DUPLICATE_ELEMENT = "duplicate_element";
+
     // --- Allowed values ---
 
     /** Value is not in the set of allowed values. */
