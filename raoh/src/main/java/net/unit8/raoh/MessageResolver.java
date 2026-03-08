@@ -91,8 +91,8 @@ public interface MessageResolver {
         case ErrorCodes.INVALID_SIZE    -> "must have exactly %s elements".formatted(meta.get("expected"));
         case ErrorCodes.NOT_MULTIPLE_OF -> "must be a multiple of %s".formatted(meta.get("divisor"));
         case ErrorCodes.MISSING_ELEMENT  -> "must contain %s".formatted(meta.get("expected"));
-        case ErrorCodes.MISSING_ELEMENTS -> "must contain all of %s".formatted(meta.get("expected"));
-        case ErrorCodes.DUPLICATE_ELEMENT -> "must not contain duplicates";
+        case ErrorCodes.MISSING_ELEMENTS -> "must contain all of %s (missing: %s)".formatted(meta.get("expected"), meta.get("missing"));
+        case ErrorCodes.DUPLICATE_ELEMENT -> "must not contain duplicates: %s".formatted(meta.get("duplicates"));
         case ErrorCodes.NOT_ALLOWED     -> "must be one of %s".formatted(meta.get("allowed"));
         case ErrorCodes.ONE_OF_FAILED   -> "no variant matched";
         case ErrorCodes.UNKNOWN_FIELD   -> "unknown field";
