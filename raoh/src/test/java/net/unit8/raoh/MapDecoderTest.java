@@ -168,6 +168,45 @@ class MapDecoderTest {
     }
 
     @Test
+    void stringOneOf() {
+        var dec = field("status", string().oneOf("active", "inactive", "pending"));
+        assertEquals("active", assertOk(dec.decode(Map.of("status", "active"))));
+        assertEquals("pending", assertOk(dec.decode(Map.of("status", "pending"))));
+        var result = dec.decode(Map.of("status", "deleted"));
+        switch (result) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> {
+                var issue = issues.asList().getFirst();
+                assertEquals(ErrorCodes.NOT_ALLOWED, issue.code());
+                assertEquals(List.of("active", "inactive", "pending"), issue.meta().get("allowed"));
+                assertEquals("deleted", issue.meta().get("actual"));
+            }
+        }
+    }
+
+    @Test
+    void intOneOf() {
+        var dec = field("priority", int_().oneOf(1, 2, 3));
+        assertEquals(2, assertOk(dec.decode(Map.of("priority", 2))));
+        var result = dec.decode(Map.of("priority", 5));
+        switch (result) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> assertEquals(ErrorCodes.NOT_ALLOWED, issues.asList().getFirst().code());
+        }
+    }
+
+    @Test
+    void longOneOf() {
+        var dec = field("id", long_().oneOf(100L, 200L, 300L));
+        assertEquals(200L, assertOk(dec.decode(Map.of("id", 200))));
+        var result = dec.decode(Map.of("id", 999));
+        switch (result) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> assertEquals(ErrorCodes.NOT_ALLOWED, issues.asList().getFirst().code());
+        }
+    }
+
+    @Test
     void intConstraints() {
         var dec = field("n", int_().positive().multipleOf(3));
         assertEquals(9, assertOk(dec.decode(Map.of("n", 9))));

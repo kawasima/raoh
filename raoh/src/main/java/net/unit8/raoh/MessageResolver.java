@@ -90,6 +90,7 @@ public interface MessageResolver {
         case ErrorCodes.TOO_BIG         -> "must have at most %s elements".formatted(meta.get("max"));
         case ErrorCodes.INVALID_SIZE    -> "must have exactly %s elements".formatted(meta.get("expected"));
         case ErrorCodes.NOT_MULTIPLE_OF -> "must be a multiple of %s".formatted(meta.get("divisor"));
+        case ErrorCodes.NOT_ALLOWED     -> "must be one of %s".formatted(meta.get("allowed"));
         case ErrorCodes.ONE_OF_FAILED   -> "no variant matched";
         case ErrorCodes.UNKNOWN_FIELD   -> "unknown field";
         case ErrorCodes.INVALID_SCALE   -> "too many decimal places (max %s)".formatted(meta.get("maxScale"));
