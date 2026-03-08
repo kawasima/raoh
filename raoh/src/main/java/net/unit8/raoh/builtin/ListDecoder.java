@@ -104,7 +104,6 @@ public class ListDecoder<I, T> implements Decoder<I, List<T>> {
     public final ListDecoder<I, T> containsAll(T... elements) {
         if (elements.length == 0) throw new IllegalArgumentException("elements must not be empty");
         var required = List.of(elements);
-        var message = "must contain all of %s".formatted(required);
         return chain((value, path) -> {
             var valueSet = new HashSet<>(value);
             var missing = new ArrayList<T>();
@@ -114,7 +113,9 @@ public class ListDecoder<I, T> implements Decoder<I, List<T>> {
                 }
             }
             if (!missing.isEmpty()) {
-                var meta = Map.<String, Object>of("expected", required, "missing", List.copyOf(missing));
+                var missingList = List.copyOf(missing);
+                var meta = Map.<String, Object>of("expected", required, "missing", missingList);
+                var message = "must contain all of %s (missing: %s)".formatted(required, missingList);
                 return Result.fail(path, ErrorCodes.MISSING_ELEMENTS, message, meta);
             }
             return Result.ok(value);
@@ -139,9 +140,10 @@ public class ListDecoder<I, T> implements Decoder<I, List<T>> {
                 }
             }
             if (duplicates != null) {
-                var meta = Map.<String, Object>of("duplicates", List.copyOf(duplicates));
+                var duplicatesList = new ArrayList<>(duplicates);
+                var meta = Map.<String, Object>of("duplicates", duplicatesList);
                 return Result.fail(path, ErrorCodes.DUPLICATE_ELEMENT,
-                        "must not contain duplicates", meta);
+                        "must not contain duplicates: %s".formatted(duplicatesList), meta);
             }
             return Result.ok(value);
         });
