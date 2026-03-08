@@ -13,9 +13,9 @@ import java.util.Map;
  *
  * <p><strong>Boundary semantics</strong></p>
  * <ul>
- *   <li>{@link #before} and {@link #after} are <strong>exclusive</strong>,
+ *   <li>{@link #before(Comparable) before} and {@link #after(Comparable) after} are <strong>exclusive</strong>,
  *       consistent with {@code isBefore}/{@code isAfter} in {@code java.time}.</li>
- *   <li>{@link #between} is <strong>inclusive</strong> on both ends,
+ *   <li>{@link #between(Comparable, Comparable) between} is <strong>inclusive</strong> on both ends,
  *       consistent with SQL {@code BETWEEN}.</li>
  *   <li>For inclusive before/after, use {@link Decoder#flatMap} directly.</li>
  * </ul>
