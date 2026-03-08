@@ -131,6 +131,22 @@ public final class Decoders {
         return new Combiner16<>(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_, dp, dq);
     }
 
+    // --- fallback for 17+ fields ---
+
+    /**
+     * Returns a {@link CombinerList} for combining more than 16 decoders.
+     *
+     * <p>Use this when the typed {@code combine(da, db, ...)} overloads (up to 16 arguments)
+     * are not sufficient. See {@link CombinerList} for usage examples.
+     *
+     * @param <I>      the input type
+     * @param decoders the decoders to combine; must not be empty
+     * @return a combiner on which {@code .apply(f)} or {@code .flatMap(f)} can be called
+     */
+    public static <I> CombinerList<I> combine(List<Decoder<I, ?>> decoders) {
+        return new CombinerList<>(decoders);
+    }
+
     // --- Utility combinators ---
 
     /**
