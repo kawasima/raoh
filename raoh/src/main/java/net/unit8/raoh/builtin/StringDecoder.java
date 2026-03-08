@@ -7,7 +7,9 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -405,12 +407,23 @@ public class StringDecoder<I> implements Decoder<I, String> {
         });
     }
 
-    public Decoder<I, Instant> iso8601() {
+    /**
+     * Parses the string as an ISO 8601 instant (e.g., {@code 2024-01-15T10:30:00Z}).
+     *
+     * @return a temporal decoder producing {@link Instant}
+     */
+    public TemporalDecoder<I, Instant> iso8601() {
         return iso8601(null);
     }
 
-    public Decoder<I, Instant> iso8601(String message) {
-        return (in, path) -> this.decode(in, path).flatMap(value -> {
+    /**
+     * Parses the string as an ISO 8601 instant.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a temporal decoder producing {@link Instant}
+     */
+    public TemporalDecoder<I, Instant> iso8601(String message) {
+        return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
                 return Result.ok(Instant.parse(value));
             } catch (Exception e) {
@@ -418,15 +431,26 @@ public class StringDecoder<I> implements Decoder<I, String> {
                         ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
                         : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid ISO 8601 instant");
             }
-        });
+        }));
     }
 
-    public Decoder<I, LocalDate> date() {
+    /**
+     * Parses the string as a local date (e.g., {@code 2024-01-15}).
+     *
+     * @return a temporal decoder producing {@link LocalDate}
+     */
+    public TemporalDecoder<I, LocalDate> date() {
         return date(null);
     }
 
-    public Decoder<I, LocalDate> date(String message) {
-        return (in, path) -> this.decode(in, path).flatMap(value -> {
+    /**
+     * Parses the string as a local date.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a temporal decoder producing {@link LocalDate}
+     */
+    public TemporalDecoder<I, LocalDate> date(String message) {
+        return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
                 return Result.ok(LocalDate.parse(value));
             } catch (Exception e) {
@@ -434,15 +458,26 @@ public class StringDecoder<I> implements Decoder<I, String> {
                         ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
                         : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid date (yyyy-MM-dd)");
             }
-        });
+        }));
     }
 
-    public Decoder<I, LocalTime> time() {
+    /**
+     * Parses the string as a local time (e.g., {@code 10:30:00}).
+     *
+     * @return a temporal decoder producing {@link LocalTime}
+     */
+    public TemporalDecoder<I, LocalTime> time() {
         return time(null);
     }
 
-    public Decoder<I, LocalTime> time(String message) {
-        return (in, path) -> this.decode(in, path).flatMap(value -> {
+    /**
+     * Parses the string as a local time.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a temporal decoder producing {@link LocalTime}
+     */
+    public TemporalDecoder<I, LocalTime> time(String message) {
+        return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
                 return Result.ok(LocalTime.parse(value));
             } catch (Exception e) {
@@ -450,7 +485,61 @@ public class StringDecoder<I> implements Decoder<I, String> {
                         ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
                         : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid time (HH:mm:ss)");
             }
-        });
+        }));
+    }
+
+    /**
+     * Parses the string as a local date-time (e.g., {@code 2024-01-15T10:30:00}).
+     *
+     * @return a temporal decoder producing {@link LocalDateTime}
+     */
+    public TemporalDecoder<I, LocalDateTime> dateTime() {
+        return dateTime(null);
+    }
+
+    /**
+     * Parses the string as a local date-time.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a temporal decoder producing {@link LocalDateTime}
+     */
+    public TemporalDecoder<I, LocalDateTime> dateTime(String message) {
+        return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
+            try {
+                return Result.ok(LocalDateTime.parse(value));
+            } catch (Exception e) {
+                return message != null
+                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
+                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid date-time (yyyy-MM-ddTHH:mm:ss)");
+            }
+        }));
+    }
+
+    /**
+     * Parses the string as an offset date-time (e.g., {@code 2024-01-15T10:30:00+09:00}).
+     *
+     * @return a temporal decoder producing {@link OffsetDateTime}
+     */
+    public TemporalDecoder<I, OffsetDateTime> offsetDateTime() {
+        return offsetDateTime(null);
+    }
+
+    /**
+     * Parses the string as an offset date-time.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a temporal decoder producing {@link OffsetDateTime}
+     */
+    public TemporalDecoder<I, OffsetDateTime> offsetDateTime(String message) {
+        return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
+            try {
+                return Result.ok(OffsetDateTime.parse(value));
+            } catch (Exception e) {
+                return message != null
+                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
+                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid offset date-time (yyyy-MM-ddTHH:mm:ss+HH:mm)");
+            }
+        }));
     }
 
     private StringDecoder<I> chain(Decoder<String, String> constraint) {

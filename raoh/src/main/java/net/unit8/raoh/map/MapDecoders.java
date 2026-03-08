@@ -5,6 +5,11 @@ import net.unit8.raoh.combinator.*;
 import net.unit8.raoh.builtin.*;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -156,6 +161,113 @@ public final class MapDecoders {
             }
             return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected number",
                     Map.of("expected", "number", "actual", in.getClass().getSimpleName()));
+        });
+    }
+
+    // --- Temporal decoders ---
+
+    /**
+     * Creates a {@link LocalDate} decoder.
+     *
+     * <p>Returns {@code required} if the value is {@code null}, and {@code type_mismatch}
+     * if the value is not a {@link LocalDate}.
+     *
+     * @return a temporal decoder for {@code Object} input producing {@link LocalDate}
+     */
+    public static TemporalDecoder<Object, LocalDate> date() {
+        return new TemporalDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (in instanceof LocalDate d) {
+                return Result.ok(d);
+            }
+            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected date",
+                    Map.of("expected", "LocalDate", "actual", in.getClass().getSimpleName()));
+        });
+    }
+
+    /**
+     * Creates a {@link LocalTime} decoder.
+     *
+     * <p>Returns {@code required} if the value is {@code null}, and {@code type_mismatch}
+     * if the value is not a {@link LocalTime}.
+     *
+     * @return a temporal decoder for {@code Object} input producing {@link LocalTime}
+     */
+    public static TemporalDecoder<Object, LocalTime> time() {
+        return new TemporalDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (in instanceof LocalTime t) {
+                return Result.ok(t);
+            }
+            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected time",
+                    Map.of("expected", "LocalTime", "actual", in.getClass().getSimpleName()));
+        });
+    }
+
+    /**
+     * Creates a {@link LocalDateTime} decoder.
+     *
+     * <p>Returns {@code required} if the value is {@code null}, and {@code type_mismatch}
+     * if the value is not a {@link LocalDateTime}.
+     *
+     * @return a temporal decoder for {@code Object} input producing {@link LocalDateTime}
+     */
+    public static TemporalDecoder<Object, LocalDateTime> dateTime() {
+        return new TemporalDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (in instanceof LocalDateTime dt) {
+                return Result.ok(dt);
+            }
+            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected date-time",
+                    Map.of("expected", "LocalDateTime", "actual", in.getClass().getSimpleName()));
+        });
+    }
+
+    /**
+     * Creates an {@link Instant} decoder.
+     *
+     * <p>Returns {@code required} if the value is {@code null}, and {@code type_mismatch}
+     * if the value is not an {@link Instant}.
+     *
+     * @return a temporal decoder for {@code Object} input producing {@link Instant}
+     */
+    public static TemporalDecoder<Object, Instant> iso8601() {
+        return new TemporalDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (in instanceof Instant i) {
+                return Result.ok(i);
+            }
+            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected instant",
+                    Map.of("expected", "Instant", "actual", in.getClass().getSimpleName()));
+        });
+    }
+
+    /**
+     * Creates an {@link OffsetDateTime} decoder.
+     *
+     * <p>Returns {@code required} if the value is {@code null}, and {@code type_mismatch}
+     * if the value is not an {@link OffsetDateTime}.
+     *
+     * @return a temporal decoder for {@code Object} input producing {@link OffsetDateTime}
+     */
+    public static TemporalDecoder<Object, OffsetDateTime> offsetDateTime() {
+        return new TemporalDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (in instanceof OffsetDateTime odt) {
+                return Result.ok(odt);
+            }
+            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected offset date-time",
+                    Map.of("expected", "OffsetDateTime", "actual", in.getClass().getSimpleName()));
         });
     }
 
