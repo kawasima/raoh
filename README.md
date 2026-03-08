@@ -7,6 +7,8 @@
 
 Raoh is a Java decoder library for turning untyped boundary input into typed domain values.
 
+![raoh logo](./docs/raoh.png)
+
 It is built around a parse-don't-validate approach:
 
 - decode at the boundary
