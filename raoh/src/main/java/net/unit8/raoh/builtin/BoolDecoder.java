@@ -53,14 +53,7 @@ public class BoolDecoder<I> implements Decoder<I, Boolean> {
      * @return a new decoder with the constraint applied
      */
     public BoolDecoder<I> isTrue(String message) {
-        return chain((value, path) -> {
-            if (!value) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_VALUE, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_VALUE, "must be true");
-            }
-            return Result.ok(value);
-        });
+        return booleanConstraint(true, message);
     }
 
     /**
@@ -81,11 +74,17 @@ public class BoolDecoder<I> implements Decoder<I, Boolean> {
      * @return a new decoder with the constraint applied
      */
     public BoolDecoder<I> isFalse(String message) {
+        return booleanConstraint(false, message);
+    }
+
+    private BoolDecoder<I> booleanConstraint(boolean expected, String message) {
         return chain((value, path) -> {
-            if (value) {
+            if (value != expected) {
+                var meta = Map.<String, Object>of("expected", expected, "actual", value);
                 return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_VALUE, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_VALUE, "must be false");
+                        ? Result.failCustom(path, ErrorCodes.INVALID_VALUE, message, meta)
+                        : Result.fail(path, ErrorCodes.INVALID_VALUE,
+                                "must be %s".formatted(expected), meta);
             }
             return Result.ok(value);
         });

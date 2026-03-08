@@ -62,6 +62,36 @@ class BoolDecoderTest {
         }
     }
 
+    // --- meta verification ---
+
+    @Test
+    void isTrueMetaContainsExpectedAndActual() {
+        var dec = field("accepted", bool().isTrue());
+        var result = dec.decode(parse("{\"accepted\":false}"));
+        switch (result) {
+            case Ok(_) -> fail("Expected Err");
+            case Err(var issues) -> {
+                var issue = issues.asList().getFirst();
+                assertEquals(true, issue.meta().get("expected"));
+                assertEquals(false, issue.meta().get("actual"));
+            }
+        }
+    }
+
+    @Test
+    void isFalseMetaContainsExpectedAndActual() {
+        var dec = field("disabled", bool().isFalse());
+        var result = dec.decode(parse("{\"disabled\":true}"));
+        switch (result) {
+            case Ok(_) -> fail("Expected Err");
+            case Err(var issues) -> {
+                var issue = issues.asList().getFirst();
+                assertEquals(false, issue.meta().get("expected"));
+                assertEquals(true, issue.meta().get("actual"));
+            }
+        }
+    }
+
     // --- type mismatch still works ---
 
     @Test
