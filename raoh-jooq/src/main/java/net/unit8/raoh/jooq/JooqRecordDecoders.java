@@ -152,16 +152,7 @@ public final class JooqRecordDecoders {
      * @return a temporal decoder for {@code Object} input producing {@link LocalDate}
      */
     public static TemporalDecoder<Object, LocalDate> date() {
-        return new TemporalDecoder<>((in, path) -> {
-            if (in == null) {
-                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
-            }
-            if (in instanceof LocalDate d) {
-                return Result.ok(d);
-            }
-            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected date",
-                    Map.of("expected", "date", "actual", in.getClass().getSimpleName()));
-        });
+        return temporalOf(LocalDate.class, "date");
     }
 
     /**
@@ -170,16 +161,7 @@ public final class JooqRecordDecoders {
      * @return a temporal decoder for {@code Object} input producing {@link LocalTime}
      */
     public static TemporalDecoder<Object, LocalTime> time() {
-        return new TemporalDecoder<>((in, path) -> {
-            if (in == null) {
-                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
-            }
-            if (in instanceof LocalTime t) {
-                return Result.ok(t);
-            }
-            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected time",
-                    Map.of("expected", "time", "actual", in.getClass().getSimpleName()));
-        });
+        return temporalOf(LocalTime.class, "time");
     }
 
     /**
@@ -188,16 +170,7 @@ public final class JooqRecordDecoders {
      * @return a temporal decoder for {@code Object} input producing {@link LocalDateTime}
      */
     public static TemporalDecoder<Object, LocalDateTime> dateTime() {
-        return new TemporalDecoder<>((in, path) -> {
-            if (in == null) {
-                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
-            }
-            if (in instanceof LocalDateTime dt) {
-                return Result.ok(dt);
-            }
-            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected date-time",
-                    Map.of("expected", "date-time", "actual", in.getClass().getSimpleName()));
-        });
+        return temporalOf(LocalDateTime.class, "date-time");
     }
 
     /**
@@ -206,16 +179,7 @@ public final class JooqRecordDecoders {
      * @return a temporal decoder for {@code Object} input producing {@link Instant}
      */
     public static TemporalDecoder<Object, Instant> iso8601() {
-        return new TemporalDecoder<>((in, path) -> {
-            if (in == null) {
-                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
-            }
-            if (in instanceof Instant i) {
-                return Result.ok(i);
-            }
-            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected instant",
-                    Map.of("expected", "instant", "actual", in.getClass().getSimpleName()));
-        });
+        return temporalOf(Instant.class, "instant");
     }
 
     /**
@@ -224,15 +188,20 @@ public final class JooqRecordDecoders {
      * @return a temporal decoder for {@code Object} input producing {@link OffsetDateTime}
      */
     public static TemporalDecoder<Object, OffsetDateTime> offsetDateTime() {
+        return temporalOf(OffsetDateTime.class, "offset-date-time");
+    }
+
+    private static <T extends Comparable<? super T>> TemporalDecoder<Object, T> temporalOf(
+            Class<T> type, String typeName) {
         return new TemporalDecoder<>((in, path) -> {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
-            if (in instanceof OffsetDateTime odt) {
-                return Result.ok(odt);
+            if (type.isInstance(in)) {
+                return Result.ok(type.cast(in));
             }
-            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected offset date-time",
-                    Map.of("expected", "offset-date-time", "actual", in.getClass().getSimpleName()));
+            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected " + typeName,
+                    Map.of("expected", typeName, "actual", in.getClass().getSimpleName()));
         });
     }
 
