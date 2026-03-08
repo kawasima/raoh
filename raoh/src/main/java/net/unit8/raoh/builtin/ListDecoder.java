@@ -101,8 +101,9 @@ public class ListDecoder<I, T> implements Decoder<I, List<T>> {
      */
     @SafeVarargs
     public final ListDecoder<I, T> containsAll(T... elements) {
+        if (elements.length == 0) throw new IllegalArgumentException("elements must not be empty");
         var required = List.of(elements);
-        var message = "must contain %s".formatted(required);
+        var message = "must contain all of %s".formatted(required);
         return chain((value, path) -> {
             var valueSet = new HashSet<>(value);
             var missing = new ArrayList<T>();
@@ -113,7 +114,7 @@ public class ListDecoder<I, T> implements Decoder<I, List<T>> {
             }
             if (!missing.isEmpty()) {
                 var meta = Map.<String, Object>of("expected", required, "missing", List.copyOf(missing));
-                return Result.fail(path, ErrorCodes.MISSING_ELEMENT, message, meta);
+                return Result.fail(path, ErrorCodes.MISSING_ELEMENTS, message, meta);
             }
             return Result.ok(value);
         });
