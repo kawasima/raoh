@@ -1,12 +1,16 @@
 package net.unit8.raoh.examples.spring.membership;
 
 import net.unit8.raoh.*;
+import net.unit8.raoh.examples.spring.SpringMessageResolver;
 import net.unit8.raoh.examples.spring.membership.MembershipDecoders.AddMemberCommand;
 import net.unit8.raoh.examples.spring.membership.MembershipDecoders.CreateGroupCommand;
 import tools.jackson.databind.JsonNode;
+import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Locale;
 
 /**
  * REST controller for group and membership operations.
@@ -21,26 +25,30 @@ public class GroupController {
 
     private final GroupRepository groups;
     private final UserRepository users;
+    private final MessageResolver resolver;
 
     /**
      * Creates a new controller.
      *
-     * @param groups the group repository
-     * @param users  the user repository (for membership existence checks)
+     * @param groups        the group repository
+     * @param users         the user repository (for membership existence checks)
+     * @param messageSource the Spring message source for locale-aware error messages
      */
-    public GroupController(GroupRepository groups, UserRepository users) {
+    public GroupController(GroupRepository groups, UserRepository users, MessageSource messageSource) {
         this.groups = groups;
         this.users = users;
+        this.resolver = new SpringMessageResolver(messageSource);
     }
 
     /**
      * Creates a new group from a JSON request body.
      *
-     * @param body the raw JSON input
+     * @param body   the raw JSON input
+     * @param locale the client's locale from the {@code Accept-Language} header
      * @return 201 with the created group, or 400 with validation issues
      */
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody JsonNode body) {
+    public ResponseEntity<?> create(@RequestBody JsonNode body, Locale locale) {
         // Same sealed-type pattern matching as UserController.create().
         return switch (MembershipDecoders.CREATE_GROUP.decode(body)) {
             case Ok<CreateGroupCommand>(var cmd) -> {
@@ -49,7 +57,7 @@ public class GroupController {
                         .body(groups.findById(id.value()).orElseThrow());
             }
             case Err<CreateGroupCommand>(var issues) ->
-                    ResponseEntity.badRequest().body(UserController.errorBody(issues));
+                    ResponseEntity.badRequest().body(UserController.errorBody(issues, resolver, locale));
         };
     }
 
@@ -101,7 +109,7 @@ public class GroupController {
      * @return 201 with the updated member list, or 400/404 on failure
      */
     @PostMapping("/{id}/members")
-    public ResponseEntity<?> addMember(@PathVariable long id, @RequestBody JsonNode body) {
+    public ResponseEntity<?> addMember(@PathVariable long id, @RequestBody JsonNode body, Locale locale) {
         return switch (MembershipDecoders.ADD_MEMBER.decode(body)) {
             case Ok<AddMemberCommand>(var cmd) -> {
                 if (groups.findById(id).isEmpty()) {
@@ -113,14 +121,15 @@ public class GroupController {
                 if (users.findById(cmd.userId().value()).isEmpty()) {
                     yield ResponseEntity.badRequest().body(UserController.errorBody(
                             new Issues(java.util.List.of(
-                                    Issue.of(Path.ROOT.append("userId"), "not_found", "user not found")))));
+                                    Issue.of(Path.ROOT.append("userId"), "not_found", "user not found"))),
+                            resolver, locale));
                 }
                 groups.addMember(new GroupId(id), cmd.userId(), cmd.role());
                 yield ResponseEntity.status(HttpStatus.CREATED)
                         .body(groups.findMembers(id));
             }
             case Err<AddMemberCommand>(var issues) ->
-                    ResponseEntity.badRequest().body(UserController.errorBody(issues));
+                    ResponseEntity.badRequest().body(UserController.errorBody(issues, resolver, locale));
         };
     }
 

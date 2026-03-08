@@ -1,5 +1,6 @@
 package net.unit8.raoh;
 
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -7,6 +8,10 @@ import java.util.Map;
  *
  * <p>Implementations can provide localized or customized messages for each error code.
  * Use {@link Issues#resolve(MessageResolver)} to apply a resolver to all issues.
+ *
+ * <p>For locale-aware resolution, override
+ * {@link #resolve(String, Map, Locale)} and call
+ * {@link Issues#resolve(MessageResolver, Locale)} at resolution time.
  */
 @FunctionalInterface
 public interface MessageResolver {
@@ -18,6 +23,22 @@ public interface MessageResolver {
      * @return the resolved message
      */
     String resolve(String code, Map<String, Object> meta);
+
+    /**
+     * Resolves an error code into a locale-aware human-readable message.
+     *
+     * <p>The default implementation ignores the locale and delegates to
+     * {@link #resolve(String, Map)}, so existing implementations remain
+     * fully backward-compatible.
+     *
+     * @param code   the error code
+     * @param meta   additional metadata associated with the issue
+     * @param locale the target locale for the message
+     * @return the resolved message
+     */
+    default String resolve(String code, Map<String, Object> meta, Locale locale) {
+        return resolve(code, meta);
+    }
 
     /** A default resolver that provides English messages for all built-in error codes. */
     MessageResolver DEFAULT = (code, meta) -> switch (code) {
