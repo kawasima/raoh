@@ -31,7 +31,9 @@ class ErrorCodesDefaultCoverageTest {
             Map.entry("expected", "foo"), Map.entry("actual", "bar"),
             Map.entry("divisor", 2), Map.entry("maxScale", 3),
             Map.entry("length", 5), Map.entry("size", 5),
-            Map.entry("allowed", List.of("a", "b"))
+            Map.entry("allowed", List.of("a", "b")),
+            Map.entry("missing", List.of("x")),
+            Map.entry("duplicates", List.of("a"))
     );
 
     /**

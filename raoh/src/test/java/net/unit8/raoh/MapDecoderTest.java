@@ -244,6 +244,51 @@ class MapDecoderTest {
     }
 
     @Test
+    void listContains() {
+        var dec = field("tags", list(string()).contains("required-tag"));
+        assertOk(dec.decode(Map.of("tags", List.of("required-tag", "other"))));
+        var result = dec.decode(Map.of("tags", List.of("foo", "bar")));
+        switch (result) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> {
+                var issue = issues.asList().getFirst();
+                assertEquals(ErrorCodes.MISSING_ELEMENT, issue.code());
+                assertEquals("required-tag", issue.meta().get("expected"));
+            }
+        }
+    }
+
+    @Test
+    void listContainsAll() {
+        var dec = field("roles", list(string()).containsAll("read", "write"));
+        assertOk(dec.decode(Map.of("roles", List.of("read", "write", "admin"))));
+        var result = dec.decode(Map.of("roles", List.of("read", "admin")));
+        switch (result) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> {
+                var issue = issues.asList().getFirst();
+                assertEquals(ErrorCodes.MISSING_ELEMENT, issue.code());
+                assertEquals(List.of("write"), issue.meta().get("missing"));
+            }
+        }
+    }
+
+    @Test
+    void listUnique() {
+        var dec = field("emails", list(string()).unique());
+        assertOk(dec.decode(Map.of("emails", List.of("a@example.com", "b@example.com"))));
+        var result = dec.decode(Map.of("emails", List.of("a@example.com", "b@example.com", "a@example.com")));
+        switch (result) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> {
+                var issue = issues.asList().getFirst();
+                assertEquals(ErrorCodes.DUPLICATE_ELEMENT, issue.code());
+                assertEquals(List.of("a@example.com"), issue.meta().get("duplicates"));
+            }
+        }
+    }
+
+    @Test
     void listElementErrors() {
         var dec = field("items", list(int_().positive()));
         var result = dec.decode(Map.of("items", List.of(1, -2, 3, -4)));
