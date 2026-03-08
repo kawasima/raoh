@@ -122,7 +122,7 @@ public class GroupController {
                 if (users.findById(cmd.userId().value()).isEmpty()) {
                     yield ResponseEntity.badRequest().body(UserController.errorBody(
                             new Issues(java.util.List.of(
-                                    Issue.of(Path.ROOT.append("userId"), "not_found", "")
+                                    Issue.of(Path.ROOT.append("userId"), "not_found", "user not found")
                                             .withCustomMessage("user not found"))),
                             resolver, locale));
                 }

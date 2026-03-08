@@ -50,10 +50,20 @@ public class ResourceBundleMessageResolver implements MessageResolver {
         return resolve(code, meta, Locale.getDefault());
     }
 
+    /**
+     * {@link ResourceBundle.Control} that disables default-locale fallback.
+     * Without this, a request for {@code Locale.ENGLISH} on a JVM whose default
+     * locale is, e.g., {@code ja_JP} could unexpectedly resolve to a {@code _ja}
+     * bundle when no {@code _en} bundle exists. The lookup chain becomes:
+     * requested locale → base bundle → {@link MessageResolver#DEFAULT}.
+     */
+    private static final ResourceBundle.Control NO_FALLBACK =
+            ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES);
+
     @Override
     public String resolve(String code, Map<String, Object> meta, Locale locale) {
         try {
-            ResourceBundle bundle = ResourceBundle.getBundle(baseName, locale);
+            ResourceBundle bundle = ResourceBundle.getBundle(baseName, locale, NO_FALLBACK);
             String template = bundle.getString(KEY_PREFIX + code);
             return MessageResolver.interpolate(template, meta);
         } catch (MissingResourceException ignored) {
