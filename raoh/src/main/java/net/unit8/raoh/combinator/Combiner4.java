@@ -10,8 +10,28 @@ import net.unit8.raoh.Result;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+/**
+ * Combines 4 decoders for applicative-style validation with error accumulation.
+ *
+ * @param <I> the input type
+ * @param <A> the first decoder's output type
+ * @param <B> the second decoder's output type
+ * @param <C> the third decoder's output type
+ * @param <D> the fourth decoder's output type
+ * @param da  the first decoder
+ * @param db  the second decoder
+ * @param dc  the third decoder
+ * @param dd  the fourth decoder
+ */
 public record Combiner4<I, A, B, C, D>(Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd) {
 
+    /**
+     * Applies a constructor function to the decoded values with error accumulation.
+     *
+     * @param <T> the output type
+     * @param f   the constructor function
+     * @return a decoder that runs all decoders and accumulates errors
+     */
     @SuppressWarnings("unchecked")
     public <T> Decoder<I, T> apply(Function4<A, B, C, D, T> f) {
         return (in, path) -> {
@@ -26,6 +46,13 @@ public record Combiner4<I, A, B, C, D>(Decoder<I, A> da, Decoder<I, B> db, Decod
         };
     }
 
+    /**
+     * Like {@link #apply}, but the constructor function may itself return a {@link Result}.
+     *
+     * @param <T> the output type
+     * @param f   a function returning a {@link Result}
+     * @return a decoder that runs all decoders, accumulates errors, and flat-maps the result
+     */
     @SuppressWarnings("unchecked")
     public <T> Decoder<I, T> flatMap(Function4<A, B, C, D, Result<T>> f) {
         return (in, path) -> {
@@ -43,10 +70,24 @@ public record Combiner4<I, A, B, C, D>(Decoder<I, A> da, Decoder<I, B> db, Decod
         };
     }
 
+    /**
+     * Like {@link #apply}, but additionally rejects unknown fields.
+     *
+     * @param <T> the output type
+     * @param f   the constructor function
+     * @return a strict decoder that fails on unknown fields
+     */
     public <T> Decoder<I, T> strict(Function4<A, B, C, D, T> f) {
         return Decoders.strict(apply(f), knownFields());
     }
 
+    /**
+     * Like {@link #flatMap}, but additionally rejects unknown fields.
+     *
+     * @param <T> the output type
+     * @param f   a function returning a {@link Result}
+     * @return a strict decoder that fails on unknown fields
+     */
     public <T> Decoder<I, T> strictFlatMap(Function4<A, B, C, D, Result<T>> f) {
         return Decoders.strict(flatMap(f), knownFields());
     }

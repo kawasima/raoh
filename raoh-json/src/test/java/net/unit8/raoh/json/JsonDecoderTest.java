@@ -135,7 +135,7 @@ class JsonDecoderTest {
                 """);
 
         switch (user().decode(json)) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 assertTrue(issues.asList().size() >= 3);
                 var paths = issues.asList().stream()
@@ -164,7 +164,7 @@ class JsonDecoderTest {
                 {"amount": 19.99, "currency": "jpy"}
                 """);
         switch (money().decode(json)) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 var codes = issues.asList().stream().map(Issue::code).toList();
                 assertTrue(codes.contains("invalid_scale"));
@@ -224,7 +224,7 @@ class JsonDecoderTest {
         var dec = field("items", list(int_().positive()));
         var result = dec.decode(parse("{\"items\":[1, -2, 3, -4]}"));
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 assertEquals(2, issues.asList().size());
                 var paths = issues.asList().stream()
@@ -334,7 +334,7 @@ class JsonDecoderTest {
         var dec = field("name", string().minLength(5));
         var result = dec.decode(parse("{\"name\":\"ab\"}"));
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 var resolved = issues.resolve(MessageResolver.DEFAULT);
                 assertEquals("must be at least 5 characters", resolved.asList().getFirst().message());
@@ -349,7 +349,7 @@ class JsonDecoderTest {
                  "address":{"prefecture":"?","city":"x","street":"y"}}
                 """));
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 var flat = issues.flatten();
                 assertTrue(flat.containsKey("/id"));
@@ -366,7 +366,7 @@ class JsonDecoderTest {
                  "address":{"prefecture":"?","city":"x","street":"y"}}
                 """));
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 var list = issues.toJsonList();
                 assertTrue(list.size() >= 3);
@@ -389,6 +389,7 @@ class JsonDecoderTest {
     void lazyRecursiveDecoder() {
         record Comment(String body, List<Comment> replies) {}
 
+        @SuppressWarnings("unchecked")
         Decoder<JsonNode, Comment>[] holder = new Decoder[1];
         holder[0] = combine(
                 field("body", string()),
@@ -417,7 +418,7 @@ class JsonDecoderTest {
         var dec = field("age", int_().range(0, 150, "年齢は0〜150の範囲で指定してください"));
         var result = dec.decode(parse("{\"age\":200}"));
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 assertEquals("年齢は0〜150の範囲で指定してください", issues.asList().getFirst().message());
                 // custom message should survive resolve
@@ -478,7 +479,7 @@ class JsonDecoderTest {
         var result = dec.decode(parse("{\"kind\":\"sms\",\"value\":\"abc\"}"));
 
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 assertEquals("one_of_failed", issues.asList().getFirst().code());
                 @SuppressWarnings("unchecked")
@@ -498,7 +499,7 @@ class JsonDecoderTest {
 
         var result = dec.decode(parse("{\"name\":\"Taro\",\"age\":20,\"extra\":true}"));
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 assertTrue(issues.asList().stream().anyMatch(i ->
                         i.code().equals("unknown_field") && i.path().toJsonPointer().equals("/extra")));
@@ -528,7 +529,7 @@ class JsonDecoderTest {
         assertOk(dec.decode(parse("{\"name\":\"Alice\",\"email\":\"alice@example.com\"}")));
         var result = dec.decode(parse("{\"name\":\"Alice\"}"));
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> assertTrue(issues.asList().stream()
                     .anyMatch(i -> i.path().toJsonPointer().equals("/email") && i.code().equals("required")));
         }
@@ -562,7 +563,7 @@ class JsonDecoderTest {
         var dec = field("period", period);
         var result = dec.decode(parse("{\"period\":{\"start\":10,\"end\":5}}"));
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> assertTrue(issues.asList().stream()
                     .anyMatch(i -> i.path().toJsonPointer().equals("/period") && i.code().equals("invalid_range")));
         }

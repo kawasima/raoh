@@ -10,8 +10,42 @@ import net.unit8.raoh.Result;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+/**
+ * Combines 11 decoders for applicative-style validation with error accumulation.
+ *
+ * @param <I> the input type
+ * @param <A> the first decoder's output type
+ * @param <B> the second decoder's output type
+ * @param <C> the third decoder's output type
+ * @param <D> the fourth decoder's output type
+ * @param <E> the fifth decoder's output type
+ * @param <F> the sixth decoder's output type
+ * @param <G> the seventh decoder's output type
+ * @param <H> the eighth decoder's output type
+ * @param <J> the ninth decoder's output type
+ * @param <K> the tenth decoder's output type
+ * @param <L> the eleventh decoder's output type
+ * @param da  the first decoder
+ * @param db  the second decoder
+ * @param dc  the third decoder
+ * @param dd  the fourth decoder
+ * @param de  the fifth decoder
+ * @param df  the sixth decoder
+ * @param dg  the seventh decoder
+ * @param dh  the eighth decoder
+ * @param dj  the ninth decoder
+ * @param dk  the tenth decoder
+ * @param dl  the eleventh decoder
+ */
 public record Combiner11<I, A, B, C, D, E, F, G, H, J, K, L>(Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd, Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh, Decoder<I, J> dj, Decoder<I, K> dk, Decoder<I, L> dl) {
 
+    /**
+     * Applies a constructor function to the decoded values with error accumulation.
+     *
+     * @param <T> the output type
+     * @param f   the constructor function
+     * @return a decoder that runs all decoders and accumulates errors
+     */
     @SuppressWarnings("unchecked")
     public <T> Decoder<I, T> apply(Function11<A, B, C, D, E, F, G, H, J, K, L, T> f) {
         return (in, path) -> {
@@ -33,6 +67,13 @@ public record Combiner11<I, A, B, C, D, E, F, G, H, J, K, L>(Decoder<I, A> da, D
         };
     }
 
+    /**
+     * Like {@link #apply}, but the constructor function may itself return a {@link Result}.
+     *
+     * @param <T> the output type
+     * @param f   a function returning a {@link Result}
+     * @return a decoder that runs all decoders, accumulates errors, and flat-maps the result
+     */
     @SuppressWarnings("unchecked")
     public <T> Decoder<I, T> flatMap(Function11<A, B, C, D, E, F, G, H, J, K, L, Result<T>> f) {
         return (in, path) -> {
@@ -57,10 +98,24 @@ public record Combiner11<I, A, B, C, D, E, F, G, H, J, K, L>(Decoder<I, A> da, D
         };
     }
 
+    /**
+     * Like {@link #apply}, but additionally rejects unknown fields.
+     *
+     * @param <T> the output type
+     * @param f   the constructor function
+     * @return a strict decoder that fails on unknown fields
+     */
     public <T> Decoder<I, T> strict(Function11<A, B, C, D, E, F, G, H, J, K, L, T> f) {
         return Decoders.strict(apply(f), knownFields());
     }
 
+    /**
+     * Like {@link #flatMap}, but additionally rejects unknown fields.
+     *
+     * @param <T> the output type
+     * @param f   a function returning a {@link Result}
+     * @return a strict decoder that fails on unknown fields
+     */
     public <T> Decoder<I, T> strictFlatMap(Function11<A, B, C, D, E, F, G, H, J, K, L, Result<T>> f) {
         return Decoders.strict(flatMap(f), knownFields());
     }

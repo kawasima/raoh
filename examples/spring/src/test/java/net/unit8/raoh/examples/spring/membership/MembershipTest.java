@@ -13,6 +13,24 @@ import org.junit.jupiter.api.BeforeEach;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/**
+ * Integration tests for the membership REST API.
+ *
+ * <p>These tests exercise the full request lifecycle — JSON decoding via Raoh,
+ * validation with error accumulation, JDBC persistence, and response rendering —
+ * using Spring's {@link MockMvc} against the real application context with an
+ * H2 in-memory database.
+ *
+ * <p>Scenarios covered:
+ * <ul>
+ *   <li>Successful user and group creation with valid JSON</li>
+ *   <li>Rejection of invalid input with per-field error paths</li>
+ *   <li>Optional field defaults ({@code description} defaults to empty,
+ *       {@code role} defaults to MEMBER) via {@code Decoders.withDefault}</li>
+ *   <li>Group membership lifecycle (add, fetch user-with-groups, remove)</li>
+ *   <li>Business-level validation (non-existent user ID)</li>
+ * </ul>
+ */
 @SpringBootTest
 class MembershipTest {
 

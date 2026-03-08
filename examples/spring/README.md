@@ -9,9 +9,8 @@ and the **JDBC boundary** (row decoding with `MapDecoders`).
 | --- | --- |
 | `JsonDecoders.combine` + `field` | Request body decoding in `MembershipDecoders` |
 | `MapDecoders.combine` + `field` | JDBC row decoding (`USER_ROW`, `GROUP_ROW`, etc.) |
-| `Decoder.list()` | Decoding `List<Map<String, Object>>` from `JdbcClient` |
+| `Decoder#list()` | Decoding a variable-length list of rows from `JdbcClient` |
 | `Result.map2` | Combining user + group-memberships from two queries |
-| `Result.traverse` | Decoding a variable-length list of membership rows |
 | `Decoders.withDefault` | Optional fields with defaults (`description`, `role`) |
 | `StringDecoder` chain | `.trim().nonBlank().maxLength()`, `.toLowerCase().email()` |
 
@@ -48,7 +47,7 @@ mvn spring-boot:run
 | --- | --- | --- |
 | `POST /users` | Create a user | Body: `{ "name": "Alice", "email": "alice@example.com" }` |
 | `GET /users` | List all users | |
-| `GET /users/{id}` | Show user with groups | Uses `Result.map2` + `Result.traverse` |
+| `GET /users/{id}` | Show user with groups | Uses `Result.map2` + `Decoder#list()` |
 
 ### Groups
 

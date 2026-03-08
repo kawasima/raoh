@@ -60,6 +60,8 @@ public class UserRepository {
                 .param(id)
                 .query().listOfRows();
         if (rows.isEmpty()) return Optional.empty();
+        // decode() returns a Result; getOrThrow() unwraps the Ok value or throws on Err.
+        // This is safe here because the row shape matches the decoder's expected columns.
         return Optional.of(MembershipDecoders.USER_ROW.decode(rows.getFirst()).getOrThrow());
     }
 

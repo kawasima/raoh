@@ -43,6 +43,11 @@ public final class JsonDecoders {
         return new StringDecoder<>(base, base);
     }
 
+    /**
+     * Creates a string decoder that preserves blank values (no trim or nonBlank validation).
+     *
+     * @return a string decoder that allows blank strings
+     */
     public static StringDecoder<JsonNode> allowBlankString() {
         return new StringDecoder<>(allowBlankBase());
     }
@@ -52,11 +57,11 @@ public final class JsonDecoders {
             if (in == null || in.isNull() || in.isMissingNode()) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
-            if (!in.isTextual()) {
+            if (!in.isString()) {
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected string",
                         Map.of("expected", "string", "actual", in.getNodeType().name().toLowerCase()));
             }
-            return Result.ok(in.asText());
+            return Result.ok(in.asString());
         };
     }
 
@@ -156,7 +161,8 @@ public final class JsonDecoders {
                 var fieldPath = path.append(name);
                 if (in == null || !in.isObject()) {
                     return Result.fail(fieldPath, ErrorCodes.TYPE_MISMATCH, "expected object",
-                            Map.of("expected", "object"));
+                            Map.of("expected", "object", "actual",
+                                    in == null ? "null" : in.getNodeType().name().toLowerCase()));
                 }
                 var node = in.get(name);
                 if (node == null) {
@@ -363,14 +369,6 @@ public final class JsonDecoders {
     /**
      * Wraps a decoder to reject unknown fields not in the given set.
      *
-     * @param <T>         the decoded type
-     * @param dec         the underlying decoder
-     * @param knownFields the set of allowed field names
-     * @return a strict decoder
-     */
-    /**
-     * Wraps a decoder to reject unknown fields not in the given set.
-     *
      * <p>This overrides the core {@link Decoders#strict} to add JsonNode object support:
      * unknown properties in a JSON object are reported as {@code unknown_field} issues.
      *
@@ -395,7 +393,7 @@ public final class JsonDecoders {
                 return decResult;
             }
             return switch (decResult) {
-                case Ok<T> ignored -> Result.err(issues);
+                case Ok<T> _ -> Result.err(issues);
                 case Err<T> err -> Result.err(err.issues().merge(issues));
             };
         };
@@ -403,34 +401,64 @@ public final class JsonDecoders {
 
     // --- Delegate combine to Decoders ---
 
+    /**
+     * Combines 2 decoders for applicative-style validation.
+     *
+     * @see Decoders#combine(Decoder, Decoder)
+     */
     public static <A, B> Combiner2<JsonNode, A, B> combine(
             Decoder<JsonNode, A> da, Decoder<JsonNode, B> db) {
         return Decoders.combine(da, db);
     }
 
+    /**
+     * Combines 3 decoders for applicative-style validation.
+     *
+     * @see Decoders#combine(Decoder, Decoder, Decoder)
+     */
     public static <A, B, C> Combiner3<JsonNode, A, B, C> combine(
             Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc) {
         return Decoders.combine(da, db, dc);
     }
 
+    /**
+     * Combines 4 decoders for applicative-style validation.
+     *
+     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder)
+     */
     public static <A, B, C, D> Combiner4<JsonNode, A, B, C, D> combine(
             Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
             Decoder<JsonNode, D> dd) {
         return Decoders.combine(da, db, dc, dd);
     }
 
+    /**
+     * Combines 5 decoders for applicative-style validation.
+     *
+     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder)
+     */
     public static <A, B, C, D, E> Combiner5<JsonNode, A, B, C, D, E> combine(
             Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
             Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de) {
         return Decoders.combine(da, db, dc, dd, de);
     }
 
+    /**
+     * Combines 6 decoders for applicative-style validation.
+     *
+     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F> Combiner6<JsonNode, A, B, C, D, E, F> combine(
             Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
             Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df) {
         return Decoders.combine(da, db, dc, dd, de, df);
     }
 
+    /**
+     * Combines 7 decoders for applicative-style validation.
+     *
+     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G> Combiner7<JsonNode, A, B, C, D, E, F, G> combine(
             Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
             Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
@@ -438,6 +466,11 @@ public final class JsonDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg);
     }
 
+    /**
+     * Combines 8 decoders for applicative-style validation.
+     *
+     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H> Combiner8<JsonNode, A, B, C, D, E, F, G, H> combine(
             Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
             Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
@@ -445,6 +478,11 @@ public final class JsonDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh);
     }
 
+    /**
+     * Combines 9 decoders for applicative-style validation.
+     *
+     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J> Combiner9<JsonNode, A, B, C, D, E, F, G, H, J> combine(
             Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
             Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
@@ -452,6 +490,11 @@ public final class JsonDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj);
     }
 
+    /**
+     * Combines 10 decoders for applicative-style validation.
+     *
+     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J, K> Combiner10<JsonNode, A, B, C, D, E, F, G, H, J, K> combine(
             Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
             Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
@@ -460,6 +503,11 @@ public final class JsonDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk);
     }
 
+    /**
+     * Combines 11 decoders for applicative-style validation.
+     *
+     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J, K, L> Combiner11<JsonNode, A, B, C, D, E, F, G, H, J, K, L> combine(
             Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
             Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
@@ -468,6 +516,11 @@ public final class JsonDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl);
     }
 
+    /**
+     * Combines 12 decoders for applicative-style validation.
+     *
+     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J, K, L, M> Combiner12<JsonNode, A, B, C, D, E, F, G, H, J, K, L, M> combine(
             Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
             Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
@@ -476,6 +529,11 @@ public final class JsonDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm);
     }
 
+    /**
+     * Combines 13 decoders for applicative-style validation.
+     *
+     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N> Combiner13<JsonNode, A, B, C, D, E, F, G, H, J, K, L, M, N> combine(
             Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
             Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
@@ -485,6 +543,11 @@ public final class JsonDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn);
     }
 
+    /**
+     * Combines 14 decoders for applicative-style validation.
+     *
+     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O> Combiner14<JsonNode, A, B, C, D, E, F, G, H, J, K, L, M, N, O> combine(
             Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
             Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
@@ -494,6 +557,11 @@ public final class JsonDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_);
     }
 
+    /**
+     * Combines 15 decoders for applicative-style validation.
+     *
+     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> Combiner15<JsonNode, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> combine(
             Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
             Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
@@ -503,6 +571,11 @@ public final class JsonDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_, dp);
     }
 
+    /**
+     * Combines 16 decoders for applicative-style validation.
+     *
+     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> Combiner16<JsonNode, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> combine(
             Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
             Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,

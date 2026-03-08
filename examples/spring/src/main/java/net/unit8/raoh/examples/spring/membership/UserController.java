@@ -41,12 +41,15 @@ public class UserController {
      */
     @PostMapping
     public ResponseEntity<?> create(@RequestBody JsonNode body) {
+        // Decode returns a sealed Result: Ok (valid command) or Err (accumulated issues).
+        // Pattern matching on the sealed type ensures both cases are handled at compile time.
         return switch (MembershipDecoders.CREATE_USER.decode(body)) {
             case Ok<CreateUserCommand>(var cmd) -> {
                 UserId id = users.insert(cmd.name(), cmd.email());
                 yield ResponseEntity.status(HttpStatus.CREATED)
                         .body(users.findById(id.value()).orElseThrow());
             }
+            // Err carries all accumulated validation Issues (e.g. both name and email errors).
             case Err<CreateUserCommand>(var issues) ->
                     ResponseEntity.badRequest().body(errorBody(issues));
         };
@@ -87,9 +90,13 @@ public class UserController {
      * @return a map containing both the flat and list representations
      */
     static Map<String, Object> errorBody(Issues issues) {
+        // resolve() turns raw Issues into human-readable messages using the given resolver.
+        // MessageResolver.DEFAULT provides built-in English messages for standard constraints.
         var resolved = issues.resolve(MessageResolver.DEFAULT);
         var body = new LinkedHashMap<String, Object>();
+        // toJsonList() produces a list of {path, message} objects for structured clients.
         body.put("issues", resolved.toJsonList());
+        // flatten() produces a simple Map<path, message> for convenience.
         body.put("errors", resolved.flatten());
         return body;
     }

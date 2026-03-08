@@ -218,7 +218,7 @@ public final class Decoders {
             var r = dec.decode(in, path);
             return switch (r) {
                 case Ok<T> ok -> ok;
-                case Err<T> ignored -> Result.ok(fallback);
+                case Err<T> _ -> Result.ok(fallback);
             };
         };
     }
@@ -305,7 +305,7 @@ public final class Decoders {
             }
 
             return switch (decResult) {
-                case Ok<T> ignored -> Result.err(issues);
+                case Ok<T> _ -> Result.err(issues);
                 case Err<T> err -> Result.err(err.issues().merge(issues));
             };
         };

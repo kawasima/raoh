@@ -103,7 +103,7 @@
                         <artifactId>maven-javadoc-plugin</artifactId>
                         <version>3.11.2</version>
                         <configuration>
-                            <doclint>none</doclint>
+                            <doclint>all</doclint>
                         </configuration>
                         <executions>
                             <execution>

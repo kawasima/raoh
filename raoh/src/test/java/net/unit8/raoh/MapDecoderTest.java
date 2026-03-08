@@ -126,7 +126,7 @@ class MapDecoderTest {
         );
 
         switch (user().decode(input)) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 assertTrue(issues.asList().size() >= 3);
                 var paths = issues.asList().stream()
@@ -151,7 +151,7 @@ class MapDecoderTest {
     void moneyInvalidScale() {
         var input = Map.<String, Object>of("amount", 19.99, "currency", "jpy");
         switch (money().decode(input)) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 var codes = issues.asList().stream().map(Issue::code).toList();
                 assertTrue(codes.contains("invalid_scale"));
@@ -209,7 +209,7 @@ class MapDecoderTest {
         var dec = field("items", list(int_().positive()));
         var result = dec.decode(Map.of("items", List.of(1, -2, 3, -4)));
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 assertEquals(2, issues.asList().size());
                 var paths = issues.asList().stream()
@@ -297,7 +297,7 @@ class MapDecoderTest {
         var dec = field("name", string());
         var result = dec.decode(Map.of());
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 assertEquals("/name", issues.asList().getFirst().path().toJsonPointer());
                 assertEquals("required", issues.asList().getFirst().code());
@@ -337,7 +337,7 @@ class MapDecoderTest {
         var dec = field("age", int_().range(0, 150, "年齢は0〜150の範囲で指定してください"));
         var result = dec.decode(Map.of("age", 200));
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 assertEquals("年齢は0〜150の範囲で指定してください", issues.asList().getFirst().message());
                 var resolved = issues.resolve(MessageResolver.DEFAULT);
@@ -391,7 +391,7 @@ class MapDecoderTest {
 
         var result = dec.decode(Map.of("kind", "sms", "value", "abc"));
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 assertEquals("one_of_failed", issues.asList().getFirst().code());
                 @SuppressWarnings("unchecked")
@@ -415,7 +415,7 @@ class MapDecoderTest {
 
         var result = dec.decode(Map.of("name", "Taro", "age", 20, "extra", true));
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 assertTrue(issues.asList().stream().anyMatch(i ->
                         i.code().equals("unknown_field") && i.path().toJsonPointer().equals("/extra")));
@@ -444,7 +444,7 @@ class MapDecoderTest {
         assertOk(dec.decode(Map.of("name", "Alice", "email", "alice@example.com")));
         var result = dec.decode(Map.of("name", "Alice"));
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> assertTrue(issues.asList().stream()
                     .anyMatch(i -> i.path().toJsonPointer().equals("/email") && i.code().equals("required")));
         }
@@ -478,7 +478,7 @@ class MapDecoderTest {
         var dec = field("period", nested(period));
         var result = dec.decode(Map.of("period", Map.of("start", 10, "end", 5)));
         switch (result) {
-            case Ok(var ignored) -> fail("Expected Err");
+            case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> assertTrue(issues.asList().stream()
                     .anyMatch(i -> i.path().toJsonPointer().equals("/period") && i.code().equals("invalid_range")));
         }

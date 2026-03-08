@@ -53,6 +53,7 @@ public class GroupRepository {
                 .param(id)
                 .query().listOfRows();
         if (rows.isEmpty()) return Optional.empty();
+        // decode() + getOrThrow(): safe because the SELECT column shape matches the decoder.
         return Optional.of(MembershipDecoders.GROUP_ROW.decode(rows.getFirst()).getOrThrow());
     }
 

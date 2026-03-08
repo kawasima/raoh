@@ -41,6 +41,7 @@ public class GroupController {
      */
     @PostMapping
     public ResponseEntity<?> create(@RequestBody JsonNode body) {
+        // Same sealed-type pattern matching as UserController.create().
         return switch (MembershipDecoders.CREATE_GROUP.decode(body)) {
             case Ok<CreateGroupCommand>(var cmd) -> {
                 GroupId id = groups.insert(cmd.name(), cmd.description());
@@ -106,6 +107,9 @@ public class GroupController {
                 if (groups.findById(id).isEmpty()) {
                     yield ResponseEntity.notFound().build();
                 }
+                // Business-level validation that cannot be expressed in the decoder itself.
+                // Issue.of() creates a structured error with a JSON-pointer path ("/userId"),
+                // a machine-readable code ("not_found"), and a human-readable message.
                 if (users.findById(cmd.userId().value()).isEmpty()) {
                     yield ResponseEntity.badRequest().body(UserController.errorBody(
                             new Issues(java.util.List.of(

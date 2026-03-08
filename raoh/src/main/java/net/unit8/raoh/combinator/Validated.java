@@ -30,7 +30,7 @@ sealed interface Validated<T> permits Valid, Invalid {
                 case Invalid<B> ib -> new Invalid<>(ib.issues());
             };
             case Invalid<A> ia -> switch (vb) {
-                case Valid<B> ignored -> new Invalid<>(ia.issues());
+                case Valid<B> _ -> new Invalid<>(ia.issues());
                 case Invalid<B> ib -> new Invalid<>(ia.issues().merge(ib.issues()));
             };
         };

@@ -176,9 +176,9 @@ class JooqDecoderTest {
                     .decode(rec, path);
             return switch (presence) {
                 case Err<Presence<String>> e -> e.coerce();
-                case Ok<Presence<String>>(Presence.Absent<String> ignored) ->
+                case Ok<Presence<String>>(Presence.Absent<String> _) ->
                         Result.ok(Optional.empty());
-                case Ok<Presence<String>>(Presence.PresentNull<String> ignored) ->
+                case Ok<Presence<String>>(Presence.PresentNull<String> _) ->
                         Result.ok(Optional.empty());
                 case Ok<Presence<String>>(Presence.Present<String>(var deptName)) ->
                         field("location", string())

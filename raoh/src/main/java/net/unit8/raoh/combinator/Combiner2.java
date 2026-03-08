@@ -22,6 +22,13 @@ import java.util.function.BiFunction;
  */
 public record Combiner2<I, A, B>(Decoder<I, A> da, Decoder<I, B> db) {
 
+    /**
+     * Applies a constructor function to the decoded values with error accumulation.
+     *
+     * @param <T> the output type
+     * @param f   the constructor function
+     * @return a decoder that runs all decoders and accumulates errors
+     */
     public <T> Decoder<I, T> apply(BiFunction<A, B, T> f) {
         return (in, path) -> {
             var va = Validated.fromResult(da.decode(in, path));
@@ -30,6 +37,13 @@ public record Combiner2<I, A, B>(Decoder<I, A> da, Decoder<I, B> db) {
         };
     }
 
+    /**
+     * Like {@link #apply}, but the constructor function may itself return a {@link Result}.
+     *
+     * @param <T> the output type
+     * @param f   a function returning a {@link Result}
+     * @return a decoder that runs all decoders, accumulates errors, and flat-maps the result
+     */
     public <T> Decoder<I, T> flatMap(BiFunction<A, B, Result<T>> f) {
         return (in, path) -> {
             var va = Validated.fromResult(da.decode(in, path));
@@ -42,10 +56,24 @@ public record Combiner2<I, A, B>(Decoder<I, A> da, Decoder<I, B> db) {
         };
     }
 
+    /**
+     * Like {@link #apply}, but additionally rejects unknown fields.
+     *
+     * @param <T> the output type
+     * @param f   the constructor function
+     * @return a strict decoder that fails on unknown fields
+     */
     public <T> Decoder<I, T> strict(BiFunction<A, B, T> f) {
         return Decoders.strict(apply(f), knownFields());
     }
 
+    /**
+     * Like {@link #flatMap}, but additionally rejects unknown fields.
+     *
+     * @param <T> the output type
+     * @param f   a function returning a {@link Result}
+     * @return a strict decoder that fails on unknown fields
+     */
     public <T> Decoder<I, T> strictFlatMap(BiFunction<A, B, Result<T>> f) {
         return Decoders.strict(flatMap(f), knownFields());
     }
