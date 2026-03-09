@@ -9,7 +9,11 @@ import java.util.Optional;
 /**
  * Boundary factory for {@code Map<String, Object>} input.
  *
- * <p>Usage: {@code import static net.unit8.raoh.map.MapDecoders.*;}
+ * <p>Usage:
+ * <pre>{@code
+ * import static net.unit8.raoh.map.MapDecoders.*;
+ * import static net.unit8.raoh.ObjectDecoders.*;
+ * }</pre>
  *
  * <p>For primitive decoders ({@code string()}, {@code int_()}, etc.) that work on raw
  * {@code Object} values, see {@link net.unit8.raoh.ObjectDecoders}.
