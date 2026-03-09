@@ -18,7 +18,7 @@ public final class MapDecoders {
 
     private MapDecoders() {}
 
-    // --- field / optionalField / nullable ---
+    // --- field / optionalField / optionalNullableField ---
 
     /**
      * Creates a required field decoder that extracts a value from a map by key

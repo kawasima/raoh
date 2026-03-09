@@ -31,10 +31,12 @@ public final class ObjectDecoders {
     // --- Primitive decoders ---
 
     /**
-     * Creates a string decoder that trims whitespace by default.
+     * Creates a string decoder that rejects blank values by default.
      *
-     * <p>Returns {@code required} if the value is {@code null}, and {@code type_mismatch}
-     * if the value is not a {@link String}.
+     * <p>Returns {@code required} if the value is {@code null} or blank,
+     * and {@code type_mismatch} if the value is not a {@link String}.
+     * Call {@link net.unit8.raoh.builtin.StringDecoder#allowBlank() allowBlank()} to allow blank strings,
+     * or use {@link #allowBlankString()} directly.
      *
      * @return a string decoder for {@code Object} input
      */
