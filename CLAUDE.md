@@ -81,7 +81,7 @@ Notes:
 - **`nonBlank()`** currently returns error code `required` / message `is required` (not `must not be blank`). See issue #16.
 - **`Presence` toString**: `Present[value=hello]`, `PresentNull[]`, `Absent[]`.
 - **`optionalField` absent** → `Ok[Optional.empty]`, not `Ok[null]`.
-- **`oneOf` failure** → `Err[: no variant matched]`.
+- **`oneOf` failure** → `Err[/: no variant matched]`.
 - **`field("x", subDec)`** where `subDec: Decoder<Map<String,Object>,T>` requires `nested(subDec)`. See issue #17.
 - **`list(subDec)`** where `subDec: Decoder<Map<String,Object>,T>` requires `list(nested(subDec))`.
 - **`Path.of(String)`** does not exist — use `Path.ROOT.append("x")`. See issue #18.
