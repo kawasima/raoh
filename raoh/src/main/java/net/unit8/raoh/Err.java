@@ -20,12 +20,21 @@ public record Err<T>(Issues issues) implements Result<T> {
         return (Err<U>) this;
     }
 
+    /**
+     * Returns a concise string representation of this failed result.
+     *
+     * <p>Each issue is formatted as {@code path: message}, where the root path
+     * is rendered as {@code /}. Multiple issues are comma-separated.
+     * Example: {@code Err[/: is required, /name: must not be blank]}
+     *
+     * @return a string of the form {@code Err[path: message, ...]}
+     */
     @Override
     public String toString() {
         return issues.asList().stream()
             .map(issue -> {
-                String p = issue.path().toString();
-                return (p.isEmpty() ? "/" : p) + ": " + issue.message();
+                String path = issue.path().toString();
+                return (path.isEmpty() ? "/" : path) + ": " + issue.message();
             })
             .collect(Collectors.joining(", ", "Err[", "]"));
     }
