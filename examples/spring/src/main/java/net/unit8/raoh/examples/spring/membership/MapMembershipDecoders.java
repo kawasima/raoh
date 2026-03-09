@@ -37,6 +37,7 @@ public final class MapMembershipDecoders {
     public static final Decoder<Map<String, Object>, Group> GROUP_ROW = combine(
             field("id", long_()).map(GroupId::new),
             field("name", string()),
+            // description is NOT NULL DEFAULT '' in the schema, so string() is correct here.
             field("description", string())
     ).apply(Group::new);
 
@@ -45,10 +46,10 @@ public final class MapMembershipDecoders {
             combine(
                     field("group_id", long_()).map(GroupId::new),
                     field("group_name", string()),
-                    // map() after decoding applies a custom transformation; here it converts
-                    // the raw string into the MembershipRole enum.
-                    field("role", string())
-                            .map(s -> MembershipRole.valueOf(s.toUpperCase()))
+                    // enumOf() decodes the stored role string into the MembershipRole enum
+                    // (case-insensitive). The DB column is NOT NULL so string() without nullable
+                    // is appropriate as the base.
+                    field("role", enumOf(MembershipRole.class))
             ).apply(GroupMembership::new);
 
     /**
