@@ -4,13 +4,15 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
 
+import static net.unit8.raoh.examples.spring.membership.MapMembershipDecoders.*;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 /**
  * Data access for users, using Spring's {@link JdbcClient} and Raoh's
- * {@link net.unit8.raoh.map.MapDecoders MapDecoders} to decode JDBC rows.
+ * {@link MapMembershipDecoders} to decode JDBC rows.
  *
  * <p>Key Raoh patterns demonstrated here:
  * <ul>
@@ -50,7 +52,7 @@ public class UserRepository {
     }
 
     /**
-     * Finds a user by ID, decoding the JDBC row via {@link MembershipDecoders#USER_ROW}.
+     * Finds a user by ID, decoding the JDBC row via {@link MapMembershipDecoders#USER_ROW}.
      *
      * @param id the user ID
      * @return the decoded user, or empty if not found
@@ -62,7 +64,7 @@ public class UserRepository {
         if (rows.isEmpty()) return Optional.empty();
         // decode() returns a Result; getOrThrow() unwraps the Ok value or throws on Err.
         // This is safe here because the row shape matches the decoder's expected columns.
-        return Optional.of(MembershipDecoders.USER_ROW.decode(rows.getFirst()).getOrThrow());
+        return Optional.of(USER_ROW.decode(rows.getFirst()).getOrThrow());
     }
 
     /**
@@ -74,7 +76,7 @@ public class UserRepository {
         List<Map<String, Object>> rows = jdbc.sql("SELECT id, name, email FROM users ORDER BY id")
                 .query().listOfRows();
         // Decoder.list() — decode all rows, accumulating any errors
-        return MembershipDecoders.USER_ROW.list().decode(rows).getOrThrow();
+        return USER_ROW.list().decode(rows).getOrThrow();
     }
 
     /**
@@ -82,7 +84,7 @@ public class UserRepository {
      *
      * <p>This method issues two independent queries (users table and memberships
      * JOIN groups) and combines the results using
-     * {@link MembershipDecoders#decodeUserWithGroups}, which demonstrates
+     * {@link MapMembershipDecoders#decodeUserWithGroups}, which demonstrates
      * {@link net.unit8.raoh.Result#map2 Result.map2} and
      * {@link net.unit8.raoh.Decoder#list() Decoder.list()}.
      *
@@ -106,6 +108,6 @@ public class UserRepository {
 
         // Result.map2 — two independent decode results from different tables
         return Optional.of(
-                MembershipDecoders.decodeUserWithGroups(userRows.getFirst(), groupRows).getOrThrow());
+                decodeUserWithGroups(userRows.getFirst(), groupRows).getOrThrow());
     }
 }

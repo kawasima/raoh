@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 import static net.unit8.raoh.jooq.JooqRecordDecoders.*;
+import static net.unit8.raoh.ObjectDecoders.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class JooqDecoderTest {

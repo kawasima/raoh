@@ -93,13 +93,13 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * Removes a previously-applied {@link #nonBlank()} constraint, restoring blank-string acceptance.
      *
      * @throws IllegalStateException if this decoder was not created via {@code net.unit8.raoh.json.JsonDecoders#string()}
-     *         or {@link net.unit8.raoh.map.MapDecoders#string()} (i.e., no base decoder is available to restore)
+     *         or {@link net.unit8.raoh.ObjectDecoders#string()} (i.e., no base decoder is available to restore)
      */
     public StringDecoder<I> allowBlank() {
         if (base == null) {
             throw new IllegalStateException(
                     "allowBlank() can only be called on a StringDecoder created by JsonDecoders.string() " +
-                    "or MapDecoders.string(), which retain the base decoder for restoration.");
+                    "or ObjectDecoders.string(), which retain the base decoder for restoration.");
         }
         return new StringDecoder<>(base);
     }

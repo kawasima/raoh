@@ -2,7 +2,8 @@ package net.unit8.raoh.examples.spring.membership;
 
 import net.unit8.raoh.*;
 import net.unit8.raoh.examples.spring.SpringMessageResolver;
-import net.unit8.raoh.examples.spring.membership.MembershipDecoders.CreateUserCommand;
+import net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.CreateUserCommand;
+import static net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.CREATE_USER;
 import tools.jackson.databind.JsonNode;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
@@ -18,7 +19,7 @@ import java.util.Map;
  *
  * <p>Demonstrates Raoh's JSON decoder at the HTTP boundary:
  * the request body is decoded into a typed command using
- * {@link MembershipDecoders#CREATE_USER}, and any validation
+ * {@link JsonMembershipDecoders#CREATE_USER}, and any validation
  * errors are returned as structured issues.
  */
 @RestController
@@ -53,7 +54,7 @@ public class UserController {
     public ResponseEntity<?> create(@RequestBody JsonNode body, Locale locale) {
         // Decode returns a sealed Result: Ok (valid command) or Err (accumulated issues).
         // Pattern matching on the sealed type ensures both cases are handled at compile time.
-        return switch (MembershipDecoders.CREATE_USER.decode(body)) {
+        return switch (CREATE_USER.decode(body)) {
             case Ok<CreateUserCommand>(var cmd) -> {
                 UserId id = users.insert(cmd.name(), cmd.email());
                 yield ResponseEntity.status(HttpStatus.CREATED)
@@ -78,7 +79,7 @@ public class UserController {
     /**
      * Shows a single user together with their group memberships.
      *
-     * <p>The response is built by {@link MembershipDecoders#decodeUserWithGroups},
+     * <p>The response is built by {@link MapMembershipDecoders#decodeUserWithGroups},
      * which uses {@link Result#map2} to combine independently decoded user and
      * group-membership data, and {@link net.unit8.raoh.Decoder#list() Decoder.list()} to decode the
      * variable-length list of memberships.
