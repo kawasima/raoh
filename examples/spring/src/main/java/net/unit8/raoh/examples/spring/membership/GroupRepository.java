@@ -4,15 +4,13 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
 
-import static net.unit8.raoh.examples.spring.membership.MapMembershipDecoders.*;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 /**
  * Data access for groups and memberships, using Spring's {@link JdbcClient}
- * and Raoh's {@link MapMembershipDecoders} to decode JDBC rows.
+ * and Raoh's {@link net.unit8.raoh.map.MapDecoders MapDecoders} to decode JDBC rows.
  */
 @Repository
 public class GroupRepository {
@@ -56,7 +54,7 @@ public class GroupRepository {
                 .query().listOfRows();
         if (rows.isEmpty()) return Optional.empty();
         // decode() + getOrThrow(): safe because the SELECT column shape matches the decoder.
-        return Optional.of(GROUP_ROW.decode(rows.getFirst()).getOrThrow());
+        return Optional.of(MembershipDecoders.GROUP_ROW.decode(rows.getFirst()).getOrThrow());
     }
 
     /**
@@ -68,7 +66,7 @@ public class GroupRepository {
         List<Map<String, Object>> rows = jdbc.sql("SELECT id, name, description FROM groups ORDER BY id")
                 .query().listOfRows();
         // Decoder.list() — decode all rows with error accumulation
-        return GROUP_ROW.list().decode(rows).getOrThrow();
+        return MembershipDecoders.GROUP_ROW.list().decode(rows).getOrThrow();
     }
 
     /**
@@ -102,7 +100,7 @@ public class GroupRepository {
     /**
      * Returns the users that belong to a group.
      *
-     * <p>Reuses the same {@link MapMembershipDecoders#USER_ROW} decoder that is
+     * <p>Reuses the same {@link MembershipDecoders#USER_ROW} decoder that is
      * used for the users table — the join result has the same column shape.
      *
      * @param groupId the group ID
@@ -118,6 +116,6 @@ public class GroupRepository {
                 .param(groupId)
                 .query().listOfRows();
         // Reuse the same USER_ROW decoder for join results
-        return USER_ROW.list().decode(rows).getOrThrow();
+        return MembershipDecoders.USER_ROW.list().decode(rows).getOrThrow();
     }
 }

@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 
 import static net.unit8.raoh.map.MapDecoders.*;
-import static net.unit8.raoh.ObjectDecoders.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**

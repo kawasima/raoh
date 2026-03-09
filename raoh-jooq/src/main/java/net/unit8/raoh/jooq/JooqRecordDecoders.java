@@ -1,9 +1,19 @@
 package net.unit8.raoh.jooq;
 
 import net.unit8.raoh.*;
+import net.unit8.raoh.builtin.*;
 import net.unit8.raoh.combinator.*;
 
+import org.jspecify.annotations.Nullable;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -11,14 +21,191 @@ import java.util.Optional;
  *
  * <p>Usage: {@code import static net.unit8.raoh.jooq.JooqRecordDecoders.*;}
  *
- * <p>For primitive decoders ({@code string()}, {@code int_()}, etc.) that work on raw
- * {@code Object} values extracted from a jOOQ record, see {@link net.unit8.raoh.ObjectDecoders}.
+ * <p>Primitive decoders receive raw {@code Object} values extracted from
+ * a jOOQ {@link org.jooq.Record} by {@link #field}. The raw value is
+ * whatever jOOQ maps the SQL type to (e.g. {@link Integer}, {@link String}).
  */
 public final class JooqRecordDecoders {
 
     private JooqRecordDecoders() {}
 
-    // --- field / optionalField / optionalNullableField ---
+    // --- Primitive decoders ---
+
+    /**
+     * Decodes a field value as a {@link String}.
+     *
+     * @return a string decoder for {@code Object} input
+     */
+    public static StringDecoder<Object> string() {
+        Decoder<Object, String> base = stringBase();
+        return new StringDecoder<>(base, base);
+    }
+
+    /**
+     * Decodes a field value as a {@link String}, allowing blank values.
+     *
+     * @return a string decoder for {@code Object} input that allows blank strings
+     */
+    public static StringDecoder<Object> allowBlankString() {
+        return new StringDecoder<>(stringBase());
+    }
+
+    private static Decoder<Object, String> stringBase() {
+        return (in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (in instanceof String s) {
+                return Result.ok(s);
+            }
+            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected string",
+                    Map.of("expected", "string", "actual", in.getClass().getSimpleName()));
+        };
+    }
+
+    /**
+     * Decodes a field value as an {@code int}.
+     *
+     * @return an integer decoder for {@code Object} input
+     */
+    public static IntDecoder<Object> int_() {
+        return new IntDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (in instanceof Integer i) {
+                return Result.ok(i);
+            }
+            if (in instanceof Number n) {
+                return Result.ok(n.intValue());
+            }
+            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected integer",
+                    Map.of("expected", "integer", "actual", in.getClass().getSimpleName()));
+        });
+    }
+
+    /**
+     * Decodes a field value as a {@code long}.
+     *
+     * @return a long decoder for {@code Object} input
+     */
+    public static LongDecoder<Object> long_() {
+        return new LongDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (in instanceof Long l) {
+                return Result.ok(l);
+            }
+            if (in instanceof Number n) {
+                return Result.ok(n.longValue());
+            }
+            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected long",
+                    Map.of("expected", "long", "actual", in.getClass().getSimpleName()));
+        });
+    }
+
+    /**
+     * Decodes a field value as a {@code boolean}.
+     *
+     * @return a boolean decoder for {@code Object} input
+     */
+    public static BoolDecoder<Object> bool() {
+        return new BoolDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (in instanceof Boolean b) {
+                return Result.ok(b);
+            }
+            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected boolean",
+                    Map.of("expected", "boolean", "actual", in.getClass().getSimpleName()));
+        });
+    }
+
+    /**
+     * Decodes a field value as a {@link BigDecimal}.
+     *
+     * @return a decimal decoder for {@code Object} input
+     */
+    public static DecimalDecoder<Object> decimal() {
+        return new DecimalDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (in instanceof BigDecimal bd) {
+                return Result.ok(bd);
+            }
+            if (in instanceof Number n) {
+                return Result.ok(new BigDecimal(n.toString()));
+            }
+            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected number",
+                    Map.of("expected", "number", "actual", in.getClass().getSimpleName()));
+        });
+    }
+
+    // --- Temporal decoders ---
+
+    /**
+     * Decodes a field value as a {@link LocalDate}.
+     *
+     * @return a temporal decoder for {@code Object} input producing {@link LocalDate}
+     */
+    public static TemporalDecoder<Object, LocalDate> date() {
+        return temporalOf(LocalDate.class, "date");
+    }
+
+    /**
+     * Decodes a field value as a {@link LocalTime}.
+     *
+     * @return a temporal decoder for {@code Object} input producing {@link LocalTime}
+     */
+    public static TemporalDecoder<Object, LocalTime> time() {
+        return temporalOf(LocalTime.class, "time");
+    }
+
+    /**
+     * Decodes a field value as a {@link LocalDateTime}.
+     *
+     * @return a temporal decoder for {@code Object} input producing {@link LocalDateTime}
+     */
+    public static TemporalDecoder<Object, LocalDateTime> dateTime() {
+        return temporalOf(LocalDateTime.class, "date-time");
+    }
+
+    /**
+     * Decodes a field value as an {@link Instant}.
+     *
+     * @return a temporal decoder for {@code Object} input producing {@link Instant}
+     */
+    public static TemporalDecoder<Object, Instant> iso8601() {
+        return temporalOf(Instant.class, "instant");
+    }
+
+    /**
+     * Decodes a field value as an {@link OffsetDateTime}.
+     *
+     * @return a temporal decoder for {@code Object} input producing {@link OffsetDateTime}
+     */
+    public static TemporalDecoder<Object, OffsetDateTime> offsetDateTime() {
+        return temporalOf(OffsetDateTime.class, "offset-date-time");
+    }
+
+    private static <T extends Comparable<? super T>> TemporalDecoder<Object, T> temporalOf(
+            Class<T> type, String typeName) {
+        return new TemporalDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (type.isInstance(in)) {
+                return Result.ok(type.cast(in));
+            }
+            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected " + typeName,
+                    Map.of("expected", typeName, "actual", in.getClass().getSimpleName()));
+        });
+    }
+
+    // --- field / optionalField / nullable ---
 
     /**
      * Extracts a named field from a {@link org.jooq.Record} and decodes it.
@@ -85,6 +272,26 @@ public final class JooqRecordDecoders {
     }
 
     /**
+     * Makes a decoder accept {@code null} as a valid value, returning {@code null}.
+     *
+     * <p><strong>Note:</strong> The returned decoder produces {@code Ok(null)} when the column
+     * value is SQL NULL. Callers must handle {@code null} explicitly. Prefer
+     * {@link #optionalField} for optional semantics.
+     *
+     * @param <T> the decoded value type
+     * @param dec the inner decoder
+     * @return a decoder that passes through {@code null} without error
+     */
+    public static <T> Decoder<Object, @Nullable T> nullable(Decoder<Object, T> dec) {
+        return (in, path) -> {
+            if (in == null) {
+                return Result.ok(null);
+            }
+            return dec.decode(in, path);
+        };
+    }
+
+    /**
      * Applies another {@link JooqRecordDecoder} to the same {@link org.jooq.Record}.
      *
      * <p>This is the primary building block for mapping a flat JOIN result into a
@@ -105,6 +312,19 @@ public final class JooqRecordDecoders {
      */
     public static <T> JooqRecordDecoder<T> nested(JooqRecordDecoder<T> dec) {
         return dec::decode;
+    }
+
+    // --- enumOf ---
+
+    /**
+     * Decodes a field value as an enum constant of the given class.
+     *
+     * @param <E> the enum type
+     * @param cls the enum class
+     * @return a decoder that produces enum constants from string input
+     */
+    public static <E extends Enum<E>> Decoder<Object, E> enumOf(Class<E> cls) {
+        return Decoders.enumOf(cls, allowBlankString());
     }
 
     // --- combine delegates ---
