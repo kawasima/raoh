@@ -70,7 +70,7 @@ public final class MapDecoders {
      * Adapts a {@code Decoder<Map<String, Object>, T>} for use as a field value decoder.
      *
      * <p><strong>Why this is needed</strong></p>
-     * <p>{@link #field} and {@link #list} accept a {@code Decoder<Object, T>} for the value,
+     * <p>{@link #field} and {@link net.unit8.raoh.ObjectDecoders#list(Decoder) ObjectDecoders.list} accept a {@code Decoder<Object, T>} for the value,
      * because field values arrive as raw {@code Object} from the enclosing map.
      * But a decoder built with {@link #combine} + {@link #field} internally produces a
      * {@code Decoder<Map<String, Object>, T>} — there is a type gap between {@code Object}
