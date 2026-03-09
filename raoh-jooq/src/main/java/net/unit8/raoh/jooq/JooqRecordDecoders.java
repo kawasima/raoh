@@ -9,7 +9,11 @@ import java.util.Optional;
 /**
  * Factory of decoders for {@link org.jooq.Record} input.
  *
- * <p>Usage: {@code import static net.unit8.raoh.jooq.JooqRecordDecoders.*;}
+ * <p>Usage:
+ * <pre>{@code
+ * import static net.unit8.raoh.jooq.JooqRecordDecoders.*;
+ * import static net.unit8.raoh.ObjectDecoders.*;
+ * }</pre>
  *
  * <p>For primitive decoders ({@code string()}, {@code int_()}, etc.) that work on raw
  * {@code Object} values extracted from a jOOQ record, see {@link net.unit8.raoh.ObjectDecoders}.

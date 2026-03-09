@@ -31,12 +31,13 @@ public final class ObjectDecoders {
     // --- Primitive decoders ---
 
     /**
-     * Creates a string decoder that rejects blank values by default.
+     * Creates a string decoder.
      *
-     * <p>Returns {@code required} if the value is {@code null} or blank,
+     * <p>Returns {@code required} if the value is {@code null},
      * and {@code type_mismatch} if the value is not a {@link String}.
-     * Call {@link net.unit8.raoh.builtin.StringDecoder#allowBlank() allowBlank()} to allow blank strings,
-     * or use {@link #allowBlankString()} directly.
+     * Blank strings are accepted by default; chain {@link net.unit8.raoh.builtin.StringDecoder#nonBlank() nonBlank()}
+     * to reject them, or use {@link #allowBlankString()} when you explicitly want to allow blanks
+     * and suppress the {@link net.unit8.raoh.builtin.StringDecoder#nonBlank() nonBlank()} default.
      *
      * @return a string decoder for {@code Object} input
      */
@@ -297,7 +298,8 @@ public final class ObjectDecoders {
 
     /**
      * Creates a map decoder that decodes each value of a {@code Map<String, ?>} with the given
-     * decoder, accumulating all errors. Keys are preserved as-is.
+     * decoder, accumulating all errors. Non-{@link String} keys are converted via
+     * {@link String#valueOf(Object)}; {@link String} keys are used directly.
      *
      * <p>Returns {@code required} if the value is {@code null},
      * and {@code type_mismatch} if the value is not a {@link Map}.
