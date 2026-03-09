@@ -58,7 +58,7 @@ class CombineListTest {
 
     @Test
     void allFieldsSucceed() {
-        var decoder = Decoders.combine(DECODERS_17).apply(Row17::new);
+        var decoder = Decoders.combine(DECODERS_17).map(Row17::new);
         var result  = decoder.decode(allValid());
         assertInstanceOf(Ok.class, result);
         var row = ((Ok<Row17>) result).value();
@@ -71,7 +71,7 @@ class CombineListTest {
         var input = new java.util.HashMap<>(allValid());
         input.remove("f5");  // missing → required error
 
-        var decoder = Decoders.combine(DECODERS_17).apply(Row17::new);
+        var decoder = Decoders.combine(DECODERS_17).map(Row17::new);
         var result  = decoder.decode(input);
         assertInstanceOf(Err.class, result);
         var issues  = ((Err<Row17>) result).issues().asList();
@@ -85,7 +85,7 @@ class CombineListTest {
         input.remove("f1");
         input.remove("f17");
 
-        var decoder = Decoders.combine(DECODERS_17).apply(Row17::new);
+        var decoder = Decoders.combine(DECODERS_17).map(Row17::new);
         var result  = decoder.decode(input);
         assertInstanceOf(Err.class, result);
         var issues  = ((Err<Row17>) result).issues().asList();
@@ -96,7 +96,7 @@ class CombineListTest {
     void constructorReferenceViaObjectArrayCtor() {
         // Verify that MyRow::new works as a method reference when
         // an Object[]-accepting constructor is defined on the record.
-        var decoder = Decoders.combine(DECODERS_17).apply(Row17::new);
+        var decoder = Decoders.combine(DECODERS_17).map(Row17::new);
         assertNotNull(decoder);
         assertInstanceOf(Ok.class, decoder.decode(allValid()));
     }

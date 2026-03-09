@@ -34,7 +34,7 @@ public final class JsonMembershipDecoders {
                     // in the EmailAddress value object after all validations pass.
                     field("email", string().trim().toLowerCase().email()
                             .maxLength(200).map(EmailAddress::new))
-            ).apply(CreateUserCommand::new));
+            ).map(CreateUserCommand::new));
 
     /**
      * Decodes a JSON request body into a group-creation command.
@@ -48,7 +48,7 @@ public final class JsonMembershipDecoders {
                     field("name", string().trim().nonBlank().maxLength(100)),
                     Decoders.withDefault(
                             field("description", string().maxLength(500)), "")
-            ).apply(CreateGroupCommand::new));
+            ).map(CreateGroupCommand::new));
 
     /**
      * Decodes a JSON request body into a membership-addition command.
@@ -63,7 +63,7 @@ public final class JsonMembershipDecoders {
                     Decoders.withDefault(
                             field("role", enumOf(MembershipRole.class)),
                             MembershipRole.MEMBER)
-            ).apply(AddMemberCommand::new));
+            ).map(AddMemberCommand::new));
 
     // ── Command records ─────────────────────────────────────────────
 

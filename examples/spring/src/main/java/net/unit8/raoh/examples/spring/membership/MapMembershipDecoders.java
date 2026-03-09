@@ -31,7 +31,7 @@ public final class MapMembershipDecoders {
             field("id", long_()).map(UserId::new),
             field("name", string()),
             field("email", string()).map(EmailAddress::new)
-    ).apply(User::new);
+    ).map(User::new);
 
     /** Decodes a JDBC row into a {@link Group}. */
     public static final Decoder<Map<String, Object>, Group> GROUP_ROW = combine(
@@ -39,7 +39,7 @@ public final class MapMembershipDecoders {
             field("name", string()),
             // description is NOT NULL DEFAULT '' in the schema, so string() is correct here.
             field("description", string())
-    ).apply(Group::new);
+    ).map(Group::new);
 
     /** Decodes a JDBC join row into a {@link GroupMembership}. */
     public static final Decoder<Map<String, Object>, GroupMembership> GROUP_MEMBERSHIP_ROW =
@@ -50,7 +50,7 @@ public final class MapMembershipDecoders {
                     // (case-insensitive). The DB column is NOT NULL so string() without nullable
                     // is appropriate as the base.
                     field("role", enumOf(MembershipRole.class))
-            ).apply(GroupMembership::new);
+            ).map(GroupMembership::new);
 
     /**
      * Decodes a user row plus a list of group-membership rows into {@link UserWithGroups},

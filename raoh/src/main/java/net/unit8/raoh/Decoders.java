@@ -141,7 +141,7 @@ public final class Decoders {
      *
      * @param <I>      the input type
      * @param decoders the decoders to combine; must not be empty
-     * @return a combiner on which {@code .apply(f)} or {@code .flatMap(f)} can be called
+     * @return a combiner on which {@code .map(f)} or {@code .flatMap(f)} can be called
      */
     public static <I> CombinerList<I> combine(List<Decoder<I, ?>> decoders) {
         return new CombinerList<>(decoders);

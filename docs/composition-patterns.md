@@ -2,7 +2,7 @@
 
 Raoh offers four distinct composition patterns. Choosing the right one keeps error accumulation correct.
 
-## Pattern 1: Same input, independent fields — `combine(...).apply(...)`
+## Pattern 1: Same input, independent fields — `combine(...).map(...)`
 
 Use this for normal object decoding from a single input source.
 All field errors are accumulated even when multiple fields fail.
@@ -11,7 +11,7 @@ All field errors are accumulated even when multiple fields fail.
 combine(
         field("name", string().nonBlank()),
         field("age", int_().range(0, 150))
-).apply(Person::new);
+).map(Person::new);
 ```
 
 If `name` and `age` are both invalid, you get both errors back.
@@ -94,7 +94,7 @@ If elements 1 and 3 fail, both errors are reported with their respective paths �
 
 | Situation | Tool |
 | --- | --- |
-| Multiple fields from the same input | `combine(...).apply(...)` |
+| Multiple fields from the same input | `combine(...).map(...)` |
 | Next step depends on a previous result | `flatMap(...)` |
 | Two independent results from different inputs | `Result.map2(...)` |
 | Variable-length list, accumulate all errors | `Result.traverse(...)` / `Decoder.list()` |

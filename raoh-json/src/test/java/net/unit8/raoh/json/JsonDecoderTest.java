@@ -73,7 +73,7 @@ class JsonDecoderTest {
                 field("prefecture", enumOf(Prefecture.class)),
                 field("city", string().maxLength(100)),
                 field("street", string().maxLength(200))
-        ).apply(Address::new);
+        ).map(Address::new);
     }
 
     static Decoder<JsonNode, User> user() {
@@ -82,7 +82,7 @@ class JsonDecoderTest {
                 field("email", email()),
                 field("age", age()),
                 field("address", address())
-        ).apply(User::new);
+        ).map(User::new);
     }
 
     static Decoder<JsonNode, Money> money() {
@@ -395,7 +395,7 @@ class JsonDecoderTest {
                 field("body", string()),
                 Decoders.withDefault(
                         field("replies", list(Decoders.lazy(() -> holder[0]))), List.of())
-        ).apply(Comment::new);
+        ).map(Comment::new);
 
         var json = parse("""
                 {
@@ -470,11 +470,11 @@ class JsonDecoderTest {
                 combine(
                         field("kind", literal("email")),
                         field("value", string().email())
-                ).apply((kind, value) -> new EmailContact(new Email(value))),
+                ).map((kind, value) -> new EmailContact(new Email(value))),
                 combine(
                         field("kind", literal("phone")),
                         field("value", string().pattern(java.util.regex.Pattern.compile("^\\d+$")))
-                ).apply((kind, value) -> new Phone(value))
+                ).map((kind, value) -> new Phone(value))
         );
         var result = dec.decode(parse("{\"kind\":\"sms\",\"value\":\"abc\"}"));
 
@@ -495,7 +495,7 @@ class JsonDecoderTest {
         var dec = strict(combine(
                 field("name", string()),
                 field("age", int_())
-        ).apply((name, age) -> Map.of("name", name, "age", age)), java.util.Set.of("name", "age"));
+        ).map((name, age) -> Map.of("name", name, "age", age)), java.util.Set.of("name", "age"));
 
         var result = dec.decode(parse("{\"name\":\"Taro\",\"age\":20,\"extra\":true}"));
         switch (result) {

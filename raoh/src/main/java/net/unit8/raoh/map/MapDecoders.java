@@ -86,13 +86,13 @@ public final class MapDecoders {
      * Decoder<Map<String, Object>, Address> addressDecoder = combine(
      *     field("zip",  string().minLength(3)),
      *     field("city", string())
-     * ).apply(Address::new);
+     * ).map(Address::new);
      *
      * // nested() lets you embed it inside an outer field() call
      * Decoder<Map<String, Object>, User> userDecoder = combine(
      *     field("name",    string()),
      *     field("address", nested(addressDecoder))  // ← nested() required here
-     * ).apply(User::new);
+     * ).map(User::new);
      * }</pre>
      *
      * <p>Without {@code nested()}, the compiler rejects the second {@code field()} call because
@@ -174,14 +174,14 @@ public final class MapDecoders {
     /**
      * Combines two decoders so that all fields are decoded in parallel with error accumulation.
      *
-     * <p>Overloads for 2–16 decoders are provided. Call {@code .apply(MyRecord::new)} on the
+     * <p>Overloads for 2–16 decoders are provided. Call {@code .map(MyRecord::new)} on the
      * returned combiner to produce the final {@code Decoder<Map<String, Object>, T>}.
      *
      * @param <A> the first decoded type
      * @param <B> the second decoded type
      * @param da  the first decoder
      * @param db  the second decoder
-     * @return a combiner that can be finished with {@code apply}
+     * @return a combiner that can be finished with {@code map}
      */
     public static <A, B> Combiner2<Map<String, Object>, A, B> combine(
             Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db) {
@@ -196,7 +196,7 @@ public final class MapDecoders {
      * @param da  the first decoder
      * @param db  the second decoder
      * @param dc  the third decoder
-     * @return a combiner that can be finished with {@code apply}
+     * @return a combiner that can be finished with {@code map}
      */
     public static <A, B, C> Combiner3<Map<String, Object>, A, B, C> combine(
             Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,

@@ -14,7 +14,7 @@ If you know Zod, the closest equivalents are:
 | `z.literal("x")` | `literal("x")` |
 | `z.array(dec)` | `list(dec)` |
 | `z.record(dec)` | `map(dec)` |
-| `z.object({...})` | `combine(field(...), ...).apply(...)` |
+| `z.object({...})` | `combine(field(...), ...).map(...)` |
 | `.optional()` | `optionalField(name, dec)` |
 | `.nullable()` | `nullable(dec)` |
 | `.default(v)` | `withDefault(dec, v)` |
@@ -37,7 +37,7 @@ So the typical Raoh shape is:
 combine(
         field("email", string().trim().toLowerCase().email().map(Email::new)),
         field("age", int_().range(0, 150).map(Age::new))
-).apply(User::new);
+).map(User::new);
 ```
 
 The schema is already the parsing pipeline.
@@ -65,14 +65,14 @@ Rough correspondences:
 | `map` | `map(...)` |
 | `andThen` | `flatMap(...)` |
 | `oneOf` | `oneOf(...)` |
-| building records with `map2`, `map3`, ... | `combine(...).apply(...)` |
+| building records with `map2`, `map3`, ... | `combine(...).map(...)` |
 
 The most important differences are:
 
 - Elm decoders are primarily JSON decoders, while Raoh is generic over input type and ships JSON and `Map<String, Object>` boundaries out of the box
 - Elm usually models failure as decoder failure text, while Raoh emphasizes structured issues with `path`, `code`, `message`, and `meta`
 - Raoh has an explicit applicative/monadic split:
-  `combine(...).apply(...)` accumulates independent field errors, while `flatMap(...)` handles dependent parsing
+  `combine(...).map(...)` accumulates independent field errors, while `flatMap(...)` handles dependent parsing
 
 If you know Elm, this Raoh code should feel familiar:
 
@@ -82,7 +82,7 @@ JsonDecoder<User> user() {
             field("id", string().uuid().map(UserId::new)),
             field("email", string().trim().toLowerCase().email().map(Email::new)),
             field("age", int_().range(0, 150).map(Age::new))
-    ).apply(User::new);
+    ).map(User::new);
 }
 ```
 

@@ -57,7 +57,7 @@ public record Combiner16<I, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q>(Deco
      * @return a decoder that runs all decoders and accumulates errors
      */
     @SuppressWarnings("unchecked")
-    public <T> Decoder<I, T> apply(Function16<A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q, T> f) {
+    public <T> Decoder<I, T> map(Function16<A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q, T> f) {
         return (in, path) -> {
             var va = Validated.fromResult(da.decode(in, path));
             var vb = Validated.fromResult(db.decode(in, path));
@@ -83,7 +83,7 @@ public record Combiner16<I, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q>(Deco
     }
 
     /**
-     * Like {@link #apply}, but the constructor function may itself return a {@link Result}.
+     * Like {@link #map}, but the constructor function may itself return a {@link Result}.
      *
      * @param <T> the output type
      * @param f   a function returning a {@link Result}
@@ -119,14 +119,14 @@ public record Combiner16<I, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q>(Deco
     }
 
     /**
-     * Like {@link #apply}, but additionally rejects unknown fields.
+     * Like {@link #map}, but additionally rejects unknown fields.
      *
      * @param <T> the output type
      * @param f   the constructor function
      * @return a strict decoder that fails on unknown fields
      */
     public <T> Decoder<I, T> strict(Function16<A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q, T> f) {
-        return Decoders.strict(apply(f), knownFields());
+        return Decoders.strict(map(f), knownFields());
     }
 
     /**

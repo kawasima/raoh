@@ -61,7 +61,7 @@ class JooqDecoderTest {
                 field("name",  string()),
                 field("age",   int_()),
                 field("email", string())
-        ).apply(User::new);
+        ).map(User::new);
 
         var result = dec.decode(rec);
         assertInstanceOf(Ok.class, result);
@@ -108,12 +108,12 @@ class JooqDecoderTest {
             field("name",  string()),
             field("age",   int_()),
             field("email", string())
-    ).apply(User::new)::decode;
+    ).map(User::new)::decode;
 
     private static final JooqRecordDecoder<Address> ADDRESS_DECODER = combine(
             field("city", string()),
             field("zip",  string())
-    ).apply(Address::new)::decode;
+    ).map(Address::new)::decode;
 
     @Test
     void flatJoinResultToNestedDomainType() {
@@ -128,7 +128,7 @@ class JooqDecoderTest {
         Decoder<org.jooq.Record, UserWithAddress> dec = combine(
                 nested(USER_DECODER),
                 nested(ADDRESS_DECODER)
-        ).apply(UserWithAddress::new);
+        ).map(UserWithAddress::new);
 
         var result = dec.decode(rec);
         assertInstanceOf(Ok.class, result);
@@ -152,7 +152,7 @@ class JooqDecoderTest {
         Decoder<org.jooq.Record, UserWithAddress> dec = combine(
                 nested(USER_DECODER),
                 nested(ADDRESS_DECODER)
-        ).apply(UserWithAddress::new);
+        ).map(UserWithAddress::new);
 
         var result = dec.decode(rec);
         assertInstanceOf(Err.class, result);
@@ -169,7 +169,7 @@ class JooqDecoderTest {
             field("name",  string()),
             field("email", string()),
             field("role",  enumOf(Role.class))
-    ).apply(Employee::new)::decode;
+    ).map(Employee::new)::decode;
 
     private static JooqRecordDecoder<Optional<Department>> optDeptDecoder() {
         return (rec, path) -> {
@@ -202,7 +202,7 @@ class JooqDecoderTest {
         Decoder<org.jooq.Record, EmployeeWithDepartment> dec = combine(
                 nested(EMPLOYEE_DECODER),
                 optDeptDecoder()
-        ).apply(EmployeeWithDepartment::new);
+        ).map(EmployeeWithDepartment::new);
 
         var result = dec.decode(rec);
         assertInstanceOf(Ok.class, result);
@@ -226,7 +226,7 @@ class JooqDecoderTest {
         Decoder<org.jooq.Record, EmployeeWithDepartment> dec = combine(
                 nested(EMPLOYEE_DECODER),
                 optDeptDecoder()
-        ).apply(EmployeeWithDepartment::new);
+        ).map(EmployeeWithDepartment::new);
 
         var result = dec.decode(rec);
         assertInstanceOf(Ok.class, result);
@@ -242,7 +242,7 @@ class JooqDecoderTest {
     private static final JooqRecordDecoder<Money> MONEY_DECODER = combine(
             field("unit_price", decimal()),
             field("currency",   string())
-    ).apply(Money::new)::decode;
+    ).map(Money::new)::decode;
 
     @Test
     void valueObjectComposedFromTwoColumns() {
@@ -259,7 +259,7 @@ class JooqDecoderTest {
                 field("name",     string()),
                 field("quantity", int_()),
                 nested(MONEY_DECODER)
-        ).apply(OrderLine::new);
+        ).map(OrderLine::new);
 
         var result = dec.decode(rec);
         assertInstanceOf(Ok.class, result);
