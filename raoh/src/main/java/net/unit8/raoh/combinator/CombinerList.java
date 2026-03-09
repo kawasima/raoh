@@ -12,7 +12,7 @@ import java.util.function.Function;
  * Holds an arbitrary number of decoders for applicative-style validation with error accumulation.
  * Returned by {@link net.unit8.raoh.Decoders#combine(List)} as a fallback for more than 16 fields.
  *
- * <p>Because the arity is not statically known, {@link #apply} and {@link #flatMap}
+ * <p>Because the arity is not statically known, {@link #map} and {@link #flatMap}
  * receive decoded values as an untyped {@code Object[]}. To use a constructor reference
  * ({@code MyRow::new}), add an {@code Object[]}-accepting constructor to your record:
  *
@@ -26,7 +26,7 @@ import java.util.function.Function;
  *     field("name", string()),
  *     field("id",   long_()),
  *     // 17 or more fields
- * )).apply(MyRow::new)
+ * )).map(MyRow::new)
  * }</pre>
  *
  * @param <I>      the input type
@@ -43,7 +43,7 @@ public record CombinerList<I>(List<Decoder<I, ?>> decoders) {
      * @param f   a function receiving all decoded values as an untyped {@code Object[]}
      * @return a decoder that runs all decoders and accumulates errors
      */
-    public <T> Decoder<I, T> apply(Function<Object[], T> f) {
+    public <T> Decoder<I, T> map(Function<Object[], T> f) {
         return (in, path) -> {
             var vals = new Validated<?>[decoders.size()];
             for (int i = 0; i < decoders.size(); i++) {
@@ -54,7 +54,7 @@ public record CombinerList<I>(List<Decoder<I, ?>> decoders) {
     }
 
     /**
-     * Like {@link #apply}, but the constructor function may itself return a {@link Result}.
+     * Like {@link #map}, but the constructor function may itself return a {@link Result}.
      *
      * <p>If the combined decoding succeeds, the result of {@code f} is flat-mapped;
      * any issues it produces are rebased to the current path.

@@ -41,7 +41,7 @@ public record Combiner8<I, A, B, C, D, E, F, G, H>(Decoder<I, A> da, Decoder<I, 
      * @return a decoder that runs all decoders and accumulates errors
      */
     @SuppressWarnings("unchecked")
-    public <T> Decoder<I, T> apply(Function8<A, B, C, D, E, F, G, H, T> f) {
+    public <T> Decoder<I, T> map(Function8<A, B, C, D, E, F, G, H, T> f) {
         return (in, path) -> {
             var va = Validated.fromResult(da.decode(in, path));
             var vb = Validated.fromResult(db.decode(in, path));
@@ -59,7 +59,7 @@ public record Combiner8<I, A, B, C, D, E, F, G, H>(Decoder<I, A> da, Decoder<I, 
     }
 
     /**
-     * Like {@link #apply}, but the constructor function may itself return a {@link Result}.
+     * Like {@link #map}, but the constructor function may itself return a {@link Result}.
      *
      * @param <T> the output type
      * @param f   a function returning a {@link Result}
@@ -87,14 +87,14 @@ public record Combiner8<I, A, B, C, D, E, F, G, H>(Decoder<I, A> da, Decoder<I, 
     }
 
     /**
-     * Like {@link #apply}, but additionally rejects unknown fields.
+     * Like {@link #map}, but additionally rejects unknown fields.
      *
      * @param <T> the output type
      * @param f   the constructor function
      * @return a strict decoder that fails on unknown fields
      */
     public <T> Decoder<I, T> strict(Function8<A, B, C, D, E, F, G, H, T> f) {
-        return Decoders.strict(apply(f), knownFields());
+        return Decoders.strict(map(f), knownFields());
     }
 
     /**

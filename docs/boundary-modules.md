@@ -55,18 +55,18 @@ record UserWithAddress(User user, Address address) {}
 JooqRecordDecoder<User> userDecoder = combine(
         field("name", string()),
         field("age",  int_())
-).apply(User::new)::decode;
+).map(User::new)::decode;
 
 JooqRecordDecoder<Address> addressDecoder = combine(
         field("city", string()),
         field("zip",  string())
-).apply(Address::new)::decode;
+).map(Address::new)::decode;
 
 // SELECT u.name, u.age, a.city, a.zip FROM users u JOIN addresses a ...
 Decoder<Record, UserWithAddress> dec = combine(
         nested(userDecoder),
         nested(addressDecoder)
-).apply(UserWithAddress::new);
+).map(UserWithAddress::new);
 ```
 
 `nested(dec)` applies another `JooqRecordDecoder` to the same flat record.

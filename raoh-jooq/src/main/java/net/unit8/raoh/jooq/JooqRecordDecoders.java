@@ -100,7 +100,7 @@ public final class JooqRecordDecoders {
      * Decoder<Record, UserWithAddress> dec = combine(
      *     nested(userDecoder),
      *     nested(addressDecoder)
-     * ).apply(UserWithAddress::new);
+     * ).map(UserWithAddress::new);
      * }</pre>
      *
      * @param <T> the decoded value type
@@ -116,14 +116,14 @@ public final class JooqRecordDecoders {
     /**
      * Combines two field decoders, accumulating all errors.
      *
-     * <p>Overloads for 2-16 decoders are provided. Call {@code .apply(MyRecord::new)} on the
+     * <p>Overloads for 2-16 decoders are provided. Call {@code .map(MyRecord::new)} on the
      * returned combiner to produce the final {@code Decoder<Record, T>}.
      *
      * @param <A> the first decoded type
      * @param <B> the second decoded type
      * @param da  the first decoder
      * @param db  the second decoder
-     * @return a combiner that can be finished with {@code apply}
+     * @return a combiner that can be finished with {@code map}
      */
     public static <A, B> Combiner2<org.jooq.Record, A, B> combine(
             Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db) {
@@ -139,7 +139,7 @@ public final class JooqRecordDecoders {
      * @param da  the first decoder
      * @param db  the second decoder
      * @param dc  the third decoder
-     * @return a combiner that can be finished with {@code apply}
+     * @return a combiner that can be finished with {@code map}
      * @see Decoders#combine(Decoder, Decoder, Decoder)
      */
     public static <A, B, C> Combiner3<org.jooq.Record, A, B, C> combine(
@@ -159,7 +159,7 @@ public final class JooqRecordDecoders {
      * @param db  the second decoder
      * @param dc  the third decoder
      * @param dd  the fourth decoder
-     * @return a combiner that can be finished with {@code apply}
+     * @return a combiner that can be finished with {@code map}
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D> Combiner4<org.jooq.Record, A, B, C, D> combine(
@@ -347,7 +347,7 @@ public final class JooqRecordDecoders {
      *
      * @param <T>      the output type
      * @param decoders the decoders to combine
-     * @return a combiner on which {@code .apply(f)} can be called
+     * @return a combiner on which {@code .map(f)} can be called
      * @see Decoders#combine(List)
      */
     public static <T> CombinerList<org.jooq.Record> combine(List<Decoder<org.jooq.Record, ?>> decoders) {

@@ -24,7 +24,7 @@ import java.util.Set;
  * var userDecoder = combine(
  *     field("name", string().minLength(1)),
  *     field("age", int_().range(0, 150))
- * ).apply(User::new);
+ * ).map(User::new);
  * }</pre>
  */
 public final class JsonDecoders {

@@ -157,7 +157,7 @@ JsonDecoder<User> user() {
     return combine(
             field("email", email()),
             field("age", age())
-    ).apply(User::new);
+    ).map(User::new);
 }
 ```
 
@@ -207,7 +207,7 @@ MapDecoder<Config> config() {
     return combine(
             field("host", string().nonBlank()),
             field("port", int_().range(1, 65535))
-    ).apply(Config::new);
+    ).map(Config::new);
 }
 ```
 
@@ -420,7 +420,7 @@ JsonDecoder<User> user() {
             field("id", userId()),
             field("email", email()),
             field("balance", money())
-    ).apply(User::new);
+    ).map(User::new);
 }
 ```
 
@@ -433,7 +433,7 @@ This reads naturally as:
 
 ## Composition Patterns
 
-Raoh offers four distinct composition patterns — `combine(...).apply(...)`, `flatMap(...)`, `Result.map2(...)`, and `Result.traverse(...)` / `Decoder.list()`. Choosing the right one keeps error accumulation correct.
+Raoh offers four distinct composition patterns — `combine(...).map(...)`, `flatMap(...)`, `Result.map2(...)`, and `Result.traverse(...)` / `Decoder.list()`. Choosing the right one keeps error accumulation correct.
 
 See [docs/composition-patterns.md](docs/composition-patterns.md) for details and examples.
 
@@ -445,7 +445,7 @@ Given this decoder:
 var dec = combine(
         field("email", string().email()),
         field("age", int_().range(0, 150))
-).apply((email, age) -> Map.of("email", email, "age", age));
+).map((email, age) -> Map.of("email", email, "age", age));
 ```
 
 And this input:
@@ -506,7 +506,7 @@ JsonDecoder<Comment>[] self = new JsonDecoder[1];
 self[0] = combine(
         field("body", string().nonBlank()),
         withDefault(field("replies", list(lazy(() -> self[0]))), List.of())
-).apply(Comment::new);
+).map(Comment::new);
 ```
 
 ### `oneOf(...)`
@@ -518,11 +518,11 @@ var contact = oneOf(
         combine(
                 field("kind", literal("email")),
                 field("value", string().email())
-        ).apply((kind, value) -> new EmailContact(value)),
+        ).map((kind, value) -> new EmailContact(value)),
         combine(
                 field("kind", literal("phone")),
                 field("value", string().pattern(Pattern.compile("^\\d+$")))
-        ).apply((kind, value) -> new PhoneContact(value))
+        ).map((kind, value) -> new PhoneContact(value))
 );
 ```
 
@@ -637,7 +637,7 @@ Examples:
 combine(
         field("name", string()),
         field("address", address())
-).apply(User::new);
+).map(User::new);
 ```
 
 - cross-field validation

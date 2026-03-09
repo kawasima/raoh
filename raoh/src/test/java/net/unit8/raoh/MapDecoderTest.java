@@ -69,7 +69,7 @@ class MapDecoderTest {
                 field("prefecture", enumOf(Prefecture.class)),
                 field("city", string().maxLength(100)),
                 field("street", string().maxLength(200))
-        ).apply(Address::new);
+        ).map(Address::new);
     }
 
     static Decoder<Map<String, Object>, User> user() {
@@ -78,7 +78,7 @@ class MapDecoderTest {
                 field("email", email()),
                 field("age", age()),
                 field("address", nested(address()))
-        ).apply(User::new);
+        ).map(User::new);
     }
 
     static Decoder<Map<String, Object>, Money> money() {
@@ -472,8 +472,8 @@ class MapDecoderTest {
                 field("address", nested(combine(
                         field("city", string()),
                         field("zip", string().fixedLength(7))
-                ).apply((city, zip) -> Map.of("city", city, "zip", zip))))
-        ).apply((name, addr) -> Map.of("name", name, "address", addr));
+                ).map((city, zip) -> Map.of("city", city, "zip", zip))))
+        ).map((name, addr) -> Map.of("name", name, "address", addr));
 
         var input = Map.<String, Object>of(
                 "name", "Taro",
@@ -501,11 +501,11 @@ class MapDecoderTest {
                 combine(
                         field("kind", literal("email")),
                         field("value", string().email())
-                ).apply((kind, value) -> new EmailContact(new Email(value))),
+                ).map((kind, value) -> new EmailContact(new Email(value))),
                 combine(
                         field("kind", literal("phone")),
                         field("value", string().pattern(java.util.regex.Pattern.compile("^\\d+$")))
-                ).apply((kind, value) -> new Phone(value))
+                ).map((kind, value) -> new Phone(value))
         );
 
         var result = dec.decode(Map.of("kind", "sms", "value", "abc"));
@@ -530,7 +530,7 @@ class MapDecoderTest {
         var dec = strict(combine(
                 field("name", string()),
                 field("age", int_())
-        ).apply((name, age) -> Map.of("name", name, "age", age)), java.util.Set.of("name", "age"));
+        ).map((name, age) -> Map.of("name", name, "age", age)), java.util.Set.of("name", "age"));
 
         var result = dec.decode(Map.of("name", "Taro", "age", 20, "extra", true));
         switch (result) {
