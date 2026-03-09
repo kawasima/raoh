@@ -1,5 +1,7 @@
 package net.unit8.raoh;
 
+import java.util.stream.Collectors;
+
 /**
  * A failed decoding result containing validation issues.
  *
@@ -16,5 +18,15 @@ public record Err<T>(Issues issues) implements Result<T> {
     @SuppressWarnings("unchecked")
     public <U> Err<U> coerce() {
         return (Err<U>) this;
+    }
+
+    @Override
+    public String toString() {
+        return issues.asList().stream()
+            .map(issue -> {
+                String p = issue.path().toString();
+                return (p.isEmpty() ? "/" : p) + ": " + issue.message();
+            })
+            .collect(Collectors.joining(", ", "Err[", "]"));
     }
 }
