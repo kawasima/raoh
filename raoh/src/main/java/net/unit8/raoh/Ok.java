@@ -7,4 +7,8 @@ package net.unit8.raoh;
  * @param <T>   the type of the decoded value
  */
 public record Ok<T>(T value) implements Result<T> {
+    @Override
+    public final String toString() {
+        return "Ok[" + value + "]";
+    }
 }
