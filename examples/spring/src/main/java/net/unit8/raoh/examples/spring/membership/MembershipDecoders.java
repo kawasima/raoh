@@ -2,6 +2,7 @@ package net.unit8.raoh.examples.spring.membership;
 
 import net.unit8.raoh.Decoder;
 import net.unit8.raoh.Decoders;
+import net.unit8.raoh.ObjectDecoders;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.json.JsonDecoder;
 import net.unit8.raoh.json.JsonDecoders;
@@ -87,26 +88,26 @@ public final class MembershipDecoders {
     /** Decodes a JDBC row into a {@link User}. */
     public static final Decoder<Map<String, Object>, User> USER_ROW = MapDecoders.combine(
             // map() transforms the decoded long into a UserId value object.
-            MapDecoders.field("id", MapDecoders.long_()).map(UserId::new),
-            MapDecoders.field("name", MapDecoders.string()),
-            MapDecoders.field("email", MapDecoders.string()).map(EmailAddress::new)
+            MapDecoders.field("id", ObjectDecoders.long_()).map(UserId::new),
+            MapDecoders.field("name", ObjectDecoders.string()),
+            MapDecoders.field("email", ObjectDecoders.string()).map(EmailAddress::new)
     ).apply(User::new);
 
     /** Decodes a JDBC row into a {@link Group}. */
     public static final Decoder<Map<String, Object>, Group> GROUP_ROW = MapDecoders.combine(
-            MapDecoders.field("id", MapDecoders.long_()).map(GroupId::new),
-            MapDecoders.field("name", MapDecoders.string()),
-            MapDecoders.field("description", MapDecoders.string())
+            MapDecoders.field("id", ObjectDecoders.long_()).map(GroupId::new),
+            MapDecoders.field("name", ObjectDecoders.string()),
+            MapDecoders.field("description", ObjectDecoders.string())
     ).apply(Group::new);
 
     /** Decodes a JDBC join row into a {@link GroupMembership}. */
     public static final Decoder<Map<String, Object>, GroupMembership> GROUP_MEMBERSHIP_ROW =
             MapDecoders.combine(
-                    MapDecoders.field("group_id", MapDecoders.long_()).map(GroupId::new),
-                    MapDecoders.field("group_name", MapDecoders.string()),
+                    MapDecoders.field("group_id", ObjectDecoders.long_()).map(GroupId::new),
+                    MapDecoders.field("group_name", ObjectDecoders.string()),
                     // map() after decoding applies a custom transformation; here it converts
                     // the raw string into the MembershipRole enum.
-                    MapDecoders.field("role", MapDecoders.string())
+                    MapDecoders.field("role", ObjectDecoders.string())
                             .map(s -> MembershipRole.valueOf(s.toUpperCase()))
             ).apply(GroupMembership::new);
 

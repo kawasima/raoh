@@ -10,6 +10,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static net.unit8.raoh.map.MapDecoders.*;
+import static net.unit8.raoh.ObjectDecoders.*;
 
 class MapDecoderTest {
 
@@ -395,7 +396,7 @@ class MapDecoderTest {
 
     @Test
     void mapDecoder() {
-        var dec = field("prices", net.unit8.raoh.map.MapDecoders.map(decimal()));
+        var dec = field("prices", map(decimal()));
         var result = assertOk(dec.decode(
                 Map.of("prices", Map.of("apple", 1.50, "banana", 0.99))));
         assertEquals(2, result.size());
@@ -404,7 +405,7 @@ class MapDecoderTest {
 
     @Test
     void mapDecoderSizeConstraints() {
-        var dec = field("tags", net.unit8.raoh.map.MapDecoders.map(string()).minSize(1).maxSize(3));
+        var dec = field("tags", map(string()).minSize(1).maxSize(3));
         assertOk(dec.decode(Map.of("tags", Map.of("a", "x"))));
         assertErr(dec.decode(Map.of("tags", Map.of())));
         assertErr(dec.decode(Map.of("tags", Map.of("a", "x", "b", "y", "c", "z", "d", "w"))));
