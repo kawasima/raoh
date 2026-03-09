@@ -52,7 +52,7 @@ public final class ObjectDecoders {
         return new StringDecoder<>(allowBlankBase());
     }
 
-    static Decoder<Object, String> allowBlankBase() {
+    private static Decoder<Object, String> allowBlankBase() {
         return (in, path) -> {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");

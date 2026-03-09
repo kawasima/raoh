@@ -12,8 +12,8 @@ import static net.unit8.raoh.map.MapDecoders.*;
 /**
  * Map boundary decoders for the membership domain.
  *
- * <p>Decodes {@code Map<String, Object>} JDBC rows (from Spring JDBC's
- * {@code JdbcClient.query().listOfRows()}) into domain objects.
+ * <p>Decodes {@code Map<String, Object>} rows — the format returned by Spring JDBC's
+ * {@code JdbcClient.query().listOfRows()} — into domain objects.
  * Use {@code import static net.unit8.raoh.examples.spring.membership.MapMembershipDecoders.*;}
  * to bring all constants into scope.
  */

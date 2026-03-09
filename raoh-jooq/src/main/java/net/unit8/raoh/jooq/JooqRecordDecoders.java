@@ -3,8 +3,6 @@ package net.unit8.raoh.jooq;
 import net.unit8.raoh.*;
 import net.unit8.raoh.combinator.*;
 
-import org.jspecify.annotations.Nullable;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -83,26 +81,6 @@ public final class JooqRecordDecoders {
             }
             return dec.decode(value, fieldPath)
                     .map(v -> (Presence<T>) new Presence.Present<>(v));
-        };
-    }
-
-    /**
-     * Makes a decoder accept {@code null} as a valid value, returning {@code null}.
-     *
-     * <p><strong>Note:</strong> The returned decoder produces {@code Ok(null)} when the column
-     * value is SQL NULL. Callers must handle {@code null} explicitly. Prefer
-     * {@link #optionalField} for optional semantics.
-     *
-     * @param <T> the decoded value type
-     * @param dec the inner decoder
-     * @return a decoder that passes through {@code null} without error
-     */
-    public static <T> Decoder<Object, @Nullable T> nullable(Decoder<Object, T> dec) {
-        return (in, path) -> {
-            if (in == null) {
-                return Result.ok(null);
-            }
-            return dec.decode(in, path);
         };
     }
 
