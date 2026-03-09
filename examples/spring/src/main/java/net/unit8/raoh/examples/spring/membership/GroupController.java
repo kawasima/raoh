@@ -2,8 +2,10 @@ package net.unit8.raoh.examples.spring.membership;
 
 import net.unit8.raoh.*;
 import net.unit8.raoh.examples.spring.SpringMessageResolver;
-import net.unit8.raoh.examples.spring.membership.MembershipDecoders.AddMemberCommand;
-import net.unit8.raoh.examples.spring.membership.MembershipDecoders.CreateGroupCommand;
+import net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.AddMemberCommand;
+import net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.CreateGroupCommand;
+import static net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.ADD_MEMBER;
+import static net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.CREATE_GROUP;
 import tools.jackson.databind.JsonNode;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
@@ -15,8 +17,8 @@ import java.util.Locale;
 /**
  * REST controller for group and membership operations.
  *
- * <p>Group creation uses {@link MembershipDecoders#CREATE_GROUP} and member
- * addition uses {@link MembershipDecoders#ADD_MEMBER} for request body
+ * <p>Group creation uses {@link JsonMembershipDecoders#CREATE_GROUP} and member
+ * addition uses {@link JsonMembershipDecoders#ADD_MEMBER} for request body
  * decoding with full error accumulation.
  */
 @RestController
@@ -50,7 +52,7 @@ public class GroupController {
     @PostMapping
     public ResponseEntity<?> create(@RequestBody JsonNode body, Locale locale) {
         // Same sealed-type pattern matching as UserController.create().
-        return switch (MembershipDecoders.CREATE_GROUP.decode(body)) {
+        return switch (CREATE_GROUP.decode(body)) {
             case Ok<CreateGroupCommand>(var cmd) -> {
                 GroupId id = groups.insert(cmd.name(), cmd.description());
                 yield ResponseEntity.status(HttpStatus.CREATED)
@@ -101,7 +103,7 @@ public class GroupController {
     /**
      * Adds a user to a group with a given role.
      *
-     * <p>The request body is decoded by {@link MembershipDecoders#ADD_MEMBER}.
+     * <p>The request body is decoded by {@link JsonMembershipDecoders#ADD_MEMBER}.
      * If the role is omitted, it defaults to {@link MembershipRole#MEMBER}.
      *
      * @param id   the group ID
@@ -110,7 +112,7 @@ public class GroupController {
      */
     @PostMapping("/{id}/members")
     public ResponseEntity<?> addMember(@PathVariable long id, @RequestBody JsonNode body, Locale locale) {
-        return switch (MembershipDecoders.ADD_MEMBER.decode(body)) {
+        return switch (ADD_MEMBER.decode(body)) {
             case Ok<AddMemberCommand>(var cmd) -> {
                 if (groups.findById(id).isEmpty()) {
                     yield ResponseEntity.notFound().build();
