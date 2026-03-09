@@ -18,7 +18,7 @@ public final class JooqRecordDecoders {
 
     private JooqRecordDecoders() {}
 
-    // --- field / optionalField / nullable ---
+    // --- field / optionalField / optionalNullableField ---
 
     /**
      * Extracts a named field from a {@link org.jooq.Record} and decodes it.
