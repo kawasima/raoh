@@ -2,6 +2,7 @@ package net.unit8.raoh.builtin;
 
 import net.unit8.raoh.*;
 
+import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
@@ -571,6 +572,150 @@ public class StringDecoder<I> implements Decoder<I, String> {
                         ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
                         : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid ISO-8601 offset date-time (e.g., 2024-01-15T10:30:00+09:00)");
             }
+        }));
+    }
+
+    // --- Numeric / boolean type conversions ---
+
+    /**
+     * Parses the string as an integer.
+     *
+     * <p>Produces a {@link ErrorCodes#TYPE_MISMATCH} error when the string
+     * cannot be parsed as an integer. The returned {@link IntDecoder} supports
+     * further numeric constraints such as {@code range()}, {@code positive()}, etc.
+     *
+     * @return an integer decoder with the parsed value
+     */
+    public IntDecoder<I> toInt() {
+        return toInt(null);
+    }
+
+    /**
+     * Parses the string as an integer.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return an integer decoder with the parsed value
+     */
+    public IntDecoder<I> toInt(String message) {
+        return new IntDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
+            try {
+                return Result.ok(Integer.parseInt(value));
+            } catch (NumberFormatException e) {
+                return message != null
+                        ? Result.failCustom(path, ErrorCodes.TYPE_MISMATCH, message,
+                                Map.of("expected", "integer"))
+                        : Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected integer",
+                                Map.of("expected", "integer"));
+            }
+        }));
+    }
+
+    /**
+     * Parses the string as a long integer.
+     *
+     * <p>Produces a {@link ErrorCodes#TYPE_MISMATCH} error when the string
+     * cannot be parsed as a long. The returned {@link LongDecoder} supports
+     * further numeric constraints such as {@code range()}, {@code positive()}, etc.
+     *
+     * @return a long decoder with the parsed value
+     */
+    public LongDecoder<I> toLong() {
+        return toLong(null);
+    }
+
+    /**
+     * Parses the string as a long integer.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a long decoder with the parsed value
+     */
+    public LongDecoder<I> toLong(String message) {
+        return new LongDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
+            try {
+                return Result.ok(Long.parseLong(value));
+            } catch (NumberFormatException e) {
+                return message != null
+                        ? Result.failCustom(path, ErrorCodes.TYPE_MISMATCH, message,
+                                Map.of("expected", "long"))
+                        : Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected long",
+                                Map.of("expected", "long"));
+            }
+        }));
+    }
+
+    /**
+     * Parses the string as a {@link BigDecimal}.
+     *
+     * <p>Produces a {@link ErrorCodes#TYPE_MISMATCH} error when the string
+     * cannot be parsed as a decimal number. The returned {@link DecimalDecoder} supports
+     * further numeric constraints such as {@code scale()}, {@code positive()}, etc.
+     *
+     * @return a decimal decoder with the parsed value
+     */
+    public DecimalDecoder<I> toDecimal() {
+        return toDecimal(null);
+    }
+
+    /**
+     * Parses the string as a {@link BigDecimal}.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a decimal decoder with the parsed value
+     */
+    public DecimalDecoder<I> toDecimal(String message) {
+        return new DecimalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
+            try {
+                return Result.ok(new BigDecimal(value));
+            } catch (NumberFormatException e) {
+                return message != null
+                        ? Result.failCustom(path, ErrorCodes.TYPE_MISMATCH, message,
+                                Map.of("expected", "decimal"))
+                        : Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected decimal",
+                                Map.of("expected", "decimal"));
+            }
+        }));
+    }
+
+    /**
+     * Parses the string as a boolean.
+     *
+     * <p>Recognises common form-data representations (case-insensitive):
+     * <ul>
+     *   <li>true: {@code "true"}, {@code "1"}, {@code "yes"}, {@code "on"}</li>
+     *   <li>false: {@code "false"}, {@code "0"}, {@code "no"}, {@code "off"}</li>
+     * </ul>
+     *
+     * <p>Produces a {@link ErrorCodes#TYPE_MISMATCH} error for any other value.
+     * The returned {@link BoolDecoder} supports {@code isTrue()} and {@code isFalse()} constraints.
+     *
+     * @return a boolean decoder with the parsed value
+     */
+    public BoolDecoder<I> toBool() {
+        return toBool(null);
+    }
+
+    /**
+     * Parses the string as a boolean.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a boolean decoder with the parsed value
+     * @see #toBool()
+     */
+    public BoolDecoder<I> toBool(String message) {
+        return new BoolDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
+            Boolean parsed = switch (value.toLowerCase()) {
+                case "true", "1", "yes", "on" -> Boolean.TRUE;
+                case "false", "0", "no", "off" -> Boolean.FALSE;
+                default -> null;
+            };
+            if (parsed != null) {
+                return Result.ok(parsed);
+            }
+            return message != null
+                    ? Result.failCustom(path, ErrorCodes.TYPE_MISMATCH, message,
+                            Map.of("expected", "boolean"))
+                    : Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected boolean",
+                            Map.of("expected", "boolean"));
         }));
     }
 
