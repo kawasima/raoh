@@ -1,5 +1,7 @@
 package net.unit8.raoh.gsh;
 
+import net.unit8.raoh.Decoder;
+
 import java.util.List;
 import java.util.Set;
 
@@ -15,10 +17,9 @@ import java.util.Set;
  * <p>Outside of a scope, no checking occurs — this makes the guard safe to leave
  * woven into bytecode even if the scope is never activated (e.g., in production).
  *
- * <p>The stack check matches both the method name and the declaring class name.
- * By default, only methods named {@code decode} in classes whose name contains
- * {@code Decoder} (case-sensitive) are recognized. This prevents false positives
- * from unrelated {@code decode} methods (e.g., {@code java.util.Base64.Decoder}).
+ * <p>The stack check verifies that a {@code decode} method in a class implementing
+ * {@link net.unit8.raoh.Decoder} is on the call stack. This type-level check prevents
+ * false positives from unrelated {@code decode} methods (e.g., {@code java.util.Base64}).
  *
  * <p>This class uses {@link ScopedValue} (JEP 506) and is safe for use with virtual threads.
  *
@@ -39,10 +40,10 @@ public final class DomainConstructionScope {
     private static final ScopedValue<Boolean> ACTIVE = ScopedValue.newInstance();
     private static final ScopedValue<List<DecoderMethodSpec>> DECODER_METHODS = ScopedValue.newInstance();
 
-    private static final StackWalker STACK_WALKER = StackWalker.getInstance(Set.of(), 32);
+    private static final StackWalker STACK_WALKER =
+            StackWalker.getInstance(Set.of(StackWalker.Option.RETAIN_CLASS_REFERENCE), 32);
 
-    private static final List<DecoderMethodSpec> DEFAULT_SPECS = List.of(
-            new DecoderMethodSpec("decode", "Decoder"));
+    private static final String DEFAULT_METHOD_NAME = "decode";
 
     private DomainConstructionScope() {
     }
@@ -51,7 +52,7 @@ public final class DomainConstructionScope {
      * Specifies a decoder method to recognize on the call stack.
      *
      * @param methodName       the method name to match (e.g. {@code decode})
-     * @param classNameContains a substring the declaring class name must contain (e.g. {@code Decoder})
+     * @param classNameContains a substring the declaring class's FQDN must contain (e.g. {@code Decoder})
      */
     public record DecoderMethodSpec(String methodName, String classNameContains) {
 
@@ -84,11 +85,16 @@ public final class DomainConstructionScope {
         if (!ACTIVE.isBound()) {
             return;
         }
-        List<DecoderMethodSpec> specs = DECODER_METHODS.isBound()
-                ? DECODER_METHODS.get()
-                : DEFAULT_SPECS;
-        boolean throughDecoder = STACK_WALKER.walk(frames ->
-                frames.anyMatch(f -> specs.stream().anyMatch(s -> s.matches(f))));
+        boolean throughDecoder;
+        if (DECODER_METHODS.isBound()) {
+            List<DecoderMethodSpec> specs = DECODER_METHODS.get();
+            throughDecoder = STACK_WALKER.walk(frames ->
+                    frames.anyMatch(f -> specs.stream().anyMatch(s -> s.matches(f))));
+        } else {
+            throughDecoder = STACK_WALKER.walk(frames ->
+                    frames.anyMatch(f -> DEFAULT_METHOD_NAME.equals(f.getMethodName())
+                            && Decoder.class.isAssignableFrom(f.getDeclaringClass())));
+        }
         if (!throughDecoder) {
             throw new DomainConstructionGuardException(className);
         }
@@ -100,8 +106,8 @@ public final class DomainConstructionScope {
      * <p>While inside this scope, any guarded domain object constructed without
      * a decoder method on the call stack will throw {@link DomainConstructionGuardException}.
      *
-     * <p>Uses the default decoder method spec: methods named {@code decode} in classes
-     * whose name contains {@code Decoder}.
+     * <p>Uses the default check: methods named {@code decode} in classes
+     * implementing {@link net.unit8.raoh.Decoder}.
      *
      * @param task the task to execute within the guarded scope
      */
@@ -125,8 +131,8 @@ public final class DomainConstructionScope {
     /**
      * Executes the given task within a domain construction guard scope, returning a result.
      *
-     * <p>Uses the default decoder method spec: methods named {@code decode} in classes
-     * whose name contains {@code Decoder}.
+     * <p>Uses the default check: methods named {@code decode} in classes
+     * implementing {@link net.unit8.raoh.Decoder}.
      *
      * @param <T>  the result type
      * @param <X>  the exception type that may be thrown
