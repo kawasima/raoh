@@ -34,7 +34,7 @@ DomainConstructionScope.run(() -> {
 
     // Direct construction — throws DomainConstructionGuardException
     var email = new EmailAddress("test@example.com");
-    // => DomainConstructionGuardException: EmailAddress was constructed without going through Decoder.decode()
+    // => DomainConstructionGuardException: EmailAddress was constructed outside of an allowed decode scope.
 });
 
 // Outside scope — no checking, construction always succeeds
