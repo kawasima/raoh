@@ -46,7 +46,7 @@ Use jetshell to verify code snippets in `docs/tutorial.ja.md`.
 jetshell must be on PATH. Run in non-interactive (batch) mode by piping a script file:
 
 ```sh
-cat input.jsh | jetshell -nostartup
+cat input.jsh | jetshell
 ```
 
 ### Input file template
@@ -57,7 +57,8 @@ Build the project first to populate `target/dependency/`:
 mvn -f raoh/pom.xml dependency:copy-dependencies -q
 ```
 
-Every verification script must start with these lines (adjust the path to the repo root as needed):
+Every verification script must start with these lines (adjust the path to the repo root as needed).
+`java.util.*`, `java.math.*`, `java.util.regex.*` etc. are already imported by jetshell's default startup.
 
 ```text
 /classpath raoh/target/raoh-*.jar
@@ -67,7 +68,8 @@ import net.unit8.raoh.map.*;
 import net.unit8.raoh.builtin.*;
 import static net.unit8.raoh.map.MapDecoders.*;
 import static net.unit8.raoh.Decoders.*;
-import java.util.*;
+import java.util.stream.*;
+import java.time.*;
 ```
 
 Notes:
