@@ -680,14 +680,14 @@ public class StringDecoder<I> implements Decoder<I, String> {
     /**
      * Parses the string as a boolean.
      *
-     * <p>Recognises common form-data representations (case-insensitive):
+     * <p>Recognises common form-data representations (case-insensitive):</p>
      * <ul>
      *   <li>true: {@code "true"}, {@code "1"}, {@code "yes"}, {@code "on"}</li>
      *   <li>false: {@code "false"}, {@code "0"}, {@code "no"}, {@code "off"}</li>
      * </ul>
      *
      * <p>Produces a {@link ErrorCodes#TYPE_MISMATCH} error for any other value.
-     * The returned {@link BoolDecoder} supports {@code isTrue()} and {@code isFalse()} constraints.
+     * The returned {@link BoolDecoder} supports {@code isTrue()} and {@code isFalse()} constraints.</p>
      *
      * @return a boolean decoder with the parsed value
      */
