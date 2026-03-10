@@ -24,6 +24,23 @@ public final class Path {
     }
 
     /**
+     * Creates a path from one or more segments.
+     *
+     * <p>This is a shorthand for {@code Path.ROOT.append(first).append(...)}.
+     *
+     * @param first the first segment (e.g., a field name)
+     * @param rest  additional segments
+     * @return a path with all segments appended to root
+     */
+    public static Path of(String first, String... rest) {
+        Path p = ROOT.append(first);
+        for (String segment : rest) {
+            p = p.append(segment);
+        }
+        return p;
+    }
+
+    /**
      * Appends a segment to this path in O(1).
      *
      * @param segment the segment to append (e.g., a field name or array index)
