@@ -23,6 +23,9 @@ public final class ErrorCodes {
     /** Value is absent or null when a non-null value was expected. */
     public static final String REQUIRED = "required";
 
+    /** Value is present but consists entirely of whitespace characters. */
+    public static final String BLANK = "blank";
+
     // --- String length ---
 
     /** String is shorter than the minimum allowed length. */

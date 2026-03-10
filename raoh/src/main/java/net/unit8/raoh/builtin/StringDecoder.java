@@ -80,10 +80,19 @@ public class StringDecoder<I> implements Decoder<I, String> {
 
     // --- Constraints ---
 
+    /**
+     * Requires the string value to contain at least one non-whitespace character.
+     *
+     * <p>Fails with {@link ErrorCodes#BLANK} when the value is {@code null} or consists
+     * entirely of whitespace. Use this after {@link #trim()} to reject strings that become
+     * empty after trimming, or stand-alone to reject blank-only input.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#BLANK} for blank values
+     */
     public StringDecoder<I> nonBlank() {
         return chain((value, path) -> {
             if (value == null || value.isBlank()) {
-                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+                return Result.fail(path, ErrorCodes.BLANK, "must not be blank");
             }
             return Result.ok(value);
         });
