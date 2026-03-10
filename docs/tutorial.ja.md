@@ -128,6 +128,62 @@ string().iso8601().decode("2025-06-15T10:30:00Z")
 // ==> Ok[2025-06-15T10:30:00Z]
 ```
 
+### 文字列からの型変換（coerce）
+
+フォームデータやクエリパラメータでは、数値や真偽値もすべて文字列として届きます。`toInt()`, `toLong()`, `toDecimal()`, `toBool()` を使うと、文字列をパースして型付きデコーダーに変換できます。変換後はそのまま制約をチェーンできます。
+
+```java
+string().toInt().decode("42")
+// ==> Ok[42]
+
+string().toInt().range(0, 150).decode("25")
+// ==> Ok[25]
+
+string().toInt().decode("abc")
+// ==> Err[/: expected integer]
+
+string().toLong().decode("9999999999")
+// ==> Ok[9999999999]
+
+string().toDecimal().scale(2).decode("19.99")
+// ==> Ok[19.99]
+
+string().toDecimal().decode("abc")
+// ==> Err[/: expected decimal]
+```
+
+`toBool()` はフォームデータでよく使われる文字列をケース非依存で認識します。
+
+```java
+string().toBool().decode("true")
+// ==> Ok[true]
+
+string().toBool().decode("1")
+// ==> Ok[true]
+
+string().toBool().decode("no")
+// ==> Ok[false]
+
+string().toBool().decode("maybe")
+// ==> Err[/: expected boolean]
+
+// isTrue() で「利用規約への同意」を強制
+string().toBool().isTrue().decode("true")
+// ==> Ok[true]
+
+string().toBool().isTrue().decode("false")
+// ==> Err[/: must be true]
+```
+
+`toBool()` が認識する値: `true`/`1`/`yes`/`on` → `true`、`false`/`0`/`no`/`off` → `false`。
+
+前段で `trim()` を挟むと、ホワイトスペース付きの入力にも対応できます。
+
+```java
+string().trim().toInt().decode("  42  ")
+// ==> Ok[42]
+```
+
 ---
 
 ## 3. ドメインプリミティブへの変換

@@ -129,6 +129,62 @@ string().iso8601().decode("2025-06-15T10:30:00Z")
 // ==> Ok[2025-06-15T10:30:00Z]
 ```
 
+### String-to-type conversions (coerce)
+
+In form data and query parameters, numbers and booleans arrive as strings. `toInt()`, `toLong()`, `toDecimal()`, and `toBool()` parse the string and return a typed decoder. Constraints can be chained directly after the conversion.
+
+```java
+string().toInt().decode("42")
+// ==> Ok[42]
+
+string().toInt().range(0, 150).decode("25")
+// ==> Ok[25]
+
+string().toInt().decode("abc")
+// ==> Err[/: expected integer]
+
+string().toLong().decode("9999999999")
+// ==> Ok[9999999999]
+
+string().toDecimal().scale(2).decode("19.99")
+// ==> Ok[19.99]
+
+string().toDecimal().decode("abc")
+// ==> Err[/: expected decimal]
+```
+
+`toBool()` recognises common form-data representations, case-insensitively.
+
+```java
+string().toBool().decode("true")
+// ==> Ok[true]
+
+string().toBool().decode("1")
+// ==> Ok[true]
+
+string().toBool().decode("no")
+// ==> Ok[false]
+
+string().toBool().decode("maybe")
+// ==> Err[/: expected boolean]
+
+// Use isTrue() to enforce agreement (e.g., terms of service)
+string().toBool().isTrue().decode("true")
+// ==> Ok[true]
+
+string().toBool().isTrue().decode("false")
+// ==> Err[/: must be true]
+```
+
+Recognised values: `true`/`1`/`yes`/`on` → `true`, `false`/`0`/`no`/`off` → `false`.
+
+Chain `trim()` before conversion to handle whitespace-padded input.
+
+```java
+string().trim().toInt().decode("  42  ")
+// ==> Ok[42]
+```
+
 ---
 
 ## 3. Mapping to domain primitives
