@@ -92,7 +92,7 @@ DomainConstructionScope.run(() -> {
 
     // Direct construction — throws DomainConstructionGuardException
     var email = new EmailAddress("test@example.com");
-    // => DomainConstructionGuardException: EmailAddress was constructed outside of a decoder scope
+    // => DomainConstructionGuardException: EmailAddress was constructed without going through Decoder.decode()
 });
 
 // Outside scope — no checking, construction always succeeds
@@ -103,7 +103,7 @@ var email = new EmailAddress("test@example.com"); // OK (guard inactive)
 
 raoh-gsh uses the Java ClassFile API (JEP 484) to inject a `DomainConstructionScope.checkActive()` call into every constructor of target classes, immediately after the super constructor invocation.
 
-`checkActive()` uses `StackWalker` to inspect the call stack: if a method named `decode` is found, construction is allowed; otherwise, `DomainConstructionGuardException` is thrown. This check only runs when a `DomainConstructionScope` is active (via `ScopedValue`, JEP 506).
+`checkActive()` uses `StackWalker` to inspect the call stack: if a `decode` method in a class implementing `net.unit8.raoh.Decoder` is found, construction is allowed; otherwise, `DomainConstructionGuardException` is thrown. This check only runs when a `DomainConstructionScope` is active (via `ScopedValue`, JEP 506).
 
 ## Performance
 

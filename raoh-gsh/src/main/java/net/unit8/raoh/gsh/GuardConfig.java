@@ -5,8 +5,10 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -30,10 +32,10 @@ import java.util.regex.Pattern;
 public final class GuardConfig {
 
     private final List<Pattern> packagePatterns;
-    private final List<String> classes;
+    private final Set<String> classes;
     private final List<Pattern> excludePatterns;
 
-    private GuardConfig(List<Pattern> packagePatterns, List<String> classes, List<Pattern> excludePatterns) {
+    private GuardConfig(List<Pattern> packagePatterns, Set<String> classes, List<Pattern> excludePatterns) {
         this.packagePatterns = packagePatterns;
         this.classes = classes;
         this.excludePatterns = excludePatterns;
@@ -86,10 +88,10 @@ public final class GuardConfig {
      */
     public static GuardConfig parse(String args) {
         if (args == null || args.isBlank()) {
-            return new GuardConfig(List.of(), List.of(), List.of());
+            return new GuardConfig(List.of(), Set.of(), List.of());
         }
         List<Pattern> packagePatterns = new ArrayList<>();
-        List<String> classes = new ArrayList<>();
+        Set<String> classes = new HashSet<>();
         List<Pattern> excludePatterns = new ArrayList<>();
 
         for (String part : args.split(";")) {
@@ -145,19 +147,19 @@ public final class GuardConfig {
     public static GuardConfig loadFromClasspath(String resourceName) {
         try (InputStream in = GuardConfig.class.getClassLoader().getResourceAsStream(resourceName)) {
             if (in == null) {
-                return new GuardConfig(List.of(), List.of(), List.of());
+                return new GuardConfig(List.of(), Set.of(), List.of());
             }
             Properties props = new Properties();
             props.load(in);
             return fromProperties(props);
         } catch (IOException e) {
-            return new GuardConfig(List.of(), List.of(), List.of());
+            return new GuardConfig(List.of(), Set.of(), List.of());
         }
     }
 
     private static GuardConfig fromProperties(Properties props) {
         List<Pattern> packagePatterns = new ArrayList<>();
-        List<String> classes = new ArrayList<>();
+        Set<String> classes = new HashSet<>();
         List<Pattern> excludePatterns = new ArrayList<>();
 
         String packages = props.getProperty("guard.packages", "");
@@ -198,25 +200,33 @@ public final class GuardConfig {
      */
     static Pattern globToPattern(String glob) {
         StringBuilder regex = new StringBuilder();
+        StringBuilder literal = new StringBuilder();
         int i = 0;
         while (i < glob.length()) {
             if (i + 1 < glob.length() && glob.charAt(i) == '*' && glob.charAt(i + 1) == '*') {
+                flushLiteral(literal, regex);
                 regex.append(".*");
                 i += 2;
                 if (i < glob.length() && glob.charAt(i) == '.') {
                     i++; // skip trailing dot after **
                 }
             } else if (glob.charAt(i) == '*') {
+                flushLiteral(literal, regex);
                 regex.append("[^.]*");
                 i++;
-            } else if (glob.charAt(i) == '.') {
-                regex.append("\\.");
-                i++;
             } else {
-                regex.append(Pattern.quote(String.valueOf(glob.charAt(i))));
+                literal.append(glob.charAt(i));
                 i++;
             }
         }
+        flushLiteral(literal, regex);
         return Pattern.compile(regex.toString());
+    }
+
+    private static void flushLiteral(StringBuilder literal, StringBuilder regex) {
+        if (!literal.isEmpty()) {
+            regex.append(Pattern.quote(literal.toString()));
+            literal.setLength(0);
+        }
     }
 }

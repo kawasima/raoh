@@ -53,13 +53,12 @@ class DomainConstructionScopeTest {
     }
 
     @Test
-    void defaultSpecRejectsUnrelatedDecodeMethod() {
-        // Default spec requires class name to contain "Decoder"
-        // Our test helper class doesn't match, so it should throw even
-        // when called from a method named "decode"
+    void defaultSpecRejectsNonDecoderClass() {
+        // Default spec requires Decoder interface implementation.
+        // Direct checkActive call (no Decoder on stack) should throw.
         DomainConstructionScope.run(() ->
                 assertThrows(DomainConstructionGuardException.class,
-                        () -> decode("com.example.Email", true)));
+                        () -> DomainConstructionScope.checkActive("com.example.Email")));
     }
 
     @Test
@@ -110,12 +109,4 @@ class DomainConstructionScopeTest {
         assertDoesNotThrow(() -> DomainConstructionScope.checkActive(className));
     }
 
-    /**
-     * Calls checkActive from a method named "decode" without assertion wrapping,
-     * allowing the caller to catch the thrown exception with assertThrows.
-     */
-    @SuppressWarnings("overloads")
-    private static void decode(String className, boolean propagateException) {
-        DomainConstructionScope.checkActive(className);
-    }
 }
