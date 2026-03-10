@@ -19,7 +19,7 @@ import java.nio.file.attribute.BasicFileAttributes;
  * Weaves construction guard checks into domain class bytecode using the ClassFile API (JEP 484).
  *
  * <p>For each target class, all {@code <init>} methods are transformed to call
- * {@link DomainConstructionScope#checkActive(String)} immediately after the super
+ * {@code net.unit8.raoh.gsh.DomainConstructionScope#checkActive(String)} immediately after the super
  * constructor invocation. Constructors that delegate to another constructor of the
  * same class via {@code this(...)} are left untouched, since the delegated-to
  * constructor already contains the guard.
@@ -113,7 +113,8 @@ public final class GuardWeaver {
                 if (!file.toString().endsWith(".class")) {
                     return FileVisitResult.CONTINUE;
                 }
-                String relativePath = classesDir.relativize(file).toString();
+                String relativePath = classesDir.relativize(file).toString()
+                        .replace(file.getFileSystem().getSeparator(), "/");
                 // Convert path to internal class name: com/example/Foo.class -> com/example/Foo
                 String internalName = relativePath.substring(0, relativePath.length() - ".class".length());
                 if (config.isTargetInternal(internalName)) {

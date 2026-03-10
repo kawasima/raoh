@@ -3,7 +3,6 @@ package net.unit8.raoh.gsh;
 import net.unit8.raoh.Decoder;
 
 import java.util.List;
-import java.util.Set;
 
 /**
  * Marks a guarded execution zone where domain object construction is monitored.
@@ -41,7 +40,7 @@ public final class DomainConstructionScope {
     private static final ScopedValue<List<DecoderMethodSpec>> DECODER_METHODS = ScopedValue.newInstance();
 
     private static final StackWalker STACK_WALKER =
-            StackWalker.getInstance(Set.of(StackWalker.Option.RETAIN_CLASS_REFERENCE), 32);
+            StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
 
     private static final String DEFAULT_METHOD_NAME = "decode";
 
@@ -71,7 +70,7 @@ public final class DomainConstructionScope {
     /**
      * Checks whether the current construction is occurring through a Decoder.
      *
-     * <p>This method is injected into guarded domain class constructors by {@link GuardWeaver}.
+     * <p>This method is injected into guarded domain class constructors by {@code GuardWeaver}.
      * It should not normally be called by user code.
      *
      * <p>The check is only performed when a {@code DomainConstructionScope} is active.
