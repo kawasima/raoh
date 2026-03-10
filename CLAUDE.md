@@ -86,8 +86,7 @@ Notes:
 - **`oneOf` failure** → `Err[/: no variant matched]`.
 - **`field("x", subDec)`** where `subDec: Decoder<Map<String,Object>,T>` requires `nested(subDec)`. See issue #17.
 - **`list(subDec)`** where `subDec: Decoder<Map<String,Object>,T>` requires `list(nested(subDec))`.
-- **`Path.of(String)`** does not exist — use `Path.ROOT.append("x")`. See issue #18.
-- **`Decoder.fail()`** does not exist — use `(in, path) -> Result.fail(path, code, message)`. See issue #19.
+- **`Decoder.fail()`** does not exist — use `(in, path) -> Result.fail(path, code, message)` (one-line lambda; closed as low-value convenience).
 - **`flatMap` returning `Decoder`** does not work — `flatMap` expects `Function<T, Result<U>>`, not `Function<T, Decoder<I,U>>`. Use a full `Decoder<I,T>` lambda instead.
 - **`sealed interface`** in JShell requires all permits classes declared in the same snippet; use plain `interface` as a workaround.
 
