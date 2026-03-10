@@ -64,7 +64,14 @@ public class GuardWeaveMojo extends AbstractMojo {
     private String config;
 
     /**
-     * The target directory containing compiled class files to weave.
+     * Whether to weave main classes in addition to test classes.
+     * Defaults to {@code false} to avoid leaking guard calls into packaged artifacts.
+     */
+    @Parameter(defaultValue = "false", property = "raoh.gsh.weaveMain")
+    private boolean weaveMain;
+
+    /**
+     * The main classes directory to weave (only when {@code weaveMain} is {@code true}).
      */
     @Parameter(defaultValue = "${project.build.outputDirectory}", property = "raoh.gsh.target")
     private String target;
@@ -81,11 +88,13 @@ public class GuardWeaveMojo extends AbstractMojo {
             GuardConfig guardConfig = buildConfig();
 
             int total = 0;
-            Path targetPath = Path.of(target);
-            if (Files.isDirectory(targetPath)) {
-                int count = GuardWeaver.weaveDirectory(targetPath, guardConfig);
-                getLog().info("Wove " + count + " class(es) in " + target);
-                total += count;
+            if (weaveMain) {
+                Path targetPath = Path.of(target);
+                if (Files.isDirectory(targetPath)) {
+                    int count = GuardWeaver.weaveDirectory(targetPath, guardConfig);
+                    getLog().info("Wove " + count + " class(es) in " + target);
+                    total += count;
+                }
             }
 
             Path testTargetPath = Path.of(testTarget);

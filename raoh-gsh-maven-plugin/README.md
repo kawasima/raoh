@@ -50,18 +50,19 @@ You also need `raoh-gsh` as a runtime dependency so that the woven `checkActive(
 
 Default phase: `process-test-classes`
 
-Weaves both `target/classes` and `target/test-classes`.
+By default, weaves only `target/test-classes`. Set `weaveMain` to `true` to also weave `target/classes`.
 
 ### Configuration Parameters
 
-| Parameter | Property | Description |
-|-----------|----------|-------------|
-| `packages` | `raoh.gsh.packages` | Comma-separated package glob patterns |
-| `classes` | `raoh.gsh.classes` | Comma-separated fully qualified class names |
-| `exclude` | `raoh.gsh.exclude` | Comma-separated exclusion glob patterns |
-| `config` | `raoh.gsh.config` | Path to a `raoh-gsh.properties` file |
-| `target` | `raoh.gsh.target` | Classes directory (default: `${project.build.outputDirectory}`) |
-| `testTarget` | `raoh.gsh.testTarget` | Test classes directory (default: `${project.build.testOutputDirectory}`) |
+| Parameter | Property | Default | Description |
+|-----------|----------|---------|-------------|
+| `packages` | `raoh.gsh.packages` | | Comma-separated package glob patterns |
+| `classes` | `raoh.gsh.classes` | | Comma-separated fully qualified class names |
+| `exclude` | `raoh.gsh.exclude` | | Comma-separated exclusion glob patterns |
+| `config` | `raoh.gsh.config` | | Path to a `raoh-gsh.properties` file |
+| `weaveMain` | `raoh.gsh.weaveMain` | `false` | Whether to weave main classes in addition to test classes |
+| `target` | `raoh.gsh.target` | `${project.build.outputDirectory}` | Main classes directory (only when `weaveMain` is `true`) |
+| `testTarget` | `raoh.gsh.testTarget` | `${project.build.testOutputDirectory}` | Test classes directory |
 
 If no explicit configuration is provided, the plugin looks for `raoh-gsh.properties` on the classpath.
 
