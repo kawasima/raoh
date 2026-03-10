@@ -21,7 +21,7 @@
     <dependencies>
         <dependency>
             <groupId>net.unit8.raoh</groupId>
-            <artifactId>raoh-gsh</artifactId>
+            <artifactId>raoh-gsh-weaver</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

@@ -11,8 +11,8 @@ import java.nio.file.Path;
  *
  * <p><strong>Usage:</strong></p>
  * <pre>
- * java -jar raoh-gsh.jar --packages "com.example.domain.**" --target target/classes
- * java -jar raoh-gsh.jar --config raoh-gsh.properties --target target/classes
+ * java -jar raoh-gsh-weaver.jar --packages "com.example.domain.**" --target target/classes
+ * java -jar raoh-gsh-weaver.jar --config raoh-gsh.properties --target target/classes
  * </pre>
  */
 public final class GuardCli {
@@ -99,7 +99,7 @@ public final class GuardCli {
     }
 
     private static void printUsage() {
-        System.err.println("Usage: java -jar raoh-gsh.jar [options]");
+        System.err.println("Usage: java -jar raoh-gsh-weaver.jar [options]");
         System.err.println();
         System.err.println("Options:");
         System.err.println("  --packages <patterns>   Comma-separated package glob patterns");

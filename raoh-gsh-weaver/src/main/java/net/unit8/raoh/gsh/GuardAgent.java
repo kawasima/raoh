@@ -9,13 +9,13 @@ import java.security.ProtectionDomain;
  *
  * <p>Attach this agent to the JVM with:
  * <pre>
- * -javaagent:raoh-gsh.jar=packages=com.example.domain.**
+ * -javaagent:raoh-gsh-weaver.jar=packages=com.example.domain.**
  * </pre>
  *
  * <p>The agent argument uses the same format as {@link GuardConfig#parse(String)}.
  * Multiple settings are separated by semicolons:
  * <pre>
- * -javaagent:raoh-gsh.jar=packages=com.example.domain.**;exclude=com.example.domain.internal.**
+ * -javaagent:raoh-gsh-weaver.jar=packages=com.example.domain.**;exclude=com.example.domain.internal.**
  * </pre>
  *
  * <p>For Maven Surefire, configure like:
@@ -23,7 +23,7 @@ import java.security.ProtectionDomain;
  * <plugin>
  *     <artifactId>maven-surefire-plugin</artifactId>
  *     <configuration>
- *         <argLine>-javaagent:${path}/raoh-gsh.jar=packages=com.example.domain.**</argLine>
+ *         <argLine>-javaagent:${path}/raoh-gsh-weaver.jar=packages=com.example.domain.**</argLine>
  *     </configuration>
  * </plugin>
  * }</pre>
@@ -35,7 +35,7 @@ public final class GuardAgent {
 
     /**
      * Agent entry point called before {@code main} when the JVM is started with
-     * {@code -javaagent:raoh-gsh.jar=...}.
+     * {@code -javaagent:raoh-gsh-weaver.jar=...}.
      *
      * @param args the agent argument string (parsed by {@link GuardConfig#parse(String)})
      * @param inst the instrumentation instance provided by the JVM
