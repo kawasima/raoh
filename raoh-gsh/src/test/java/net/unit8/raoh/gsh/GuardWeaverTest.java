@@ -1,15 +1,21 @@
 package net.unit8.raoh.gsh;
 
+import net.unit8.raoh.gsh.DomainConstructionScope.DecoderMethodSpec;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class GuardWeaverTest {
+
+    /** Custom spec that matches the test helper's decode method in this class. */
+    private static final List<DecoderMethodSpec> TEST_SPECS = List.of(
+            new DecoderMethodSpec("decode", "GuardWeaverTest"));
 
     @Test
     void wovenRecordDoesNothingOutsideScope() throws Exception {
@@ -41,7 +47,7 @@ class GuardWeaverTest {
         Class<?> wovenClass = loadWovenClass("net.unit8.raoh.gsh.testdomain.TestEmail");
         Constructor<?> ctor = wovenClass.getDeclaredConstructor(String.class);
 
-        DomainConstructionScope.run(() -> decode(ctor, "test@example.com"));
+        DomainConstructionScope.run(TEST_SPECS, () -> decode(ctor, "test@example.com"));
     }
 
     @Test
@@ -71,7 +77,7 @@ class GuardWeaverTest {
         Constructor<?> primaryCtor = wovenClass.getDeclaredConstructor(String.class, int.class);
         Constructor<?> delegatingCtor = wovenClass.getDeclaredConstructor(String.class);
 
-        DomainConstructionScope.run(() -> {
+        DomainConstructionScope.run(TEST_SPECS, () -> {
             decode(primaryCtor, "Alice", 30);
             decode(delegatingCtor, "Bob");
         });

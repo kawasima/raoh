@@ -39,11 +39,11 @@ public final class GuardCli {
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
-                case "--packages" -> packages = nextArg(args, i++);
-                case "--classes" -> classes = nextArg(args, i++);
-                case "--exclude" -> exclude = nextArg(args, i++);
-                case "--config" -> configFile = nextArg(args, i++);
-                case "--target" -> target = nextArg(args, i++);
+                case "--packages" -> { packages = nextArg(args, i); i++; }
+                case "--classes" -> { classes = nextArg(args, i); i++; }
+                case "--exclude" -> { exclude = nextArg(args, i); i++; }
+                case "--config" -> { configFile = nextArg(args, i); i++; }
+                case "--target" -> { target = nextArg(args, i); i++; }
                 case "--help", "-h" -> {
                     printUsage();
                     System.exit(0);

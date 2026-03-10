@@ -1,10 +1,11 @@
 package net.unit8.raoh.gsh;
 
 /**
- * Thrown when a guarded domain object is constructed outside of a {@link DomainConstructionScope}.
+ * Thrown when a guarded domain object is constructed without going through a Decoder.
  *
- * <p>This exception indicates that a domain object annotated or configured for construction
- * guarding was instantiated without going through a Decoder.
+ * <p>This exception indicates that within a {@link DomainConstructionScope},
+ * a domain object was instantiated directly (via {@code new}) instead of
+ * through a Decoder's {@code decode} method.
  */
 public class DomainConstructionGuardException extends RuntimeException {
 
@@ -13,12 +14,11 @@ public class DomainConstructionGuardException extends RuntimeException {
     /**
      * Creates a new exception for the given domain class.
      *
-     * @param className the fully qualified name of the domain class that was constructed outside scope
+     * @param className the fully qualified name of the domain class that was constructed without a Decoder
      */
     public DomainConstructionGuardException(String className) {
-        super(className + " was constructed outside of a decoder scope. "
-                + "Wrap the call site in DomainConstructionScope.run(() -> ...) "
-                + "or ensure your Decoder.decode() is invoked within a scope.");
+        super(className + " was constructed without going through Decoder.decode(). "
+                + "Use a Decoder to create this domain object instead of calling new directly.");
         this.className = className;
     }
 

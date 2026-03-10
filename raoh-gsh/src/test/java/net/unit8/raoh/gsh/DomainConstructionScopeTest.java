@@ -1,10 +1,17 @@
 package net.unit8.raoh.gsh;
 
+import net.unit8.raoh.gsh.DomainConstructionScope.DecoderMethodSpec;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class DomainConstructionScopeTest {
+
+    /** Custom spec that matches the test helper's decode method in this class. */
+    private static final List<DecoderMethodSpec> TEST_SPECS = List.of(
+            new DecoderMethodSpec("decode", "DomainConstructionScopeTest"));
 
     @Test
     void checkActiveDoesNothingOutsideScope() {
@@ -23,7 +30,7 @@ class DomainConstructionScopeTest {
     @Test
     void checkActivePassesInsideScopeWithDecode() {
         // Simulate Decoder invocation by calling from a method named "decode"
-        DomainConstructionScope.run(() -> decode("com.example.Email"));
+        DomainConstructionScope.run(TEST_SPECS, () -> decode("com.example.Email"));
     }
 
     @Test
@@ -38,11 +45,21 @@ class DomainConstructionScopeTest {
 
     @Test
     void callPassesInsideScopeWithDecode() throws Exception {
-        String result = DomainConstructionScope.call(() -> {
+        String result = DomainConstructionScope.call(TEST_SPECS, () -> {
             decode("com.example.Email");
             return "ok";
         });
         assertEquals("ok", result);
+    }
+
+    @Test
+    void defaultSpecRejectsUnrelatedDecodeMethod() {
+        // Default spec requires class name to contain "Decoder"
+        // Our test helper class doesn't match, so it should throw even
+        // when called from a method named "decode"
+        DomainConstructionScope.run(() ->
+                assertThrows(DomainConstructionGuardException.class,
+                        () -> decode("com.example.Email", true)));
     }
 
     @Test
@@ -91,5 +108,14 @@ class DomainConstructionScopeTest {
      */
     private static void decode(String className) {
         assertDoesNotThrow(() -> DomainConstructionScope.checkActive(className));
+    }
+
+    /**
+     * Calls checkActive from a method named "decode" without assertion wrapping,
+     * allowing the caller to catch the thrown exception with assertThrows.
+     */
+    @SuppressWarnings("overloads")
+    private static void decode(String className, boolean propagateException) {
+        DomainConstructionScope.checkActive(className);
     }
 }
