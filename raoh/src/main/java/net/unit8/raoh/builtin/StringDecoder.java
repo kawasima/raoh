@@ -83,7 +83,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
     /**
      * Requires the string value to contain at least one non-whitespace character.
      *
-     * <p>Fails with {@link ErrorCodes#BLANK} when the value is {@code null} or consists
+     * <p>Fails with {@link ErrorCodes#BLANK} when the decoded string is empty or consists
      * entirely of whitespace. Use this after {@link #trim()} to reject strings that become
      * empty after trimming, or stand-alone to reject blank-only input.
      *
