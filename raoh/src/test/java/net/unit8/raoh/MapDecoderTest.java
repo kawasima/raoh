@@ -626,6 +626,135 @@ class MapDecoderTest {
         }
     }
 
+    // --- String coerce ---
+
+    @Test
+    void toIntValid() {
+        var dec = field("age", string().toInt());
+        assertEquals(42, assertOk(dec.decode(Map.of("age", "42"))));
+        assertEquals(-7, assertOk(dec.decode(Map.of("age", "-7"))));
+    }
+
+    @Test
+    void toIntInvalid() {
+        var dec = field("age", string().toInt());
+        var result = dec.decode(Map.of("age", "abc"));
+        switch (result) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> {
+                assertEquals(ErrorCodes.TYPE_MISMATCH, issues.asList().getFirst().code());
+                assertEquals("integer", issues.asList().getFirst().meta().get("expected"));
+            }
+        }
+    }
+
+    @Test
+    void toIntChainRange() {
+        var dec = field("age", string().toInt().range(0, 150));
+        assertEquals(25, assertOk(dec.decode(Map.of("age", "25"))));
+        assertErr(dec.decode(Map.of("age", "200")));
+    }
+
+    @Test
+    void toIntCustomMessage() {
+        var dec = field("n", string().toInt("整数を入力してください"));
+        var result = dec.decode(Map.of("n", "abc"));
+        switch (result) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> assertEquals("整数を入力してください", issues.asList().getFirst().message());
+        }
+    }
+
+    @Test
+    void toLongValid() {
+        var dec = field("id", string().toLong());
+        assertEquals(9999999999L, assertOk(dec.decode(Map.of("id", "9999999999"))));
+    }
+
+    @Test
+    void toLongInvalid() {
+        var dec = field("id", string().toLong());
+        assertErr(dec.decode(Map.of("id", "not-a-number")));
+    }
+
+    @Test
+    void toDecimalValid() {
+        var dec = field("price", string().toDecimal());
+        assertEquals(0, new BigDecimal("19.99").compareTo(assertOk(dec.decode(Map.of("price", "19.99")))));
+    }
+
+    @Test
+    void toDecimalChainScale() {
+        var dec = field("price", string().toDecimal().scale(2));
+        assertOk(dec.decode(Map.of("price", "19.99")));
+        assertErr(dec.decode(Map.of("price", "19.999")));
+    }
+
+    @Test
+    void toDecimalInvalid() {
+        var dec = field("price", string().toDecimal());
+        var result = dec.decode(Map.of("price", "abc"));
+        switch (result) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> assertEquals(ErrorCodes.TYPE_MISMATCH, issues.asList().getFirst().code());
+        }
+    }
+
+    @Test
+    void toBoolTrue() {
+        var dec = field("agree", string().toBool());
+        for (var input : new String[]{"true", "TRUE", "1", "yes", "YES", "on", "On"}) {
+            assertTrue(assertOk(dec.decode(Map.of("agree", input))),
+                    "expected true for input: " + input);
+        }
+    }
+
+    @Test
+    void toBoolFalse() {
+        var dec = field("agree", string().toBool());
+        for (var input : new String[]{"false", "FALSE", "0", "no", "NO", "off", "Off"}) {
+            assertFalse(assertOk(dec.decode(Map.of("agree", input))),
+                    "expected false for input: " + input);
+        }
+    }
+
+    @Test
+    void toBoolInvalid() {
+        var dec = field("agree", string().toBool());
+        var result = dec.decode(Map.of("agree", "maybe"));
+        switch (result) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> {
+                assertEquals(ErrorCodes.TYPE_MISMATCH, issues.asList().getFirst().code());
+                assertEquals("boolean", issues.asList().getFirst().meta().get("expected"));
+            }
+        }
+    }
+
+    @Test
+    void toBoolChainIsTrue() {
+        var dec = field("terms", string().toBool().isTrue());
+        assertTrue(assertOk(dec.decode(Map.of("terms", "true"))));
+        assertErr(dec.decode(Map.of("terms", "false")));
+    }
+
+    @Test
+    void toBoolCustomMessage() {
+        var dec = field("flag", string().toBool("真偽値を入力してください"));
+        var result = dec.decode(Map.of("flag", "maybe"));
+        switch (result) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> assertEquals("真偽値を入力してください", issues.asList().getFirst().message());
+        }
+    }
+
+    @Test
+    void trimThenToInt() {
+        var dec = field("age", string().trim().toInt());
+        assertEquals(42, assertOk(dec.decode(Map.of("age", "  42  "))));
+        assertErr(dec.decode(Map.of("age", "  abc  ")));
+    }
+
     // --- Helpers ---
 
     static <T> T assertOk(Result<T> result) {
