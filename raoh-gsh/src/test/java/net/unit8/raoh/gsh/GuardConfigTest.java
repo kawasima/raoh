@@ -73,4 +73,14 @@ class GuardConfigTest {
         assertFalse(config.isTarget("com.example.domain.dto.UserDto"));
         assertFalse(config.isTarget("com.other.Thing"));
     }
+
+    @Test
+    void doubleStarInMiddleMatchesAnySegments() {
+        GuardConfig config = GuardConfig.parse("packages=com.**.domain.*");
+        assertTrue(config.isTarget("com.example.domain.Email"));
+        assertTrue(config.isTarget("com.foo.bar.domain.User"));
+        assertTrue(config.isTarget("com.domain.Foo"));
+        assertFalse(config.isTarget("com.example.domain.sub.Bar"));
+        assertFalse(config.isTarget("org.example.domain.Email"));
+    }
 }
