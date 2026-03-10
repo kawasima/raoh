@@ -13,6 +13,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -703,7 +704,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      */
     public BoolDecoder<I> toBool(String message) {
         return new BoolDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            Boolean parsed = switch (value.toLowerCase()) {
+            Boolean parsed = switch (value.toLowerCase(Locale.ROOT)) {
                 case "true", "1", "yes", "on" -> Boolean.TRUE;
                 case "false", "0", "no", "off" -> Boolean.FALSE;
                 default -> null;
