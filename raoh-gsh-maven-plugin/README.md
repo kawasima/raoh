@@ -2,7 +2,7 @@
 
 Maven plugin for weaving domain construction guards into compiled classes at build time.
 
-This plugin uses [raoh-gsh](../raoh-gsh/) to transform `.class` files, injecting `DomainConstructionScope.checkActive()` into constructors of target domain classes.
+This plugin uses [raoh-gsh-weaver](../raoh-gsh-weaver/) to transform `.class` files, injecting `DomainConstructionScope.checkActive()` into constructors of target domain classes.
 
 ## Requirements
 
@@ -73,4 +73,4 @@ guard.classes=com.example.special.Money
 guard.exclude=com.example.domain.internal.**
 ```
 
-See [raoh-gsh README](../raoh-gsh/README.md) for glob pattern syntax and `DomainConstructionScope` usage.
+See [raoh-gsh-weaver README](../raoh-gsh-weaver/README.md) for glob pattern syntax, and [raoh-gsh README](../raoh-gsh/README.md) for `DomainConstructionScope` usage.
