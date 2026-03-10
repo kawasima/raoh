@@ -337,7 +337,7 @@ var joinRows = List.<Map<String, Object>>of(
 
 ```java
 // 全行をデコード
-var decodedRows = Result.traverse(joinRows, rowDec::decode, Path.ROOT.append("rows"));
+var decodedRows = Result.traverse(joinRows, rowDec::decode, Path.of("rows"));
 // 親キーでグルーピング → OrderWithLines に組み上げ
 var orders = decodedRows.map(entries ->
         entries.stream()
@@ -618,7 +618,7 @@ var rows = List.<Map<String, Object>>of(
         Map.of("order_id", "A003", "total", 300)
 );
 
-Result.traverse(rows, orderDec::decode, Path.ROOT.append("orders"))
+Result.traverse(rows, orderDec::decode, Path.of("orders"))
 // ==> Err[/orders/1/order_id: is required, /orders/1/total: must be non-negative]
 ```
 
@@ -1056,7 +1056,7 @@ var rows = List.<Map<String, Object>>of(
         Map.of("email", "also-bad",           "name", "Carol", "age", -1)
 );
 
-var result = Result.traverse(rows, memberDec::decode, Path.ROOT.append("rows"));
+var result = Result.traverse(rows, memberDec::decode, Path.of("rows"));
 switch (result) {
     case Ok(var members) -> System.out.println("Imported: " + members.size());
     case Err(var issues) -> issues.flatten().forEach((path, msgs) ->
