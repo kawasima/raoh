@@ -91,7 +91,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      */
     public StringDecoder<I> nonBlank() {
         return chain((value, path) -> {
-            if (value == null || value.isBlank()) {
+            if (value.isBlank()) {
                 return Result.fail(path, ErrorCodes.BLANK, "must not be blank");
             }
             return Result.ok(value);
