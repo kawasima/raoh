@@ -100,3 +100,43 @@ Features progress through this lifecycle:
 4. Commit and push, then open a PR with `gh pr create --base develop`.
 5. After `/simplify` and `/review`, address any findings and push additional commits.
 6. PR is merged into `develop` when approved.
+
+## Release Flow
+
+Releases are done locally (no CI). Steps:
+
+1. On `develop`, set the release version in all POMs:
+
+   ```sh
+   mvn versions:set -DnewVersion=X.Y.Z -DgenerateBackupPoms=false
+   ```
+
+   Commit: `release: set version X.Y.Z`
+
+2. Merge `develop` into `main` (fast-forward):
+
+   ```sh
+   git checkout main && git merge --ff-only develop
+   ```
+
+3. On `main`, deploy to Maven Central and create a GitHub release:
+
+   ```sh
+   mvn clean deploy -Prelease
+   gh release create vX.Y.Z --target main --title "vX.Y.Z" --generate-notes
+   ```
+
+4. Back on `develop`, bump to next SNAPSHOT:
+
+   ```sh
+   git checkout develop
+   mvn versions:set -DnewVersion=X.Y.(Z+1)-SNAPSHOT -DgenerateBackupPoms=false
+   ```
+
+   Commit: `chore: bump version to X.Y.(Z+1)-SNAPSHOT`
+
+5. Push both branches:
+
+   ```sh
+   git push origin main develop
+   ```
