@@ -72,6 +72,7 @@ public interface MessageResolver {
     /** A default resolver that provides English messages for all built-in error codes. */
     MessageResolver DEFAULT = (code, meta) -> switch (code) {
         case ErrorCodes.REQUIRED        -> "is required";
+        case ErrorCodes.BLANK           -> "must not be blank";
         case ErrorCodes.TOO_SHORT       -> "must be at least %s characters".formatted(meta.get("min"));
         case ErrorCodes.TOO_LONG        -> "must be at most %s characters".formatted(meta.get("max"));
         case ErrorCodes.OUT_OF_RANGE    -> {
