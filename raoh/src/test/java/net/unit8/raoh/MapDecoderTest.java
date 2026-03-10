@@ -447,13 +447,14 @@ class MapDecoderTest {
     @Test
     void nonBlankStringRejectsBlank() {
         var dec = field("name", string().nonBlank());
-        var blankResult = dec.decode(Map.of("name", ""));
-        assertErr(blankResult);
-        switch (blankResult) {
-            case Err<?> err -> assertEquals(ErrorCodes.BLANK, err.issues().asList().getFirst().code());
-            default -> fail("expected Err");
+        for (var input : new String[]{"", "   "}) {
+            var result = dec.decode(Map.of("name", input));
+            assertErr(result);
+            switch (result) {
+                case Err<?> err -> assertEquals(ErrorCodes.BLANK, err.issues().asList().getFirst().code());
+                default -> fail("expected Err for input: " + input);
+            }
         }
-        assertErr(dec.decode(Map.of("name", "   ")));
     }
 
     @Test
