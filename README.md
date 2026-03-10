@@ -24,18 +24,10 @@ If you are coming from a validator-oriented library, the main difference in feel
 - you decode raw input into a domain object
 - object construction happens only after decoding succeeds
 
-## Current Scope
+## Tutorials
 
-Raoh currently provides:
-
-- a generic `Decoder<I, T>` abstraction
-- `Result<T>` with `Ok<T>` and `Err<T>`
-- structured diagnostics with `Issue`, `Issues`, and `Path`
-- built-in decoders for strings, numbers, booleans, lists, and maps
-- boundary modules for Jackson `JsonNode`, `Map<String, Object>`, and jOOQ `Record`
-- applicative composition for accumulating field errors
-- monadic composition for dependent parsing and domain rules
-- utility combinators such as `lazy`, `withDefault`, `recover`, `oneOf`, `strict`, `enumOf`, and `literal`
+- [Tutorial (English)](docs/tutorial.md)
+- [Tutorial (日本語)](docs/tutorial.ja.md)
 
 ## Requirements
 
@@ -64,6 +56,16 @@ mvn clean test
 ### jOOQ extension (`raoh-jooq`)
 
 - `net.unit8.raoh.jooq`: decoders for jOOQ `Record`
+
+### Domain Construction Guard (`raoh-gsh`, `raoh-gsh-weaver`, `raoh-gsh-maven-plugin`)
+
+Test/CI-time guard that detects accidental `new` construction of domain objects outside of `Decoder.decode()`.
+
+- `raoh-gsh`: runtime — `DomainConstructionScope`, `DomainConstructionGuardException`
+- `raoh-gsh-weaver`: bytecode weaver (ClassFile API), Java Agent, CLI
+- `raoh-gsh-maven-plugin`: Maven plugin for build-time weaving
+
+See [raoh-gsh README](raoh-gsh/README.md) for usage.
 
 ## Core Model
 
@@ -266,6 +268,10 @@ Collection/value-container decoders:
 - `time()`
 - `localDateTime()`
 - `offsetDateTime()`
+- `toInt()`
+- `toLong()`
+- `toDecimal()`
+- `toBool()`
 - `StringDecoder.from(...)`
 
 Temporal decoders (`iso8601()`, `date()`, `time()`, `localDateTime()`, `offsetDateTime()`) return a `TemporalDecoder` that supports:
