@@ -96,4 +96,21 @@ class ErrorCodesDefaultCoverageTest {
                 "messages.properties missing key 'raoh." + code + "'"
         );
     }
+
+    /**
+     * Asserts that the Japanese bundle {@code messages_ja.properties} contains
+     * a key for every constant in {@link ErrorCodes}.
+     *
+     * @param code the error code to test
+     */
+    @ParameterizedTest(name = "messages_ja.properties covers error code: {0}")
+    @MethodSource("allErrorCodes")
+    void japaneseBundleCoversCode(String code) {
+        var noFallback = ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES);
+        var bundle = ResourceBundle.getBundle("net.unit8.raoh.messages", Locale.JAPANESE, noFallback);
+        Assertions.assertTrue(
+                bundle.containsKey(MessageResolver.KEY_PREFIX + code),
+                "messages_ja.properties missing key 'raoh." + code + "'"
+        );
+    }
 }
