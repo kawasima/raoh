@@ -4,11 +4,13 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.IOException;
 import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Properties;
 import java.util.ResourceBundle;
 import java.util.stream.Stream;
 
@@ -101,15 +103,21 @@ class ErrorCodesDefaultCoverageTest {
      * Asserts that the Japanese bundle {@code messages_ja.properties} contains
      * a key for every constant in {@link ErrorCodes}.
      *
+     * <p>Loads the properties file directly (not via {@link ResourceBundle}) to avoid
+     * parent-bundle fallback, which would mask missing Japanese translations.
+     *
      * @param code the error code to test
      */
     @ParameterizedTest(name = "messages_ja.properties covers error code: {0}")
     @MethodSource("allErrorCodes")
-    void japaneseBundleCoversCode(String code) {
-        var noFallback = ResourceBundle.Control.getNoFallbackControl(ResourceBundle.Control.FORMAT_PROPERTIES);
-        var bundle = ResourceBundle.getBundle("net.unit8.raoh.messages", Locale.JAPANESE, noFallback);
+    void japaneseBundleCoversCode(String code) throws IOException {
+        var props = new Properties();
+        try (var is = getClass().getResourceAsStream("/net/unit8/raoh/messages_ja.properties")) {
+            Assertions.assertNotNull(is, "messages_ja.properties not found on classpath");
+            props.load(is);
+        }
         Assertions.assertTrue(
-                bundle.containsKey(MessageResolver.KEY_PREFIX + code),
+                props.containsKey(MessageResolver.KEY_PREFIX + code),
                 "messages_ja.properties missing key 'raoh." + code + "'"
         );
     }
