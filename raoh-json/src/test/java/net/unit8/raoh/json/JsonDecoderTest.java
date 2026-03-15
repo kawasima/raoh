@@ -569,6 +569,19 @@ class JsonDecoderTest {
         }
     }
 
+    // --- combine(List) ---
+
+    @Test
+    void combineListDecoder() {
+        var dec = combine(List.<Decoder<JsonNode, ?>>of(
+                field("a", string()),
+                field("b", string()),
+                field("c", string())
+        )).map(args -> args[0] + "-" + args[1] + "-" + args[2]);
+
+        assertEquals("x-y-z", assertOk(dec.decode(parse("{\"a\":\"x\",\"b\":\"y\",\"c\":\"z\"}"))));
+    }
+
     // --- Helpers ---
 
     static <T> T assertOk(Result<T> result) {
