@@ -255,6 +255,64 @@ public sealed interface Result<T> permits Ok, Err {
     }
 
     /**
+     * Combines three independent results, accumulating errors from all if any fail.
+     *
+     * @param <A> the value type of the first result
+     * @param <B> the value type of the second result
+     * @param <C> the value type of the third result
+     * @param <D> the combined output type
+     * @param ra  the first result
+     * @param rb  the second result
+     * @param rc  the third result
+     * @param f   the function to combine the three values if all succeed
+     * @return {@link Ok} with the combined value, or {@link Err} with all accumulated issues
+     * @see #map2
+     */
+    static <A, B, C, D> Result<D> map3(
+            Result<A> ra, Result<B> rb, Result<C> rc,
+            net.unit8.raoh.combinator.Function3<A, B, C, D> f) {
+        if (ra instanceof Ok<A> oa && rb instanceof Ok<B> ob && rc instanceof Ok<C> oc) {
+            return Result.ok(f.apply(oa.value(), ob.value(), oc.value()));
+        }
+        Issues issues = Issues.EMPTY;
+        if (ra instanceof Err<A> e) issues = issues.merge(e.issues());
+        if (rb instanceof Err<B> e) issues = issues.merge(e.issues());
+        if (rc instanceof Err<C> e) issues = issues.merge(e.issues());
+        return Result.err(issues);
+    }
+
+    /**
+     * Combines four independent results, accumulating errors from all if any fail.
+     *
+     * @param <A> the value type of the first result
+     * @param <B> the value type of the second result
+     * @param <C> the value type of the third result
+     * @param <D> the value type of the fourth result
+     * @param <E> the combined output type
+     * @param ra  the first result
+     * @param rb  the second result
+     * @param rc  the third result
+     * @param rd  the fourth result
+     * @param f   the function to combine the four values if all succeed
+     * @return {@link Ok} with the combined value, or {@link Err} with all accumulated issues
+     * @see #map2
+     */
+    static <A, B, C, D, E> Result<E> map4(
+            Result<A> ra, Result<B> rb, Result<C> rc, Result<D> rd,
+            net.unit8.raoh.combinator.Function4<A, B, C, D, E> f) {
+        if (ra instanceof Ok<A> oa && rb instanceof Ok<B> ob
+                && rc instanceof Ok<C> oc && rd instanceof Ok<D> od) {
+            return Result.ok(f.apply(oa.value(), ob.value(), oc.value(), od.value()));
+        }
+        Issues issues = Issues.EMPTY;
+        if (ra instanceof Err<A> e) issues = issues.merge(e.issues());
+        if (rb instanceof Err<B> e) issues = issues.merge(e.issues());
+        if (rc instanceof Err<C> e) issues = issues.merge(e.issues());
+        if (rd instanceof Err<D> e) issues = issues.merge(e.issues());
+        return Result.err(issues);
+    }
+
+    /**
      * Decodes every element of a list, accumulating all errors rather than short-circuiting
      * on the first failure.
      *
