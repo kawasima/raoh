@@ -4,6 +4,7 @@ import net.unit8.raoh.*;
 import net.unit8.raoh.combinator.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -109,6 +110,41 @@ public final class JooqRecordDecoders {
      */
     public static <T> JooqRecordDecoder<T> nested(JooqRecordDecoder<T> dec) {
         return dec::decode;
+    }
+
+    // --- discriminate ---
+
+    /**
+     * Creates a decoder that dispatches to different decoders based on a discriminator column.
+     *
+     * <p>Useful for single-table inheritance patterns where a column (e.g., {@code "type"})
+     * determines which decoder should be applied to the record.
+     *
+     * @param <T>       the decoded type
+     * @param fieldName the discriminator column name (e.g., {@code "type"})
+     * @param variants  a map from discriminator values to decoders
+     * @return a discriminating decoder
+     */
+    public static <T> JooqRecordDecoder<T> discriminate(
+            String fieldName,
+            Map<String, Decoder<org.jooq.Record, ? extends T>> variants) {
+        return (in, path) -> {
+            var tag = field(fieldName, ObjectDecoders.allowBlankString()).decode(in, path);
+            return switch (tag) {
+                case Err<String> err -> err.coerce();
+                case Ok<String> ok -> {
+                    var dec = variants.get(ok.value());
+                    if (dec == null) {
+                        yield Result.fail(path.append(fieldName),
+                                ErrorCodes.INVALID_FORMAT, "invalid value",
+                                Map.of("allowed", variants.keySet()));
+                    }
+                    @SuppressWarnings("unchecked")
+                    var result = (Result<T>) dec.decode(in, path);
+                    yield result;
+                }
+            };
+        };
     }
 
     // --- combine delegates ---
