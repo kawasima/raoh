@@ -1175,3 +1175,47 @@ appConfigDec.decode(Map.of(
 ```
 
 設定デコーダーをアプリ起動時に実行することで、環境変数の設定漏れや型ミスを本番コードに入る前に検出できます。
+
+## 28. タプル型 — 軽量な結果コンテナ
+
+`combine(...).map(...)` では通常、結果用の専用 record を定義します。
+しかし `switch` 式の中でしか使わない一時的な値であれば、
+組み込みの `Tuple2` 〜 `Tuple8` を使うことで record 定義を省略できます:
+
+```java
+import net.unit8.raoh.combinator.Tuple2;
+
+var dec = combine(
+        field("name", string()),
+        field("age", int_())
+).map(Tuple2::new);
+
+switch (dec.decode(input)) {
+    case Ok(Tuple2(var name, var age)) -> {
+        // name: String, age: Integer — バリデーション済み
+    }
+    case Err(var issues) -> { /* エラー処理 */ }
+}
+```
+
+フィールドが多い場合は `Tuple3` 〜 `Tuple8` を使用します:
+
+```java
+import net.unit8.raoh.combinator.Tuple4;
+
+var dec = combine(
+        field("customerId", long_()),
+        field("items", list(string())),
+        field("address", string()),
+        field("desiredDeliveryDate", string().date())
+).map(Tuple4::new);
+
+switch (dec.decode(input)) {
+    case Ok(Tuple4(var customerId, var items, var address, var date)) -> {
+        // 4つの値がすべて利用可能
+    }
+    case Err(var issues) -> { /* エラー処理 */ }
+}
+```
+
+パターンマッチを使わない場合は `_1`, `_2`, ... `_8` でアクセスできます。
