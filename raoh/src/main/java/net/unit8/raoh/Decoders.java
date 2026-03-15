@@ -343,6 +343,45 @@ public final class Decoders {
     }
 
     /**
+     * Creates a decoder that dispatches to different decoders based on a discriminator value.
+     *
+     * <p>Decodes the discriminator using {@code tagDec}, looks up the corresponding decoder
+     * in {@code variants}, and delegates to it. This is the input-type-agnostic version;
+     * boundary factories like {@code MapDecoders.discriminate} and {@code JsonDecoders.discriminate}
+     * provide convenient two-argument overloads.
+     *
+     * @param <I>       the input type
+     * @param <T>       the decoded type
+     * @param fieldName the discriminator field name, used for error path reporting
+     * @param tagDec    a decoder that extracts the discriminator value as a string
+     * @param variants  a map from discriminator values to decoders
+     * @return a discriminating decoder
+     */
+    public static <I, T> Decoder<I, T> discriminate(
+            String fieldName,
+            Decoder<I, String> tagDec,
+            Map<String, Decoder<I, ? extends T>> variants) {
+        return (in, path) -> {
+            var tag = tagDec.decode(in, path);
+            return switch (tag) {
+                case Err<String> err -> err.coerce();
+                case Ok<String> ok -> {
+                    var dec = variants.get(ok.value());
+                    if (dec == null) {
+                        var allowed = variants.keySet().stream().sorted().toList();
+                        yield Result.fail(path.append(fieldName),
+                                ErrorCodes.NOT_ALLOWED, "must be one of " + allowed,
+                                Map.of("allowed", allowed));
+                    }
+                    @SuppressWarnings("unchecked")
+                    var result = (Result<T>) dec.decode(in, path);
+                    yield result;
+                }
+            };
+        };
+    }
+
+    /**
      * Decodes a string and asserts it equals the expected value.
      *
      * @param <I>       the input type

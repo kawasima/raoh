@@ -128,24 +128,7 @@ public final class JooqRecordDecoders {
     public static <T> JooqRecordDecoder<T> discriminate(
             String fieldName,
             Map<String, Decoder<org.jooq.Record, ? extends T>> variants) {
-        return (in, path) -> {
-            var tag = field(fieldName, ObjectDecoders.allowBlankString()).decode(in, path);
-            return switch (tag) {
-                case Err<String> err -> err.coerce();
-                case Ok<String> ok -> {
-                    var dec = variants.get(ok.value());
-                    if (dec == null) {
-                        var allowed = variants.keySet().stream().sorted().toList();
-                        yield Result.fail(path.append(fieldName),
-                                ErrorCodes.NOT_ALLOWED, "must be one of " + allowed,
-                                Map.of("allowed", allowed));
-                    }
-                    @SuppressWarnings("unchecked")
-                    var result = (Result<T>) dec.decode(in, path);
-                    yield result;
-                }
-            };
-        };
+        return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.allowBlankString()), variants)::decode;
     }
 
     // --- combine delegates ---

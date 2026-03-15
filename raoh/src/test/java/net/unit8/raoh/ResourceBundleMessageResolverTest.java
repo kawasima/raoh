@@ -87,6 +87,36 @@ class ResourceBundleMessageResolverTest {
 
     // --- customMessage is not overridden ---
 
+    // --- Default bundle (net.unit8.raoh.messages) with Japanese locale ---
+
+    private static final ResourceBundleMessageResolver defaultResolver =
+            new ResourceBundleMessageResolver("net.unit8.raoh.messages");
+
+    @Test
+    void defaultBundleResolvesJapanese() {
+        var result = defaultResolver.resolve("required", Map.of(), Locale.JAPANESE);
+        assertEquals("必須です", result);
+    }
+
+    @Test
+    void defaultBundleResolvesJapaneseWithPlaceholders() {
+        var result = defaultResolver.resolve("too_short", Map.of("min", 5), Locale.JAPANESE);
+        assertEquals("5文字以上で入力してください", result);
+    }
+
+    @Test
+    void defaultBundleResolvesAllJapaneseCodes() {
+        // Verify all 21 error codes have Japanese translations
+        assertNotNull(defaultResolver.resolve("required", Map.of(), Locale.JAPANESE));
+        assertNotNull(defaultResolver.resolve("blank", Map.of(), Locale.JAPANESE));
+        assertNotNull(defaultResolver.resolve("not_allowed", Map.of("allowed", List.of("a", "b")), Locale.JAPANESE));
+        assertNotNull(defaultResolver.resolve("unknown_field", Map.of(), Locale.JAPANESE));
+        assertNotNull(defaultResolver.resolve("one_of_failed", Map.of(), Locale.JAPANESE));
+        assertNotNull(defaultResolver.resolve("missing_field", Map.of(), Locale.JAPANESE));
+    }
+
+    // --- customMessage is not overridden ---
+
     @Test
     void customMessageNotOverridden() {
         var issue = Issue.of(Path.ROOT, "required", "original")
