@@ -348,7 +348,7 @@ class JooqDecoderTest {
         var result = dec.decode(rec);
         assertInstanceOf(Err.class, result);
         var issue = ((Err<Payment>) result).issues().asList().get(0);
-        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals(ErrorCodes.NOT_ALLOWED, issue.code());
         assertEquals("/type", issue.path().toJsonPointer());
     }
 
@@ -361,5 +361,8 @@ class JooqDecoderTest {
         var rec = record("card_number", "4111");
         var result = dec.decode(rec);
         assertInstanceOf(Err.class, result);
+        var issue = ((Err<Payment>) result).issues().asList().get(0);
+        assertEquals(ErrorCodes.MISSING_FIELD, issue.code());
+        assertEquals("/type", issue.path().toJsonPointer());
     }
 }
