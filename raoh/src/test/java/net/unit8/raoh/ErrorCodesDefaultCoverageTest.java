@@ -99,6 +99,19 @@ class ErrorCodesDefaultCoverageTest {
         );
     }
 
+    private static final Properties JA_PROPS = loadProperties("/net/unit8/raoh/messages_ja.properties");
+
+    private static Properties loadProperties(String resource) {
+        var props = new Properties();
+        try (var is = ErrorCodesDefaultCoverageTest.class.getResourceAsStream(resource)) {
+            if (is == null) throw new RuntimeException(resource + " not found on classpath");
+            props.load(is);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return props;
+    }
+
     /**
      * Asserts that the Japanese bundle {@code messages_ja.properties} contains
      * a key for every constant in {@link ErrorCodes}.
@@ -110,14 +123,9 @@ class ErrorCodesDefaultCoverageTest {
      */
     @ParameterizedTest(name = "messages_ja.properties covers error code: {0}")
     @MethodSource("allErrorCodes")
-    void japaneseBundleCoversCode(String code) throws IOException {
-        var props = new Properties();
-        try (var is = getClass().getResourceAsStream("/net/unit8/raoh/messages_ja.properties")) {
-            Assertions.assertNotNull(is, "messages_ja.properties not found on classpath");
-            props.load(is);
-        }
+    void japaneseBundleCoversCode(String code) {
         Assertions.assertTrue(
-                props.containsKey(MessageResolver.KEY_PREFIX + code),
+                JA_PROPS.containsKey(MessageResolver.KEY_PREFIX + code),
                 "messages_ja.properties missing key 'raoh." + code + "'"
         );
     }
