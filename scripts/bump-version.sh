@@ -41,6 +41,9 @@ FILES=(
     "$ROOT/raoh/pom.xml"
     "$ROOT/raoh-json/pom.xml"
     "$ROOT/raoh-jooq/pom.xml"
+    "$ROOT/raoh-gsh/pom.xml"
+    "$ROOT/raoh-gsh-weaver/pom.xml"
+    "$ROOT/raoh-gsh-maven-plugin/pom.xml"
     "$ROOT/examples/spring/pom.xml"
 )
 
