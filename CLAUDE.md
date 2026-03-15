@@ -108,7 +108,7 @@ Releases are done locally (no CI). Steps:
 1. On `develop`, set the release version in all POMs:
 
    ```sh
-   mvn versions:set -DnewVersion=X.Y.Z -DgenerateBackupPoms=false
+   ./scripts/bump-version.sh X.Y.Z
    ```
 
    Commit: `release: set version X.Y.Z`
@@ -130,7 +130,7 @@ Releases are done locally (no CI). Steps:
 
    ```sh
    git checkout develop
-   mvn versions:set -DnewVersion=X.Y.(Z+1)-SNAPSHOT -DgenerateBackupPoms=false
+   ./scripts/bump-version.sh X.Y.(Z+1)-SNAPSHOT
    ```
 
    Commit: `chore: bump version to X.Y.(Z+1)-SNAPSHOT`
