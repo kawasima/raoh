@@ -352,9 +352,10 @@ public final class JsonDecoders {
                 case Ok<String> ok -> {
                     var dec = variants.get(ok.value());
                     if (dec == null) {
+                        var allowed = variants.keySet().stream().sorted().toList();
                         yield Result.fail(path.append(fieldName),
-                                ErrorCodes.NOT_ALLOWED, "must be one of " + variants.keySet(),
-                                Map.of("allowed", variants.keySet()));
+                                ErrorCodes.NOT_ALLOWED, "must be one of " + allowed,
+                                Map.of("allowed", allowed));
                     }
                     @SuppressWarnings("unchecked")
                     var result = (Result<T>) dec.decode(in, path);
