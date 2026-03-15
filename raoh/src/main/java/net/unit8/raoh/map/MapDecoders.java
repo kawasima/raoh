@@ -376,8 +376,8 @@ public final class MapDecoders {
     /**
      * Returns a {@link CombinerList} for combining more than 16 decoders.
      *
-     * @param decoders the decoders to combine
-     * @return a combiner on which {@code .map(f)} can be called
+     * @param decoders the decoders to combine; must not be empty
+     * @return a combiner on which {@code .map(f)} or {@code .flatMap(f)} can be called
      * @see Decoders#combine(List)
      */
     public static CombinerList<Map<String, Object>> combine(List<Decoder<Map<String, Object>, ?>> decoders) {

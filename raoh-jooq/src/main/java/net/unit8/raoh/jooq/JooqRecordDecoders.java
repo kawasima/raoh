@@ -382,8 +382,8 @@ public final class JooqRecordDecoders {
      * Returns a {@link CombinerList} for combining more than 16 decoders.
      *
      * @param <T>      the output type
-     * @param decoders the decoders to combine
-     * @return a combiner on which {@code .map(f)} can be called
+     * @param decoders the decoders to combine; must not be empty
+     * @return a combiner on which {@code .map(f)} or {@code .flatMap(f)} can be called
      * @see Decoders#combine(List)
      */
     public static <T> CombinerList<org.jooq.Record> combine(List<Decoder<org.jooq.Record, ?>> decoders) {
