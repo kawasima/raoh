@@ -6,6 +6,7 @@ import org.jooq.impl.DSL;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.Optional;
 
 import static net.unit8.raoh.jooq.JooqRecordDecoders.*;
@@ -308,5 +309,57 @@ class JooqDecoderTest {
         var result = JooqRecordDecoders.<String>optionalNullableField("email", string()).decode(rec);
         assertInstanceOf(Ok.class, result);
         assertInstanceOf(Presence.PresentNull.class, ((Ok<?>) result).value());
+    }
+
+    // -------------------------------------------------------------------------
+    // discriminate — single-table inheritance
+    // -------------------------------------------------------------------------
+
+    sealed interface Payment permits CreditCard, BankTransfer {}
+    record CreditCard(String cardNumber) implements Payment {}
+    record BankTransfer(String bankCode) implements Payment {}
+
+    @Test
+    void discriminateDispatchesCorrectly() {
+        Decoder<org.jooq.Record, Payment> dec = discriminate("type", Map.of(
+                "credit_card", field("card_number", string()).map(CreditCard::new),
+                "bank_transfer", field("bank_code", string()).map(BankTransfer::new)
+        ));
+
+        var ccRec = record("type", "credit_card", "card_number", "4111-1111-1111-1111", "bank_code", "");
+        var ccResult = dec.decode(ccRec);
+        assertInstanceOf(Ok.class, ccResult);
+        assertInstanceOf(CreditCard.class, ((Ok<Payment>) ccResult).value());
+        assertEquals("4111-1111-1111-1111", ((CreditCard) ((Ok<Payment>) ccResult).value()).cardNumber());
+
+        var btRec = record("type", "bank_transfer", "card_number", "", "bank_code", "MUFG");
+        var btResult = dec.decode(btRec);
+        assertInstanceOf(Ok.class, btResult);
+        assertInstanceOf(BankTransfer.class, ((Ok<Payment>) btResult).value());
+    }
+
+    @Test
+    void discriminateUnknownTag() {
+        Decoder<org.jooq.Record, Payment> dec = discriminate("type", Map.of(
+                "credit_card", field("card_number", string()).map(CreditCard::new)
+        ));
+
+        var rec = record("type", "crypto", "card_number", "");
+        var result = dec.decode(rec);
+        assertInstanceOf(Err.class, result);
+        var issue = ((Err<Payment>) result).issues().asList().get(0);
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals("/type", issue.path().toJsonPointer());
+    }
+
+    @Test
+    void discriminateMissingTagField() {
+        Decoder<org.jooq.Record, Payment> dec = discriminate("type", Map.of(
+                "credit_card", field("card_number", string()).map(CreditCard::new)
+        ));
+
+        var rec = record("card_number", "4111");
+        var result = dec.decode(rec);
+        assertInstanceOf(Err.class, result);
     }
 }

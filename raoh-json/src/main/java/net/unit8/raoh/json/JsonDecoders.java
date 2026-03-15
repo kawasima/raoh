@@ -585,4 +585,15 @@ public final class JsonDecoders {
             Decoder<JsonNode, Q> dq) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_, dp, dq);
     }
+
+    /**
+     * Returns a {@link CombinerList} for combining more than 16 decoders.
+     *
+     * @param decoders the decoders to combine
+     * @return a combiner on which {@code .map(f)} can be called
+     * @see Decoders#combine(List)
+     */
+    public static CombinerList<JsonNode> combine(List<Decoder<JsonNode, ?>> decoders) {
+        return Decoders.combine(decoders);
+    }
 }

@@ -3,6 +3,7 @@ package net.unit8.raoh.map;
 import net.unit8.raoh.*;
 import net.unit8.raoh.combinator.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -154,6 +155,41 @@ public final class MapDecoders {
             }
             return dec.decode(value, fieldPath)
                     .map(v -> (Presence<T>) new Presence.Present<>(v));
+        };
+    }
+
+    // --- discriminate ---
+
+    /**
+     * Creates a decoder that dispatches to different decoders based on a discriminator field.
+     *
+     * <p>Extracts the value of the given field as a string, looks up the corresponding
+     * decoder in the variants map, and delegates decoding to it.
+     *
+     * @param <T>       the decoded type
+     * @param fieldName the discriminator field name (e.g., {@code "type"})
+     * @param variants  a map from discriminator values to decoders
+     * @return a discriminating decoder
+     */
+    public static <T> Decoder<Map<String, Object>, T> discriminate(
+            String fieldName,
+            Map<String, Decoder<Map<String, Object>, ? extends T>> variants) {
+        return (in, path) -> {
+            var tag = field(fieldName, ObjectDecoders.allowBlankString()).decode(in, path);
+            return switch (tag) {
+                case Err<String> err -> err.coerce();
+                case Ok<String> ok -> {
+                    var dec = variants.get(ok.value());
+                    if (dec == null) {
+                        yield Result.fail(path.append(fieldName),
+                                ErrorCodes.INVALID_FORMAT, "invalid value",
+                                Map.of("allowed", variants.keySet()));
+                    }
+                    @SuppressWarnings("unchecked")
+                    var result = (Result<T>) dec.decode(in, path);
+                    yield result;
+                }
+            };
         };
     }
 
@@ -335,5 +371,16 @@ public final class MapDecoders {
             Decoder<Map<String, Object>, N> dn, Decoder<Map<String, Object>, O> do_,
             Decoder<Map<String, Object>, P> dp, Decoder<Map<String, Object>, Q> dq) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_, dp, dq);
+    }
+
+    /**
+     * Returns a {@link CombinerList} for combining more than 16 decoders.
+     *
+     * @param decoders the decoders to combine
+     * @return a combiner on which {@code .map(f)} can be called
+     * @see Decoders#combine(List)
+     */
+    public static CombinerList<Map<String, Object>> combine(List<Decoder<Map<String, Object>, ?>> decoders) {
+        return Decoders.combine(decoders);
     }
 }

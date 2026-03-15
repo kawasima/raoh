@@ -755,6 +755,72 @@ class MapDecoderTest {
         assertErr(dec.decode(Map.of("age", "  abc  ")));
     }
 
+    // --- discriminate ---
+
+    sealed interface Shape permits Circle, Rect {}
+    record Circle(double radius) implements Shape {}
+    record Rect(double width, double height) implements Shape {}
+
+    @Test
+    void discriminateDispatchesCorrectly() {
+        Decoder<Map<String, Object>, Shape> dec = discriminate("type", Map.of(
+                "circle", field("radius", decimal()).map(r -> new Circle(r.doubleValue())),
+                "rect", combine(field("width", decimal()), field("height", decimal()))
+                        .map((w, h) -> new Rect(w.doubleValue(), h.doubleValue()))
+        ));
+
+        var circle = assertOk(dec.decode(Map.of("type", "circle", "radius", 5.0)));
+        assertInstanceOf(Circle.class, circle);
+        assertEquals(5.0, ((Circle) circle).radius());
+
+        var rect = assertOk(dec.decode(Map.of("type", "rect", "width", 3.0, "height", 4.0)));
+        assertInstanceOf(Rect.class, rect);
+        assertEquals(3.0, ((Rect) rect).width());
+    }
+
+    @Test
+    void discriminateUnknownTag() {
+        Decoder<Map<String, Object>, Shape> dec = discriminate("type", Map.of(
+                "circle", field("radius", decimal()).map(r -> new Circle(r.doubleValue()))
+        ));
+
+        var result = dec.decode(Map.of("type", "triangle", "sides", 3));
+        switch (result) {
+            case Ok(_) -> fail("Expected Err");
+            case Err(var issues) -> {
+                var issue = issues.asList().getFirst();
+                assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+                assertEquals("/type", issue.path().toJsonPointer());
+            }
+        }
+    }
+
+    @Test
+    void discriminateMissingTagField() {
+        Decoder<Map<String, Object>, Shape> dec = discriminate("type", Map.of(
+                "circle", field("radius", decimal()).map(r -> new Circle(r.doubleValue()))
+        ));
+
+        var result = dec.decode(Map.of("radius", 5.0));
+        switch (result) {
+            case Ok(_) -> fail("Expected Err");
+            case Err(var issues) -> assertEquals(ErrorCodes.REQUIRED, issues.asList().getFirst().code());
+        }
+    }
+
+    // --- combine(List) ---
+
+    @Test
+    void combineListDecoder() {
+        var dec = combine(List.<Decoder<Map<String, Object>, ?>>of(
+                field("a", string()),
+                field("b", string()),
+                field("c", string())
+        )).map(args -> args[0] + "-" + args[1] + "-" + args[2]);
+
+        assertEquals("x-y-z", assertOk(dec.decode(Map.of("a", "x", "b", "y", "c", "z"))));
+    }
+
     // --- Helpers ---
 
     static <T> T assertOk(Result<T> result) {
