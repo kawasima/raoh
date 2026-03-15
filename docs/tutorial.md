@@ -1173,3 +1173,47 @@ appConfigDec.decode(Map.of(
 ```
 
 Running the configuration decoder at application startup lets you catch missing environment variables and type mismatches before they reach production code.
+
+## 28. Tuple types — lightweight result containers
+
+When you use `combine(...).map(...)`, you normally define a dedicated record for the result.
+If the combined value is only used in a single `switch` expression and does not warrant its own type,
+you can use the built-in `Tuple2` through `Tuple8` types instead:
+
+```java
+import net.unit8.raoh.combinator.Tuple2;
+
+var dec = combine(
+        field("name", string()),
+        field("age", int_())
+).map(Tuple2::new);
+
+switch (dec.decode(input)) {
+    case Ok(Tuple2(var name, var age)) -> {
+        // name: String, age: Integer — fully validated
+    }
+    case Err(var issues) -> { /* handle errors */ }
+}
+```
+
+For more fields, use `Tuple3` through `Tuple8`:
+
+```java
+import net.unit8.raoh.combinator.Tuple4;
+
+var dec = combine(
+        field("customerId", long_()),
+        field("items", list(string())),
+        field("address", string()),
+        field("desiredDeliveryDate", string().date())
+).map(Tuple4::new);
+
+switch (dec.decode(input)) {
+    case Ok(Tuple4(var customerId, var items, var address, var date)) -> {
+        // all four values available here
+    }
+    case Err(var issues) -> { /* handle errors */ }
+}
+```
+
+Tuple elements are accessed as `_1`, `_2`, ... `_8` when not using pattern matching.
