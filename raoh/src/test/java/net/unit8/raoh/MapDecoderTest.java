@@ -789,7 +789,7 @@ class MapDecoderTest {
             case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> {
                 var issue = issues.asList().getFirst();
-                assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+                assertEquals(ErrorCodes.NOT_ALLOWED, issue.code());
                 assertEquals("/type", issue.path().toJsonPointer());
             }
         }

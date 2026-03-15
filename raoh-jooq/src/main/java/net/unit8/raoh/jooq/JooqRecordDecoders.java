@@ -136,7 +136,7 @@ public final class JooqRecordDecoders {
                     var dec = variants.get(ok.value());
                     if (dec == null) {
                         yield Result.fail(path.append(fieldName),
-                                ErrorCodes.INVALID_FORMAT, "invalid value",
+                                ErrorCodes.NOT_ALLOWED, "must be one of " + variants.keySet(),
                                 Map.of("allowed", variants.keySet()));
                     }
                     @SuppressWarnings("unchecked")
@@ -382,7 +382,7 @@ public final class JooqRecordDecoders {
      * Returns a {@link CombinerList} for combining more than 16 decoders.
      *
      * @param <T>      the output type
-     * @param decoders the decoders to combine; must not be empty
+     * @param decoders the decoders to combine
      * @return a combiner on which {@code .map(f)} or {@code .flatMap(f)} can be called
      * @see Decoders#combine(List)
      */
