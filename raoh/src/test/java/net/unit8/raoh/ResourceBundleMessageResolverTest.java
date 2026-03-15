@@ -105,14 +105,16 @@ class ResourceBundleMessageResolverTest {
     }
 
     @Test
-    void defaultBundleResolvesAllJapaneseCodes() {
-        // Verify all 21 error codes have Japanese translations
-        assertNotNull(defaultResolver.resolve("required", Map.of(), Locale.JAPANESE));
-        assertNotNull(defaultResolver.resolve("blank", Map.of(), Locale.JAPANESE));
-        assertNotNull(defaultResolver.resolve("not_allowed", Map.of("allowed", List.of("a", "b")), Locale.JAPANESE));
-        assertNotNull(defaultResolver.resolve("unknown_field", Map.of(), Locale.JAPANESE));
-        assertNotNull(defaultResolver.resolve("one_of_failed", Map.of(), Locale.JAPANESE));
-        assertNotNull(defaultResolver.resolve("missing_field", Map.of(), Locale.JAPANESE));
+    void defaultBundleResolvesJapaneseNotAllowed() {
+        var result = defaultResolver.resolve("not_allowed",
+                Map.of("allowed", List.of("a", "b")), Locale.JAPANESE);
+        assertEquals("[a, b]のいずれかで入力してください", result);
+    }
+
+    @Test
+    void defaultBundleResolvesJapaneseUnknownField() {
+        var result = defaultResolver.resolve("unknown_field", Map.of(), Locale.JAPANESE);
+        assertEquals("不明なフィールドです", result);
     }
 
     // --- customMessage is not overridden ---
