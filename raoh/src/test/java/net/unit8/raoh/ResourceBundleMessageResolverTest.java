@@ -85,8 +85,6 @@ class ResourceBundleMessageResolverTest {
         assertEquals("is required", resolved.asList().getFirst().message());
     }
 
-    // --- customMessage is not overridden ---
-
     // --- Default bundle (net.unit8.raoh.messages) with Japanese locale ---
 
     private static final ResourceBundleMessageResolver defaultResolver =
