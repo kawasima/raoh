@@ -65,4 +65,16 @@ class MapEncoderTest {
         Encoder<Color, Object> enc = enumOf();
         assertEquals("GREEN", enc.encode(Color.GREEN));
     }
+
+    @Test
+    void nullablePassesThroughNull() {
+        var enc = nullable(string());
+        assertNull(enc.encode(null));
+    }
+
+    @Test
+    void nullableDelegatesToInnerEncoderWhenNonNull() {
+        var enc = nullable(string());
+        assertEquals("hello", enc.encode("hello"));
+    }
 }

@@ -135,4 +135,22 @@ public final class ObjectEncoders {
     public static <E extends Enum<E>> Encoder<E, Object> enumOf() {
         return v -> v.name();
     }
+
+    /**
+     * Wraps an encoder to accept {@code null} input, passing {@code null} through to the output.
+     *
+     * <p>Use this for nullable columns in UPDATE statements where the domain object may carry
+     * a {@code null} value:
+     *
+     * <pre>{@code
+     * property("description", Item::description, nullable(string()))
+     * }</pre>
+     *
+     * @param <T> the domain value type
+     * @param enc the inner encoder to apply when the value is non-null
+     * @return an encoder that passes {@code null} through without invoking {@code enc}
+     */
+    public static <T> Encoder<T, Object> nullable(Encoder<T, Object> enc) {
+        return v -> v == null ? null : enc.encode(v);
+    }
 }

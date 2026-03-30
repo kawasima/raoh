@@ -13,11 +13,13 @@ import java.util.function.Function;
  * {@link #andThen} (post-process the output):
  *
  * <pre>{@code
+ * import static net.unit8.raoh.encoder.ObjectEncoders.*;
+ *
  * // Pre-process: unwrap a value object before encoding
  * Encoder<UserId, Object> userIdEncoder = long_().contramap(UserId::value);
  *
  * // Post-process: convert to a different output type
- * Encoder<Long, String> longString = long_().andThen(o -> o.toString());
+ * Encoder<Long, String> longString = long_().andThen(o -> String.valueOf(o));
  * }</pre>
  *
  * @param <T> the domain type to encode from
