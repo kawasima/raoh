@@ -17,6 +17,11 @@ public class DecimalDecoder<I> implements Decoder<I, BigDecimal> {
 
     private final Decoder<I, BigDecimal> inner;
 
+    /**
+     * Creates a new decimal decoder wrapping the given inner decoder.
+     *
+     * @param inner the inner decoder that performs the actual decoding
+     */
     public DecimalDecoder(Decoder<I, BigDecimal> inner) {
         this.inner = inner;
     }
@@ -26,6 +31,12 @@ public class DecimalDecoder<I> implements Decoder<I, BigDecimal> {
         return inner.decode(in, path);
     }
 
+    /**
+     * Restricts the decoded value to be at least {@code n}.
+     *
+     * @param n the minimum allowed value (inclusive)
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if below
+     */
     public DecimalDecoder<I> min(BigDecimal n) {
         return chain((value, path) -> {
             if (value.compareTo(n) < 0) {
@@ -36,6 +47,12 @@ public class DecimalDecoder<I> implements Decoder<I, BigDecimal> {
         });
     }
 
+    /**
+     * Restricts the decoded value to be at most {@code n}.
+     *
+     * @param n the maximum allowed value (inclusive)
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if above
+     */
     public DecimalDecoder<I> max(BigDecimal n) {
         return chain((value, path) -> {
             if (value.compareTo(n) > 0) {
@@ -46,6 +63,11 @@ public class DecimalDecoder<I> implements Decoder<I, BigDecimal> {
         });
     }
 
+    /**
+     * Restricts the decoded value to be strictly positive.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if not positive
+     */
     public DecimalDecoder<I> positive() {
         return chain((value, path) -> {
             if (value.compareTo(BigDecimal.ZERO) <= 0) {
@@ -56,6 +78,11 @@ public class DecimalDecoder<I> implements Decoder<I, BigDecimal> {
         });
     }
 
+    /**
+     * Restricts the decoded value to be strictly negative.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if not negative
+     */
     public DecimalDecoder<I> negative() {
         return chain((value, path) -> {
             if (value.compareTo(BigDecimal.ZERO) >= 0) {
@@ -66,6 +93,11 @@ public class DecimalDecoder<I> implements Decoder<I, BigDecimal> {
         });
     }
 
+    /**
+     * Restricts the decoded value to be zero or positive.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if negative
+     */
     public DecimalDecoder<I> nonNegative() {
         return chain((value, path) -> {
             if (value.compareTo(BigDecimal.ZERO) < 0) {
@@ -76,6 +108,11 @@ public class DecimalDecoder<I> implements Decoder<I, BigDecimal> {
         });
     }
 
+    /**
+     * Restricts the decoded value to be zero or negative.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if positive
+     */
     public DecimalDecoder<I> nonPositive() {
         return chain((value, path) -> {
             if (value.compareTo(BigDecimal.ZERO) > 0) {
@@ -86,6 +123,12 @@ public class DecimalDecoder<I> implements Decoder<I, BigDecimal> {
         });
     }
 
+    /**
+     * Restricts the decoded value to be a multiple of {@code n}.
+     *
+     * @param n the required divisor
+     * @return a new decoder that fails with {@link ErrorCodes#NOT_MULTIPLE_OF} if not a multiple
+     */
     public DecimalDecoder<I> multipleOf(BigDecimal n) {
         return chain((value, path) -> {
             if (value.remainder(n).compareTo(BigDecimal.ZERO) != 0) {
@@ -97,6 +140,12 @@ public class DecimalDecoder<I> implements Decoder<I, BigDecimal> {
         });
     }
 
+    /**
+     * Restricts the number of decimal places.
+     *
+     * @param s the maximum allowed scale (number of decimal places)
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_SCALE} if the scale exceeds {@code s}
+     */
     public DecimalDecoder<I> scale(int s) {
         return chain((value, path) -> {
             if (value.scale() > s) {

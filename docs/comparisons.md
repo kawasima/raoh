@@ -7,8 +7,8 @@ If you know Zod, the closest equivalents are:
 | Zod | Raoh |
 | --- | --- |
 | `z.string()` | `string()` |
-| `z.number().int()` | `int_()` |
-| `z.number()` | `decimal()` |
+| `z.number().int()` | `int_()` / `long_()` |
+| `z.number()` | `double_()` / `float_()` / `decimal()` |
 | `z.boolean()` | `bool()` |
 | `z.enum([...])` | `enumOf(MyEnum.class)` |
 | `z.literal("x")` | `literal("x")` |

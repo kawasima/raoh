@@ -19,6 +19,11 @@ public class LongDecoder<I> implements Decoder<I, Long> {
 
     private final Decoder<I, Long> inner;
 
+    /**
+     * Creates a new long decoder wrapping the given inner decoder.
+     *
+     * @param inner the inner decoder that performs the actual decoding
+     */
     public LongDecoder(Decoder<I, Long> inner) {
         this.inner = inner;
     }
@@ -28,10 +33,23 @@ public class LongDecoder<I> implements Decoder<I, Long> {
         return inner.decode(in, path);
     }
 
+    /**
+     * Restricts the decoded value to be at least {@code n}.
+     *
+     * @param n the minimum allowed value (inclusive)
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if below
+     */
     public LongDecoder<I> min(long n) {
         return min(n, null);
     }
 
+    /**
+     * Restricts the decoded value to be at least {@code n}.
+     *
+     * @param n       the minimum allowed value (inclusive)
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if below
+     */
     public LongDecoder<I> min(long n, String message) {
         return chain((value, path) -> {
             if (value < n) {
@@ -44,10 +62,23 @@ public class LongDecoder<I> implements Decoder<I, Long> {
         });
     }
 
+    /**
+     * Restricts the decoded value to be at most {@code n}.
+     *
+     * @param n the maximum allowed value (inclusive)
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if above
+     */
     public LongDecoder<I> max(long n) {
         return max(n, null);
     }
 
+    /**
+     * Restricts the decoded value to be at most {@code n}.
+     *
+     * @param n       the maximum allowed value (inclusive)
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if above
+     */
     public LongDecoder<I> max(long n, String message) {
         return chain((value, path) -> {
             if (value > n) {
@@ -60,10 +91,25 @@ public class LongDecoder<I> implements Decoder<I, Long> {
         });
     }
 
+    /**
+     * Restricts the decoded value to be within the given range (inclusive).
+     *
+     * @param min the minimum allowed value (inclusive)
+     * @param max the maximum allowed value (inclusive)
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if outside
+     */
     public LongDecoder<I> range(long min, long max) {
         return range(min, max, null);
     }
 
+    /**
+     * Restricts the decoded value to be within the given range (inclusive).
+     *
+     * @param min     the minimum allowed value (inclusive)
+     * @param max     the maximum allowed value (inclusive)
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if outside
+     */
     public LongDecoder<I> range(long min, long max, String message) {
         return chain((value, path) -> {
             if (value < min || value > max) {
@@ -76,6 +122,11 @@ public class LongDecoder<I> implements Decoder<I, Long> {
         });
     }
 
+    /**
+     * Restricts the decoded value to be strictly positive.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if not positive
+     */
     public LongDecoder<I> positive() {
         return chain((value, path) -> {
             if (value <= 0) {
@@ -85,6 +136,11 @@ public class LongDecoder<I> implements Decoder<I, Long> {
         });
     }
 
+    /**
+     * Restricts the decoded value to be strictly negative.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if not negative
+     */
     public LongDecoder<I> negative() {
         return chain((value, path) -> {
             if (value >= 0) {
@@ -94,6 +150,11 @@ public class LongDecoder<I> implements Decoder<I, Long> {
         });
     }
 
+    /**
+     * Restricts the decoded value to be zero or positive.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if negative
+     */
     public LongDecoder<I> nonNegative() {
         return chain((value, path) -> {
             if (value < 0) {
@@ -103,6 +164,11 @@ public class LongDecoder<I> implements Decoder<I, Long> {
         });
     }
 
+    /**
+     * Restricts the decoded value to be zero or negative.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if positive
+     */
     public LongDecoder<I> nonPositive() {
         return chain((value, path) -> {
             if (value > 0) {
@@ -131,6 +197,12 @@ public class LongDecoder<I> implements Decoder<I, Long> {
         });
     }
 
+    /**
+     * Restricts the decoded value to be a multiple of {@code n}.
+     *
+     * @param n the divisor
+     * @return a new decoder that fails with {@link ErrorCodes#NOT_MULTIPLE_OF} if not divisible
+     */
     public LongDecoder<I> multipleOf(long n) {
         return chain((value, path) -> {
             if (value % n != 0) {

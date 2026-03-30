@@ -17,6 +17,11 @@ public class RecordDecoder<I, V> implements Decoder<I, Map<String, V>> {
 
     private final Decoder<I, Map<String, V>> inner;
 
+    /**
+     * Creates a new {@link RecordDecoder} wrapping the given decoder.
+     *
+     * @param inner the underlying decoder that produces a map value
+     */
     public RecordDecoder(Decoder<I, Map<String, V>> inner) {
         this.inner = inner;
     }
@@ -26,6 +31,11 @@ public class RecordDecoder<I, V> implements Decoder<I, Map<String, V>> {
         return inner.decode(in, path);
     }
 
+    /**
+     * Requires the record to have at least one entry.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_SMALL} if the map is empty
+     */
     public RecordDecoder<I, V> nonempty() {
         return chain((value, path) -> {
             if (value.isEmpty()) {
@@ -36,6 +46,12 @@ public class RecordDecoder<I, V> implements Decoder<I, Map<String, V>> {
         });
     }
 
+    /**
+     * Requires the record to have at least {@code n} entries.
+     *
+     * @param n the minimum number of entries
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_SMALL} if the map has fewer entries
+     */
     public RecordDecoder<I, V> minSize(int n) {
         return chain((value, path) -> {
             if (value.size() < n) {
@@ -47,6 +63,12 @@ public class RecordDecoder<I, V> implements Decoder<I, Map<String, V>> {
         });
     }
 
+    /**
+     * Requires the record to have at most {@code n} entries.
+     *
+     * @param n the maximum number of entries
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_BIG} if the map has more entries
+     */
     public RecordDecoder<I, V> maxSize(int n) {
         return chain((value, path) -> {
             if (value.size() > n) {
@@ -58,6 +80,12 @@ public class RecordDecoder<I, V> implements Decoder<I, Map<String, V>> {
         });
     }
 
+    /**
+     * Requires the record to have exactly {@code n} entries.
+     *
+     * @param n the required number of entries
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_SIZE} if the map size differs
+     */
     public RecordDecoder<I, V> fixedSize(int n) {
         return chain((value, path) -> {
             if (value.size() != n) {

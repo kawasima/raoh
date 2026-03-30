@@ -13,6 +13,10 @@ package net.unit8.raoh.decode;
  */
 public interface FieldDecoder<I, T> extends Decoder<I, T> {
 
-    /** Returns the field name this decoder is bound to. */
+    /**
+     * Returns the field name this decoder is bound to.
+     *
+     * @return the field name
+     */
     String fieldName();
 }

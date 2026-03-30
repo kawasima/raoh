@@ -231,6 +231,8 @@ Value decoders:
 - `StringDecoder`
 - `IntDecoder`
 - `LongDecoder`
+- `DoubleDecoder`
+- `FloatDecoder`
 - `BoolDecoder`
 - `DecimalDecoder`
 
@@ -238,6 +240,10 @@ Collection/value-container decoders:
 
 - `ListDecoder`
 - `RecordDecoder`
+
+Other:
+
+- `ObjectDecoders.bytes()` — decodes `byte[]` (for JDBC binary columns such as BYTEA/VARBINARY)
 
 ### String Capabilities
 
@@ -288,7 +294,7 @@ Temporal decoders (`iso8601()`, `date()`, `time()`, `localDateTime()`, `offsetDa
 
 ### Numeric Capabilities
 
-`IntDecoder` and `LongDecoder` support:
+`IntDecoder`, `LongDecoder`, `DoubleDecoder`, and `FloatDecoder` support:
 
 - `min(...)`
 - `max(...)`
@@ -297,7 +303,7 @@ Temporal decoders (`iso8601()`, `date()`, `time()`, `localDateTime()`, `offsetDa
 - `negative()`
 - `nonNegative()`
 - `nonPositive()`
-- `multipleOf(...)`
+- `multipleOf(...)` (integer/long only — not available for double/float)
 - `oneOf(...)`
 
 `DecimalDecoder` supports:
@@ -678,6 +684,34 @@ combine(
 ```java
 string().email().decode(node)
 ```
+
+## Encoders
+
+The `net.unit8.raoh.encode` package provides the mirror image of decoders: converting domain objects to `Map<String, Object>` for JDBC binding or JSON serialization.
+
+```java
+import static net.unit8.raoh.encode.MapEncoders.*;
+import static net.unit8.raoh.encode.ObjectEncoders.*;
+
+Encoder<Item, Map<String, Object>> ITEM_ENCODER = object(
+        property("id",    Item::id,    long_().contramap(ItemId::value)),
+        property("name",  Item::name,  string()),
+        property("price", Item::price, decimal())
+);
+
+Map<String, Object> row = ITEM_ENCODER.encode(item);
+```
+
+### Built-in Encoders
+
+`ObjectEncoders` provides: `string()`, `int_()`, `long_()`, `double_()`, `float_()`, `bool()`, `decimal()`, `date()`, `time()`, `dateTime()`, `iso8601()`, `offsetDateTime()`, `enumOf()`.
+
+Null handling:
+
+- `nullable(enc)` — passes `null` through as-is
+- `withDefault(enc, defaultValue)` — encodes a default value when the input is `null`
+
+`MapEncoders` provides: `property()`, `object()`, `nested()`, `list()`.
 
 ## Comparisons
 
