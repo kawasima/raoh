@@ -40,6 +40,7 @@
         <module>raoh</module>
         <module>raoh-json</module>
         <module>raoh-jooq</module>
+        <module>raoh-encoder</module>
         <module>raoh-gsh</module>
         <module>raoh-gsh-weaver</module>
         <module>raoh-gsh-maven-plugin</module>
