@@ -34,6 +34,16 @@ import java.util.function.Function;
  * );
  * }</pre>
  *
+ * <p>The {@code Map<String, Object>} output integrates naturally with other libraries:
+ * <ul>
+ *   <li><strong>Spring JDBC</strong> — pass directly to {@code JdbcClient} named-parameter
+ *       binding via {@code .params(map)}</li>
+ *   <li><strong>jOOQ</strong> — populate a typed record via
+ *       {@code record.fromMap(map)} (note: key matching is case-sensitive per jOOQ convention)</li>
+ *   <li><strong>Jackson</strong> — convert to {@code ObjectNode} via
+ *       {@code objectMapper.valueToTree(map)}</li>
+ * </ul>
+ *
  * <p>Usage: {@code import static net.unit8.raoh.encoder.MapEncoders.*;}
  */
 public final class MapEncoders {

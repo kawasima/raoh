@@ -143,6 +143,9 @@ public final class ObjectEncoders {
      * a {@code null} value:
      *
      * <pre>{@code
+     * import static net.unit8.raoh.encoder.MapEncoders.*;
+     * import static net.unit8.raoh.encoder.ObjectEncoders.*;
+     *
      * property("description", Item::description, nullable(string()))
      * }</pre>
      *

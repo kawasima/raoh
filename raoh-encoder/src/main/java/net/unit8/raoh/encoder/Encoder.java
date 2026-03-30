@@ -59,6 +59,8 @@ public interface Encoder<T, O> {
      * {@code next}.
      *
      * <pre>{@code
+     * import static net.unit8.raoh.encoder.ObjectEncoders.*;
+     *
      * Encoder<Instant, String> enc = iso8601().andThen(o -> o.toString().replace("T", " "));
      * }</pre>
      *
