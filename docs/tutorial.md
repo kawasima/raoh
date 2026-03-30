@@ -1217,3 +1217,64 @@ switch (dec.decode(input)) {
 ```
 
 Tuple elements are accessed as `_1`, `_2`, ... `_8` when not using pattern matching.
+
+---
+
+## 30. Encoding — domain objects to Map
+
+Raoh also provides encoders that perform the reverse operation: converting domain objects into `Map<String, Object>` for JDBC binding, JSON serialization, or other boundary output.
+
+```java
+import static net.unit8.raoh.encode.MapEncoders.*;
+import static net.unit8.raoh.encode.ObjectEncoders.*;
+
+record ItemId(long value) {}
+record Item(ItemId id, String name, BigDecimal price) {}
+
+Encoder<Item, Map<String, Object>> ITEM_ENCODER = object(
+        property("id",    Item::id,    long_().contramap(ItemId::value)),
+        property("name",  Item::name,  string()),
+        property("price", Item::price, decimal())
+);
+
+Map<String, Object> row = ITEM_ENCODER.encode(new Item(new ItemId(42L), "Widget", new BigDecimal("9.99")));
+// {id=42, name=Widget, price=9.99}
+```
+
+The encoder API mirrors the decoder side:
+
+| Decoder | Encoder |
+| --- | --- |
+| `field("name", string())` | `property("name", T::name, string())` |
+| `combine(...).map(T::new)` | `object(property(...), ...)` |
+| `nested(subDecoder)` | `nested(subEncoder)` |
+| `list(elementDecoder)` | `list(elementEncoder)` |
+| `nullable(dec)` | `nullable(enc)` |
+| `withDefault(dec, v)` | `withDefault(enc, v)` |
+
+## 31. Encoding — nullable and withDefault
+
+Use `nullable(enc)` when null should pass through as null in the output:
+
+```java
+property("description", Item::description, nullable(string()))
+// null → null in output
+```
+
+Use `withDefault(enc, defaultValue)` when null should be replaced with a default:
+
+```java
+property("tags", Article::tags, withDefault(list(nested(TAG_ENCODER)), List.of()))
+// null → [] in output
+```
+
+## 32. Encoding — nested objects
+
+Use `nested()` to embed structured encoders inside a parent, and `list()` to encode collections:
+
+```java
+Encoder<Order, Map<String, Object>> ORDER_ENCODER = object(
+        property("id",        Order::id,        long_()),
+        property("customer",  Order::customer,  nested(CUSTOMER_ENCODER)),
+        property("items",     Order::items,     list(nested(ITEM_ENCODER)))
+);

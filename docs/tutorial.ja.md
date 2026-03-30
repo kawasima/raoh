@@ -1219,3 +1219,64 @@ switch (dec.decode(input)) {
 ```
 
 パターンマッチを使わない場合は `_1`, `_2`, ... `_8` でアクセスできます。
+
+---
+
+## 30. エンコード — ドメインオブジェクトから Map へ
+
+Raoh はデコーダーの逆操作として、ドメインオブジェクトを `Map<String, Object>` に変換するエンコーダーも提供しています。JDBC バインディングや JSON シリアライズに使えます。
+
+```java
+import static net.unit8.raoh.encode.MapEncoders.*;
+import static net.unit8.raoh.encode.ObjectEncoders.*;
+
+record ItemId(long value) {}
+record Item(ItemId id, String name, BigDecimal price) {}
+
+Encoder<Item, Map<String, Object>> ITEM_ENCODER = object(
+        property("id",    Item::id,    long_().contramap(ItemId::value)),
+        property("name",  Item::name,  string()),
+        property("price", Item::price, decimal())
+);
+
+Map<String, Object> row = ITEM_ENCODER.encode(new Item(new ItemId(42L), "Widget", new BigDecimal("9.99")));
+// {id=42, name=Widget, price=9.99}
+```
+
+エンコーダー API はデコーダーと対称になっています：
+
+| デコーダー | エンコーダー |
+| --- | --- |
+| `field("name", string())` | `property("name", T::name, string())` |
+| `combine(...).map(T::new)` | `object(property(...), ...)` |
+| `nested(subDecoder)` | `nested(subEncoder)` |
+| `list(elementDecoder)` | `list(elementEncoder)` |
+| `nullable(dec)` | `nullable(enc)` |
+| `withDefault(dec, v)` | `withDefault(enc, v)` |
+
+## 31. エンコード — nullable と withDefault
+
+出力で null をそのまま通したい場合は `nullable(enc)` を使います：
+
+```java
+property("description", Item::description, nullable(string()))
+// null → 出力でも null
+```
+
+null をデフォルト値に置き換えたい場合は `withDefault(enc, defaultValue)` を使います：
+
+```java
+property("tags", Article::tags, withDefault(list(nested(TAG_ENCODER)), List.of()))
+// null → 出力では []
+```
+
+## 32. エンコード — ネストしたオブジェクト
+
+`nested()` で構造化エンコーダーを親に埋め込み、`list()` でコレクションをエンコードします：
+
+```java
+Encoder<Order, Map<String, Object>> ORDER_ENCODER = object(
+        property("id",        Order::id,        long_()),
+        property("customer",  Order::customer,  nested(CUSTOMER_ENCODER)),
+        property("items",     Order::items,     list(nested(ITEM_ENCODER)))
+);
