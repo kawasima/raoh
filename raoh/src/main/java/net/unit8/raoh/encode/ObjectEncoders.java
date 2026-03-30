@@ -56,6 +56,24 @@ public final class ObjectEncoders {
     }
 
     /**
+     * Returns an encoder that passes a {@link Double} through as-is.
+     *
+     * @return a double encoder
+     */
+    public static Encoder<Double, Object> double_() {
+        return v -> v;
+    }
+
+    /**
+     * Returns an encoder that passes a {@link Float} through as-is.
+     *
+     * @return a float encoder
+     */
+    public static Encoder<Float, Object> float_() {
+        return v -> v;
+    }
+
+    /**
      * Returns an encoder that passes a {@link Boolean} through as-is.
      *
      * @return a boolean encoder

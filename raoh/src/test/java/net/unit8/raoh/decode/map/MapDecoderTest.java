@@ -832,6 +832,80 @@ class MapDecoderTest {
         assertEquals("x-y-z", assertOk(dec.decode(Map.of("a", "x", "b", "y", "c", "z"))));
     }
 
+    // --- double / float / bytes ---
+
+    @Test
+    void doubleDecoder() {
+        var dec = field("x", double_());
+        assertEquals(3.14, assertOk(dec.decode(Map.of("x", 3.14))));
+        assertErr(dec.decode(Map.of("x", "not a number")));
+        assertErr(dec.decode(Map.of()));
+    }
+
+    @Test
+    void doubleFromNumberCoercion() {
+        var dec = field("x", double_());
+        assertEquals(42.0, assertOk(dec.decode(Map.of("x", 42))));
+        assertEquals(100.0, assertOk(dec.decode(Map.of("x", 100L))));
+    }
+
+    @Test
+    void doubleConstraints() {
+        var dec = field("x", double_().positive().max(100.0));
+        assertEquals(50.5, assertOk(dec.decode(Map.of("x", 50.5))));
+        assertErr(dec.decode(Map.of("x", -1.0)));
+        assertErr(dec.decode(Map.of("x", 200.0)));
+    }
+
+    @Test
+    void doubleRange() {
+        var dec = field("x", double_().range(0.0, 1.0));
+        assertEquals(0.5, assertOk(dec.decode(Map.of("x", 0.5))));
+        assertErr(dec.decode(Map.of("x", -0.1)));
+        assertErr(dec.decode(Map.of("x", 1.1)));
+    }
+
+    @Test
+    void floatDecoder() {
+        var dec = field("x", float_());
+        assertEquals(2.5f, assertOk(dec.decode(Map.of("x", 2.5f))));
+        assertErr(dec.decode(Map.of("x", "not a number")));
+        assertErr(dec.decode(Map.of()));
+    }
+
+    @Test
+    void floatFromNumberCoercion() {
+        var dec = field("x", float_());
+        assertEquals(42.0f, assertOk(dec.decode(Map.of("x", 42))));
+        assertEquals(3.14f, assertOk(dec.decode(Map.of("x", 3.14))));
+    }
+
+    @Test
+    void floatConstraints() {
+        var dec = field("x", float_().nonNegative());
+        assertEquals(0.0f, assertOk(dec.decode(Map.of("x", 0.0f))));
+        assertErr(dec.decode(Map.of("x", -0.1f)));
+    }
+
+    @Test
+    void bytesDecoder() {
+        var dec = field("data", bytes());
+        var input = new byte[]{1, 2, 3};
+        assertArrayEquals(input, assertOk(dec.decode(Map.of("data", input))));
+    }
+
+    @Test
+    void bytesNull() {
+        var dec = field("data", bytes());
+        assertErr(dec.decode(Map.of()));
+    }
+
+    @Test
+    void bytesTypeMismatch() {
+        var dec = field("data", bytes());
+        assertErr(dec.decode(Map.of("data", "not bytes")));
+    }
+
     // --- Helpers ---
 
     static <T> T assertOk(Result<T> result) {

@@ -9,6 +9,8 @@ import net.unit8.raoh.Result;
 
 import net.unit8.raoh.decode.builtin.BoolDecoder;
 import net.unit8.raoh.decode.builtin.DecimalDecoder;
+import net.unit8.raoh.decode.builtin.DoubleDecoder;
+import net.unit8.raoh.decode.builtin.FloatDecoder;
 import net.unit8.raoh.decode.builtin.IntDecoder;
 import net.unit8.raoh.decode.builtin.ListDecoder;
 import net.unit8.raoh.decode.builtin.LongDecoder;
@@ -129,6 +131,56 @@ public final class ObjectDecoders {
             }
             return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected long",
                     Map.of("expected", "long", "actual", in.getClass().getSimpleName()));
+        });
+    }
+
+    /**
+     * Creates a double decoder.
+     *
+     * <p>Accepts {@link Double} values directly, and widens other {@link Number} subtypes
+     * via {@link Number#doubleValue()}. Returns {@code required} if the value is {@code null},
+     * and {@code type_mismatch} if the value is not a number.
+     *
+     * @return a double decoder for {@code Object} input
+     */
+    public static DoubleDecoder<Object> double_() {
+        return new DoubleDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (in instanceof Double d) {
+                return Result.ok(d);
+            }
+            if (in instanceof Number n) {
+                return Result.ok(n.doubleValue());
+            }
+            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
+                    Map.of("expected", "double", "actual", in.getClass().getSimpleName()));
+        });
+    }
+
+    /**
+     * Creates a float decoder.
+     *
+     * <p>Accepts {@link Float} values directly, and narrows other {@link Number} subtypes
+     * via {@link Number#floatValue()}. Returns {@code required} if the value is {@code null},
+     * and {@code type_mismatch} if the value is not a number.
+     *
+     * @return a float decoder for {@code Object} input
+     */
+    public static FloatDecoder<Object> float_() {
+        return new FloatDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (in instanceof Float f) {
+                return Result.ok(f);
+            }
+            if (in instanceof Number n) {
+                return Result.ok(n.floatValue());
+            }
+            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
+                    Map.of("expected", "float", "actual", in.getClass().getSimpleName()));
         });
     }
 
@@ -369,6 +421,32 @@ public final class ObjectDecoders {
             }
             return Result.ok(Map.copyOf(results));
         });
+    }
+
+    // --- bytes ---
+
+    /**
+     * Creates a {@code byte[]} decoder.
+     *
+     * <p>Accepts {@code byte[]} values directly. Returns {@code required} if the value is
+     * {@code null}, and {@code type_mismatch} if the value is not a {@code byte[]}.
+     *
+     * <p>Suitable for JDBC binary columns such as PostgreSQL {@code BYTEA}
+     * or SQL standard {@code VARBINARY}.
+     *
+     * @return a byte array decoder for {@code Object} input
+     */
+    public static Decoder<Object, byte[]> bytes() {
+        return (in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (in instanceof byte[] ba) {
+                return Result.ok(ba);
+            }
+            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected byte[]",
+                    Map.of("expected", "byte[]", "actual", in.getClass().getSimpleName()));
+        };
     }
 
     // --- enumOf / literal ---

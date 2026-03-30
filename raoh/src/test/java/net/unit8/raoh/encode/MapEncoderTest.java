@@ -77,4 +77,14 @@ class MapEncoderTest {
         var enc = nullable(string());
         assertEquals("hello", enc.encode("hello"));
     }
+
+    @Test
+    void doubleEncoderPassesThrough() {
+        assertEquals(3.14, double_().encode(3.14));
+    }
+
+    @Test
+    void floatEncoderPassesThrough() {
+        assertEquals(2.5f, float_().encode(2.5f));
+    }
 }
