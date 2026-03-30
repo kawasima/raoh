@@ -12,10 +12,10 @@
     </parent>
 
     <groupId>net.unit8.raoh.examples</groupId>
-    <artifactId>raoh-spring-example</artifactId>
+    <artifactId>raoh-schema-versioning-example</artifactId>
     <version>0.4.1</version>
-    <name>Raoh Spring Example</name>
-    <description>Standalone Spring Boot example for Raoh</description>
+    <name>Raoh Schema Versioning Example</name>
+    <description>Demonstrates schema-versioned decoding with Raoh's discriminate()</description>
 
     <properties>
         <java.version>25</java.version>
@@ -41,7 +41,7 @@
 
         <dependency>
             <groupId>net.unit8.raoh</groupId>
-            <artifactId>raoh-json</artifactId>
+            <artifactId>raoh</artifactId>
             <version>${raoh.version}</version>
         </dependency>
 
