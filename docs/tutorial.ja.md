@@ -37,11 +37,11 @@ Ok[ドメインオブジェクト]  または  Err[{path: "/email", code: "inval
 ```bash
 jetshell
 /resolve net.unit8.raoh:raoh:0.4.0
-import static net.unit8.raoh.ObjectDecoders.*;
-import static net.unit8.raoh.map.MapDecoders.*;
-import static net.unit8.raoh.Decoders.*;
+import static net.unit8.raoh.decode.ObjectDecoders.*;
+import static net.unit8.raoh.decode.map.MapDecoders.*;
+import static net.unit8.raoh.decode.Decoders.*;
 import net.unit8.raoh.*;
-import net.unit8.raoh.map.*;
+import net.unit8.raoh.decode.map.*;
 import java.util.stream.*;
 import java.time.*;
 ```
@@ -218,7 +218,7 @@ userIdDec.decode("550e8400-e29b-41d4-a716-446655440000")
 ここから `MapDecoders` に切り替えます。`Map<String, Object>` を入力として `field()` と `combine()` でオブジェクトを組み立てます。
 
 ```java
-import static net.unit8.raoh.map.MapDecoders.*
+import static net.unit8.raoh.decode.map.MapDecoders.*
 ```
 
 `combine` はapplicative合成であり、各フィールドのエラーが独立に蓄積されます。フォームバリデーションで「全エラーを一度に返したい」という要件に自然にフィットします。
@@ -1183,7 +1183,7 @@ appConfigDec.decode(Map.of(
 組み込みの `Tuple2` 〜 `Tuple8` を使うことで record 定義を省略できます:
 
 ```java
-import net.unit8.raoh.combinator.Tuple2;
+import net.unit8.raoh.decode.combinator.Tuple2;
 
 var dec = combine(
         field("name", string()),
@@ -1201,7 +1201,7 @@ switch (dec.decode(input)) {
 フィールドが多い場合は `Tuple3` 〜 `Tuple8` を使用します:
 
 ```java
-import net.unit8.raoh.combinator.Tuple4;
+import net.unit8.raoh.decode.combinator.Tuple4;
 
 var dec = combine(
         field("customerId", long_()),

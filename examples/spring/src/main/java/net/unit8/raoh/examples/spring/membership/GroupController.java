@@ -1,6 +1,7 @@
 package net.unit8.raoh.examples.spring.membership;
 
 import net.unit8.raoh.*;
+import net.unit8.raoh.decode.*;
 import net.unit8.raoh.examples.spring.SpringMessageResolver;
 import net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.AddMemberCommand;
 import net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.CreateGroupCommand;

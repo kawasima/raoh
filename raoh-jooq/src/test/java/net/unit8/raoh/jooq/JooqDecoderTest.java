@@ -1,6 +1,7 @@
 package net.unit8.raoh.jooq;
 
 import net.unit8.raoh.*;
+import net.unit8.raoh.decode.*;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
 import org.junit.jupiter.api.Test;
@@ -10,7 +11,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static net.unit8.raoh.jooq.JooqRecordDecoders.*;
-import static net.unit8.raoh.ObjectDecoders.*;
+import static net.unit8.raoh.decode.ObjectDecoders.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class JooqDecoderTest {

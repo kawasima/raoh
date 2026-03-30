@@ -82,7 +82,7 @@ This returns `Presence.Absent`, `Presence.PresentNull`, or `Presence.Present`, w
 
 ## `MapDecoders`
 
-`net.unit8.raoh.map.MapDecoders` works with `Map<String, Object>`.
+`net.unit8.raoh.decode.map.MapDecoders` works with `Map<String, Object>`.
 
 Supported helpers include:
 

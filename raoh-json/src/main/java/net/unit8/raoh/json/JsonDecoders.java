@@ -1,8 +1,9 @@
 package net.unit8.raoh.json;
 
 import net.unit8.raoh.*;
-import net.unit8.raoh.combinator.*;
-import net.unit8.raoh.builtin.*;
+import net.unit8.raoh.decode.*;
+import net.unit8.raoh.decode.combinator.*;
+import net.unit8.raoh.decode.builtin.*;
 
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;

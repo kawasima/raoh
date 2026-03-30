@@ -1,6 +1,7 @@
 package net.unit8.raoh.json;
 
 import net.unit8.raoh.*;
+import net.unit8.raoh.decode.*;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -537,7 +538,7 @@ class JsonDecoderTest {
 
     @Test
     void customConstraintViaStringDecoderFrom() {
-        var sku = net.unit8.raoh.builtin.StringDecoder.from(string()).pattern(java.util.regex.Pattern.compile("^[A-Z]{3}-\\d{4}$"));
+        var sku = net.unit8.raoh.decode.builtin.StringDecoder.from(string()).pattern(java.util.regex.Pattern.compile("^[A-Z]{3}-\\d{4}$"));
         var dec = field("sku", sku);
 
         assertEquals("ABC-1234", assertOk(dec.decode(parse("{\"sku\":\"ABC-1234\"}"))));

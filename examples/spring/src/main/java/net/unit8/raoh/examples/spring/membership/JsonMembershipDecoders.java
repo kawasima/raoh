@@ -1,7 +1,7 @@
 package net.unit8.raoh.examples.spring.membership;
 
-import net.unit8.raoh.Decoder;
-import net.unit8.raoh.Decoders;
+import net.unit8.raoh.decode.Decoder;
+import net.unit8.raoh.decode.Decoders;
 import net.unit8.raoh.json.JsonDecoder;
 import net.unit8.raoh.json.JsonDecoders;
 import tools.jackson.databind.JsonNode;

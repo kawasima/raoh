@@ -7,7 +7,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * Entry point for the schema versioning example application.
  *
  * <p>This example demonstrates how to use Raoh's
- * {@link net.unit8.raoh.map.MapDecoders#discriminate(String, java.util.Map) discriminate()}
+ * {@link net.unit8.raoh.decode.map.MapDecoders#discriminate(String, java.util.Map) discriminate()}
  * to decode database rows whose schema varies by a version column. Different
  * schema versions coexist in the same table and are transparently normalized
  * into a single domain model without data migration.

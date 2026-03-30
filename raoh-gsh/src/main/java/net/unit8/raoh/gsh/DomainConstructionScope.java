@@ -1,6 +1,6 @@
 package net.unit8.raoh.gsh;
 
-import net.unit8.raoh.Decoder;
+import net.unit8.raoh.decode.Decoder;
 
 import java.util.List;
 
@@ -17,7 +17,7 @@ import java.util.List;
  * woven into bytecode even if the scope is never activated (e.g., in production).
  *
  * <p>The stack check verifies that a {@code decode} method in a class implementing
- * {@link net.unit8.raoh.Decoder} is on the call stack. This type-level check prevents
+ * {@link net.unit8.raoh.decode.Decoder} is on the call stack. This type-level check prevents
  * false positives from unrelated {@code decode} methods (e.g., {@code java.util.Base64}).
  *
  * <p>This class uses {@link ScopedValue} (JEP 506) and is safe for use with virtual threads.
@@ -106,7 +106,7 @@ public final class DomainConstructionScope {
      * a decoder method on the call stack will throw {@link DomainConstructionGuardException}.
      *
      * <p>Uses the default check: methods named {@code decode} in classes
-     * implementing {@link net.unit8.raoh.Decoder}.
+     * implementing {@link net.unit8.raoh.decode.Decoder}.
      *
      * @param task the task to execute within the guarded scope
      */
@@ -131,7 +131,7 @@ public final class DomainConstructionScope {
      * Executes the given task within a domain construction guard scope, returning a result.
      *
      * <p>Uses the default check: methods named {@code decode} in classes
-     * implementing {@link net.unit8.raoh.Decoder}.
+     * implementing {@link net.unit8.raoh.decode.Decoder}.
      *
      * @param <T>  the result type
      * @param <X>  the exception type that may be thrown

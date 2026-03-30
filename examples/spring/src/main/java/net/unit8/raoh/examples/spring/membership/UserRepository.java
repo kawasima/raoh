@@ -17,7 +17,7 @@ import java.util.Optional;
  * <p>Key Raoh patterns demonstrated here:
  * <ul>
  *   <li>{@code Decoder.list()} in {@link #findAll()} — decode all rows with error accumulation</li>
- *   <li>{@link net.unit8.raoh.Result#map2 Result.map2} + {@link net.unit8.raoh.Decoder#list() Decoder.list()}
+ *   <li>{@link net.unit8.raoh.Result#map2 Result.map2} + {@link net.unit8.raoh.decode.Decoder#list() Decoder.list()}
  *       in {@link #findByIdWithGroups(long)} — merge results from two independent queries</li>
  * </ul>
  */
@@ -86,7 +86,7 @@ public class UserRepository {
      * JOIN groups) and combines the results using
      * {@link MapMembershipDecoders#decodeUserWithGroups}, which demonstrates
      * {@link net.unit8.raoh.Result#map2 Result.map2} and
-     * {@link net.unit8.raoh.Decoder#list() Decoder.list()}.
+     * {@link net.unit8.raoh.decode.Decoder#list() Decoder.list()}.
      *
      * @param id the user ID
      * @return the user with groups, or empty if the user does not exist

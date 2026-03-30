@@ -1,13 +1,13 @@
 package net.unit8.raoh.examples.versioning.order;
 
-import net.unit8.raoh.Decoder;
-import net.unit8.raoh.Decoders;
+import net.unit8.raoh.decode.Decoder;
+import net.unit8.raoh.decode.Decoders;
 
 import java.math.BigDecimal;
 import java.util.Map;
 
-import static net.unit8.raoh.ObjectDecoders.*;
-import static net.unit8.raoh.map.MapDecoders.*;
+import static net.unit8.raoh.decode.ObjectDecoders.*;
+import static net.unit8.raoh.decode.map.MapDecoders.*;
 
 /**
  * Schema-versioned decoders for the orders table.
@@ -25,7 +25,7 @@ import static net.unit8.raoh.map.MapDecoders.*;
  * </ul>
  *
  * <p>The top-level {@link #ORDER_ROW} decoder uses
- * {@link net.unit8.raoh.map.MapDecoders#discriminate(String, Map) discriminate()}
+ * {@link net.unit8.raoh.decode.map.MapDecoders#discriminate(String, Map) discriminate()}
  * to dispatch to the correct version-specific decoder based on the
  * {@code schema_version} value.
  *

@@ -64,10 +64,10 @@ Every verification script must start with these lines (adjust the path to the re
 /classpath raoh/target/raoh-*.jar
 /classpath raoh/target/dependency/*.jar
 import net.unit8.raoh.*;
-import net.unit8.raoh.map.*;
-import net.unit8.raoh.builtin.*;
-import static net.unit8.raoh.map.MapDecoders.*;
-import static net.unit8.raoh.Decoders.*;
+import net.unit8.raoh.decode.map.*;
+import net.unit8.raoh.decode.builtin.*;
+import static net.unit8.raoh.decode.map.MapDecoders.*;
+import static net.unit8.raoh.decode.Decoders.*;
 import java.util.stream.*;
 import java.time.*;
 ```
@@ -75,7 +75,7 @@ import java.time.*;
 Notes:
 
 - `/classpath` takes one path per line — glob expansion does not work across `:` separators.
-- Do **not** `import static net.unit8.raoh.ObjectDecoders.*` alongside `MapDecoders.*`; both define `string()` and the import becomes ambiguous. `MapDecoders` re-exports everything needed for `Map`-based decoding.
+- Do **not** `import static net.unit8.raoh.decode.ObjectDecoders.*` alongside `MapDecoders.*`; both define `string()` and the import becomes ambiguous. `MapDecoders` re-exports everything needed for `Map`-based decoding.
 
 ### Known gotchas
 
