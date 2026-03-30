@@ -101,8 +101,11 @@ public final class ObjectEncoders {
     }
 
     /**
-     * Returns an encoder that converts a {@link LocalDateTime} to its ISO-8601 string
-     * representation.
+     * Returns an encoder that converts a {@link LocalDateTime} to a string via
+     * {@link LocalDateTime#toString()}.
+     *
+     * <p>The output follows ISO-8601 but omits trailing zero seconds and nanoseconds
+     * (e.g., {@code "2024-06-15T10:30"} rather than {@code "2024-06-15T10:30:00"}).
      *
      * @return a local date-time encoder
      */
@@ -111,8 +114,11 @@ public final class ObjectEncoders {
     }
 
     /**
-     * Returns an encoder that converts an {@link OffsetDateTime} to its ISO-8601 string
-     * representation.
+     * Returns an encoder that converts an {@link OffsetDateTime} to a string via
+     * {@link OffsetDateTime#toString()}.
+     *
+     * <p>The output follows ISO-8601 but omits trailing zero seconds and nanoseconds
+     * (e.g., {@code "2024-06-15T10:30+09:00"} rather than {@code "2024-06-15T10:30:00+09:00"}).
      *
      * @return an offset date-time encoder
      */

@@ -103,7 +103,7 @@ public final class MapEncoders {
      * @return an encoder whose output type is {@code Object}
      */
     public static <T> Encoder<T, Object> nested(Encoder<T, Map<String, Object>> enc) {
-        return value -> enc.encode(value);
+        return enc::encode;
     }
 
     /**

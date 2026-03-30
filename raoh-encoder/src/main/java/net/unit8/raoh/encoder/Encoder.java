@@ -57,7 +57,7 @@ public interface Encoder<T, O> {
      * {@code next}.
      *
      * <pre>{@code
-     * Encoder<Instant, String> enc = iso8601().andThen(s -> s.replace("T", " "));
+     * Encoder<Instant, String> enc = iso8601().andThen(o -> o.toString().replace("T", " "));
      * }</pre>
      *
      * @param <P>  the final output type
