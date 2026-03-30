@@ -79,7 +79,7 @@ public sealed interface Result<T> permits Ok, Err {
      *
      * <p><strong>Path propagation note:</strong> The mapping function {@code f} receives only the
      * decoded value — not the current {@link Path}. If {@code f} needs to produce an error with a
-     * correct path (e.g., for cross-field validation), wrap the entire logic in a {@link Decoder}
+     * correct path (e.g., for cross-field validation), wrap the entire logic in a {@link net.unit8.raoh.decode.Decoder Decoder}
      * lambda so that {@code path} is available via closure:
      * <pre>{@code
      * Decoder<JsonNode, Money> moneyDecoder = (in, path) ->
@@ -234,7 +234,7 @@ public sealed interface Result<T> permits Ok, Err {
      *
      * <p>Use this when the two results come from independent sources (e.g., different input types
      * or different database tables). When both results share the same input type, prefer
-     * {@link Decoders#combine} which composes decoders before decoding.
+     * {@link net.unit8.raoh.decode.Decoders#combine Decoders.combine} which composes decoders before decoding.
      *
      * @param <A> the value type of the first result
      * @param <B> the value type of the second result
@@ -270,7 +270,7 @@ public sealed interface Result<T> permits Ok, Err {
      */
     static <A, B, C, D> Result<D> map3(
             Result<A> ra, Result<B> rb, Result<C> rc,
-            net.unit8.raoh.combinator.Function3<A, B, C, D> f) {
+            net.unit8.raoh.decode.combinator.Function3<A, B, C, D> f) {
         if (ra instanceof Ok<A> oa && rb instanceof Ok<B> ob && rc instanceof Ok<C> oc) {
             return Result.ok(f.apply(oa.value(), ob.value(), oc.value()));
         }
@@ -299,7 +299,7 @@ public sealed interface Result<T> permits Ok, Err {
      */
     static <A, B, C, D, E> Result<E> map4(
             Result<A> ra, Result<B> rb, Result<C> rc, Result<D> rd,
-            net.unit8.raoh.combinator.Function4<A, B, C, D, E> f) {
+            net.unit8.raoh.decode.combinator.Function4<A, B, C, D, E> f) {
         if (ra instanceof Ok<A> oa && rb instanceof Ok<B> ob
                 && rc instanceof Ok<C> oc && rd instanceof Ok<D> od) {
             return Result.ok(f.apply(oa.value(), ob.value(), oc.value(), od.value()));

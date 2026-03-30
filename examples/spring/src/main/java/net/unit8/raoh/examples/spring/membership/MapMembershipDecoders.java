@@ -1,13 +1,13 @@
 package net.unit8.raoh.examples.spring.membership;
 
-import net.unit8.raoh.Decoder;
+import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.Result;
 
 import java.util.List;
 import java.util.Map;
 
-import static net.unit8.raoh.ObjectDecoders.*;
-import static net.unit8.raoh.map.MapDecoders.*;
+import static net.unit8.raoh.decode.ObjectDecoders.*;
+import static net.unit8.raoh.decode.map.MapDecoders.*;
 
 /**
  * Map boundary decoders for the membership domain.

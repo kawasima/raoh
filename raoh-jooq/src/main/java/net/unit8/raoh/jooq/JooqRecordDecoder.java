@@ -1,6 +1,6 @@
 package net.unit8.raoh.jooq;
 
-import net.unit8.raoh.Decoder;
+import net.unit8.raoh.decode.Decoder;
 
 /**
  * A convenience interface for decoders that operate on {@link org.jooq.Record} input.

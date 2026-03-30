@@ -2,7 +2,7 @@
 
 Runtime library for the domain construction guard. Provides `DomainConstructionScope` and `DomainConstructionGuardException`.
 
-Within a `DomainConstructionScope`, any woven domain object construction is checked against the call stack. If a `decode` method in a class implementing `net.unit8.raoh.Decoder` is on the stack, construction is allowed. If not (i.e., a direct `new`), a `DomainConstructionGuardException` is thrown. Outside of a scope, no checking occurs — so production code is never affected.
+Within a `DomainConstructionScope`, any woven domain object construction is checked against the call stack. If a `decode` method in a class implementing `net.unit8.raoh.decode.Decoder` is on the stack, construction is allowed. If not (i.e., a direct `new`), a `DomainConstructionGuardException` is thrown. Outside of a scope, no checking occurs — so production code is never affected.
 
 ## Requirements
 

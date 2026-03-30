@@ -45,9 +45,11 @@ mvn clean test
 ### Core (`raoh`)
 
 - `net.unit8.raoh`: core abstractions and error model
-- `net.unit8.raoh.builtin`: built-in primitive and collection decoders
-- `net.unit8.raoh.combinator`: applicative combinator internals
-- `net.unit8.raoh.map`: decoders for `Map<String, Object>`
+- `net.unit8.raoh.decode`: decoder core (`Decoder`, `Decoders`, `ObjectDecoders`, `FieldDecoder`)
+- `net.unit8.raoh.decode.builtin`: built-in primitive and collection decoders
+- `net.unit8.raoh.decode.combinator`: applicative combinator internals
+- `net.unit8.raoh.decode.map`: decoders for `Map<String, Object>`
+- `net.unit8.raoh.encode`: encoder core (`Encoder`, `ObjectEncoders`, `MapEncoders`)
 
 ### JSON extension (`raoh-json`)
 
@@ -118,7 +120,7 @@ A decoder reads an input value of type `I` and produces either:
 Two boundary implementations are included:
 
 - `net.unit8.raoh.json.JsonDecoders`
-- `net.unit8.raoh.map.MapDecoders`
+- `net.unit8.raoh.decode.map.MapDecoders`
 
 ## What It Feels Like
 
@@ -199,9 +201,9 @@ Example failure shape:
 ```java
 import java.util.Map;
 
-import net.unit8.raoh.map.MapDecoder;
+import net.unit8.raoh.decode.map.MapDecoder;
 
-import static net.unit8.raoh.map.MapDecoders.*;
+import static net.unit8.raoh.decode.map.MapDecoders.*;
 
 record Config(String host, int port) {}
 
@@ -222,7 +224,7 @@ This is useful when the input is already materialized by another layer, for exam
 
 ## Built-in Decoders
 
-Raoh includes the following built-in decoders in `net.unit8.raoh.builtin`.
+Raoh includes the following built-in decoders in `net.unit8.raoh.decode.builtin`.
 
 Value decoders:
 
@@ -475,7 +477,7 @@ issues.flatten()
 
 ## Utility Combinators
 
-The `net.unit8.raoh.Decoders` class provides reusable combinators.
+The `net.unit8.raoh.decode.Decoders` class provides reusable combinators.
 
 - `lazy(...)`
   For recursive decoders.

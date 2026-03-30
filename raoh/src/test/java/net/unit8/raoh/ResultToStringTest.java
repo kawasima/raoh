@@ -1,11 +1,13 @@
 package net.unit8.raoh;
 
+import net.unit8.raoh.decode.Decoder;
+import net.unit8.raoh.decode.Decoders;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
-import static net.unit8.raoh.map.MapDecoders.*;
-import static net.unit8.raoh.ObjectDecoders.*;
+import static net.unit8.raoh.decode.map.MapDecoders.*;
+import static net.unit8.raoh.decode.ObjectDecoders.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ResultToStringTest {

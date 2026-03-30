@@ -37,11 +37,11 @@ Start [jetshell](https://github.com/kawasima/jetshell) and load Raoh:
 ```bash
 jetshell
 /resolve net.unit8.raoh:raoh:0.4.0
-import static net.unit8.raoh.ObjectDecoders.*;
-import static net.unit8.raoh.map.MapDecoders.*;
-import static net.unit8.raoh.Decoders.*;
+import static net.unit8.raoh.decode.ObjectDecoders.*;
+import static net.unit8.raoh.decode.map.MapDecoders.*;
+import static net.unit8.raoh.decode.Decoders.*;
 import net.unit8.raoh.*;
-import net.unit8.raoh.map.*;
+import net.unit8.raoh.decode.map.*;
 import java.util.stream.*;
 import java.time.*;
 ```
@@ -1181,7 +1181,7 @@ If the combined value is only used in a single `switch` expression and does not 
 you can use the built-in `Tuple2` through `Tuple8` types instead:
 
 ```java
-import net.unit8.raoh.combinator.Tuple2;
+import net.unit8.raoh.decode.combinator.Tuple2;
 
 var dec = combine(
         field("name", string()),
@@ -1199,7 +1199,7 @@ switch (dec.decode(input)) {
 For more fields, use `Tuple3` through `Tuple8`:
 
 ```java
-import net.unit8.raoh.combinator.Tuple4;
+import net.unit8.raoh.decode.combinator.Tuple4;
 
 var dec = combine(
         field("customerId", long_()),

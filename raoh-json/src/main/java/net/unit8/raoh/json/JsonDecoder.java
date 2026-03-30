@@ -1,6 +1,6 @@
 package net.unit8.raoh.json;
 
-import net.unit8.raoh.*;
+import net.unit8.raoh.decode.Decoder;
 
 import tools.jackson.databind.JsonNode;
 

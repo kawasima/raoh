@@ -1,6 +1,9 @@
 package net.unit8.raoh.examples.spring.membership;
 
-import net.unit8.raoh.*;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Issues;
+import net.unit8.raoh.MessageResolver;
+import net.unit8.raoh.Ok;
 import net.unit8.raoh.examples.spring.SpringMessageResolver;
 import net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.CreateUserCommand;
 import static net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.CREATE_USER;
@@ -81,7 +84,7 @@ public class UserController {
      *
      * <p>The response is built by {@link MapMembershipDecoders#decodeUserWithGroups},
      * which uses {@link Result#map2} to combine independently decoded user and
-     * group-membership data, and {@link net.unit8.raoh.Decoder#list() Decoder.list()} to decode the
+     * group-membership data, and {@link net.unit8.raoh.decode.Decoder#list() Decoder.list()} to decode the
      * variable-length list of memberships.
      *
      * @param id the user ID

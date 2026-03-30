@@ -1,6 +1,9 @@
 package net.unit8.raoh.json;
 
-import net.unit8.raoh.*;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.Ok;
+import net.unit8.raoh.Result;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -237,7 +240,7 @@ class TemporalDecoderTest {
     static <T> T assertOk(Result<T> result) {
         return switch (result) {
             case Ok(var value) -> value;
-            case Err(var issues) -> { fail("Expected Ok, got: " + issues); yield null; }
+            case Err(var issues) -> fail("Expected Ok, got: " + issues);
         };
     }
 

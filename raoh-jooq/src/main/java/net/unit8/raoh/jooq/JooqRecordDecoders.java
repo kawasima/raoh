@@ -1,7 +1,12 @@
 package net.unit8.raoh.jooq;
 
-import net.unit8.raoh.*;
-import net.unit8.raoh.combinator.*;
+import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.Presence;
+import net.unit8.raoh.Result;
+import net.unit8.raoh.decode.Decoder;
+import net.unit8.raoh.decode.Decoders;
+import net.unit8.raoh.decode.ObjectDecoders;
+import net.unit8.raoh.decode.combinator.*;
 
 import java.util.List;
 import java.util.Map;
@@ -13,11 +18,11 @@ import java.util.Optional;
  * <p>Usage:
  * <pre>{@code
  * import static net.unit8.raoh.jooq.JooqRecordDecoders.*;
- * import static net.unit8.raoh.ObjectDecoders.*;
+ * import static net.unit8.raoh.decode.ObjectDecoders.*;
  * }</pre>
  *
  * <p>For primitive decoders ({@code string()}, {@code int_()}, etc.) that work on raw
- * {@code Object} values extracted from a jOOQ record, see {@link net.unit8.raoh.ObjectDecoders}.
+ * {@code Object} values extracted from a jOOQ record, see {@link net.unit8.raoh.decode.ObjectDecoders}.
  */
 public final class JooqRecordDecoders {
 
