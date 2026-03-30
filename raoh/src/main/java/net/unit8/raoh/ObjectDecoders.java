@@ -169,25 +169,37 @@ public final class ObjectDecoders {
     /**
      * Creates a {@link LocalDate} decoder.
      *
-     * <p>Returns {@code required} if the value is {@code null}, and {@code type_mismatch}
-     * if the value is not a {@link LocalDate}.
+     * <p>Accepts {@link LocalDate} values directly, and converts {@link java.sql.Date}
+     * via {@link java.sql.Date#toLocalDate()}. Returns {@code required} if the value
+     * is {@code null}, and {@code type_mismatch} if the value is neither type.
      *
      * @return a temporal decoder for {@code Object} input producing {@link LocalDate}
      */
     public static TemporalDecoder<Object, LocalDate> date() {
-        return temporalOf(LocalDate.class, "date");
+        return new TemporalDecoder<>((in, path) -> switch (in) {
+            case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            case LocalDate d -> Result.ok(d);
+            case java.sql.Date sd -> Result.ok(sd.toLocalDate());
+            default -> typeMismatch(path, "date", in);
+        });
     }
 
     /**
      * Creates a {@link LocalTime} decoder.
      *
-     * <p>Returns {@code required} if the value is {@code null}, and {@code type_mismatch}
-     * if the value is not a {@link LocalTime}.
+     * <p>Accepts {@link LocalTime} values directly, and converts {@link java.sql.Time}
+     * via {@link java.sql.Time#toLocalTime()}. Returns {@code required} if the value
+     * is {@code null}, and {@code type_mismatch} if the value is neither type.
      *
      * @return a temporal decoder for {@code Object} input producing {@link LocalTime}
      */
     public static TemporalDecoder<Object, LocalTime> time() {
-        return temporalOf(LocalTime.class, "time");
+        return new TemporalDecoder<>((in, path) -> switch (in) {
+            case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            case LocalTime t -> Result.ok(t);
+            case java.sql.Time st -> Result.ok(st.toLocalTime());
+            default -> typeMismatch(path, "time", in);
+        });
     }
 
     /**
@@ -205,13 +217,19 @@ public final class ObjectDecoders {
     /**
      * Creates an {@link Instant} decoder.
      *
-     * <p>Returns {@code required} if the value is {@code null}, and {@code type_mismatch}
-     * if the value is not an {@link Instant}.
+     * <p>Accepts {@link Instant} values directly, and converts {@link java.sql.Timestamp}
+     * via {@link java.sql.Timestamp#toInstant()}. Returns {@code required} if the value
+     * is {@code null}, and {@code type_mismatch} if the value is neither type.
      *
      * @return a temporal decoder for {@code Object} input producing {@link Instant}
      */
     public static TemporalDecoder<Object, Instant> iso8601() {
-        return temporalOf(Instant.class, "instant");
+        return new TemporalDecoder<>((in, path) -> switch (in) {
+            case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            case Instant i -> Result.ok(i);
+            case java.sql.Timestamp ts -> Result.ok(ts.toInstant());
+            default -> typeMismatch(path, "instant", in);
+        });
     }
 
     /**
@@ -224,6 +242,11 @@ public final class ObjectDecoders {
      */
     public static TemporalDecoder<Object, OffsetDateTime> offsetDateTime() {
         return temporalOf(OffsetDateTime.class, "offset-date-time");
+    }
+
+    private static <T> Result<T> typeMismatch(Path path, String expected, Object actual) {
+        return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected " + expected,
+                Map.of("expected", expected, "actual", actual.getClass().getSimpleName()));
     }
 
     private static <T extends Comparable<? super T>> TemporalDecoder<Object, T> temporalOf(
