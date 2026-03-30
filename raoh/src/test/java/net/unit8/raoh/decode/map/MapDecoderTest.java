@@ -866,6 +866,29 @@ class MapDecoderTest {
     }
 
     @Test
+    void doubleNegative() {
+        var dec = field("x", double_().negative());
+        assertEquals(-1.5, assertOk(dec.decode(Map.of("x", -1.5))));
+        assertErr(dec.decode(Map.of("x", 0.0)));
+        assertErr(dec.decode(Map.of("x", 1.0)));
+    }
+
+    @Test
+    void doubleNonPositive() {
+        var dec = field("x", double_().nonPositive());
+        assertEquals(0.0, assertOk(dec.decode(Map.of("x", 0.0))));
+        assertEquals(-5.0, assertOk(dec.decode(Map.of("x", -5.0))));
+        assertErr(dec.decode(Map.of("x", 0.1)));
+    }
+
+    @Test
+    void doubleOneOf() {
+        var dec = field("x", double_().oneOf(1.0, 2.5, 3.0));
+        assertEquals(2.5, assertOk(dec.decode(Map.of("x", 2.5))));
+        assertErr(dec.decode(Map.of("x", 4.0)));
+    }
+
+    @Test
     void floatDecoder() {
         var dec = field("x", float_());
         assertEquals(2.5f, assertOk(dec.decode(Map.of("x", 2.5f))));
@@ -885,6 +908,28 @@ class MapDecoderTest {
         var dec = field("x", float_().nonNegative());
         assertEquals(0.0f, assertOk(dec.decode(Map.of("x", 0.0f))));
         assertErr(dec.decode(Map.of("x", -0.1f)));
+    }
+
+    @Test
+    void floatNegative() {
+        var dec = field("x", float_().negative());
+        assertEquals(-2.0f, assertOk(dec.decode(Map.of("x", -2.0f))));
+        assertErr(dec.decode(Map.of("x", 0.0f)));
+        assertErr(dec.decode(Map.of("x", 1.0f)));
+    }
+
+    @Test
+    void floatNonPositive() {
+        var dec = field("x", float_().nonPositive());
+        assertEquals(0.0f, assertOk(dec.decode(Map.of("x", 0.0f))));
+        assertErr(dec.decode(Map.of("x", 0.1f)));
+    }
+
+    @Test
+    void floatOneOf() {
+        var dec = field("x", float_().oneOf(1.0f, 2.5f, 3.0f));
+        assertEquals(2.5f, assertOk(dec.decode(Map.of("x", 2.5f))));
+        assertErr(dec.decode(Map.of("x", 4.0f)));
     }
 
     @Test
