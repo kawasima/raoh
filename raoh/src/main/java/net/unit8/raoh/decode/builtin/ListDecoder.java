@@ -24,6 +24,11 @@ public class ListDecoder<I, T> implements Decoder<I, List<T>> {
 
     private final Decoder<I, List<T>> inner;
 
+    /**
+     * Creates a new list decoder wrapping the given inner decoder.
+     *
+     * @param inner the inner decoder that performs the actual decoding
+     */
     public ListDecoder(Decoder<I, List<T>> inner) {
         this.inner = inner;
     }
@@ -33,6 +38,11 @@ public class ListDecoder<I, T> implements Decoder<I, List<T>> {
         return inner.decode(in, path);
     }
 
+    /**
+     * Requires the list to be non-empty.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_SMALL} if the list is empty
+     */
     public ListDecoder<I, T> nonempty() {
         return chain((value, path) -> {
             if (value.isEmpty()) {
@@ -43,6 +53,12 @@ public class ListDecoder<I, T> implements Decoder<I, List<T>> {
         });
     }
 
+    /**
+     * Restricts the list to have at least {@code n} elements.
+     *
+     * @param n the minimum number of elements (inclusive)
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_SMALL} if below
+     */
     public ListDecoder<I, T> minSize(int n) {
         return chain((value, path) -> {
             if (value.size() < n) {
@@ -54,6 +70,12 @@ public class ListDecoder<I, T> implements Decoder<I, List<T>> {
         });
     }
 
+    /**
+     * Restricts the list to have at most {@code n} elements.
+     *
+     * @param n the maximum number of elements (inclusive)
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_BIG} if above
+     */
     public ListDecoder<I, T> maxSize(int n) {
         return chain((value, path) -> {
             if (value.size() > n) {
@@ -65,6 +87,12 @@ public class ListDecoder<I, T> implements Decoder<I, List<T>> {
         });
     }
 
+    /**
+     * Restricts the list to have exactly {@code n} elements.
+     *
+     * @param n the required number of elements
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_SIZE} if the size differs
+     */
     public ListDecoder<I, T> fixedSize(int n) {
         return chain((value, path) -> {
             if (value.size() != n) {
@@ -150,6 +178,11 @@ public class ListDecoder<I, T> implements Decoder<I, List<T>> {
         });
     }
 
+    /**
+     * Converts the decoded list to a {@link Set}, preserving insertion order.
+     *
+     * @return a decoder that produces an unmodifiable {@link Set} from the list elements
+     */
     public Decoder<I, Set<T>> toSet() {
         return (in, path) -> this.decode(in, path).map(list -> Set.copyOf(new LinkedHashSet<>(list)));
     }

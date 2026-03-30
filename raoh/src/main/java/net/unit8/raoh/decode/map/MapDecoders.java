@@ -231,14 +231,42 @@ public final class MapDecoders {
         return Decoders.combine(da, db, dc);
     }
 
-    /** 4-arity variant of {@link #combine(Decoder, Decoder)}. @return a combiner */
+    /**
+     * Combines 4 map-field decoders into an applicative builder.
+     *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <A, B, C, D> Combiner4<Map<String, Object>, A, B, C, D> combine(
             Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
             Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd) {
         return Decoders.combine(da, db, dc, dd);
     }
 
-    /** 5-arity variant of {@link #combine(Decoder, Decoder)}. @return a combiner */
+    /**
+     * Combines 5 map-field decoders into an applicative builder.
+     *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <A, B, C, D, E> Combiner5<Map<String, Object>, A, B, C, D, E> combine(
             Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
             Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
@@ -246,7 +274,24 @@ public final class MapDecoders {
         return Decoders.combine(da, db, dc, dd, de);
     }
 
-    /** 6-arity variant of {@link #combine(Decoder, Decoder)}. @return a combiner */
+    /**
+     * Combines 6 map-field decoders into an applicative builder.
+     *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F> Combiner6<Map<String, Object>, A, B, C, D, E, F> combine(
             Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
             Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
@@ -254,7 +299,26 @@ public final class MapDecoders {
         return Decoders.combine(da, db, dc, dd, de, df);
     }
 
-    /** 7-arity variant of {@link #combine(Decoder, Decoder)}. @return a combiner */
+    /**
+     * Combines 7 map-field decoders into an applicative builder.
+     *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G> Combiner7<Map<String, Object>, A, B, C, D, E, F, G> combine(
             Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
             Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
@@ -263,7 +327,28 @@ public final class MapDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg);
     }
 
-    /** 8-arity variant of {@link #combine(Decoder, Decoder)}. @return a combiner */
+    /**
+     * Combines 8 map-field decoders into an applicative builder.
+     *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H> Combiner8<Map<String, Object>, A, B, C, D, E, F, G, H> combine(
             Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
             Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
@@ -272,7 +357,30 @@ public final class MapDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh);
     }
 
-    /** 9-arity variant of {@link #combine(Decoder, Decoder)}. @return a combiner */
+    /**
+     * Combines 9 map-field decoders into an applicative builder.
+     *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J> Combiner9<Map<String, Object>, A, B, C, D, E, F, G, H, J> combine(
             Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
             Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
@@ -282,7 +390,32 @@ public final class MapDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj);
     }
 
-    /** 10-arity variant of {@link #combine(Decoder, Decoder)}. @return a combiner */
+    /**
+     * Combines 10 map-field decoders into an applicative builder.
+     *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J, K> Combiner10<Map<String, Object>, A, B, C, D, E, F, G, H, J, K> combine(
             Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
             Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
@@ -292,7 +425,34 @@ public final class MapDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk);
     }
 
-    /** 11-arity variant of {@link #combine(Decoder, Decoder)}. @return a combiner */
+    /**
+     * Combines 11 map-field decoders into an applicative builder.
+     *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J, K, L> Combiner11<Map<String, Object>, A, B, C, D, E, F, G, H, J, K, L> combine(
             Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
             Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
@@ -303,7 +463,36 @@ public final class MapDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl);
     }
 
-    /** 12-arity variant of {@link #combine(Decoder, Decoder)}. @return a combiner */
+    /**
+     * Combines 12 map-field decoders into an applicative builder.
+     *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J, K, L, M> Combiner12<Map<String, Object>, A, B, C, D, E, F, G, H, J, K, L, M> combine(
             Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
             Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
@@ -314,7 +503,38 @@ public final class MapDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm);
     }
 
-    /** 13-arity variant of {@link #combine(Decoder, Decoder)}. @return a combiner */
+    /**
+     * Combines 13 map-field decoders into an applicative builder.
+     *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N> Combiner13<Map<String, Object>, A, B, C, D, E, F, G, H, J, K, L, M, N> combine(
             Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
             Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
@@ -326,7 +546,40 @@ public final class MapDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn);
     }
 
-    /** 14-arity variant of {@link #combine(Decoder, Decoder)}. @return a combiner */
+    /**
+     * Combines 14 map-field decoders into an applicative builder.
+     *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param <O> the fourteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @param do_ the fourteenth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O> Combiner14<Map<String, Object>, A, B, C, D, E, F, G, H, J, K, L, M, N, O> combine(
             Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
             Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
@@ -338,7 +591,42 @@ public final class MapDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_);
     }
 
-    /** 15-arity variant of {@link #combine(Decoder, Decoder)}. @return a combiner */
+    /**
+     * Combines 15 map-field decoders into an applicative builder.
+     *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param <O> the fourteenth decoder's output type
+     * @param <P> the fifteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @param do_ the fourteenth decoder
+     * @param dp  the fifteenth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> Combiner15<Map<String, Object>, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> combine(
             Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
             Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
@@ -351,7 +639,44 @@ public final class MapDecoders {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_, dp);
     }
 
-    /** 16-arity variant of {@link #combine(Decoder, Decoder)}. @return a combiner */
+    /**
+     * Combines 16 map-field decoders into an applicative builder.
+     *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param <O> the fourteenth decoder's output type
+     * @param <P> the fifteenth decoder's output type
+     * @param <Q> the sixteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @param do_ the fourteenth decoder
+     * @param dp  the fifteenth decoder
+     * @param dq  the sixteenth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> Combiner16<Map<String, Object>, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> combine(
             Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
             Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,

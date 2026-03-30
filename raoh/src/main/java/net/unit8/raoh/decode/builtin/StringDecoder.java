@@ -50,11 +50,23 @@ public class StringDecoder<I> implements Decoder<I, String> {
     private final Decoder<I, String> inner;
     private final Decoder<I, String> base;
 
+    /**
+     * Creates a new {@link StringDecoder} wrapping the given decoder.
+     *
+     * @param inner the underlying decoder that produces a string value
+     */
     public StringDecoder(Decoder<I, String> inner) {
         this.inner = inner;
         this.base = null;
     }
 
+    /**
+     * Creates a new {@link StringDecoder} wrapping the given decoder, retaining a base decoder
+     * for use by {@link #allowBlank()}.
+     *
+     * @param inner the underlying decoder that produces a string value
+     * @param base  the original decoder before {@link #nonBlank()} was applied, or {@code null}
+     */
     public StringDecoder(Decoder<I, String> inner, Decoder<I, String> base) {
         this.inner = inner;
         this.base = base;
@@ -106,6 +118,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
     /**
      * Removes a previously-applied {@link #nonBlank()} constraint, restoring blank-string acceptance.
      *
+     * @return a new decoder that accepts blank strings
      * @throws IllegalStateException if this decoder was not created via {@code net.unit8.raoh.json.JsonDecoders#string()}
      *         or {@link net.unit8.raoh.decode.ObjectDecoders#string()} (i.e., no base decoder is available to restore)
      */
@@ -118,10 +131,23 @@ public class StringDecoder<I> implements Decoder<I, String> {
         return new StringDecoder<>(base);
     }
 
+    /**
+     * Restricts the string to be at least {@code n} characters long.
+     *
+     * @param n the minimum length
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_SHORT} if shorter
+     */
     public StringDecoder<I> minLength(int n) {
         return minLength(n, null);
     }
 
+    /**
+     * Restricts the string to be at least {@code n} characters long.
+     *
+     * @param n       the minimum length
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_SHORT} if shorter
+     */
     public StringDecoder<I> minLength(int n, String message) {
         return chain((value, path) -> {
             if (value.length() < n) {
@@ -134,10 +160,23 @@ public class StringDecoder<I> implements Decoder<I, String> {
         });
     }
 
+    /**
+     * Restricts the string to be at most {@code n} characters long.
+     *
+     * @param n the maximum length
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_LONG} if longer
+     */
     public StringDecoder<I> maxLength(int n) {
         return maxLength(n, null);
     }
 
+    /**
+     * Restricts the string to be at most {@code n} characters long.
+     *
+     * @param n       the maximum length
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_LONG} if longer
+     */
     public StringDecoder<I> maxLength(int n, String message) {
         return chain((value, path) -> {
             if (value.length() > n) {
@@ -150,10 +189,23 @@ public class StringDecoder<I> implements Decoder<I, String> {
         });
     }
 
+    /**
+     * Restricts the string to be exactly {@code n} characters long.
+     *
+     * @param n the required length
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_LENGTH} if the length differs
+     */
     public StringDecoder<I> fixedLength(int n) {
         return fixedLength(n, null);
     }
 
+    /**
+     * Restricts the string to be exactly {@code n} characters long.
+     *
+     * @param n       the required length
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_LENGTH} if the length differs
+     */
     public StringDecoder<I> fixedLength(int n, String message) {
         return chain((value, path) -> {
             if (value.length() != n) {
@@ -185,14 +237,35 @@ public class StringDecoder<I> implements Decoder<I, String> {
         });
     }
 
+    /**
+     * Validates the string against the given regular expression pattern.
+     *
+     * @param p the pattern to match against
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value does not match
+     */
     public StringDecoder<I> pattern(Pattern p) {
         return pattern(p, ErrorCodes.INVALID_FORMAT, null);
     }
 
+    /**
+     * Validates the string against the given regular expression pattern with a custom error code.
+     *
+     * @param p    the pattern to match against
+     * @param code the error code to use on failure
+     * @return a new decoder that fails with the specified error code if the value does not match
+     */
     public StringDecoder<I> pattern(Pattern p, String code) {
         return pattern(p, code, null);
     }
 
+    /**
+     * Validates the string against the given regular expression pattern with a custom error code and message.
+     *
+     * @param p       the pattern to match against
+     * @param code    the error code to use on failure
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with the specified error code if the value does not match
+     */
     public StringDecoder<I> pattern(Pattern p, String code, String message) {
         return chain((value, path) -> {
             if (!p.matcher(value).matches()) {
@@ -205,10 +278,23 @@ public class StringDecoder<I> implements Decoder<I, String> {
         });
     }
 
+    /**
+     * Requires the string to start with the given prefix.
+     *
+     * @param prefix the required prefix
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the prefix is absent
+     */
     public StringDecoder<I> startsWith(String prefix) {
         return startsWith(prefix, null);
     }
 
+    /**
+     * Requires the string to start with the given prefix.
+     *
+     * @param prefix  the required prefix
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the prefix is absent
+     */
     public StringDecoder<I> startsWith(String prefix, String message) {
         return chain((value, path) -> {
             if (!value.startsWith(prefix)) {
@@ -221,10 +307,23 @@ public class StringDecoder<I> implements Decoder<I, String> {
         });
     }
 
+    /**
+     * Requires the string to end with the given suffix.
+     *
+     * @param suffix the required suffix
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the suffix is absent
+     */
     public StringDecoder<I> endsWith(String suffix) {
         return endsWith(suffix, null);
     }
 
+    /**
+     * Requires the string to end with the given suffix.
+     *
+     * @param suffix  the required suffix
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the suffix is absent
+     */
     public StringDecoder<I> endsWith(String suffix, String message) {
         return chain((value, path) -> {
             if (!value.endsWith(suffix)) {
@@ -237,10 +336,23 @@ public class StringDecoder<I> implements Decoder<I, String> {
         });
     }
 
+    /**
+     * Requires the string to contain the given substring.
+     *
+     * @param substring the required substring
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the substring is absent
+     */
     public StringDecoder<I> includes(String substring) {
         return includes(substring, null);
     }
 
+    /**
+     * Requires the string to contain the given substring.
+     *
+     * @param substring the required substring
+     * @param message   custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the substring is absent
+     */
     public StringDecoder<I> includes(String substring, String message) {
         return chain((value, path) -> {
             if (!value.contains(substring)) {
@@ -255,10 +367,21 @@ public class StringDecoder<I> implements Decoder<I, String> {
 
     // --- Preset constraints ---
 
+    /**
+     * Validates that the string is a well-formed email address.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid email
+     */
     public StringDecoder<I> email() {
         return email(null);
     }
 
+    /**
+     * Validates that the string is a well-formed email address.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid email
+     */
     public StringDecoder<I> email(String message) {
         return chain((value, path) -> {
             if (value.length() > MAX_EMAIL_LENGTH || !EMAIL_PATTERN.matcher(value).matches()) {
@@ -322,10 +445,21 @@ public class StringDecoder<I> implements Decoder<I, String> {
         });
     }
 
+    /**
+     * Validates that the string is a valid IPv4 address.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid IPv4 address
+     */
     public StringDecoder<I> ipv4() {
         return ipv4(null);
     }
 
+    /**
+     * Validates that the string is a valid IPv4 address.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid IPv4 address
+     */
     public StringDecoder<I> ipv4(String message) {
         return chain((value, path) -> {
             if (value.length() > MAX_IP_LENGTH || !IPV4_PATTERN.matcher(value).matches()) {
@@ -337,13 +471,21 @@ public class StringDecoder<I> implements Decoder<I, String> {
         });
     }
 
+    /**
+     * Validates that the string is a valid IPv6 address.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid IPv6 address
+     */
     public StringDecoder<I> ipv6() {
         return ipv6(null);
     }
 
     /**
-     * Validates that the value is a valid IPv6 address.
+     * Validates that the string is a valid IPv6 address.
      * Uses {@link InetAddress#getByName} to avoid ReDoS from complex regex backtracking.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid IPv6 address
      */
     public StringDecoder<I> ipv6(String message) {
         return chain((value, path) -> {
@@ -356,10 +498,21 @@ public class StringDecoder<I> implements Decoder<I, String> {
         });
     }
 
+    /**
+     * Validates that the string is a valid IP address (IPv4 or IPv6).
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid IP address
+     */
     public StringDecoder<I> ip() {
         return ip(null);
     }
 
+    /**
+     * Validates that the string is a valid IP address (IPv4 or IPv6).
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid IP address
+     */
     public StringDecoder<I> ip(String message) {
         return chain((value, path) -> {
             if (value.length() > MAX_IP_LENGTH
@@ -385,10 +538,21 @@ public class StringDecoder<I> implements Decoder<I, String> {
         }
     }
 
+    /**
+     * Validates that the string is a valid CUID.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid CUID
+     */
     public StringDecoder<I> cuid() {
         return cuid(null);
     }
 
+    /**
+     * Validates that the string is a valid CUID.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid CUID
+     */
     public StringDecoder<I> cuid(String message) {
         return chain((value, path) -> {
             if (!CUID_PATTERN.matcher(value).matches()) {
@@ -400,10 +564,21 @@ public class StringDecoder<I> implements Decoder<I, String> {
         });
     }
 
+    /**
+     * Validates that the string is a valid ULID.
+     *
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid ULID
+     */
     public StringDecoder<I> ulid() {
         return ulid(null);
     }
 
+    /**
+     * Validates that the string is a valid ULID.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid ULID
+     */
     public StringDecoder<I> ulid(String message) {
         return chain((value, path) -> {
             if (!ULID_PATTERN.matcher(value).matches()) {
@@ -417,24 +592,50 @@ public class StringDecoder<I> implements Decoder<I, String> {
 
     // --- Transforms ---
 
+    /**
+     * Trims leading and trailing whitespace from the decoded string.
+     *
+     * @return a new decoder that applies {@link String#trim()} to the value
+     */
     public StringDecoder<I> trim() {
         return new StringDecoder<>((in, path) -> this.decode(in, path).map(String::trim));
     }
 
+    /**
+     * Converts the decoded string to lower case.
+     *
+     * @return a new decoder that applies {@link String#toLowerCase()} to the value
+     */
     public StringDecoder<I> toLowerCase() {
         return new StringDecoder<>((in, path) -> this.decode(in, path).map(String::toLowerCase));
     }
 
+    /**
+     * Converts the decoded string to upper case.
+     *
+     * @return a new decoder that applies {@link String#toUpperCase()} to the value
+     */
     public StringDecoder<I> toUpperCase() {
         return new StringDecoder<>((in, path) -> this.decode(in, path).map(String::toUpperCase));
     }
 
     // --- Type conversions ---
 
+    /**
+     * Parses the string as a {@link UUID}.
+     *
+     * @return a decoder producing {@link UUID} from validated UUID strings
+     */
     public Decoder<I, UUID> uuid() {
         return uuid(null);
     }
 
+    /**
+     * Parses the string as a {@link UUID}.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a decoder producing {@link UUID} from validated UUID strings
+     */
     public Decoder<I, UUID> uuid(String message) {
         return (in, path) -> this.decode(in, path).flatMap(value -> {
             try {
@@ -447,10 +648,23 @@ public class StringDecoder<I> implements Decoder<I, String> {
         });
     }
 
+    /**
+     * Parses the string as a {@link URI}.
+     *
+     * <p>Unlike {@link #url()}, this accepts any valid URI regardless of scheme.
+     *
+     * @return a decoder producing {@link URI} from validated URI strings
+     */
     public Decoder<I, URI> uri() {
         return uri(null);
     }
 
+    /**
+     * Parses the string as a {@link URI}.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a decoder producing {@link URI} from validated URI strings
+     */
     public Decoder<I, URI> uri(String message) {
         return (in, path) -> this.decode(in, path).flatMap(value -> {
             try {

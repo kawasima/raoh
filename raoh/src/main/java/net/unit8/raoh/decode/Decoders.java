@@ -44,40 +44,173 @@ public final class Decoders {
         return new Combiner2<>(da, db);
     }
 
+    /**
+     * Combines 3 decoders into an applicative builder.
+     *
+     * @param <I> the input type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <I, A, B, C> Combiner3<I, A, B, C> combine(
             Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc) {
         return new Combiner3<>(da, db, dc);
     }
 
+    /**
+     * Combines 4 decoders into an applicative builder.
+     *
+     * @param <I> the input type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <I, A, B, C, D> Combiner4<I, A, B, C, D> combine(
             Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd) {
         return new Combiner4<>(da, db, dc, dd);
     }
 
+    /**
+     * Combines 5 decoders into an applicative builder.
+     *
+     * @param <I> the input type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <I, A, B, C, D, E> Combiner5<I, A, B, C, D, E> combine(
             Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
             Decoder<I, E> de) {
         return new Combiner5<>(da, db, dc, dd, de);
     }
 
+    /**
+     * Combines 6 decoders into an applicative builder.
+     *
+     * @param <I> the input type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <I, A, B, C, D, E, F> Combiner6<I, A, B, C, D, E, F> combine(
             Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
             Decoder<I, E> de, Decoder<I, F> df) {
         return new Combiner6<>(da, db, dc, dd, de, df);
     }
 
+    /**
+     * Combines 7 decoders into an applicative builder.
+     *
+     * @param <I> the input type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <I, A, B, C, D, E, F, G> Combiner7<I, A, B, C, D, E, F, G> combine(
             Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
             Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg) {
         return new Combiner7<>(da, db, dc, dd, de, df, dg);
     }
 
+    /**
+     * Combines 8 decoders into an applicative builder.
+     *
+     * @param <I> the input type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <I, A, B, C, D, E, F, G, H> Combiner8<I, A, B, C, D, E, F, G, H> combine(
             Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
             Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh) {
         return new Combiner8<>(da, db, dc, dd, de, df, dg, dh);
     }
 
+    /**
+     * Combines 9 decoders into an applicative builder.
+     *
+     * @param <I> the input type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <I, A, B, C, D, E, F, G, H, J> Combiner9<I, A, B, C, D, E, F, G, H, J> combine(
             Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
             Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
@@ -85,6 +218,33 @@ public final class Decoders {
         return new Combiner9<>(da, db, dc, dd, de, df, dg, dh, dj);
     }
 
+    /**
+     * Combines 10 decoders into an applicative builder.
+     *
+     * @param <I> the input type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <I, A, B, C, D, E, F, G, H, J, K> Combiner10<I, A, B, C, D, E, F, G, H, J, K> combine(
             Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
             Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
@@ -92,6 +252,35 @@ public final class Decoders {
         return new Combiner10<>(da, db, dc, dd, de, df, dg, dh, dj, dk);
     }
 
+    /**
+     * Combines 11 decoders into an applicative builder.
+     *
+     * @param <I> the input type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <I, A, B, C, D, E, F, G, H, J, K, L> Combiner11<I, A, B, C, D, E, F, G, H, J, K, L> combine(
             Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
             Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
@@ -99,6 +288,37 @@ public final class Decoders {
         return new Combiner11<>(da, db, dc, dd, de, df, dg, dh, dj, dk, dl);
     }
 
+    /**
+     * Combines 12 decoders into an applicative builder.
+     *
+     * @param <I> the input type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <I, A, B, C, D, E, F, G, H, J, K, L, M> Combiner12<I, A, B, C, D, E, F, G, H, J, K, L, M> combine(
             Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
             Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
@@ -106,6 +326,39 @@ public final class Decoders {
         return new Combiner12<>(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm);
     }
 
+    /**
+     * Combines 13 decoders into an applicative builder.
+     *
+     * @param <I> the input type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <I, A, B, C, D, E, F, G, H, J, K, L, M, N> Combiner13<I, A, B, C, D, E, F, G, H, J, K, L, M, N> combine(
             Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
             Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
@@ -114,6 +367,41 @@ public final class Decoders {
         return new Combiner13<>(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn);
     }
 
+    /**
+     * Combines 14 decoders into an applicative builder.
+     *
+     * @param <I> the input type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param <O> the fourteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @param do_ the fourteenth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <I, A, B, C, D, E, F, G, H, J, K, L, M, N, O> Combiner14<I, A, B, C, D, E, F, G, H, J, K, L, M, N, O> combine(
             Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
             Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
@@ -122,6 +410,43 @@ public final class Decoders {
         return new Combiner14<>(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_);
     }
 
+    /**
+     * Combines 15 decoders into an applicative builder.
+     *
+     * @param <I> the input type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param <O> the fourteenth decoder's output type
+     * @param <P> the fifteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @param do_ the fourteenth decoder
+     * @param dp  the fifteenth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <I, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> Combiner15<I, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> combine(
             Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
             Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
@@ -130,6 +455,45 @@ public final class Decoders {
         return new Combiner15<>(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_, dp);
     }
 
+    /**
+     * Combines 16 decoders into an applicative builder.
+     *
+     * @param <I> the input type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param <O> the fourteenth decoder's output type
+     * @param <P> the fifteenth decoder's output type
+     * @param <Q> the sixteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @param do_ the fourteenth decoder
+     * @param dp  the fifteenth decoder
+     * @param dq  the sixteenth decoder
+     * @return a combiner that can be applied with a function
+     * @see #combine(Decoder, Decoder)
+     */
     public static <I, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> Combiner16<I, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> combine(
             Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
             Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
