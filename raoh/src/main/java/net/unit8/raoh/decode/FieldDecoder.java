@@ -1,6 +1,5 @@
 package net.unit8.raoh.decode;
 
-
 /**
  * A {@link Decoder} that is bound to a specific field name.
  *
