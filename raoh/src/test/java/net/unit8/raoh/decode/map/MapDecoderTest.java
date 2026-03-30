@@ -14,6 +14,7 @@ import net.unit8.raoh.decode.Decoders;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -949,6 +950,74 @@ class MapDecoderTest {
     void bytesTypeMismatch() {
         var dec = field("data", bytes());
         assertErr(dec.decode(Map.of("data", "not bytes")));
+    }
+
+    // --- url / uri ---
+
+    @Test
+    void urlReturnsUri() {
+        var dec = field("link", string().url());
+        assertEquals(URI.create("https://example.com/path"), assertOk(dec.decode(Map.of("link", "https://example.com/path"))));
+        assertEquals(URI.create("http://localhost:8080"), assertOk(dec.decode(Map.of("link", "http://localhost:8080"))));
+    }
+
+    @Test
+    void urlRejectsNonHttp() {
+        var dec = field("link", string().url());
+        assertErr(dec.decode(Map.of("link", "ftp://example.com")));
+        assertErr(dec.decode(Map.of("link", "file:///tmp/x")));
+    }
+
+    @Test
+    void urlRejectsInvalid() {
+        var dec = field("link", string().url());
+        assertErr(dec.decode(Map.of("link", "not a url")));
+    }
+
+    @Test
+    void urlRejectsExceedingLength() {
+        var dec = field("link", string().url());
+        var longUrl = "https://example.com/" + "a".repeat(2030);
+        assertErr(dec.decode(Map.of("link", longUrl)));
+    }
+
+    @Test
+    void urlRejectsNoHost() {
+        var dec = field("link", string().url());
+        assertErr(dec.decode(Map.of("link", "http://")));
+    }
+
+    @Test
+    void urlWithCustomMessage() {
+        var dec = field("link", string().url("bad link"));
+        var result = dec.decode(Map.of("link", "not-a-url"));
+        switch (result) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> assertEquals("bad link", issues.asList().getFirst().message());
+        }
+    }
+
+    @Test
+    void uriReturnsUri() {
+        var dec = field("ref", string().uri());
+        assertEquals(URI.create("file:///tmp/x"), assertOk(dec.decode(Map.of("ref", "file:///tmp/x"))));
+        assertEquals(URI.create("mailto:user@example.com"), assertOk(dec.decode(Map.of("ref", "mailto:user@example.com"))));
+    }
+
+    @Test
+    void uriRejectsInvalid() {
+        var dec = field("ref", string().uri());
+        assertErr(dec.decode(Map.of("ref", "://bad")));
+    }
+
+    @Test
+    void uriWithCustomMessage() {
+        var dec = field("ref", string().uri("bad ref"));
+        var result = dec.decode(Map.of("ref", "://bad"));
+        switch (result) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> assertEquals("bad ref", issues.asList().getFirst().message());
+        }
     }
 
     // --- Helpers ---

@@ -254,7 +254,7 @@ Collection/value-container decoders:
 - `includes(...)`
 - `oneOf(...)`
 - `email()`
-- `url()`
+- `url()` — validates http/https and returns `URI`
 - `ipv4()`
 - `ipv6()`
 - `ip()`
