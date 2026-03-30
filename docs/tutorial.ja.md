@@ -66,6 +66,15 @@ bool().decode(true)
 
 decimal().decode(19.99)
 // ==> Ok[19.99]
+
+double_().decode(3.14)
+// ==> Ok[3.14]
+
+float_().decode(2.5f)
+// ==> Ok[2.5]
+
+bytes().decode(new byte[]{1, 2, 3})
+// ==> Ok[[1, 2, 3]]
 ```
 
 各メソッドは `Decoder<Object, T>` を返します。期待する型でなければ `type_mismatch` エラーになります。
@@ -102,6 +111,21 @@ string().uuid().decode("550e8400-e29b-41d4-a716-446655440000")
 // ==> Ok[550e8400-e29b-41d4-a716-446655440000]
 ```
 
+### URI / URL バリデーション
+
+```java
+string().uri().decode("file:///tmp/data.csv")
+// ==> Ok[file:///tmp/data.csv]
+
+string().url().decode("https://example.com/api")
+// ==> Ok[https://example.com/api]
+
+string().url().decode("ftp://example.com")
+// ==> Err[/: not a valid URL]
+```
+
+`uri()` は任意のスキームを受け入れ、`java.net.URI` を返します。`url()` はより厳格で、`http` または `https` スキーム、空でないホスト、最大 2048 文字を要求します。どちらも終端メソッドで、`String` ではなく `URI` を返します。
+
 ### 数値の制約
 
 ```java
@@ -126,6 +150,21 @@ string().date().decode("2025-06-15")
 
 string().iso8601().decode("2025-06-15T10:30:00Z")
 // ==> Ok[2025-06-15T10:30:00Z]
+
+date().after(LocalDate.of(2020, 1, 1)).decode(LocalDate.of(2025, 6, 15))
+// ==> Ok[2025-06-15]
+
+date().before(LocalDate.of(2030, 1, 1)).decode(LocalDate.of(2035, 1, 1))
+// ==> Err[/: must be before 2030-01-01]
+
+date().between(LocalDate.of(2020, 1, 1), LocalDate.of(2030, 12, 31)).decode(LocalDate.of(2025, 6, 15))
+// ==> Ok[2025-06-15]
+
+iso8601().past().decode(Instant.now().minusSeconds(3600))
+// ==> Ok[...]
+
+iso8601().future().decode(Instant.now().minusSeconds(3600))
+// ==> Err[/: must be in the future]
 ```
 
 ### 文字列からの型変換（coerce）
@@ -440,6 +479,19 @@ orderItemsDec.decode(Map.of("items", List.of(
 // ==> Err[/items/1/productId: is required, /items/1/quantity: must be positive]
 ```
 
+`nonempty()` 以外のリスト制約:
+
+```java
+field("tags", list(string()).minSize(1).maxSize(10)).decode(Map.of("tags", List.of("a", "b")))
+// ==> Ok[[a, b]]
+
+field("tags", list(string()).unique()).decode(Map.of("tags", List.of("a", "b", "a")))
+// ==> Err[/tags: contains duplicates: [a]]
+
+field("codes", list(string()).fixedSize(3)).decode(Map.of("codes", List.of("X", "Y")))
+// ==> Err[/codes: size must be exactly 3]
+```
+
 ---
 
 ## 8. マップのデコード
@@ -557,6 +609,36 @@ contactDec.decode(Map.of("kind", "fax", "value", "123"))
 ```
 
 すべての候補がマッチしなかった場合、`no variant matched` エラーが返ります。
+
+### discriminate — フィールド値によるディスパッチ
+
+ディスクリミネーターフィールド名が固定の場合、`discriminate()` は `oneOf()` よりクリーンな代替手段です:
+
+```java
+sealed interface Shape {}
+record Circle(double radius) implements Shape {}
+record Rect(double width, double height) implements Shape {}
+
+var shapeDec = discriminate("type", Map.of(
+        "circle", combine(
+                field("type", literal("circle")),
+                field("radius", double_().positive())
+        ).map((t, r) -> (Shape) new Circle(r)),
+        "rect", combine(
+                field("type", literal("rect")),
+                field("width", double_().positive()),
+                field("height", double_().positive())
+        ).map((t, w, h) -> (Shape) new Rect(w, h))
+));
+
+shapeDec.decode(Map.of("type", "circle", "radius", 5.0))
+// ==> Ok[Circle[radius=5.0]]
+
+shapeDec.decode(Map.of("type", "rect", "width", 3.0, "height", 4.0))
+// ==> Ok[Rect[width=3.0, height=4.0]]
+```
+
+`discriminate()` はフィールド値を先に読み取り、一致するデコーダーにディスパッチします。`oneOf()` のようにすべての候補を試すわけではないため、より効率的でエラーメッセージも明確です。
 
 ---
 
