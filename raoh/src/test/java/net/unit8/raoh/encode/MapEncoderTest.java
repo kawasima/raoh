@@ -87,4 +87,30 @@ class MapEncoderTest {
     void floatEncoderPassesThrough() {
         assertEquals(2.5f, float_().encode(2.5f));
     }
+
+    @Test
+    void withDefaultEncodesDefaultWhenNull() {
+        var enc = withDefault(string(), "N/A");
+        assertEquals("N/A", enc.encode(null));
+    }
+
+    @Test
+    void withDefaultEncodesValueWhenNonNull() {
+        var enc = withDefault(string(), "N/A");
+        assertEquals("hello", enc.encode("hello"));
+    }
+
+    @Test
+    void withDefaultSupplierEncodesDefaultWhenNull() {
+        java.util.function.Supplier<String> supplier = () -> "generated";
+        var enc = withDefault(string(), supplier);
+        assertEquals("generated", enc.encode(null));
+    }
+
+    @Test
+    void withDefaultSupplierEncodesValueWhenNonNull() {
+        java.util.function.Supplier<String> supplier = () -> "generated";
+        var enc = withDefault(string(), supplier);
+        assertEquals("world", enc.encode("world"));
+    }
 }

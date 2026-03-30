@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.util.function.Supplier;
 
 /**
  * Factory for primitive {@code Encoder} instances that encode domain values to {@code Object}.
@@ -173,5 +174,50 @@ public final class ObjectEncoders {
      */
     public static <T> Encoder<T, Object> nullable(Encoder<T, Object> enc) {
         return v -> v == null ? null : enc.encode(v);
+    }
+
+    /**
+     * Wraps an encoder to substitute a default value when the input is {@code null}.
+     *
+     * <p>Unlike {@link #nullable(Encoder)}, which passes {@code null} through to the output,
+     * this method encodes the given {@code defaultValue} instead. This is the encoder-side
+     * counterpart of {@link net.unit8.raoh.decode.Decoders#withDefault(net.unit8.raoh.decode.Decoder, Object)
+     * Decoders.withDefault}.
+     *
+     * <pre>{@code
+     * import static net.unit8.raoh.encode.MapEncoders.*;
+     * import static net.unit8.raoh.encode.ObjectEncoders.*;
+     *
+     * property("tags", Article::tags, withDefault(list(nested(TAG_ENCODER)), List.of()))
+     * }</pre>
+     *
+     * @param <T>          the domain value type
+     * @param enc          the inner encoder to apply
+     * @param defaultValue the value to encode when the input is {@code null}
+     * @return an encoder that substitutes {@code defaultValue} for {@code null} input
+     */
+    public static <T> Encoder<T, Object> withDefault(Encoder<T, Object> enc, T defaultValue) {
+        return v -> v == null ? enc.encode(defaultValue) : enc.encode(v);
+    }
+
+    /**
+     * Like {@link #withDefault(Encoder, Object)}, but the default is lazily computed.
+     *
+     * <p>Note: when passing a lambda directly, the compiler may not distinguish
+     * between this overload and {@link #withDefault(Encoder, Object)}. In that case,
+     * assign the lambda to a typed variable first:
+     *
+     * <pre>{@code
+     * Supplier<List<Tag>> defaultTags = () -> List.of(Tag.UNTAGGED);
+     * property("tags", Article::tags, withDefault(list(nested(TAG_ENCODER)), defaultTags))
+     * }</pre>
+     *
+     * @param <T>          the domain value type
+     * @param enc          the inner encoder to apply
+     * @param defaultValue supplies the value to encode when the input is {@code null}
+     * @return an encoder that substitutes the supplied default for {@code null} input
+     */
+    public static <T> Encoder<T, Object> withDefault(Encoder<T, Object> enc, Supplier<T> defaultValue) {
+        return v -> v == null ? enc.encode(defaultValue.get()) : enc.encode(v);
     }
 }
