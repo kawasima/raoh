@@ -59,7 +59,7 @@ class TupleTest {
 
         var result = dec.decode(Map.of("a", "1", "b", "2", "c", "3", "d", "4"));
         switch (result) {
-            case Ok(Tuple4(var a, var b, var c, var d)) -> {
+            case Ok(Tuple4(var a, var _, var _, var d)) -> {
                 assertEquals("1", a);
                 assertEquals("4", d);
             }

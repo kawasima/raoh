@@ -5,7 +5,6 @@ import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Issue;
 import net.unit8.raoh.Issues;
 import net.unit8.raoh.Ok;
-import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
 import net.unit8.raoh.decode.combinator.Combiner10;

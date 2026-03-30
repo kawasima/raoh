@@ -837,7 +837,7 @@ class MapDecoderTest {
     static <T> T assertOk(Result<T> result) {
         return switch (result) {
             case Ok(var value) -> value;
-            case Err(var issues) -> { fail("Expected Ok, got: " + issues); yield null; }
+            case Err(var issues) -> fail("Expected Ok, got: " + issues);
         };
     }
 
