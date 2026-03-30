@@ -45,6 +45,7 @@ FILES=(
     "$ROOT/raoh-gsh-weaver/pom.xml"
     "$ROOT/raoh-gsh-maven-plugin/pom.xml"
     "$ROOT/examples/spring/pom.xml"
+    "$ROOT/examples/schema-versioning/pom.xml"
 )
 
 for f in "${FILES[@]}"; do
@@ -53,6 +54,17 @@ for f in "${FILES[@]}"; do
         echo "  updated: $f"
     else
         echo "  WARNING: not found: $f" >&2
+    fi
+done
+
+# Also update <raoh.version> in example poms (may differ from parent version)
+EXAMPLE_POMS=(
+    "$ROOT/examples/spring/pom.xml"
+    "$ROOT/examples/schema-versioning/pom.xml"
+)
+for f in "${EXAMPLE_POMS[@]}"; do
+    if [[ -f "$f" ]]; then
+        sed -i '' "s|<raoh.version>.*</raoh.version>|<raoh.version>${NEW_VERSION}</raoh.version>|g" "$f"
     fi
 done
 
