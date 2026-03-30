@@ -1,12 +1,12 @@
 package net.unit8.raoh.encode;
 
 import java.math.BigDecimal;
-import java.util.function.Supplier;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.util.function.Supplier;
 
 /**
  * Factory for primitive {@code Encoder} instances that encode domain values to {@code Object}.
@@ -202,6 +202,15 @@ public final class ObjectEncoders {
 
     /**
      * Like {@link #withDefault(Encoder, Object)}, but the default is lazily computed.
+     *
+     * <p>Note: when passing a lambda directly, the compiler may not distinguish
+     * between this overload and {@link #withDefault(Encoder, Object)}. In that case,
+     * assign the lambda to a typed variable first:
+     *
+     * <pre>{@code
+     * Supplier<List<Tag>> defaultTags = () -> List.of(Tag.UNTAGGED);
+     * property("tags", Article::tags, withDefault(list(nested(TAG_ENCODER)), defaultTags))
+     * }</pre>
      *
      * @param <T>          the domain value type
      * @param enc          the inner encoder to apply
