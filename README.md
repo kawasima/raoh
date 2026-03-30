@@ -264,7 +264,7 @@ Collection/value-container decoders:
 - `toLowerCase()`
 - `toUpperCase()`
 - `uuid()`
-- `uri()`
+- `uri()` — accepts any scheme, returns `URI`
 - `iso8601()`
 - `date()`
 - `time()`
