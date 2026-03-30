@@ -1,7 +1,6 @@
 package net.unit8.raoh.decode.map;
 
-import net.unit8.raoh.*;
-import net.unit8.raoh.decode.*;
+import net.unit8.raoh.decode.Decoder;
 
 import java.util.Map;
 

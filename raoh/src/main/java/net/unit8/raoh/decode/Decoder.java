@@ -1,6 +1,9 @@
 package net.unit8.raoh.decode;
 
-import net.unit8.raoh.*;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
+import net.unit8.raoh.Path;
+import net.unit8.raoh.Result;
 
 import java.util.List;
 import java.util.function.BiFunction;

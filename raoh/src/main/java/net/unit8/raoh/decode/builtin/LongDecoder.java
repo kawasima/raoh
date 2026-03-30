@@ -1,7 +1,9 @@
 package net.unit8.raoh.decode.builtin;
 
-import net.unit8.raoh.*;
-import net.unit8.raoh.decode.*;
+import net.unit8.raoh.decode.Decoder;
+import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.Path;
+import net.unit8.raoh.Result;
 
 import java.util.List;
 import java.util.Map;

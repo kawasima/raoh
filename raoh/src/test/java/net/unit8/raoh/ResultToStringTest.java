@@ -1,6 +1,7 @@
 package net.unit8.raoh;
 
-import net.unit8.raoh.decode.*;
+import net.unit8.raoh.decode.Decoder;
+import net.unit8.raoh.decode.Decoders;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;

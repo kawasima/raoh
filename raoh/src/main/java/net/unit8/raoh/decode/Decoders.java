@@ -1,8 +1,29 @@
 package net.unit8.raoh.decode;
 
-import net.unit8.raoh.*;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.Issue;
+import net.unit8.raoh.Issues;
+import net.unit8.raoh.Ok;
+import net.unit8.raoh.Path;
+import net.unit8.raoh.Result;
 
-import net.unit8.raoh.decode.combinator.*;
+import net.unit8.raoh.decode.combinator.Combiner10;
+import net.unit8.raoh.decode.combinator.Combiner11;
+import net.unit8.raoh.decode.combinator.Combiner12;
+import net.unit8.raoh.decode.combinator.Combiner13;
+import net.unit8.raoh.decode.combinator.Combiner14;
+import net.unit8.raoh.decode.combinator.Combiner15;
+import net.unit8.raoh.decode.combinator.Combiner16;
+import net.unit8.raoh.decode.combinator.Combiner2;
+import net.unit8.raoh.decode.combinator.Combiner3;
+import net.unit8.raoh.decode.combinator.Combiner4;
+import net.unit8.raoh.decode.combinator.Combiner5;
+import net.unit8.raoh.decode.combinator.Combiner6;
+import net.unit8.raoh.decode.combinator.Combiner7;
+import net.unit8.raoh.decode.combinator.Combiner8;
+import net.unit8.raoh.decode.combinator.Combiner9;
+import net.unit8.raoh.decode.combinator.CombinerList;
 
 import java.util.HashMap;
 import java.util.List;

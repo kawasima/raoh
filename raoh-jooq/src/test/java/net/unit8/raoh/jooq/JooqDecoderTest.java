@@ -1,7 +1,11 @@
 package net.unit8.raoh.jooq;
 
-import net.unit8.raoh.*;
-import net.unit8.raoh.decode.*;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.Ok;
+import net.unit8.raoh.Presence;
+import net.unit8.raoh.Result;
+import net.unit8.raoh.decode.Decoder;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
 import org.junit.jupiter.api.Test;

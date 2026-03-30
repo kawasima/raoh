@@ -1,7 +1,10 @@
 package net.unit8.raoh.decode.combinator;
 
-import net.unit8.raoh.*;
-import net.unit8.raoh.decode.*;
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
+import net.unit8.raoh.Path;
+import net.unit8.raoh.Result;
+import net.unit8.raoh.decode.Decoder;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

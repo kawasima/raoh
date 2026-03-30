@@ -64,6 +64,7 @@ Every verification script must start with these lines (adjust the path to the re
 /classpath raoh/target/raoh-*.jar
 /classpath raoh/target/dependency/*.jar
 import net.unit8.raoh.*;
+import net.unit8.raoh.decode.*;
 import net.unit8.raoh.decode.map.*;
 import net.unit8.raoh.decode.builtin.*;
 import static net.unit8.raoh.decode.map.MapDecoders.*;
