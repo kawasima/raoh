@@ -270,16 +270,35 @@ public class StringDecoder<I> implements Decoder<I, String> {
         });
     }
 
-    public StringDecoder<I> url() {
+    /**
+     * Decodes the string value to a {@link URI}, validating that it is a valid http or https URL.
+     *
+     * <p>Requires an absolute URL with the {@code http} or {@code https} scheme and a
+     * non-empty host. The maximum accepted length is 2048 characters.
+     * Uses {@link URI} parsing to avoid ReDoS from regex backtracking.
+     *
+     * <p>This is a terminal method — the returned decoder produces {@link URI},
+     * not {@link String}, so no further {@link StringDecoder} constraints can be chained.
+     * For URLs that accept any scheme, use {@link #uri()}.
+     *
+     * @return a decoder producing {@link URI} from validated http/https URLs
+     */
+    public Decoder<I, URI> url() {
         return url(null);
     }
 
     /**
-     * Validates that the value is a valid http/https URL.
+     * Decodes the string value to a {@link URI}, validating that it is a valid http or https URL.
+     *
+     * <p>Requires an absolute URL with the {@code http} or {@code https} scheme and a
+     * non-empty host. The maximum accepted length is 2048 characters.
      * Uses {@link URI} parsing to avoid ReDoS from regex backtracking.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a decoder producing {@link URI} from validated http/https URLs
      */
-    public StringDecoder<I> url(String message) {
-        return chain((value, path) -> {
+    public Decoder<I, URI> url(String message) {
+        return (in, path) -> this.decode(in, path).flatMap(value -> {
             if (value.length() > MAX_URL_LENGTH) {
                 return message != null
                         ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
@@ -294,12 +313,12 @@ public class StringDecoder<I> implements Decoder<I, String> {
                             ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
                             : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid URL");
                 }
+                return Result.ok(uri);
             } catch (IllegalArgumentException e) {
                 return message != null
                         ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
                         : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid URL");
             }
-            return Result.ok(value);
         });
     }
 

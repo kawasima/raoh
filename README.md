@@ -254,7 +254,7 @@ Collection/value-container decoders:
 - `includes(...)`
 - `oneOf(...)`
 - `email()`
-- `url()`
+- `url()` — validates http/https and returns `URI`
 - `ipv4()`
 - `ipv6()`
 - `ip()`
@@ -264,7 +264,7 @@ Collection/value-container decoders:
 - `toLowerCase()`
 - `toUpperCase()`
 - `uuid()`
-- `uri()`
+- `uri()` — accepts any scheme, returns `URI`
 - `iso8601()`
 - `date()`
 - `time()`
