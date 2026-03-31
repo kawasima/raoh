@@ -9,6 +9,7 @@ package net.unit8.raoh.gsh;
  */
 public class DomainConstructionGuardException extends RuntimeException {
 
+    /** The fully qualified name of the domain class. */
     private final String className;
 
     /**

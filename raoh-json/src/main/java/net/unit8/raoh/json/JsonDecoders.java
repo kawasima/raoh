@@ -402,8 +402,13 @@ public final class JsonDecoders {
     // --- Delegate combine to Decoders ---
 
     /**
-     * Combines 2 decoders for applicative-style validation.
+     * Combines 2 JSON decoders into an applicative builder.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @return a combiner that can be applied with a function
      * @see Decoders#combine(Decoder, Decoder)
      */
     public static <A, B> Combiner2<JsonNode, A, B> combine(
@@ -412,8 +417,15 @@ public final class JsonDecoders {
     }
 
     /**
-     * Combines 3 decoders for applicative-style validation.
+     * Combines 3 JSON decoders into an applicative builder.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @return a combiner that can be applied with a function
      * @see Decoders#combine(Decoder, Decoder, Decoder)
      */
     public static <A, B, C> Combiner3<JsonNode, A, B, C> combine(
@@ -422,8 +434,17 @@ public final class JsonDecoders {
     }
 
     /**
-     * Combines 4 decoders for applicative-style validation.
+     * Combines 4 JSON decoders into an applicative builder.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @return a combiner that can be applied with a function
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D> Combiner4<JsonNode, A, B, C, D> combine(
@@ -433,8 +454,19 @@ public final class JsonDecoders {
     }
 
     /**
-     * Combines 5 decoders for applicative-style validation.
+     * Combines 5 JSON decoders into an applicative builder.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @return a combiner that can be applied with a function
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E> Combiner5<JsonNode, A, B, C, D, E> combine(
@@ -444,8 +476,21 @@ public final class JsonDecoders {
     }
 
     /**
-     * Combines 6 decoders for applicative-style validation.
+     * Combines 6 JSON decoders into an applicative builder.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @return a combiner that can be applied with a function
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F> Combiner6<JsonNode, A, B, C, D, E, F> combine(
@@ -455,8 +500,23 @@ public final class JsonDecoders {
     }
 
     /**
-     * Combines 7 decoders for applicative-style validation.
+     * Combines 7 JSON decoders into an applicative builder.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @return a combiner that can be applied with a function
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G> Combiner7<JsonNode, A, B, C, D, E, F, G> combine(
@@ -467,8 +527,25 @@ public final class JsonDecoders {
     }
 
     /**
-     * Combines 8 decoders for applicative-style validation.
+     * Combines 8 JSON decoders into an applicative builder.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @return a combiner that can be applied with a function
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H> Combiner8<JsonNode, A, B, C, D, E, F, G, H> combine(
@@ -479,8 +556,27 @@ public final class JsonDecoders {
     }
 
     /**
-     * Combines 9 decoders for applicative-style validation.
+     * Combines 9 JSON decoders into an applicative builder.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @return a combiner that can be applied with a function
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J> Combiner9<JsonNode, A, B, C, D, E, F, G, H, J> combine(
@@ -491,8 +587,29 @@ public final class JsonDecoders {
     }
 
     /**
-     * Combines 10 decoders for applicative-style validation.
+     * Combines 10 JSON decoders into an applicative builder.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @return a combiner that can be applied with a function
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J, K> Combiner10<JsonNode, A, B, C, D, E, F, G, H, J, K> combine(
@@ -504,8 +621,31 @@ public final class JsonDecoders {
     }
 
     /**
-     * Combines 11 decoders for applicative-style validation.
+     * Combines 11 JSON decoders into an applicative builder.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @return a combiner that can be applied with a function
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J, K, L> Combiner11<JsonNode, A, B, C, D, E, F, G, H, J, K, L> combine(
@@ -517,8 +657,33 @@ public final class JsonDecoders {
     }
 
     /**
-     * Combines 12 decoders for applicative-style validation.
+     * Combines 12 JSON decoders into an applicative builder.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @return a combiner that can be applied with a function
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M> Combiner12<JsonNode, A, B, C, D, E, F, G, H, J, K, L, M> combine(
@@ -530,8 +695,35 @@ public final class JsonDecoders {
     }
 
     /**
-     * Combines 13 decoders for applicative-style validation.
+     * Combines 13 JSON decoders into an applicative builder.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @return a combiner that can be applied with a function
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N> Combiner13<JsonNode, A, B, C, D, E, F, G, H, J, K, L, M, N> combine(
@@ -544,8 +736,37 @@ public final class JsonDecoders {
     }
 
     /**
-     * Combines 14 decoders for applicative-style validation.
+     * Combines 14 JSON decoders into an applicative builder.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param <O> the fourteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @param do_ the fourteenth decoder
+     * @return a combiner that can be applied with a function
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O> Combiner14<JsonNode, A, B, C, D, E, F, G, H, J, K, L, M, N, O> combine(
@@ -558,8 +779,39 @@ public final class JsonDecoders {
     }
 
     /**
-     * Combines 15 decoders for applicative-style validation.
+     * Combines 15 JSON decoders into an applicative builder.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param <O> the fourteenth decoder's output type
+     * @param <P> the fifteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @param do_ the fourteenth decoder
+     * @param dp  the fifteenth decoder
+     * @return a combiner that can be applied with a function
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> Combiner15<JsonNode, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> combine(
@@ -572,8 +824,41 @@ public final class JsonDecoders {
     }
 
     /**
-     * Combines 16 decoders for applicative-style validation.
+     * Combines 16 JSON decoders into an applicative builder.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param <O> the fourteenth decoder's output type
+     * @param <P> the fifteenth decoder's output type
+     * @param <Q> the sixteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @param do_ the fourteenth decoder
+     * @param dp  the fifteenth decoder
+     * @param dq  the sixteenth decoder
+     * @return a combiner that can be applied with a function
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> Combiner16<JsonNode, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> combine(

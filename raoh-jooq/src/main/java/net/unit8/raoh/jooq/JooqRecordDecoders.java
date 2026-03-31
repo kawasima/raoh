@@ -144,8 +144,8 @@ public final class JooqRecordDecoders {
      * <p>Overloads for 2-16 decoders are provided. Call {@code .map(MyRecord::new)} on the
      * returned combiner to produce the final {@code Decoder<Record, T>}.
      *
-     * @param <A> the first decoded type
-     * @param <B> the second decoded type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
      * @param da  the first decoder
      * @param db  the second decoder
      * @return a combiner that can be finished with {@code map}
@@ -158,9 +158,9 @@ public final class JooqRecordDecoders {
     /**
      * Combines 3 decoders for applicative-style validation.
      *
-     * @param <A> the first decoded type
-     * @param <B> the second decoded type
-     * @param <C> the third decoded type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
      * @param da  the first decoder
      * @param db  the second decoder
      * @param dc  the third decoder
@@ -176,10 +176,10 @@ public final class JooqRecordDecoders {
     /**
      * Combines 4 decoders for applicative-style validation.
      *
-     * @param <A> the first decoded type
-     * @param <B> the second decoded type
-     * @param <C> the third decoded type
-     * @param <D> the fourth decoded type
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
      * @param da  the first decoder
      * @param db  the second decoder
      * @param dc  the third decoder
@@ -196,6 +196,17 @@ public final class JooqRecordDecoders {
     /**
      * Combines 5 decoders for applicative-style validation.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @return a combiner that can be finished with {@code map}
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E> Combiner5<org.jooq.Record, A, B, C, D, E> combine(
@@ -208,6 +219,19 @@ public final class JooqRecordDecoders {
     /**
      * Combines 6 decoders for applicative-style validation.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @return a combiner that can be finished with {@code map}
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F> Combiner6<org.jooq.Record, A, B, C, D, E, F> combine(
@@ -220,6 +244,21 @@ public final class JooqRecordDecoders {
     /**
      * Combines 7 decoders for applicative-style validation.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @return a combiner that can be finished with {@code map}
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G> Combiner7<org.jooq.Record, A, B, C, D, E, F, G> combine(
@@ -233,6 +272,23 @@ public final class JooqRecordDecoders {
     /**
      * Combines 8 decoders for applicative-style validation.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @return a combiner that can be finished with {@code map}
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H> Combiner8<org.jooq.Record, A, B, C, D, E, F, G, H> combine(
@@ -246,6 +302,25 @@ public final class JooqRecordDecoders {
     /**
      * Combines 9 decoders for applicative-style validation.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @return a combiner that can be finished with {@code map}
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J> Combiner9<org.jooq.Record, A, B, C, D, E, F, G, H, J> combine(
@@ -260,6 +335,27 @@ public final class JooqRecordDecoders {
     /**
      * Combines 10 decoders for applicative-style validation.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @return a combiner that can be finished with {@code map}
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J, K> Combiner10<org.jooq.Record, A, B, C, D, E, F, G, H, J, K> combine(
@@ -274,6 +370,29 @@ public final class JooqRecordDecoders {
     /**
      * Combines 11 decoders for applicative-style validation.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @return a combiner that can be finished with {@code map}
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J, K, L> Combiner11<org.jooq.Record, A, B, C, D, E, F, G, H, J, K, L> combine(
@@ -289,6 +408,31 @@ public final class JooqRecordDecoders {
     /**
      * Combines 12 decoders for applicative-style validation.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @return a combiner that can be finished with {@code map}
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M> Combiner12<org.jooq.Record, A, B, C, D, E, F, G, H, J, K, L, M> combine(
@@ -304,6 +448,33 @@ public final class JooqRecordDecoders {
     /**
      * Combines 13 decoders for applicative-style validation.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @return a combiner that can be finished with {@code map}
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N> Combiner13<org.jooq.Record, A, B, C, D, E, F, G, H, J, K, L, M, N> combine(
@@ -320,6 +491,35 @@ public final class JooqRecordDecoders {
     /**
      * Combines 14 decoders for applicative-style validation.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param <O> the fourteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @param do_ the fourteenth decoder
+     * @return a combiner that can be finished with {@code map}
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O> Combiner14<org.jooq.Record, A, B, C, D, E, F, G, H, J, K, L, M, N, O> combine(
@@ -336,6 +536,37 @@ public final class JooqRecordDecoders {
     /**
      * Combines 15 decoders for applicative-style validation.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param <O> the fourteenth decoder's output type
+     * @param <P> the fifteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @param do_ the fourteenth decoder
+     * @param dp  the fifteenth decoder
+     * @return a combiner that can be finished with {@code map}
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> Combiner15<org.jooq.Record, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> combine(
@@ -353,6 +584,39 @@ public final class JooqRecordDecoders {
     /**
      * Combines 16 decoders for applicative-style validation.
      *
+     * @param <A> the first decoder's output type
+     * @param <B> the second decoder's output type
+     * @param <C> the third decoder's output type
+     * @param <D> the fourth decoder's output type
+     * @param <E> the fifth decoder's output type
+     * @param <F> the sixth decoder's output type
+     * @param <G> the seventh decoder's output type
+     * @param <H> the eighth decoder's output type
+     * @param <J> the ninth decoder's output type
+     * @param <K> the tenth decoder's output type
+     * @param <L> the eleventh decoder's output type
+     * @param <M> the twelfth decoder's output type
+     * @param <N> the thirteenth decoder's output type
+     * @param <O> the fourteenth decoder's output type
+     * @param <P> the fifteenth decoder's output type
+     * @param <Q> the sixteenth decoder's output type
+     * @param da  the first decoder
+     * @param db  the second decoder
+     * @param dc  the third decoder
+     * @param dd  the fourth decoder
+     * @param de  the fifth decoder
+     * @param df  the sixth decoder
+     * @param dg  the seventh decoder
+     * @param dh  the eighth decoder
+     * @param dj  the ninth decoder
+     * @param dk  the tenth decoder
+     * @param dl  the eleventh decoder
+     * @param dm  the twelfth decoder
+     * @param dn  the thirteenth decoder
+     * @param do_ the fourteenth decoder
+     * @param dp  the fifteenth decoder
+     * @param dq  the sixteenth decoder
+     * @return a combiner that can be finished with {@code map}
      * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> Combiner16<org.jooq.Record, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> combine(

@@ -38,6 +38,9 @@ import java.nio.file.Path;
 @Mojo(name = "weave", defaultPhase = LifecyclePhase.PROCESS_TEST_CLASSES)
 public class GuardWeaveMojo extends AbstractMojo {
 
+    /** Creates a new mojo instance. */
+    public GuardWeaveMojo() {}
+
     /**
      * Comma-separated package glob patterns for classes to weave.
      */

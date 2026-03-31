@@ -36,7 +36,7 @@ Ok[ドメインオブジェクト]  または  Err[{path: "/email", code: "inval
 
 ```bash
 jetshell
-/resolve net.unit8.raoh:raoh:0.4.0
+/resolve net.unit8.raoh:raoh:0.5.0
 import static net.unit8.raoh.decode.ObjectDecoders.*;
 import static net.unit8.raoh.decode.map.MapDecoders.*;
 import static net.unit8.raoh.decode.Decoders.*;
