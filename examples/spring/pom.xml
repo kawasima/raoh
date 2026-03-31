@@ -19,7 +19,7 @@
 
     <properties>
         <java.version>25</java.version>
-        <raoh.version>0.5.0-SNAPSHOT</raoh.version>
+        <raoh.version>0.5.0</raoh.version>
     </properties>
 
     <dependencies>
