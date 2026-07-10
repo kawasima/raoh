@@ -1,5 +1,7 @@
 package net.unit8.raoh.encode;
 
+import org.jspecify.annotations.Nullable;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -172,7 +174,7 @@ public final class ObjectEncoders {
      * @param enc the inner encoder to apply when the value is non-null
      * @return an encoder that passes {@code null} through without invoking {@code enc}
      */
-    public static <T> Encoder<T, Object> nullable(Encoder<T, Object> enc) {
+    public static <T> Encoder<@Nullable T, @Nullable Object> nullable(Encoder<T, Object> enc) {
         return v -> v == null ? null : enc.encode(v);
     }
 
@@ -196,7 +198,7 @@ public final class ObjectEncoders {
      * @param defaultValue the value to encode when the input is {@code null}
      * @return an encoder that substitutes {@code defaultValue} for {@code null} input
      */
-    public static <T> Encoder<T, Object> withDefault(Encoder<T, Object> enc, T defaultValue) {
+    public static <T> Encoder<@Nullable T, Object> withDefault(Encoder<T, Object> enc, T defaultValue) {
         return v -> v == null ? enc.encode(defaultValue) : enc.encode(v);
     }
 
@@ -217,7 +219,7 @@ public final class ObjectEncoders {
      * @param defaultValue supplies the value to encode when the input is {@code null}
      * @return an encoder that substitutes the supplied default for {@code null} input
      */
-    public static <T> Encoder<T, Object> withDefault(Encoder<T, Object> enc, Supplier<T> defaultValue) {
+    public static <T> Encoder<@Nullable T, Object> withDefault(Encoder<T, Object> enc, Supplier<T> defaultValue) {
         return v -> v == null ? enc.encode(defaultValue.get()) : enc.encode(v);
     }
 }

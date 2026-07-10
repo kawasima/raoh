@@ -16,4 +16,7 @@
  *   <li>{@link net.unit8.raoh.decode.map.MapDecoders} — for {@code Map<String, Object>} structure (field extraction, combine)</li>
  * </ul>
  */
+@NullMarked
 package net.unit8.raoh;
+
+import org.jspecify.annotations.NullMarked;

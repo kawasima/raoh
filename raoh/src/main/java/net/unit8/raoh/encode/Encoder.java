@@ -1,5 +1,7 @@
 package net.unit8.raoh.encode;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.function.Function;
 
 /**
@@ -26,7 +28,7 @@ import java.util.function.Function;
  * @param <O> the external representation type to encode to
  */
 @FunctionalInterface
-public interface Encoder<T, O> {
+public interface Encoder<T extends @Nullable Object, O extends @Nullable Object> {
 
     /**
      * Encodes the given domain value into an external representation.

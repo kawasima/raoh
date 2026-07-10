@@ -1,5 +1,7 @@
 package net.unit8.raoh.encode;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.function.Function;
 
 /**
@@ -22,7 +24,7 @@ import java.util.function.Function;
 public final class PropertyEncoder<T> {
 
     private final String key;
-    private final Function<T, Object> extractor;
+    private final Function<T, @Nullable Object> extractor;
 
     /**
      * Creates a property encoder.
@@ -32,7 +34,7 @@ public final class PropertyEncoder<T> {
      * @param getter       extracts the property value from the domain object
      * @param valueEncoder encodes the extracted value to {@code Object}
      */
-    <V> PropertyEncoder(String key, Function<T, V> getter, Encoder<V, Object> valueEncoder) {
+    <V extends @Nullable Object> PropertyEncoder(String key, Function<T, V> getter, Encoder<V, Object> valueEncoder) {
         this.key = key;
         this.extractor = value -> valueEncoder.encode(getter.apply(value));
     }
@@ -52,7 +54,7 @@ public final class PropertyEncoder<T> {
      * @param value the domain object
      * @return the encoded property value
      */
-    public Object encode(T value) {
+    public @Nullable Object encode(T value) {
         return extractor.apply(value);
     }
 }

@@ -5,6 +5,8 @@ import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.Map;
 
 /**
@@ -13,7 +15,7 @@ import java.util.Map;
  * @param <I> the input type
  * @param <V> the value type
  */
-public class RecordDecoder<I, V> implements Decoder<I, Map<String, V>> {
+public class RecordDecoder<I extends @Nullable Object, V> implements Decoder<I, Map<String, V>> {
 
     private final Decoder<I, Map<String, V>> inner;
 

@@ -5,6 +5,8 @@ import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
+import org.jspecify.annotations.Nullable;
+
 import java.math.BigDecimal;
 import java.util.Map;
 
@@ -13,7 +15,7 @@ import java.util.Map;
  *
  * @param <I> the input type
  */
-public class DecimalDecoder<I> implements Decoder<I, BigDecimal> {
+public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, BigDecimal> {
 
     private final Decoder<I, BigDecimal> inner;
 

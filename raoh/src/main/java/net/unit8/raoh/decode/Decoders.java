@@ -9,6 +9,8 @@ import net.unit8.raoh.Result;
 
 import net.unit8.raoh.decode.combinator.*;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -528,7 +530,7 @@ public final class Decoders {
      * @param supplier supplies the decoder on each invocation
      * @return a lazy decoder
      */
-    public static <I, T> Decoder<I, T> lazy(Supplier<Decoder<I, T>> supplier) {
+    public static <I extends @Nullable Object, T> Decoder<I, T> lazy(Supplier<Decoder<I, T>> supplier) {
         return (in, path) -> supplier.get().decode(in, path);
     }
 
@@ -542,7 +544,7 @@ public final class Decoders {
      * @param fallback the default value
      * @return a decoder with default-value behavior
      */
-    public static <I, T> Decoder<I, T> withDefault(Decoder<I, T> dec, T fallback) {
+    public static <I extends @Nullable Object, T> Decoder<I, T> withDefault(Decoder<I, T> dec, T fallback) {
         return (in, path) -> {
             var r = dec.decode(in, path);
             return switch (r) {
@@ -563,7 +565,7 @@ public final class Decoders {
      * @param fallback supplier for the default value
      * @return a decoder with default-value behavior
      */
-    public static <I, T> Decoder<I, T> withDefault(Decoder<I, T> dec, Supplier<T> fallback) {
+    public static <I extends @Nullable Object, T> Decoder<I, T> withDefault(Decoder<I, T> dec, Supplier<T> fallback) {
         return (in, path) -> {
             var r = dec.decode(in, path);
             return switch (r) {
@@ -584,7 +586,7 @@ public final class Decoders {
      * @param fallback the recovery value
      * @return a decoder that never fails
      */
-    public static <I, T> Decoder<I, T> recover(Decoder<I, T> dec, T fallback) {
+    public static <I extends @Nullable Object, T> Decoder<I, T> recover(Decoder<I, T> dec, T fallback) {
         return (in, path) -> {
             var r = dec.decode(in, path);
             return switch (r) {
@@ -603,7 +605,7 @@ public final class Decoders {
      * @param fallback function to compute the recovery value from issues
      * @return a decoder that never fails
      */
-    public static <I, T> Decoder<I, T> recover(Decoder<I, T> dec, Function<Issues, T> fallback) {
+    public static <I extends @Nullable Object, T> Decoder<I, T> recover(Decoder<I, T> dec, Function<Issues, T> fallback) {
         return (in, path) -> {
             var r = dec.decode(in, path);
             return switch (r) {
@@ -623,7 +625,7 @@ public final class Decoders {
      * @return a decoder that succeeds if any candidate succeeds
      */
     @SafeVarargs
-    public static <I, T> Decoder<I, T> oneOf(Decoder<I, ? extends T>... candidates) {
+    public static <I extends @Nullable Object, T> Decoder<I, T> oneOf(Decoder<I, ? extends T>... candidates) {
         return (in, path) -> {
             // Accumulate raw Issues; defer toJsonList() until the caller accesses meta.
             var failedIssues = new java.util.ArrayList<Issues>(candidates.length);
@@ -657,7 +659,7 @@ public final class Decoders {
      * @param knownFields the set of allowed field names
      * @return a strict decoder that fails on unknown fields
      */
-    public static <I, T> Decoder<I, T> strict(Decoder<I, T> dec, Set<String> knownFields) {
+    public static <I extends @Nullable Object, T> Decoder<I, T> strict(Decoder<I, T> dec, Set<String> knownFields) {
         return (in, path) -> {
             var issues = Issues.EMPTY;
             if (in instanceof Map<?, ?> rawMap) {
@@ -691,7 +693,7 @@ public final class Decoders {
      * @param stringDec the string decoder to use
      * @return a decoder that produces enum constants
      */
-    public static <I, E extends Enum<E>> Decoder<I, E> enumOf(Class<E> cls, Decoder<I, String> stringDec) {
+    public static <I extends @Nullable Object, E extends Enum<E>> Decoder<I, E> enumOf(Class<E> cls, Decoder<I, String> stringDec) {
         // Build lookup table and allowed-list once at decoder construction time.
         var lookup = new HashMap<String, E>();
         for (var c : cls.getEnumConstants()) {
@@ -728,7 +730,7 @@ public final class Decoders {
      * @param variants  a map from discriminator values to decoders
      * @return a discriminating decoder
      */
-    public static <I, T> Decoder<I, T> discriminate(
+    public static <I extends @Nullable Object, T> Decoder<I, T> discriminate(
             String fieldName,
             Decoder<I, String> tagDec,
             Map<String, Decoder<I, ? extends T>> variants) {
@@ -760,7 +762,7 @@ public final class Decoders {
      * @param stringDec the string decoder to use
      * @return a decoder that succeeds only when the string matches
      */
-    public static <I> Decoder<I, String> literal(String expected, Decoder<I, String> stringDec) {
+    public static <I extends @Nullable Object> Decoder<I, String> literal(String expected, Decoder<I, String> stringDec) {
         return (in, path) -> {
             var r = stringDec.decode(in, path);
             return switch (r) {

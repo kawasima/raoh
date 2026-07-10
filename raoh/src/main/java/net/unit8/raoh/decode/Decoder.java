@@ -5,6 +5,8 @@ import net.unit8.raoh.Ok;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -19,7 +21,7 @@ import java.util.function.Function;
  * @param <T> the decoded output type
  */
 @FunctionalInterface
-public interface Decoder<I, T> {
+public interface Decoder<I extends @Nullable Object, T extends @Nullable Object> {
     /**
      * Decodes the given input, returning a {@link Result} that is either
      * {@link Ok} with the decoded value or {@link Err} with validation issues.

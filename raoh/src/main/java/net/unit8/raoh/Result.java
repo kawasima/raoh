@@ -1,5 +1,7 @@
 package net.unit8.raoh;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -20,7 +22,7 @@ import java.util.function.Function;
  *
  * @param <T> the type of the successfully decoded value
  */
-public sealed interface Result<T> permits Ok, Err {
+public sealed interface Result<T extends @Nullable Object> permits Ok, Err {
 
     /**
      * Returns {@code true} if this result is {@link Ok}.
@@ -137,7 +139,7 @@ public sealed interface Result<T> permits Ok, Err {
      * @param value the decoded value
      * @return an {@link Ok} result
      */
-    static <T> Result<T> ok(T value) {
+    static <T extends @Nullable Object> Result<T> ok(T value) {
         return new Ok<>(value);
     }
 
@@ -148,7 +150,7 @@ public sealed interface Result<T> permits Ok, Err {
      * @param issues the validation issues
      * @return an {@link Err} result
      */
-    static <T> Result<T> err(Issues issues) {
+    static <T extends @Nullable Object> Result<T>err(Issues issues) {
         return new Err<>(issues);
     }
 
@@ -162,7 +164,7 @@ public sealed interface Result<T> permits Ok, Err {
      * @param meta    additional metadata
      * @return an {@link Err} result
      */
-    static <T> Result<T> fail(Path path, String code, String message, Map<String, Object> meta) {
+    static <T extends @Nullable Object> Result<T>fail(Path path, String code, String message, Map<String, Object> meta) {
         return new Err<>(Issues.EMPTY.add(Issue.of(path, code, message, meta)));
     }
 
@@ -175,7 +177,7 @@ public sealed interface Result<T> permits Ok, Err {
      * @param message the error message
      * @return an {@link Err} result
      */
-    static <T> Result<T> fail(Path path, String code, String message) {
+    static <T extends @Nullable Object> Result<T>fail(Path path, String code, String message) {
         return new Err<>(Issues.EMPTY.add(Issue.of(path, code, message)));
     }
 
@@ -191,7 +193,7 @@ public sealed interface Result<T> permits Ok, Err {
      * @param message the error message
      * @return an {@link Err} result at {@link Path#ROOT}
      */
-    static <T> Result<T> fail(String code, String message) {
+    static <T extends @Nullable Object> Result<T>fail(String code, String message) {
         return fail(Path.ROOT, code, message);
     }
 
@@ -208,7 +210,7 @@ public sealed interface Result<T> permits Ok, Err {
      * @param meta    additional metadata
      * @return an {@link Err} result at {@link Path#ROOT}
      */
-    static <T> Result<T> fail(String code, String message, Map<String, Object> meta) {
+    static <T extends @Nullable Object> Result<T>fail(String code, String message, Map<String, Object> meta) {
         return fail(Path.ROOT, code, message, meta);
     }
 
@@ -222,7 +224,7 @@ public sealed interface Result<T> permits Ok, Err {
      * @param meta    additional metadata
      * @return an {@link Err} result
      */
-    static <T> Result<T> failCustom(Path path, String code, String message, Map<String, Object> meta) {
+    static <T extends @Nullable Object> Result<T>failCustom(Path path, String code, String message, Map<String, Object> meta) {
         return new Err<>(Issues.EMPTY.add(new Issue(path, code, message, meta, true)));
     }
 

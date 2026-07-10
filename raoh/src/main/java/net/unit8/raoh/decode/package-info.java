@@ -17,4 +17,7 @@
  * {@link net.unit8.raoh.decode.builtin}. For {@code Map<String, Object>}
  * structure decoders, see {@link net.unit8.raoh.decode.map}.
  */
+@NullMarked
 package net.unit8.raoh.decode;
+
+import org.jspecify.annotations.NullMarked;

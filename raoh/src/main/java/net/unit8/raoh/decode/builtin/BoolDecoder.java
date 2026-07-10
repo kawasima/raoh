@@ -5,6 +5,8 @@ import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.Map;
 
 /**
@@ -12,7 +14,7 @@ import java.util.Map;
  *
  * @param <I> the input type
  */
-public class BoolDecoder<I> implements Decoder<I, Boolean> {
+public class BoolDecoder<I extends @Nullable Object> implements Decoder<I, Boolean> {
 
     private final Decoder<I, Boolean> inner;
 
@@ -55,7 +57,7 @@ public class BoolDecoder<I> implements Decoder<I, Boolean> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder with the constraint applied
      */
-    public BoolDecoder<I> isTrue(String message) {
+    public BoolDecoder<I> isTrue(@Nullable String message) {
         return booleanConstraint(true, message);
     }
 
@@ -76,11 +78,11 @@ public class BoolDecoder<I> implements Decoder<I, Boolean> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder with the constraint applied
      */
-    public BoolDecoder<I> isFalse(String message) {
+    public BoolDecoder<I> isFalse(@Nullable String message) {
         return booleanConstraint(false, message);
     }
 
-    private BoolDecoder<I> booleanConstraint(boolean expected, String message) {
+    private BoolDecoder<I> booleanConstraint(boolean expected, @Nullable String message) {
         return chain((value, path) -> {
             if (value != expected) {
                 var meta = Map.<String, Object>of("expected", expected, "actual", value);

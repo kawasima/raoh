@@ -15,4 +15,7 @@
  * }
  * }</pre>
  */
+@NullMarked
 package net.unit8.raoh.decode.combinator;
+
+import org.jspecify.annotations.NullMarked;

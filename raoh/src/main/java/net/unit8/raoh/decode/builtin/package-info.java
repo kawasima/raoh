@@ -6,4 +6,7 @@
  * For map-structure utilities ({@code field()}, {@code combine()}, etc.),
  * see {@link net.unit8.raoh.decode.map.MapDecoders}.
  */
+@NullMarked
 package net.unit8.raoh.decode.builtin;
+
+import org.jspecify.annotations.NullMarked;

@@ -1,5 +1,7 @@
 package net.unit8.raoh.encode;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +65,7 @@ public final class MapEncoders {
      * @param valueEncoder encodes the extracted value to {@code Object}
      * @return a property encoder for use with {@link #object(PropertyEncoder[])}
      */
-    public static <T, V> PropertyEncoder<T> property(
+    public static <T, V extends @Nullable Object> PropertyEncoder<T> property(
             String key,
             Function<T, V> getter,
             Encoder<V, Object> valueEncoder) {
@@ -82,9 +84,9 @@ public final class MapEncoders {
      * @return an encoder producing {@code Map<String, Object>}
      */
     @SafeVarargs
-    public static <T> Encoder<T, Map<String, Object>> object(PropertyEncoder<T>... properties) {
+    public static <T> Encoder<T, Map<String, @Nullable Object>> object(PropertyEncoder<T>... properties) {
         return value -> {
-            var map = new LinkedHashMap<String, Object>(properties.length * 2);
+            var map = new LinkedHashMap<String, @Nullable Object>(properties.length * 2);
             for (var prop : properties) {
                 map.put(prop.key(), prop.encode(value));
             }
