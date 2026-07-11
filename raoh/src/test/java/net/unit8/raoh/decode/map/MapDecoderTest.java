@@ -576,6 +576,17 @@ class MapDecoderTest {
     }
 
     @Test
+    void customMessageSurvivesResolve() {
+        // failCustom must mark the message as custom so Issues.resolve() keeps it verbatim
+        // (rather than overwriting it with the error-code template) for the newly-added overloads.
+        assertResolvesTo(field("v", decimal().positive("正の数で")).decode(Map.of("v", -1)), "正の数で");
+        assertResolvesTo(field("v", decimal().multipleOf(new BigDecimal("3"), "3の倍数で")).decode(Map.of("v", 4)), "3の倍数で");
+        assertResolvesTo(field("v", decimal().scale(2, "小数2桁まで")).decode(Map.of("v", 1.234)), "小数2桁まで");
+        assertResolvesTo(field("v", int_().multipleOf(3, "3の倍数で")).decode(Map.of("v", 4)), "3の倍数で");
+        assertResolvesTo(field("v", long_().nonNegative("0以上で")).decode(Map.of("v", -1L)), "0以上で");
+    }
+
+    @Test
     void nullMessageFallsBackToDefault() {
         // Passing null (or using the no-message overload) yields the built-in default message.
         assertErrMessage(field("v", decimal().positive(null)).decode(Map.of("v", -1)), "must be positive");
@@ -1124,6 +1135,17 @@ class MapDecoderTest {
         switch (result) {
             case Ok(_) -> fail("Expected Err, got Ok: " + result);
             case Err(var issues) -> assertEquals(expectedMessage, issues.asList().getFirst().message());
+        }
+    }
+
+    /** Asserts the result is an Err whose first issue still carries the given message after resolve(). */
+    static void assertResolvesTo(Result<?> result, String expectedMessage) {
+        switch (result) {
+            case Ok(_) -> fail("Expected Err, got Ok: " + result);
+            case Err(var issues) -> {
+                var resolved = issues.resolve(MessageResolver.DEFAULT);
+                assertEquals(expectedMessage, resolved.asList().getFirst().message());
+            }
         }
     }
 }
