@@ -1374,3 +1374,29 @@ Encoder<Order, Map<String, Object>> ORDER_ENCODER = object(
         property("customer",  Order::customer,  nested(CUSTOMER_ENCODER)),
         property("items",     Order::items,     list(nested(ITEM_ENCODER)))
 );
+```
+
+## 33. エンコード — discriminate（タグ付きユニオン）
+
+sealed インターフェース（タグ付きユニオン）は `discriminate()` でエンコードします。値の実行時型でバリアントを選び、ディスクリミネーターのタグを出力に書き込みます。デコーダー側の `discriminate()`（第11節）の鏡像です。デコーダーが入力データからタグを読むのに対し、エンコーダーは値の型からタグを選びます。
+
+```java
+sealed interface Shape permits Circle, Rect {}
+record Circle(double radius) implements Shape {}
+record Rect(double width, double height) implements Shape {}
+
+Encoder<Circle, Map<String, Object>> CIRCLE_ENCODER =
+        object(property("radius", Circle::radius, double_()));
+Encoder<Rect, Map<String, Object>> RECT_ENCODER = object(
+        property("width",  Rect::width,  double_()),
+        property("height", Rect::height, double_()));
+
+Encoder<Shape, Map<String, Object>> SHAPE_ENCODER = discriminate("type",
+        variant(Circle.class, "circle", CIRCLE_ENCODER),
+        variant(Rect.class,   "rect",   RECT_ENCODER));
+
+SHAPE_ENCODER.encode(new Circle(2.0));
+// => {type=circle, radius=2.0}
+```
+
+各バリアントは `variant(型, タグ, エンコーダー)` で宣言します。タグは出力の先頭に注入され、コンビネータが権威を持つため、バリアントエンコーダー側はタグを書きません。ディスパッチは `getClass()` の完全一致で、permits がすべて record / final の sealed 階層に適します。エンコードは総関数なので、未登録の型を渡すと `IllegalArgumentException` を投げます（デコーダーが `not_allowed` エラーを返すのと非対称です）。
