@@ -2,6 +2,8 @@ package net.unit8.raoh.json;
 
 import net.unit8.raoh.decode.Decoder;
 
+import org.jspecify.annotations.Nullable;
+
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -9,5 +11,5 @@ import tools.jackson.databind.JsonNode;
  *
  * @param <T> the decoded output type
  */
-public interface JsonDecoder<T> extends Decoder<JsonNode, T> {
+public interface JsonDecoder<T extends @Nullable Object> extends Decoder<JsonNode, T> {
 }

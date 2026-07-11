@@ -222,10 +222,14 @@ public final class JsonDecoders {
      * @param dec the underlying decoder
      * @return a nullable decoder whose {@code Ok} value may be {@code null}
      */
+    // The null branch deliberately produces a Result whose value is null (Decoder<..., @Nullable T>).
+    // NullAway cannot verify the type-parameter variance of the lambda's Result<@Nullable T> return,
+    // so this single honest nullness-widening site is suppressed (mirrors ObjectDecoders.nullable).
+    @SuppressWarnings("NullAway")
     public static <T> Decoder<JsonNode, @Nullable T> nullable(Decoder<JsonNode, T> dec) {
         return (in, path) -> {
             if (in == null || in.isNull()) {
-                return Result.ok(null);
+                return Result.<@Nullable T>ok(null);
             }
             return dec.decode(in, path);
         };
@@ -335,7 +339,7 @@ public final class JsonDecoders {
      * @return an enum decoder
      */
     public static <E extends Enum<E>> Decoder<JsonNode, E> enumOf(Class<E> cls) {
-        return Decoders.enumOf(cls, allowBlankString());
+        return Decoders.<JsonNode, E>enumOf(cls, allowBlankString());
     }
 
     /**
@@ -345,7 +349,7 @@ public final class JsonDecoders {
      * @return a literal decoder
      */
     public static Decoder<JsonNode, String> literal(String expected) {
-        return Decoders.literal(expected, allowBlankString());
+        return Decoders.<JsonNode>literal(expected, allowBlankString());
     }
 
     // --- discriminate ---
@@ -361,7 +365,7 @@ public final class JsonDecoders {
     public static <T> Decoder<JsonNode, T> discriminate(
             String fieldName,
             Map<String, Decoder<JsonNode, ? extends T>> variants) {
-        return Decoders.discriminate(fieldName, field(fieldName, allowBlankString()), variants);
+        return Decoders.<JsonNode, T>discriminate(fieldName, field(fieldName, allowBlankString()), variants);
     }
 
     // --- strict ---

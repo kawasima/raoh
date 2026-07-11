@@ -8,6 +8,8 @@ import net.unit8.raoh.decode.Decoders;
 import net.unit8.raoh.decode.ObjectDecoders;
 import net.unit8.raoh.decode.combinator.*;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,7 +40,7 @@ public final class JooqRecordDecoders {
      * @param dec  decoder for the raw value
      * @return a decoder for the named field
      */
-    public static <T> JooqRecordDecoder<T> field(String name, Decoder<Object, T> dec) {
+    public static <T> JooqRecordDecoder<T> field(String name, Decoder<@Nullable Object, T> dec) {
         return (in, path) -> {
             var fieldPath = path.append(name);
             if (in == null) {
@@ -60,7 +62,7 @@ public final class JooqRecordDecoders {
      * @param dec  decoder for the raw value
      * @return a decoder that produces {@code Optional<T>}
      */
-    public static <T> JooqRecordDecoder<Optional<T>> optionalField(String name, Decoder<Object, T> dec) {
+    public static <T> JooqRecordDecoder<Optional<T>> optionalField(String name, Decoder<@Nullable Object, T> dec) {
         return (in, path) -> {
             var fieldPath = path.append(name);
             if (in == null || in.field(name) == null) {
@@ -79,7 +81,7 @@ public final class JooqRecordDecoders {
      * @param dec  decoder for the raw value when non-null
      * @return a decoder that produces {@link Presence Presence&lt;T&gt;}
      */
-    public static <T> JooqRecordDecoder<Presence<T>> optionalNullableField(String name, Decoder<Object, T> dec) {
+    public static <T> JooqRecordDecoder<Presence<T>> optionalNullableField(String name, Decoder<@Nullable Object, T> dec) {
         return (in, path) -> {
             var fieldPath = path.append(name);
             if (in == null || in.field(name) == null) {
