@@ -97,6 +97,43 @@ public final class JooqRecordDecoders {
     }
 
     /**
+     * Extracts a named field from a {@link org.jooq.Record} directly as a {@code @Nullable T}: an
+     * absent column or a present {@code null} value both decode to {@code null}, and any other value
+     * is decoded with {@code dec}.
+     *
+     * <p>This is the {@code @Nullable}-target sibling of {@link #optionalField} (which targets
+     * {@link Optional Optional&lt;T&gt;}) and {@link #optionalNullableField} (which targets
+     * {@link Presence Presence&lt;T&gt;}). Unlike {@code optionalNullableField}, it does <em>not</em>
+     * preserve the absent/present-null distinction — it collapses both to {@code null}. Use it to
+     * populate a plain {@code @Nullable} domain field or constructor argument without an intermediate
+     * {@code Optional} or {@code Presence}.
+     *
+     * @param <T>  the decoded value type
+     * @param name the column name
+     * @param dec  decoder for the raw value when present and non-null
+     * @return a decoder that produces the decoded value, or {@code null} when the column is absent or
+     *         its value is {@code null}
+     */
+    // Returns a JooqRecordDecoder<@Nullable T>. NullAway cannot verify the type-parameter nullness of
+    // the @Nullable T return, the same honest widening already suppressed in ObjectDecoders.nullable.
+    @SuppressWarnings("NullAway")
+    public static <T> JooqRecordDecoder<@Nullable T> nullableField(String name, Decoder<@Nullable Object, T> dec) {
+        return (in, path) -> {
+            var fieldPath = path.append(name);
+            // A null record or absent column is treated as absent (-> null), consistent with
+            // optionalField / optionalNullableField (field alone would reject it as a required error).
+            if (in == null || in.field(name) == null) {
+                return Result.<@Nullable T>ok(null);
+            }
+            var value = in.get(name);
+            if (value == null) {
+                return Result.<@Nullable T>ok(null);
+            }
+            return dec.decode(value, fieldPath);
+        };
+    }
+
+    /**
      * Applies another {@link JooqRecordDecoder} to the same {@link org.jooq.Record}.
      *
      * <p>This is the primary building block for mapping a flat JOIN result into a

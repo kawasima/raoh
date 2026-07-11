@@ -259,10 +259,35 @@ class JsonDecoderTest {
     }
 
     @Test
-    void nullableField() {
-        var dec = field("val", nullable(string()));
+    void nullableFieldCollapsesAbsentAndPresentNull() {
+        var dec = nullableField("val", string());
+
+        // absent key -> null
+        assertNull(assertOk(dec.decode(parse("{}"))));
+
+        // JSON null -> null
         assertNull(assertOk(dec.decode(parse("{\"val\":null}"))));
+
+        // present value -> decoded value
         assertEquals("x", assertOk(dec.decode(parse("{\"val\":\"x\"}"))));
+    }
+
+    @Test
+    void nullableFieldDecodesPresentValueThroughInnerDecoder() {
+        // The inner decoder still runs (and can fail) for a present, non-null value.
+        var dec = nullableField("name", string().nonBlank());
+        assertEquals("abc", assertOk(dec.decode(parse("{\"name\":\"abc\"}"))));
+        assertErr(dec.decode(parse("{\"name\":\"  \"}")));
+    }
+
+    @Test
+    void nullableFieldTreatsNullAndNonObjectInputAsNull() {
+        // A null or non-object parent is tolerated as absent -> null, consistent with
+        // optionalField / optionalNullableField (field alone would reject it as a required error).
+        var dec = nullableField("val", string());
+        assertNull(assertOk(dec.decode((JsonNode) null)));
+        assertNull(assertOk(dec.decode(parse("[]"))));
+        assertNull(assertOk(dec.decode(parse("\"scalar\""))));
     }
 
     @Test

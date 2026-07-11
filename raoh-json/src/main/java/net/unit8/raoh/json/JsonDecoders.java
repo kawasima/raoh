@@ -260,6 +260,45 @@ public final class JsonDecoders {
         };
     }
 
+    /**
+     * Creates a field decoder that lands directly on a {@code @Nullable T}: a missing key or a
+     * JSON {@code null} value both decode to {@code null}, and any other value is decoded with
+     * {@code dec}.
+     *
+     * <p>This is the {@code @Nullable}-target sibling of {@link #optionalField} (which targets
+     * {@link Optional Optional&lt;T&gt;}) and {@link #optionalNullableField} (which targets
+     * {@link Presence Presence&lt;T&gt;}). Unlike {@code optionalNullableField}, it does <em>not</em>
+     * preserve the absent/present-null distinction — it collapses both to {@code null}. Use it to
+     * populate a plain {@code @Nullable} domain field or constructor argument without an intermediate
+     * {@code Optional} or {@code Presence}.
+     *
+     * @param <T>  the decoded value type
+     * @param name the field name
+     * @param dec  the decoder for the field value when present and non-null
+     * @return a decoder that produces the decoded value, or {@code null} when the key is absent or its
+     *         value is JSON {@code null}
+     */
+    // Returns a Decoder<..., @Nullable T>. NullAway cannot verify the type-parameter nullness of the
+    // @Nullable T return, the same honest widening already suppressed in JsonDecoders.nullable.
+    @SuppressWarnings("NullAway")
+    public static <T> Decoder<JsonNode, @Nullable T> nullableField(String name, Decoder<JsonNode, T> dec) {
+        return (in, path) -> {
+            var fieldPath = path.append(name);
+            // A null / non-object input is treated as absent (-> null), consistent with optionalField /
+            // optionalNullableField (field alone would reject it as a required error).
+            if (in == null || !in.isObject()) {
+                return Result.<@Nullable T>ok(null);
+            }
+            var node = in.get(name);
+            // Collapse both a missing key and a JSON null to null; nullable(dec) alone would not,
+            // since it only folds NullNode and leaves a MissingNode to reach the inner decoder.
+            if (node == null || node.isMissingNode() || node.isNull()) {
+                return Result.<@Nullable T>ok(null);
+            }
+            return dec.decode(node, fieldPath);
+        };
+    }
+
     // --- list / map ---
 
     /**

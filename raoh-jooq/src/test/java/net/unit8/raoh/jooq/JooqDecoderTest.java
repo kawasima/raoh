@@ -242,6 +242,54 @@ class JooqDecoderTest {
     }
 
     // -------------------------------------------------------------------------
+    // nullableField — folds absent / present-null directly to @Nullable T
+    // -------------------------------------------------------------------------
+
+    @Test
+    void nullableFieldCollapsesAbsentAndPresentNull() {
+        var dec = nullableField("display_name", string());
+
+        // absent column -> null
+        var absent = dec.decode(record("name", "Bob"));
+        assertInstanceOf(Ok.class, absent);
+        assertNull(((Ok<String>) absent).value());
+
+        // present-null -> null
+        var presentNull = dec.decode(record("display_name", (Object) null));
+        assertInstanceOf(Ok.class, presentNull);
+        assertNull(((Ok<String>) presentNull).value());
+
+        // present value -> decoded value
+        var present = dec.decode(record("display_name", "Alice"));
+        assertInstanceOf(Ok.class, present);
+        assertEquals("Alice", ((Ok<String>) present).value());
+    }
+
+    @Test
+    void nullableFieldDecodesPresentValueThroughInnerDecoder() {
+        // The inner decoder still runs (and can fail) for a present, non-null value.
+        var dec = nullableField("display_name", string().nonBlank());
+
+        var ok = dec.decode(record("display_name", "abc"));
+        assertInstanceOf(Ok.class, ok);
+        assertEquals("abc", ((Ok<String>) ok).value());
+
+        var err = dec.decode(record("display_name", "  "));
+        assertInstanceOf(Err.class, err);
+    }
+
+    @Test
+    void nullableFieldTreatsNullRecordAsNull() {
+        // A null record is tolerated as absent -> null, consistent with optionalField /
+        // optionalNullableField (field alone would reject it as a required error).
+        var dec = nullableField("display_name", string());
+        org.jooq.Record nullRecord = null;
+        var result = dec.decode(nullRecord);
+        assertInstanceOf(Ok.class, result);
+        assertNull(((Ok<String>) result).value());
+    }
+
+    // -------------------------------------------------------------------------
     // Value object composition — Money from two columns
     // -------------------------------------------------------------------------
 
