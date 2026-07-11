@@ -35,15 +35,14 @@ If you are coming from a validator-oriented library, the main difference in feel
 
 ## Installation
 
-Raoh is distributed under the `net.unit8.raoh` group ID on Maven Central. Add the
+Raoh is published to Maven Central under the `net.unit8.raoh` group ID. Add the
 core module, plus whichever boundary module matches your input source. Define the
-version once as a property — replace the value below with the latest shown on the
-Maven Central badge above.
+version once as a property — use the latest shown on the Maven Central badge above.
 
 ```xml
 <properties>
-    <!-- Replace with the latest version from the Maven Central badge above -->
-    <raoh.version>1.0.0</raoh.version>
+    <!-- Use the latest version from the Maven Central badge above -->
+    <raoh.version>0.5.0</raoh.version>
 </properties>
 
 <dependencies>
