@@ -130,9 +130,22 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if not positive
      */
     public LongDecoder<I> positive() {
+        return positive(null);
+    }
+
+    /**
+     * Restricts the decoded value to be strictly positive.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if not positive
+     */
+    public LongDecoder<I> positive(@Nullable String message) {
         return chain((value, path) -> {
             if (value <= 0) {
-                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be positive", Map.of("min", 1L, "actual", value));
+                var meta = Map.<String, Object>of("min", 1L, "actual", value);
+                return message != null
+                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
+                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be positive", meta);
             }
             return Result.ok(value);
         });
@@ -144,9 +157,22 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if not negative
      */
     public LongDecoder<I> negative() {
+        return negative(null);
+    }
+
+    /**
+     * Restricts the decoded value to be strictly negative.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if not negative
+     */
+    public LongDecoder<I> negative(@Nullable String message) {
         return chain((value, path) -> {
             if (value >= 0) {
-                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be negative", Map.of("max", -1L, "actual", value));
+                var meta = Map.<String, Object>of("max", -1L, "actual", value);
+                return message != null
+                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
+                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be negative", meta);
             }
             return Result.ok(value);
         });
@@ -158,9 +184,22 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if negative
      */
     public LongDecoder<I> nonNegative() {
+        return nonNegative(null);
+    }
+
+    /**
+     * Restricts the decoded value to be zero or positive.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if negative
+     */
+    public LongDecoder<I> nonNegative(@Nullable String message) {
         return chain((value, path) -> {
             if (value < 0) {
-                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be non-negative", Map.of("min", 0L, "actual", value));
+                var meta = Map.<String, Object>of("min", 0L, "actual", value);
+                return message != null
+                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
+                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be non-negative", meta);
             }
             return Result.ok(value);
         });
@@ -172,9 +211,22 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if positive
      */
     public LongDecoder<I> nonPositive() {
+        return nonPositive(null);
+    }
+
+    /**
+     * Restricts the decoded value to be zero or negative.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if positive
+     */
+    public LongDecoder<I> nonPositive(@Nullable String message) {
         return chain((value, path) -> {
             if (value > 0) {
-                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be non-positive", Map.of("max", 0L, "actual", value));
+                var meta = Map.<String, Object>of("max", 0L, "actual", value);
+                return message != null
+                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
+                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be non-positive", meta);
             }
             return Result.ok(value);
         });
@@ -206,11 +258,24 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
      * @return a new decoder that fails with {@link ErrorCodes#NOT_MULTIPLE_OF} if not divisible
      */
     public LongDecoder<I> multipleOf(long n) {
+        return multipleOf(n, null);
+    }
+
+    /**
+     * Restricts the decoded value to be a multiple of {@code n}.
+     *
+     * @param n       the divisor
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#NOT_MULTIPLE_OF} if not divisible
+     */
+    public LongDecoder<I> multipleOf(long n, @Nullable String message) {
         return chain((value, path) -> {
             if (value % n != 0) {
-                return Result.fail(path, ErrorCodes.NOT_MULTIPLE_OF,
-                        "must be a multiple of %d".formatted(n),
-                        Map.of("divisor", n, "actual", value));
+                var meta = Map.<String, Object>of("divisor", n, "actual", value);
+                return message != null
+                        ? Result.failCustom(path, ErrorCodes.NOT_MULTIPLE_OF, message, meta)
+                        : Result.fail(path, ErrorCodes.NOT_MULTIPLE_OF,
+                                "must be a multiple of %d".formatted(n), meta);
             }
             return Result.ok(value);
         });
