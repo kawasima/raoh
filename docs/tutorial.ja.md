@@ -1354,6 +1354,16 @@ propertyWithDefault("tags", Article::tags, list(nested(TAG_ENCODER)), List.of())
 // getter が null → 出力では []
 ```
 
+### null 解析を有効にしている場合の一行設定
+
+consumer 側のコードを `@NullMarked` にして厳格な null 解析（Eclipse JDT / ecj、NullAway、IntelliJ）を有効にしていると、raoh との境界で「unchecked conversion（`@NonNull` への未検査変換）」系の警告が出ることがあります。これらは nullness の欠陥ではなく、`@NullMarked` モジュールと非注釈の JDK / ライブラリ型との相互運用で生じる既知のノイズです。raoh 自身も `.settings/org.eclipse.jdt.core.prefs` に次の一行を置いて抑制しています。
+
+```
+org.eclipse.jdt.core.compiler.problem.nullUncheckedConversion=ignore
+```
+
+ecj のバッチ実行では `-properties` でこのキーを渡せば同じ効果になります。真の null 契約違反（`nullSpecViolation`）は有効なままです。
+
 ## 32. エンコード — ネストしたオブジェクト
 
 `nested()` で構造化エンコーダーを親に埋め込み、`list()` でコレクションをエンコードします：

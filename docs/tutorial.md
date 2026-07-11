@@ -1354,6 +1354,21 @@ propertyWithDefault("tags", Article::tags, list(nested(TAG_ENCODER)), List.of())
 // getter null → [] in output
 ```
 
+### One line for consumers running null analysis
+
+If your own code is `@NullMarked` and you run strict null analysis (Eclipse JDT / ecj,
+NullAway, IntelliJ), you may see "unchecked conversion to `@NonNull`" warnings at the boundary
+with raoh. These are not nullness defects — they are the well-known interop noise between a
+`@NullMarked` module and non-null-annotated JDK / library types. raoh itself silences them with
+one line in its `.settings/org.eclipse.jdt.core.prefs`:
+
+```
+org.eclipse.jdt.core.compiler.problem.nullUncheckedConversion=ignore
+```
+
+For a batch ecj build, pass this key via `-properties`. Genuine null-contract violations
+(`nullSpecViolation`) stay enabled.
+
 ## 32. Encoding — nested objects
 
 Use `nested()` to embed structured encoders inside a parent, and `list()` to encode collections:
