@@ -34,7 +34,7 @@ public final class PropertyEncoder<T> {
      * @param getter       extracts the property value from the domain object
      * @param valueEncoder encodes the extracted value to {@code Object}
      */
-    <V extends @Nullable Object> PropertyEncoder(String key, Function<T, V> getter, Encoder<V, Object> valueEncoder) {
+    <V extends @Nullable Object> PropertyEncoder(String key, Function<T, V> getter, Encoder<V, ? extends @Nullable Object> valueEncoder) {
         this.key = key;
         this.extractor = value -> valueEncoder.encode(getter.apply(value));
     }

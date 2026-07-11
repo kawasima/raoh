@@ -68,7 +68,7 @@ public final class MapEncoders {
     public static <T, V extends @Nullable Object> PropertyEncoder<T> property(
             String key,
             Function<T, V> getter,
-            Encoder<V, Object> valueEncoder) {
+            Encoder<V, ? extends @Nullable Object> valueEncoder) {
         return new PropertyEncoder<>(key, getter, valueEncoder);
     }
 
