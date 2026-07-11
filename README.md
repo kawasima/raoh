@@ -32,9 +32,47 @@ If you are coming from a validator-oriented library, the main difference in feel
 ## Requirements
 
 - Java 25
-- Maven
 
-Build and run tests:
+## Installation
+
+Raoh is published to Maven Central under the `net.unit8.raoh` group ID. Add the
+core module, plus whichever boundary module matches your input source. Define the
+version once as a property — use the latest shown on the Maven Central badge above.
+
+```xml
+<properties>
+    <!-- Use the latest version from the Maven Central badge above -->
+    <raoh.version>0.5.0</raoh.version>
+</properties>
+
+<dependencies>
+    <!-- Core: decoders, encoders, error model -->
+    <dependency>
+        <groupId>net.unit8.raoh</groupId>
+        <artifactId>raoh</artifactId>
+        <version>${raoh.version}</version>
+    </dependency>
+
+    <!-- Optional: decode Jackson JsonNode (pulls in Jackson 3) -->
+    <dependency>
+        <groupId>net.unit8.raoh</groupId>
+        <artifactId>raoh-json</artifactId>
+        <version>${raoh.version}</version>
+    </dependency>
+
+    <!-- Optional: decode jOOQ Record (jOOQ is a provided dependency) -->
+    <dependency>
+        <groupId>net.unit8.raoh</groupId>
+        <artifactId>raoh-jooq</artifactId>
+        <version>${raoh.version}</version>
+    </dependency>
+</dependencies>
+```
+
+## Building from source
+
+- Java 25
+- Maven
 
 ```bash
 mvn clean test
@@ -139,7 +177,7 @@ That means the "happy path" looks like object construction, while the failure pa
 ### Decode JSON into a domain object
 
 ```java
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 import net.unit8.raoh.json.JsonDecoder;
 
@@ -389,7 +427,7 @@ The following example shows the common Raoh shape:
 - run domain-specific rules afterwards
 
 ```java
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 
 import java.math.BigDecimal;
 
