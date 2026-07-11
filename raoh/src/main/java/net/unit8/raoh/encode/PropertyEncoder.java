@@ -62,7 +62,7 @@ public final class PropertyEncoder<T> {
      */
     static <T, V> PropertyEncoder<T> ofNullable(String key, Function<? super T, ? extends @Nullable V> getter, Encoder<V, Object> valueEncoder) {
         return new PropertyEncoder<>(key, value -> {
-            V v = getter.apply(value);
+            @Nullable V v = getter.apply(value);
             return v == null ? null : valueEncoder.encode(v);
         });
     }
@@ -83,7 +83,7 @@ public final class PropertyEncoder<T> {
     static <T, V> PropertyEncoder<T> ofDefault(String key, Function<? super T, ? extends @Nullable V> getter,
                                                Encoder<V, Object> valueEncoder, V defaultValue) {
         return new PropertyEncoder<>(key, value -> {
-            V v = getter.apply(value);
+            @Nullable V v = getter.apply(value);
             return valueEncoder.encode(v == null ? defaultValue : v);
         });
     }
@@ -103,7 +103,7 @@ public final class PropertyEncoder<T> {
     static <T, V> PropertyEncoder<T> ofDefault(String key, Function<? super T, ? extends @Nullable V> getter,
                                                Encoder<V, Object> valueEncoder, Supplier<V> defaultValue) {
         return new PropertyEncoder<>(key, value -> {
-            V v = getter.apply(value);
+            @Nullable V v = getter.apply(value);
             return valueEncoder.encode(v == null ? defaultValue.get() : v);
         });
     }
