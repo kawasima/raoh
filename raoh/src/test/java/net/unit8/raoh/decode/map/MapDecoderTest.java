@@ -524,6 +524,78 @@ class MapDecoderTest {
     }
 
     @Test
+    void decimalRange() {
+        var dec = field("price", decimal().range(new BigDecimal("0"), new BigDecimal("100")));
+        assertEquals(0, new BigDecimal("50").compareTo(assertOk(dec.decode(Map.of("price", 50)))));
+        assertEquals(0, new BigDecimal("0").compareTo(assertOk(dec.decode(Map.of("price", 0)))));  // inclusive lower
+        assertEquals(0, new BigDecimal("100").compareTo(assertOk(dec.decode(Map.of("price", 100)))));  // inclusive upper
+        assertErr(dec.decode(Map.of("price", 150)));
+        assertErr(dec.decode(Map.of("price", -1)));
+    }
+
+    @Test
+    void decimalConstraintCustomMessages() {
+        // Each numeric constraint's message overload stores the custom message as the pre-resolved Issue.message().
+        assertErrMessage(field("v", decimal().range(new BigDecimal("0"), new BigDecimal("10"), "0〜10で"))
+                .decode(Map.of("v", 20)), "0〜10で");
+        assertErrMessage(field("v", decimal().min(new BigDecimal("5"), "5以上で"))
+                .decode(Map.of("v", 1)), "5以上で");
+        assertErrMessage(field("v", decimal().max(new BigDecimal("5"), "5以下で"))
+                .decode(Map.of("v", 9)), "5以下で");
+        assertErrMessage(field("v", decimal().positive("正の数で"))
+                .decode(Map.of("v", -1)), "正の数で");
+        assertErrMessage(field("v", decimal().negative("負の数で"))
+                .decode(Map.of("v", 1)), "負の数で");
+        assertErrMessage(field("v", decimal().nonNegative("0以上で"))
+                .decode(Map.of("v", -1)), "0以上で");
+        assertErrMessage(field("v", decimal().nonPositive("0以下で"))
+                .decode(Map.of("v", 1)), "0以下で");
+        assertErrMessage(field("v", decimal().multipleOf(new BigDecimal("3"), "3の倍数で"))
+                .decode(Map.of("v", 4)), "3の倍数で");
+        assertErrMessage(field("v", decimal().scale(2, "小数2桁まで"))
+                .decode(Map.of("v", 1.234)), "小数2桁まで");
+    }
+
+    @Test
+    void intConstraintCustomMessages() {
+        // Newly-added message overloads on the non-range integer constraints.
+        assertErrMessage(field("v", int_().positive("正の数で")).decode(Map.of("v", -1)), "正の数で");
+        assertErrMessage(field("v", int_().negative("負の数で")).decode(Map.of("v", 1)), "負の数で");
+        assertErrMessage(field("v", int_().nonNegative("0以上で")).decode(Map.of("v", -1)), "0以上で");
+        assertErrMessage(field("v", int_().nonPositive("0以下で")).decode(Map.of("v", 1)), "0以下で");
+        assertErrMessage(field("v", int_().multipleOf(3, "3の倍数で")).decode(Map.of("v", 4)), "3の倍数で");
+    }
+
+    @Test
+    void longConstraintCustomMessages() {
+        assertErrMessage(field("v", long_().positive("正の数で")).decode(Map.of("v", -1L)), "正の数で");
+        assertErrMessage(field("v", long_().negative("負の数で")).decode(Map.of("v", 1L)), "負の数で");
+        assertErrMessage(field("v", long_().nonNegative("0以上で")).decode(Map.of("v", -1L)), "0以上で");
+        assertErrMessage(field("v", long_().nonPositive("0以下で")).decode(Map.of("v", 1L)), "0以下で");
+        assertErrMessage(field("v", long_().multipleOf(3L, "3の倍数で")).decode(Map.of("v", 4L)), "3の倍数で");
+    }
+
+    @Test
+    void customMessageSurvivesResolve() {
+        // failCustom must mark the message as custom so Issues.resolve() keeps it verbatim
+        // (rather than overwriting it with the error-code template) for the newly-added overloads.
+        assertResolvesTo(field("v", decimal().positive("正の数で")).decode(Map.of("v", -1)), "正の数で");
+        assertResolvesTo(field("v", decimal().multipleOf(new BigDecimal("3"), "3の倍数で")).decode(Map.of("v", 4)), "3の倍数で");
+        assertResolvesTo(field("v", decimal().scale(2, "小数2桁まで")).decode(Map.of("v", 1.234)), "小数2桁まで");
+        assertResolvesTo(field("v", int_().multipleOf(3, "3の倍数で")).decode(Map.of("v", 4)), "3の倍数で");
+        assertResolvesTo(field("v", long_().nonNegative("0以上で")).decode(Map.of("v", -1L)), "0以上で");
+    }
+
+    @Test
+    void nullMessageFallsBackToDefault() {
+        // Passing null (or using the no-message overload) yields the built-in default message.
+        assertErrMessage(field("v", decimal().positive(null)).decode(Map.of("v", -1)), "must be positive");
+        assertErrMessage(field("v", int_().multipleOf(3)).decode(Map.of("v", 4)), "must be a multiple of 3");
+        assertErrMessage(field("v", decimal().range(new BigDecimal("0"), new BigDecimal("10")))
+                .decode(Map.of("v", 20)), "must be between 0 and 10");
+    }
+
+    @Test
     void nestedObject() {
         var dec = combine(
                 field("name", string()),
@@ -1055,6 +1127,25 @@ class MapDecoderTest {
     static void assertErr(Result<?> result) {
         if (result instanceof Ok<?>) {
             fail("Expected Err, got Ok: " + result);
+        }
+    }
+
+    /** Asserts the result is an Err whose first issue carries the given pre-resolved message. */
+    static void assertErrMessage(Result<?> result, String expectedMessage) {
+        switch (result) {
+            case Ok(_) -> fail("Expected Err, got Ok: " + result);
+            case Err(var issues) -> assertEquals(expectedMessage, issues.asList().getFirst().message());
+        }
+    }
+
+    /** Asserts the result is an Err whose first issue still carries the given message after resolve(). */
+    static void assertResolvesTo(Result<?> result, String expectedMessage) {
+        switch (result) {
+            case Ok(_) -> fail("Expected Err, got Ok: " + result);
+            case Err(var issues) -> {
+                var resolved = issues.resolve(MessageResolver.DEFAULT);
+                assertEquals(expectedMessage, resolved.asList().getFirst().message());
+            }
         }
     }
 }
