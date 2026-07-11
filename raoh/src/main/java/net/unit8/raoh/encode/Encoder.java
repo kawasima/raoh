@@ -1,7 +1,5 @@
 package net.unit8.raoh.encode;
 
-import org.jspecify.annotations.Nullable;
-
 import java.util.function.Function;
 
 /**
@@ -28,7 +26,7 @@ import java.util.function.Function;
  * @param <O> the external representation type to encode to
  */
 @FunctionalInterface
-public interface Encoder<T extends @Nullable Object, O extends @Nullable Object> {
+public interface Encoder<T, O> {
 
     /**
      * Encodes the given domain value into an external representation.
@@ -52,7 +50,7 @@ public interface Encoder<T extends @Nullable Object, O extends @Nullable Object>
      * @param f   the function to apply to the input before encoding
      * @return a new encoder whose input type is {@code S}
      */
-    default <S> Encoder<S, O> contramap(Function<S, T> f) {
+    default <S> Encoder<S, O> contramap(Function<? super S, ? extends T> f) {
         return value -> this.encode(f.apply(value));
     }
 

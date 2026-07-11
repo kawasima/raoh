@@ -1,6 +1,6 @@
 package net.unit8.raoh.encode;
 
-import org.jspecify.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -8,7 +8,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.util.function.Supplier;
 
 /**
  * Factory for primitive {@code Encoder} instances that encode domain values to {@code Object}.
@@ -36,7 +35,7 @@ public final class ObjectEncoders {
      *
      * @return a string encoder
      */
-    public static Encoder<String, Object> string() {
+    public static Encoder<@NonNull String, Object> string() {
         return v -> v;
     }
 
@@ -45,7 +44,7 @@ public final class ObjectEncoders {
      *
      * @return an integer encoder
      */
-    public static Encoder<Integer, Object> int_() {
+    public static Encoder<@NonNull Integer, Object> int_() {
         return v -> v;
     }
 
@@ -54,7 +53,7 @@ public final class ObjectEncoders {
      *
      * @return a long encoder
      */
-    public static Encoder<Long, Object> long_() {
+    public static Encoder<@NonNull Long, Object> long_() {
         return v -> v;
     }
 
@@ -63,7 +62,7 @@ public final class ObjectEncoders {
      *
      * @return a double encoder
      */
-    public static Encoder<Double, Object> double_() {
+    public static Encoder<@NonNull Double, Object> double_() {
         return v -> v;
     }
 
@@ -72,7 +71,7 @@ public final class ObjectEncoders {
      *
      * @return a float encoder
      */
-    public static Encoder<Float, Object> float_() {
+    public static Encoder<@NonNull Float, Object> float_() {
         return v -> v;
     }
 
@@ -81,7 +80,7 @@ public final class ObjectEncoders {
      *
      * @return a boolean encoder
      */
-    public static Encoder<Boolean, Object> bool() {
+    public static Encoder<@NonNull Boolean, Object> bool() {
         return v -> v;
     }
 
@@ -90,7 +89,7 @@ public final class ObjectEncoders {
      *
      * @return a decimal encoder
      */
-    public static Encoder<BigDecimal, Object> decimal() {
+    public static Encoder<@NonNull BigDecimal, Object> decimal() {
         return v -> v;
     }
 
@@ -99,7 +98,7 @@ public final class ObjectEncoders {
      *
      * @return an instant encoder
      */
-    public static Encoder<Instant, Object> iso8601() {
+    public static Encoder<@NonNull Instant, Object> iso8601() {
         return v -> v.toString();
     }
 
@@ -108,7 +107,7 @@ public final class ObjectEncoders {
      *
      * @return a local date encoder
      */
-    public static Encoder<LocalDate, Object> date() {
+    public static Encoder<@NonNull LocalDate, Object> date() {
         return v -> v.toString();
     }
 
@@ -117,7 +116,7 @@ public final class ObjectEncoders {
      *
      * @return a local time encoder
      */
-    public static Encoder<LocalTime, Object> time() {
+    public static Encoder<@NonNull LocalTime, Object> time() {
         return v -> v.toString();
     }
 
@@ -130,7 +129,7 @@ public final class ObjectEncoders {
      *
      * @return a local date-time encoder
      */
-    public static Encoder<LocalDateTime, Object> dateTime() {
+    public static Encoder<@NonNull LocalDateTime, Object> dateTime() {
         return v -> v.toString();
     }
 
@@ -143,7 +142,7 @@ public final class ObjectEncoders {
      *
      * @return an offset date-time encoder
      */
-    public static Encoder<OffsetDateTime, Object> offsetDateTime() {
+    public static Encoder<@NonNull OffsetDateTime, Object> offsetDateTime() {
         return v -> v.toString();
     }
 
@@ -153,73 +152,8 @@ public final class ObjectEncoders {
      * @param <E> the enum type
      * @return an enum encoder
      */
-    public static <E extends Enum<E>> Encoder<E, Object> enumOf() {
+    public static <E extends Enum<E>> Encoder<@NonNull E, Object> enumOf() {
         return v -> v.name();
     }
 
-    /**
-     * Wraps an encoder to accept {@code null} input, passing {@code null} through to the output.
-     *
-     * <p>Use this for nullable columns in UPDATE statements where the domain object may carry
-     * a {@code null} value:
-     *
-     * <pre>{@code
-     * import static net.unit8.raoh.encode.MapEncoders.*;
-     * import static net.unit8.raoh.encode.ObjectEncoders.*;
-     *
-     * property("description", Item::description, nullable(string()))
-     * }</pre>
-     *
-     * @param <T> the domain value type
-     * @param enc the inner encoder to apply when the value is non-null
-     * @return an encoder that passes {@code null} through without invoking {@code enc}
-     */
-    public static <T> Encoder<@Nullable T, @Nullable Object> nullable(Encoder<T, Object> enc) {
-        return v -> v == null ? null : enc.encode(v);
-    }
-
-    /**
-     * Wraps an encoder to substitute a default value when the input is {@code null}.
-     *
-     * <p>Unlike {@link #nullable(Encoder)}, which passes {@code null} through to the output,
-     * this method encodes the given {@code defaultValue} instead. This is the encoder-side
-     * counterpart of {@link net.unit8.raoh.decode.Decoders#withDefault(net.unit8.raoh.decode.Decoder, Object)
-     * Decoders.withDefault}.
-     *
-     * <pre>{@code
-     * import static net.unit8.raoh.encode.MapEncoders.*;
-     * import static net.unit8.raoh.encode.ObjectEncoders.*;
-     *
-     * property("tags", Article::tags, withDefault(list(nested(TAG_ENCODER)), List.of()))
-     * }</pre>
-     *
-     * @param <T>          the domain value type
-     * @param enc          the inner encoder to apply
-     * @param defaultValue the value to encode when the input is {@code null}
-     * @return an encoder that substitutes {@code defaultValue} for {@code null} input
-     */
-    public static <T> Encoder<@Nullable T, Object> withDefault(Encoder<T, Object> enc, T defaultValue) {
-        return v -> v == null ? enc.encode(defaultValue) : enc.encode(v);
-    }
-
-    /**
-     * Like {@link #withDefault(Encoder, Object)}, but the default is lazily computed.
-     *
-     * <p>Note: when passing a lambda directly, the compiler may not distinguish
-     * between this overload and {@link #withDefault(Encoder, Object)}. In that case,
-     * assign the lambda to a typed variable first:
-     *
-     * <pre>{@code
-     * Supplier<List<Tag>> defaultTags = () -> List.of(Tag.UNTAGGED);
-     * property("tags", Article::tags, withDefault(list(nested(TAG_ENCODER)), defaultTags))
-     * }</pre>
-     *
-     * @param <T>          the domain value type
-     * @param enc          the inner encoder to apply
-     * @param defaultValue supplies the value to encode when the input is {@code null}
-     * @return an encoder that substitutes the supplied default for {@code null} input
-     */
-    public static <T> Encoder<@Nullable T, Object> withDefault(Encoder<T, Object> enc, Supplier<T> defaultValue) {
-        return v -> v == null ? enc.encode(defaultValue.get()) : enc.encode(v);
-    }
 }

@@ -1331,23 +1331,27 @@ The encoder API mirrors the decoder side:
 | `combine(...).map(T::new)` | `object(property(...), ...)` |
 | `nested(subDecoder)` | `nested(subEncoder)` |
 | `list(elementDecoder)` | `list(elementEncoder)` |
-| `nullable(dec)` | `nullable(enc)` |
-| `withDefault(dec, v)` | `withDefault(enc, v)` |
+| `nullable(dec)` | `nullableProperty("x", T::x, enc)` |
+| `withDefault(dec, v)` | `propertyWithDefault("x", T::x, enc, v)` |
 
-## 31. Encoding — nullable and withDefault
+## 31. Encoding — nullableProperty and propertyWithDefault
 
-Use `nullable(enc)` when null should pass through as null in the output:
+Null handling lives in the property layer, not inside the encoder. Value encoders (such as
+`string()`) always receive a non-null value, mirroring `field` / `optionalField` on the decoder side.
+
+Use `nullableProperty` for a getter that may return null; when it does, the value encoder is not
+invoked and null is written to the map:
 
 ```java
-property("description", Item::description, nullable(string()))
-// null → null in output
+nullableProperty("description", Item::description, string())
+// getter null → null in output
 ```
 
-Use `withDefault(enc, defaultValue)` when null should be replaced with a default:
+Use `propertyWithDefault` when null should be replaced with a default:
 
 ```java
-property("tags", Article::tags, withDefault(list(nested(TAG_ENCODER)), List.of()))
-// null → [] in output
+propertyWithDefault("tags", Article::tags, list(nested(TAG_ENCODER)), List.of())
+// getter null → [] in output
 ```
 
 ## 32. Encoding — nested objects

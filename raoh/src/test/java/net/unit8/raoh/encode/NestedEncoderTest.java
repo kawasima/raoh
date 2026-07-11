@@ -2,6 +2,8 @@ package net.unit8.raoh.encode;
 
 import org.junit.jupiter.api.Test;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.List;
 import java.util.Map;
 
@@ -31,13 +33,13 @@ class NestedEncoderTest {
 
     // --- Encoders ---
 
-    static final Encoder<Table, Map<String, Object>> TABLE_ENCODER = object(
+    static final Encoder<Table, Map<String, @Nullable Object>> TABLE_ENCODER = object(
             property("id",           Table::id,          long_().contramap(TableId::value)),
             property("table_number", Table::tableNumber, int_()),
             property("capacity",     Table::capacity,    int_())
     );
 
-    static final Encoder<Restaurant, Map<String, Object>> RESTAURANT_ENCODER = object(
+    static final Encoder<Restaurant, Map<String, @Nullable Object>> RESTAURANT_ENCODER = object(
             property("id",     Restaurant::id,     long_().contramap(RestaurantId::value)),
             property("name",   Restaurant::name,   string()),
             property("tables", Restaurant::tables, list(nested(TABLE_ENCODER)))

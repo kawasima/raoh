@@ -6,7 +6,7 @@ import java.util.function.Function;
 
 record Valid<T>(T value) implements Validated<T> {
     @Override
-    public <U> Validated<U> map(Function<T, U> f) {
+    public <U> Validated<U> map(Function<? super T, ? extends U> f) {
         return new Valid<>(f.apply(value));
     }
 

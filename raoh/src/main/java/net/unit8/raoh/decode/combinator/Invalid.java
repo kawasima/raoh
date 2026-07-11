@@ -8,7 +8,7 @@ import java.util.function.Function;
 record Invalid<T>(Issues issues) implements Validated<T> {
     @SuppressWarnings("unchecked")
     @Override
-    public <U> Validated<U> map(Function<T, U> f) {
+    public <U> Validated<U> map(Function<? super T, ? extends U> f) {
         return (Invalid<U>) this;
     }
 

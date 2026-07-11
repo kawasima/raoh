@@ -605,7 +605,7 @@ public final class Decoders {
      * @param fallback function to compute the recovery value from issues
      * @return a decoder that never fails
      */
-    public static <I extends @Nullable Object, T> Decoder<I, T> recover(Decoder<I, T> dec, Function<Issues, T> fallback) {
+    public static <I extends @Nullable Object, T> Decoder<I, T> recover(Decoder<I, T> dec, Function<? super Issues, ? extends T> fallback) {
         return (in, path) -> {
             var r = dec.decode(in, path);
             return switch (r) {

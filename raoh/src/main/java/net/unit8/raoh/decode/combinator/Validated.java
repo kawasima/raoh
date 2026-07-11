@@ -10,7 +10,7 @@ import java.util.function.Function;
 
 sealed interface Validated<T> permits Valid, Invalid {
 
-    <U> Validated<U> map(Function<T, U> f);
+    <U> Validated<U> map(Function<? super T, ? extends U> f);
 
     Result<T> toResult();
 

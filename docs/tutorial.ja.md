@@ -1333,23 +1333,25 @@ Map<String, Object> row = ITEM_ENCODER.encode(new Item(new ItemId(42L), "Widget"
 | `combine(...).map(T::new)` | `object(property(...), ...)` |
 | `nested(subDecoder)` | `nested(subEncoder)` |
 | `list(elementDecoder)` | `list(elementEncoder)` |
-| `nullable(dec)` | `nullable(enc)` |
-| `withDefault(dec, v)` | `withDefault(enc, v)` |
+| `nullable(dec)` | `nullableProperty("x", T::x, enc)` |
+| `withDefault(dec, v)` | `propertyWithDefault("x", T::x, enc, v)` |
 
-## 31. エンコード — nullable と withDefault
+## 31. エンコード — nullableProperty と propertyWithDefault
 
-出力で null をそのまま通したい場合は `nullable(enc)` を使います：
+null を扱う分岐はエンコーダー本体ではなく property 層が担います。値エンコーダー（`string()` など）は常に非null 値を受け取る形のままで、デコーダー側の `field` / `optionalField` と対称です。
+
+getter が null を返しうるプロパティは `nullableProperty` を使います。null のときは値エンコーダーを呼ばず、マップに null を書き込みます：
 
 ```java
-property("description", Item::description, nullable(string()))
-// null → 出力でも null
+nullableProperty("description", Item::description, string())
+// getter が null → 出力でも null
 ```
 
-null をデフォルト値に置き換えたい場合は `withDefault(enc, defaultValue)` を使います：
+null をデフォルト値に置き換えたい場合は `propertyWithDefault` を使います：
 
 ```java
-property("tags", Article::tags, withDefault(list(nested(TAG_ENCODER)), List.of()))
-// null → 出力では []
+propertyWithDefault("tags", Article::tags, list(nested(TAG_ENCODER)), List.of())
+// getter が null → 出力では []
 ```
 
 ## 32. エンコード — ネストしたオブジェクト

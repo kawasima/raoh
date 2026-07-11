@@ -69,7 +69,7 @@ public sealed interface Result<T extends @Nullable Object> permits Ok, Err {
      * @param f   the mapping function
      * @return a new result with the transformed value, or the original error
      */
-    default <U> Result<U> map(Function<T, U> f) {
+    default <U> Result<U> map(Function<? super T, ? extends U> f) {
         return switch (this) {
             case Ok<T> ok -> Result.ok(f.apply(ok.value()));
             case Err<T> err -> err.coerce();
@@ -96,7 +96,7 @@ public sealed interface Result<T extends @Nullable Object> permits Ok, Err {
      * @param f   the mapping function returning a {@link Result}
      * @return the result of applying {@code f}, or the original error
      */
-    default <U> Result<U> flatMap(Function<T, Result<U>> f) {
+    default <U> Result<U> flatMap(Function<? super T, ? extends Result<U>> f) {
         return switch (this) {
             case Ok<T> ok -> f.apply(ok.value());
             case Err<T> err -> err.coerce();
@@ -111,7 +111,7 @@ public sealed interface Result<T extends @Nullable Object> permits Ok, Err {
      * @param onErr function to apply if this is {@link Err}
      * @return the folded value
      */
-    default <R> R fold(Function<T, R> onOk, Function<Issues, R> onErr) {
+    default <R> R fold(Function<? super T, ? extends R> onOk, Function<? super Issues, ? extends R> onErr) {
         return switch (this) {
             case Ok<T> ok -> onOk.apply(ok.value());
             case Err<T> err -> onErr.apply(err.issues());
@@ -125,7 +125,7 @@ public sealed interface Result<T extends @Nullable Object> permits Ok, Err {
      * @return the decoded value
      * @throws RuntimeException if this is {@link Err}
      */
-    default T orElseThrow(Function<Issues, ? extends RuntimeException> exceptionMapper) {
+    default T orElseThrow(Function<? super Issues, ? extends RuntimeException> exceptionMapper) {
         return switch (this) {
             case Ok<T> ok -> ok.value();
             case Err<T> err -> throw exceptionMapper.apply(err.issues());
@@ -246,7 +246,7 @@ public sealed interface Result<T extends @Nullable Object> permits Ok, Err {
      * @param f   the function to combine the two values if both succeed
      * @return {@link Ok} with the combined value, or {@link Err} with all accumulated issues
      */
-    static <A, B, C> Result<C> map2(Result<A> ra, Result<B> rb, BiFunction<A, B, C> f) {
+    static <A, B, C> Result<C> map2(Result<A> ra, Result<B> rb, BiFunction<? super A, ? super B, ? extends C> f) {
         if (ra instanceof Ok<A> oa && rb instanceof Ok<B> ob) {
             return Result.ok(f.apply(oa.value(), ob.value()));
         }
@@ -332,7 +332,7 @@ public sealed interface Result<T extends @Nullable Object> permits Ok, Err {
      */
     static <I, T> Result<List<T>> traverse(
             List<I> items,
-            BiFunction<I, Path, Result<T>> f,
+            BiFunction<? super I, ? super Path, ? extends Result<T>> f,
             Path basePath) {
         Issues accumulated = Issues.EMPTY;
         List<T> values = new ArrayList<>(items.size());
@@ -360,7 +360,7 @@ public sealed interface Result<T extends @Nullable Object> permits Ok, Err {
      * @param f     the decoding function applied to each element together with its path
      * @return a result containing all decoded values, or all accumulated errors
      */
-    static <I, T> Result<List<T>> traverse(List<I> items, BiFunction<I, Path, Result<T>> f) {
+    static <I, T> Result<List<T>> traverse(List<I> items, BiFunction<? super I, ? super Path, ? extends Result<T>> f) {
         return traverse(items, f, Path.ROOT);
     }
 
@@ -381,7 +381,7 @@ public sealed interface Result<T extends @Nullable Object> permits Ok, Err {
      * @param f     the mapping function applied to each element
      * @return a result containing all mapped values, or all accumulated errors
      */
-    static <I, T> Result<List<T>> traverseResults(List<I> items, Function<I, Result<T>> f) {
+    static <I, T> Result<List<T>> traverseResults(List<I> items, Function<? super I, ? extends Result<T>> f) {
         return traverse(items, (item, path) -> f.apply(item), Path.ROOT);
     }
 }

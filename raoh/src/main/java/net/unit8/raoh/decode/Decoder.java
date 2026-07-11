@@ -51,7 +51,7 @@ public interface Decoder<I extends @Nullable Object, T extends @Nullable Object>
      * @param f   the mapping function
      * @return a new decoder that applies {@code f} to successful results
      */
-    default <U> Decoder<I, U> map(Function<T, U> f) {
+    default <U> Decoder<I, U> map(Function<? super T, ? extends U> f) {
         return (in, path) -> this.decode(in, path).map(f);
     }
 
@@ -63,7 +63,7 @@ public interface Decoder<I extends @Nullable Object, T extends @Nullable Object>
      * @param f   the mapping function returning a {@link Result}
      * @return a new decoder that flat-maps successful results through {@code f}
      */
-    default <U> Decoder<I, U> flatMap(Function<T, Result<U>> f) {
+    default <U> Decoder<I, U> flatMap(Function<? super T, ? extends Result<U>> f) {
         return (in, path) -> this.decode(in, path).flatMap(t -> {
             Result<U> r = f.apply(t);
             return switch (r) {
@@ -80,7 +80,7 @@ public interface Decoder<I extends @Nullable Object, T extends @Nullable Object>
      * @param f   the mapping function receiving both the decoded value and the path
      * @return a new decoder
      */
-    default <U> Decoder<I, U> flatMapWithPath(BiFunction<T, Path, Result<U>> f) {
+    default <U> Decoder<I, U> flatMapWithPath(BiFunction<? super T, ? super Path, ? extends Result<U>> f) {
         return (in, path) -> this.decode(in, path)
                 .flatMap(t -> f.apply(t, path));
     }
