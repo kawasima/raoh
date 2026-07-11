@@ -229,6 +229,29 @@ public sealed interface Result<T extends @Nullable Object> permits Ok, Err {
     }
 
     /**
+     * Creates a failed result, using {@code message} as a custom (resolve-proof) message when it is
+     * non-null and falling back to {@code defaultMessage} otherwise.
+     *
+     * <p>This unifies the common "a caller-supplied message overrides the built-in default" branch:
+     * a non-null {@code message} routes through {@link #failCustom} (so {@link MessageResolver} will
+     * not overwrite it), while {@code null} routes through {@link #fail} with the default message.
+     *
+     * @param <T>            the value type
+     * @param path           the path where the error occurred
+     * @param code           the error code
+     * @param message        the caller-supplied custom message, or {@code null} to use the default
+     * @param defaultMessage the built-in fallback message used when {@code message} is {@code null}
+     * @param meta           additional metadata
+     * @return an {@link Err} result carrying either the custom or the default message
+     */
+    static <T extends @Nullable Object> Result<T> failWith(
+            Path path, String code, @Nullable String message, String defaultMessage, Map<String, Object> meta) {
+        return message != null
+                ? failCustom(path, code, message, meta)
+                : fail(path, code, defaultMessage, meta);
+    }
+
+    /**
      * Combines two independent results, accumulating errors from both if either fails.
      *
      * <p>Unlike {@link #flatMap}, both {@code ra} and {@code rb} are evaluated regardless of

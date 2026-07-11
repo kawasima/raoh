@@ -56,9 +56,8 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
         return chain((value, path) -> {
             if (value < n) {
                 var meta = Map.<String, Object>of("min", n, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be at least %d".formatted(n), meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message,
+                        "must be at least %d".formatted(n), meta);
             }
             return Result.ok(value);
         });
@@ -85,9 +84,8 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
         return chain((value, path) -> {
             if (value > n) {
                 var meta = Map.<String, Object>of("max", n, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be at most %d".formatted(n), meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message,
+                        "must be at most %d".formatted(n), meta);
             }
             return Result.ok(value);
         });
@@ -116,9 +114,8 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
         return chain((value, path) -> {
             if (value < min || value > max) {
                 var meta = Map.<String, Object>of("min", min, "max", max, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be between %d and %d".formatted(min, max), meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message,
+                        "must be between %d and %d".formatted(min, max), meta);
             }
             return Result.ok(value);
         });
@@ -143,9 +140,7 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
         return chain((value, path) -> {
             if (value <= 0) {
                 var meta = Map.<String, Object>of("min", 1L, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be positive", meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message, "must be positive", meta);
             }
             return Result.ok(value);
         });
@@ -170,9 +165,7 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
         return chain((value, path) -> {
             if (value >= 0) {
                 var meta = Map.<String, Object>of("max", -1L, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be negative", meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message, "must be negative", meta);
             }
             return Result.ok(value);
         });
@@ -197,9 +190,7 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
         return chain((value, path) -> {
             if (value < 0) {
                 var meta = Map.<String, Object>of("min", 0L, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be non-negative", meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message, "must be non-negative", meta);
             }
             return Result.ok(value);
         });
@@ -224,9 +215,7 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
         return chain((value, path) -> {
             if (value > 0) {
                 var meta = Map.<String, Object>of("max", 0L, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be non-positive", meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message, "must be non-positive", meta);
             }
             return Result.ok(value);
         });
@@ -272,10 +261,8 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
         return chain((value, path) -> {
             if (value % n != 0) {
                 var meta = Map.<String, Object>of("divisor", n, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.NOT_MULTIPLE_OF, message, meta)
-                        : Result.fail(path, ErrorCodes.NOT_MULTIPLE_OF,
-                                "must be a multiple of %d".formatted(n), meta);
+                return Result.failWith(path, ErrorCodes.NOT_MULTIPLE_OF, message,
+                        "must be a multiple of %d".formatted(n), meta);
             }
             return Result.ok(value);
         });

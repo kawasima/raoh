@@ -54,9 +54,8 @@ public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, Bi
         return chain((value, path) -> {
             if (value.compareTo(n) < 0) {
                 var meta = Map.<String, Object>of("min", n, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be at least %s".formatted(n), meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message,
+                        "must be at least %s".formatted(n), meta);
             }
             return Result.ok(value);
         });
@@ -83,9 +82,8 @@ public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, Bi
         return chain((value, path) -> {
             if (value.compareTo(n) > 0) {
                 var meta = Map.<String, Object>of("max", n, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be at most %s".formatted(n), meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message,
+                        "must be at most %s".formatted(n), meta);
             }
             return Result.ok(value);
         });
@@ -114,10 +112,8 @@ public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, Bi
         return chain((value, path) -> {
             if (value.compareTo(min) < 0 || value.compareTo(max) > 0) {
                 var meta = Map.<String, Object>of("min", min, "max", max, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE,
-                                "must be between %s and %s".formatted(min, max), meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message,
+                        "must be between %s and %s".formatted(min, max), meta);
             }
             return Result.ok(value);
         });
@@ -142,9 +138,7 @@ public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, Bi
         return chain((value, path) -> {
             if (value.compareTo(BigDecimal.ZERO) <= 0) {
                 var meta = Map.<String, Object>of("min", BigDecimal.ZERO, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be positive", meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message, "must be positive", meta);
             }
             return Result.ok(value);
         });
@@ -169,9 +163,7 @@ public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, Bi
         return chain((value, path) -> {
             if (value.compareTo(BigDecimal.ZERO) >= 0) {
                 var meta = Map.<String, Object>of("max", BigDecimal.ZERO, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be negative", meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message, "must be negative", meta);
             }
             return Result.ok(value);
         });
@@ -196,9 +188,7 @@ public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, Bi
         return chain((value, path) -> {
             if (value.compareTo(BigDecimal.ZERO) < 0) {
                 var meta = Map.<String, Object>of("min", BigDecimal.ZERO, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be non-negative", meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message, "must be non-negative", meta);
             }
             return Result.ok(value);
         });
@@ -223,9 +213,7 @@ public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, Bi
         return chain((value, path) -> {
             if (value.compareTo(BigDecimal.ZERO) > 0) {
                 var meta = Map.<String, Object>of("max", BigDecimal.ZERO, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be non-positive", meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message, "must be non-positive", meta);
             }
             return Result.ok(value);
         });
@@ -252,10 +240,8 @@ public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, Bi
         return chain((value, path) -> {
             if (value.remainder(n).compareTo(BigDecimal.ZERO) != 0) {
                 var meta = Map.<String, Object>of("divisor", n, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.NOT_MULTIPLE_OF, message, meta)
-                        : Result.fail(path, ErrorCodes.NOT_MULTIPLE_OF,
-                                "must be a multiple of %s".formatted(n), meta);
+                return Result.failWith(path, ErrorCodes.NOT_MULTIPLE_OF, message,
+                        "must be a multiple of %s".formatted(n), meta);
             }
             return Result.ok(value);
         });
@@ -282,10 +268,8 @@ public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, Bi
         return chain((value, path) -> {
             if (value.scale() > s) {
                 var meta = Map.<String, Object>of("maxScale", s, "actualScale", value.scale());
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_SCALE, message, meta)
-                        : Result.fail(path, ErrorCodes.INVALID_SCALE,
-                                "too many decimal places (max %d)".formatted(s), meta);
+                return Result.failWith(path, ErrorCodes.INVALID_SCALE, message,
+                        "too many decimal places (max %d)".formatted(s), meta);
             }
             return Result.ok(value);
         });
