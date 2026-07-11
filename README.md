@@ -35,31 +35,39 @@ If you are coming from a validator-oriented library, the main difference in feel
 
 ## Installation
 
-Raoh is published to Maven Central under the `net.unit8.raoh` group. Add the core
-module, plus whichever boundary module matches your input source. For the version,
-use the latest shown on the Maven Central badge above.
+Raoh is distributed under the `net.unit8.raoh` group ID on Maven Central. Add the
+core module, plus whichever boundary module matches your input source. Define the
+version once as a property — replace the value below with the latest shown on the
+Maven Central badge above.
 
 ```xml
-<!-- Core: decoders, encoders, error model -->
-<dependency>
-    <groupId>net.unit8.raoh</groupId>
-    <artifactId>raoh</artifactId>
-    <version>${raoh.version}</version>
-</dependency>
+<properties>
+    <!-- Replace with the latest version from the Maven Central badge above -->
+    <raoh.version>1.0.0</raoh.version>
+</properties>
 
-<!-- Optional: decode Jackson JsonNode (pulls in Jackson 3) -->
-<dependency>
-    <groupId>net.unit8.raoh</groupId>
-    <artifactId>raoh-json</artifactId>
-    <version>${raoh.version}</version>
-</dependency>
+<dependencies>
+    <!-- Core: decoders, encoders, error model -->
+    <dependency>
+        <groupId>net.unit8.raoh</groupId>
+        <artifactId>raoh</artifactId>
+        <version>${raoh.version}</version>
+    </dependency>
 
-<!-- Optional: decode jOOQ Record (jOOQ is a provided dependency) -->
-<dependency>
-    <groupId>net.unit8.raoh</groupId>
-    <artifactId>raoh-jooq</artifactId>
-    <version>${raoh.version}</version>
-</dependency>
+    <!-- Optional: decode Jackson JsonNode (pulls in Jackson 3) -->
+    <dependency>
+        <groupId>net.unit8.raoh</groupId>
+        <artifactId>raoh-json</artifactId>
+        <version>${raoh.version}</version>
+    </dependency>
+
+    <!-- Optional: decode jOOQ Record (jOOQ is a provided dependency) -->
+    <dependency>
+        <groupId>net.unit8.raoh</groupId>
+        <artifactId>raoh-jooq</artifactId>
+        <version>${raoh.version}</version>
+    </dependency>
+</dependencies>
 ```
 
 ## Building from source
