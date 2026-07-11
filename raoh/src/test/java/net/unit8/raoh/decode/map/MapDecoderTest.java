@@ -596,6 +596,26 @@ class MapDecoderTest {
     }
 
     @Test
+    void multipleOfZeroThrowsAtConstruction() {
+        // A zero divisor is a schema-author error, rejected fast at construction rather than
+        // throwing ArithmeticException mid-decode (see #66).
+        assertThrows(IllegalArgumentException.class, () -> int_().multipleOf(0));
+        assertThrows(IllegalArgumentException.class, () -> long_().multipleOf(0L));
+        assertThrows(IllegalArgumentException.class, () -> decimal().multipleOf(BigDecimal.ZERO));
+        // A scale-zero but non-zero divisor (e.g. 0.00) must also be rejected.
+        assertThrows(IllegalArgumentException.class, () -> decimal().multipleOf(new BigDecimal("0.00")));
+    }
+
+    @Test
+    void rangeMinGreaterThanMaxThrowsAtConstruction() {
+        assertThrows(IllegalArgumentException.class, () -> int_().range(10, 0));
+        assertThrows(IllegalArgumentException.class, () -> long_().range(10L, 0L));
+        assertThrows(IllegalArgumentException.class, () -> decimal().range(new BigDecimal("10"), new BigDecimal("0")));
+        // Equal bounds are a valid (single-value) range, not an error.
+        assertEquals(5, assertOk(field("v", int_().range(5, 5)).decode(Map.of("v", 5))));
+    }
+
+    @Test
     void nestedObject() {
         var dec = combine(
                 field("name", string()),
