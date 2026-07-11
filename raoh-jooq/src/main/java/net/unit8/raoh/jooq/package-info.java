@@ -5,11 +5,13 @@
  * {@link org.jooq.Record} (one row) into a domain object. To decode the result of a query, apply
  * such a decoder to the rows the caller has already fetched — raoh does not run the query itself.
  *
- * <p><strong>Single row.</strong> Apply the decoder directly to a fetched record:
+ * <p><strong>Single row.</strong> Apply the decoder directly to a fetched record. Use
+ * {@code fetchSingle()} when exactly one row is expected ({@code fetchOne()} instead returns
+ * {@code null} for no row, which would make "no row" look like a decode failure):
  *
  * <pre>{@code
  * Result<Problem> one = PROBLEM_DECODER.decode(
- *         ctx.selectFrom(PROBLEMS).where(ID.eq(id)).fetchOne());
+ *         ctx.selectFrom(PROBLEMS).where(ID.eq(id)).fetchSingle());
  *
  * // Zero-or-one row: keep the "no row" case as Optional, the decode outcome as Result
  * Optional<Result<Problem>> maybe = ctx.selectFrom(PROBLEMS).where(ID.eq(id))
@@ -26,9 +28,9 @@
  *         Result.traverse(ctx.selectFrom(PROBLEMS).fetch(), PROBLEM_DECODER::decode);
  * }</pre>
  *
- * <p>{@code traverse} infers its element type from the arguments, so a
- * {@code Result<SomeGeneratedRecord>} (a list of a subtype of {@code Record}) decodes cleanly with a
- * {@code Decoder<Record, T>} — no copy or cast is needed. Choose how to surface a failure on the
+ * <p>{@code traverse} infers its element type from the arguments, so an
+ * {@code org.jooq.Result<SomeGeneratedRecord>} (a list of a subtype of {@code org.jooq.Record})
+ * decodes cleanly with a {@code Decoder<org.jooq.Record, T>} — no copy or cast is needed. Choose how to surface a failure on the
  * returned {@link net.unit8.raoh.Result}: {@link net.unit8.raoh.Result#getOrThrow()} to throw, or
  * {@link net.unit8.raoh.Result#orElseThrow(java.util.function.Function)} to map the issues to a
  * domain exception.
