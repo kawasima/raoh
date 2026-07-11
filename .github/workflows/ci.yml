@@ -13,7 +13,7 @@ concurrency:
 jobs:
   build:
     name: Build & Test (JDK 25)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 25
@@ -27,7 +27,7 @@ jobs:
 
   nullcheck:
     name: NullAway null-analysis gate (JDK 25)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 25
