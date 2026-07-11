@@ -278,6 +278,17 @@ class JooqDecoderTest {
         assertInstanceOf(Err.class, err);
     }
 
+    @Test
+    void nullableFieldTreatsNullRecordAsNull() {
+        // A null record is tolerated as absent -> null, consistent with optionalField /
+        // optionalNullableField (field alone would reject it as a required error).
+        var dec = nullableField("display_name", string());
+        org.jooq.Record nullRecord = null;
+        var result = dec.decode(nullRecord);
+        assertInstanceOf(Ok.class, result);
+        assertNull(((Ok<String>) result).value());
+    }
+
     // -------------------------------------------------------------------------
     // Value object composition — Money from two columns
     // -------------------------------------------------------------------------

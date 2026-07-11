@@ -281,6 +281,16 @@ class JsonDecoderTest {
     }
 
     @Test
+    void nullableFieldTreatsNullAndNonObjectInputAsNull() {
+        // A null or non-object parent is tolerated as absent -> null, consistent with
+        // optionalField / optionalNullableField (field alone would reject it as a required error).
+        var dec = nullableField("val", string());
+        assertNull(assertOk(dec.decode((JsonNode) null)));
+        assertNull(assertOk(dec.decode(parse("[]"))));
+        assertNull(assertOk(dec.decode(parse("\"scalar\""))));
+    }
+
+    @Test
     void presenceTriState() {
         var dec = optionalNullableField("email", string());
         var absent = assertOk(dec.decode(parse("{}")));
