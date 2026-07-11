@@ -204,6 +204,25 @@ class MapEncoderTest {
     }
 
     @Test
+    void discriminateToleratesNullKeyFromVariant() {
+        // Keys are non-null by contract, but a variant encoder is arbitrary. A null key
+        // must not NPE during tag injection; the null-keyed entry passes through.
+        Encoder<Circle, Map<String, @Nullable Object>> nullKey = c -> {
+            var m = new java.util.LinkedHashMap<String, @Nullable Object>();
+            m.put(null, "x");
+            m.put("radius", c.radius());
+            return m;
+        };
+        Encoder<Shape, Map<String, @Nullable Object>> enc =
+                discriminate("type", variant(Circle.class, "circle", nullKey));
+
+        var out = enc.encode(new Circle(1.0));
+        assertEquals("circle", out.get("type"));
+        assertEquals(1.0, out.get("radius"));
+        assertTrue(out.containsKey(null));
+    }
+
+    @Test
     void discriminateTagIsAuthoritativeOverVariantOutput() {
         // A variant encoder that (incorrectly) also emits the discriminator key.
         Encoder<Circle, Map<String, @Nullable Object>> rogue = object(

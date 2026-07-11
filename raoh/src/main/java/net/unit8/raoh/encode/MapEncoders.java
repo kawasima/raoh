@@ -321,7 +321,10 @@ public final class MapEncoders {
             var out = new LinkedHashMap<String, @Nullable Object>(body.size() + 2);
             out.put(fieldName, v.tag());
             body.forEach((k, val) -> {
-                if (!k.equals(fieldName)) {
+                // fieldName is non-null; call equals on it so a variant that emits a null key
+                // (keys are non-null by contract, but the encoder is arbitrary) drops through
+                // as a normal entry instead of throwing.
+                if (!fieldName.equals(k)) {
                     out.put(k, val);
                 }
             });
