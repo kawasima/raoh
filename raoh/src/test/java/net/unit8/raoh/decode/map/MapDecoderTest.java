@@ -611,8 +611,11 @@ class MapDecoderTest {
         assertThrows(IllegalArgumentException.class, () -> int_().range(10, 0));
         assertThrows(IllegalArgumentException.class, () -> long_().range(10L, 0L));
         assertThrows(IllegalArgumentException.class, () -> decimal().range(new BigDecimal("10"), new BigDecimal("0")));
+        assertThrows(IllegalArgumentException.class, () -> double_().range(10.0, 0.0));
+        assertThrows(IllegalArgumentException.class, () -> float_().range(10f, 0f));
         // Equal bounds are a valid (single-value) range, not an error.
         assertEquals(5, assertOk(field("v", int_().range(5, 5)).decode(Map.of("v", 5))));
+        assertEquals(1.0, assertOk(field("v", double_().range(1.0, 1.0)).decode(Map.of("v", 1.0))));
     }
 
     @Test
