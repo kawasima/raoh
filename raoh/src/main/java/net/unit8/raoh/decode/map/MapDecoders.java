@@ -167,6 +167,41 @@ public final class MapDecoders {
         };
     }
 
+    /**
+     * Creates a field decoder that lands directly on a {@code @Nullable T}: a missing key or a
+     * present {@code null} value both decode to {@code null}, and any other value is decoded with
+     * {@code dec}.
+     *
+     * <p>This is the {@code @Nullable}-target sibling of {@link #optionalField} (which targets
+     * {@link Optional Optional&lt;T&gt;}) and {@link #optionalNullableField} (which targets
+     * {@link Presence Presence&lt;T&gt;}). Unlike {@code optionalNullableField}, it does <em>not</em>
+     * preserve the absent/present-null distinction — it collapses both to {@code null}. Use it to
+     * populate a plain {@code @Nullable} domain field or constructor argument without an intermediate
+     * {@code Optional} or {@code Presence}.
+     *
+     * <p>It is the natural read-back for the encoder-side
+     * {@link net.unit8.raoh.encode.MapEncoders#nullableProperty(String, java.util.function.Function, net.unit8.raoh.encode.Encoder)
+     * nullableProperty}: bridging by hand with {@code optionalField(name, dec).map(o -> o.orElse(null))}
+     * instead fails on a present {@code null}, because {@code optionalField} only treats an absent key
+     * as empty and then feeds the {@code null} value to a non-null {@code dec}.
+     *
+     * @param <T>  the decoded value type
+     * @param name the field name (map key)
+     * @param dec  the decoder for the field value when present and non-null
+     * @return a decoder that produces the decoded value, or {@code null} when the key is absent or its
+     *         value is {@code null}
+     */
+    // Returns a Decoder<..., @Nullable T>. NullAway cannot verify the type-parameter nullness of the
+    // @Nullable T return, the same honest widening already suppressed in ObjectDecoders.nullable.
+    @SuppressWarnings("NullAway")
+    public static <T> Decoder<Map<String, Object>, @Nullable T> nullableField(String name, Decoder<@Nullable Object, T> dec) {
+        // A null map is treated as absent (-> null), consistent with optionalField / optionalNullableField;
+        // field(...) alone would reject it as a required error. For a non-null map, field handles the rest:
+        // an absent key reaches nullable(dec) as a null value, which decodes to null.
+        var inner = field(name, ObjectDecoders.nullable(dec));
+        return (in, path) -> in == null ? Result.<@Nullable T>ok(null) : inner.decode(in, path);
+    }
+
     // --- discriminate ---
 
     /**
