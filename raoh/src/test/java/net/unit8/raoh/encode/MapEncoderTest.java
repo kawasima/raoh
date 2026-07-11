@@ -195,6 +195,15 @@ class MapEncoderTest {
     }
 
     @Test
+    void discriminateThrowsForDuplicateTag() {
+        // Two distinct classes sharing one tag would emit a non-unique discriminator
+        // that the tag-keyed decoder side cannot round-trip.
+        assertThrows(IllegalArgumentException.class, () -> discriminate("type",
+                variant(Circle.class, "shape", CIRCLE_ENCODER),
+                variant(Rect.class,   "shape", RECT_ENCODER)));
+    }
+
+    @Test
     void discriminateTagIsAuthoritativeOverVariantOutput() {
         // A variant encoder that (incorrectly) also emits the discriminator key.
         Encoder<Circle, Map<String, @Nullable Object>> rogue = object(

@@ -2,6 +2,7 @@ package net.unit8.raoh.encode;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -285,16 +286,23 @@ public final class MapEncoders {
      * @param fieldName the discriminator key written into the output map
      * @param variants  the variants, each pairing a concrete class with its tag and encoder
      * @return an encoder that dispatches on runtime class and injects the discriminator tag
-     * @throws IllegalArgumentException if two variants register the same class (detected here), or,
-     *         from the returned encoder, if it is given a value whose class has no registered variant
+     * @throws IllegalArgumentException if two variants register the same class or the same tag
+     *         (both detected here), or, from the returned encoder, if it is given a value whose
+     *         class has no registered variant
      */
     @SafeVarargs
     public static <T> Encoder<T, Map<String, @Nullable Object>> discriminate(
             String fieldName, Variant<? extends T>... variants) {
         var byClass = new LinkedHashMap<Class<?>, Variant<? extends T>>(variants.length * 2);
+        var seenTags = new HashSet<String>(variants.length * 2);
         for (var v : variants) {
             if (byClass.put(v.type(), v) != null) {
                 throw new IllegalArgumentException("duplicate variant for " + v.type().getName());
+            }
+            // Reject duplicate tags too: two classes sharing a tag would emit a non-unique
+            // discriminator that the tag-keyed decoder side cannot round-trip.
+            if (!seenTags.add(v.tag())) {
+                throw new IllegalArgumentException("duplicate variant tag '" + v.tag() + "'");
             }
         }
         return value -> {
