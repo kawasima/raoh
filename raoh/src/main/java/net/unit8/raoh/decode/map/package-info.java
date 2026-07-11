@@ -8,4 +8,7 @@
  *
  * @see net.unit8.raoh.decode.map.MapDecoders
  */
+@NullMarked
 package net.unit8.raoh.decode.map;
+
+import org.jspecify.annotations.NullMarked;

@@ -1331,24 +1331,43 @@ The encoder API mirrors the decoder side:
 | `combine(...).map(T::new)` | `object(property(...), ...)` |
 | `nested(subDecoder)` | `nested(subEncoder)` |
 | `list(elementDecoder)` | `list(elementEncoder)` |
-| `nullable(dec)` | `nullable(enc)` |
-| `withDefault(dec, v)` | `withDefault(enc, v)` |
+| `nullable(dec)` | `nullableProperty("x", T::x, enc)` |
+| `withDefault(dec, v)` | `propertyWithDefault("x", T::x, enc, v)` |
 
-## 31. Encoding — nullable and withDefault
+## 31. Encoding — nullableProperty and propertyWithDefault
 
-Use `nullable(enc)` when null should pass through as null in the output:
+Null handling lives in the property layer, not inside the encoder. Value encoders (such as
+`string()`) always receive a non-null value, mirroring `field` / `optionalField` on the decoder side.
 
-```java
-property("description", Item::description, nullable(string()))
-// null → null in output
-```
-
-Use `withDefault(enc, defaultValue)` when null should be replaced with a default:
+Use `nullableProperty` for a getter that may return null; when it does, the value encoder is not
+invoked and null is written to the map:
 
 ```java
-property("tags", Article::tags, withDefault(list(nested(TAG_ENCODER)), List.of()))
-// null → [] in output
+nullableProperty("description", Item::description, string())
+// getter null → null in output
 ```
+
+Use `propertyWithDefault` when null should be replaced with a default:
+
+```java
+propertyWithDefault("tags", Article::tags, list(nested(TAG_ENCODER)), List.of())
+// getter null → [] in output
+```
+
+### One line for consumers running null analysis
+
+If your own code is `@NullMarked` and you run strict null analysis (Eclipse JDT / ecj,
+NullAway, IntelliJ), you may see "unchecked conversion to `@NonNull`" warnings at the boundary
+with raoh. These are not nullness defects — they are the well-known interop noise between a
+`@NullMarked` module and non-null-annotated JDK / library types. raoh itself silences them with
+one line in its `.settings/org.eclipse.jdt.core.prefs`:
+
+```
+org.eclipse.jdt.core.compiler.problem.nullUncheckedConversion=ignore
+```
+
+For a batch ecj build, pass this key via `-properties`. Genuine null-contract violations
+(`nullSpecViolation`) stay enabled.
 
 ## 32. Encoding — nested objects
 

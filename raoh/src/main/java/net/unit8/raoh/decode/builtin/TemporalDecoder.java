@@ -5,6 +5,8 @@ import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.Map;
 
 /**
@@ -33,7 +35,7 @@ import java.util.Map;
  * @param <I> the input type
  * @param <T> the temporal type (must be {@link Comparable} to itself)
  */
-public class TemporalDecoder<I, T extends Comparable<? super T>> implements Decoder<I, T> {
+public class TemporalDecoder<I extends @Nullable Object, T extends Comparable<? super T>> implements Decoder<I, T> {
 
     private final Decoder<I, T> inner;
 
@@ -68,7 +70,7 @@ public class TemporalDecoder<I, T extends Comparable<? super T>> implements Deco
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder with the constraint applied
      */
-    public TemporalDecoder<I, T> before(T bound, String message) {
+    public TemporalDecoder<I, T> before(T bound, @Nullable String message) {
         return chain((value, path) -> {
             if (value.compareTo(bound) >= 0) {
                 var meta = Map.<String, Object>of("before", bound, "actual", value);
@@ -97,7 +99,7 @@ public class TemporalDecoder<I, T extends Comparable<? super T>> implements Deco
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder with the constraint applied
      */
-    public TemporalDecoder<I, T> after(T bound, String message) {
+    public TemporalDecoder<I, T> after(T bound, @Nullable String message) {
         return chain((value, path) -> {
             if (value.compareTo(bound) <= 0) {
                 var meta = Map.<String, Object>of("after", bound, "actual", value);
@@ -130,7 +132,7 @@ public class TemporalDecoder<I, T extends Comparable<? super T>> implements Deco
      * @return a new decoder with the constraint applied
      * @throws IllegalArgumentException if {@code from} is greater than {@code to}
      */
-    public TemporalDecoder<I, T> between(T from, T to, String message) {
+    public TemporalDecoder<I, T> between(T from, T to, @Nullable String message) {
         if (from.compareTo(to) > 0) {
             throw new IllegalArgumentException(
                     "from (%s) must not be greater than to (%s)".formatted(from, to));

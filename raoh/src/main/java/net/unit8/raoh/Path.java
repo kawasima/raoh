@@ -1,5 +1,7 @@
 package net.unit8.raoh;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -15,10 +17,10 @@ public final class Path {
     /** The root path (empty segments). */
     public static final Path ROOT = new Path(null, null);
 
-    private final Path parent;
-    private final String head;
+    private final @Nullable Path parent;
+    private final @Nullable String head;
 
-    private Path(Path parent, String head) {
+    private Path(@Nullable Path parent, @Nullable String head) {
         this.parent = parent;
         this.head = head;
     }
@@ -98,7 +100,7 @@ public final class Path {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(@Nullable Object o) {
         if (this == o) return true;
         if (!(o instanceof Path other)) return false;
         return segments().equals(other.segments());

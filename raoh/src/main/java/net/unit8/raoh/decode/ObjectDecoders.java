@@ -18,6 +18,8 @@ import net.unit8.raoh.decode.builtin.RecordDecoder;
 import net.unit8.raoh.decode.builtin.StringDecoder;
 import net.unit8.raoh.decode.builtin.TemporalDecoder;
 
+import org.jspecify.annotations.Nullable;
+
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -57,9 +59,13 @@ public final class ObjectDecoders {
      *
      * @return a string decoder for {@code Object} input
      */
-    public static StringDecoder<Object> string() {
-        Decoder<Object, String> base = allowBlankBase();
-        return new StringDecoder<>(base, base);
+    // NullAway (JSpecify mode) cannot yet see that a concrete Decoder<@Nullable Object, String>
+    // matches the constructor's Decoder<I, String> when I is instantiated to @Nullable Object;
+    // the types are identical, so this is a checker generics limitation, not a nullness hole.
+    @SuppressWarnings("NullAway")
+    public static StringDecoder<@Nullable Object> string() {
+        Decoder<@Nullable Object, String> base = allowBlankBase();
+        return new StringDecoder<@Nullable Object>(base, base);
     }
 
     /**
@@ -67,11 +73,13 @@ public final class ObjectDecoders {
      *
      * @return a string decoder for {@code Object} input that allows blank strings
      */
-    public static StringDecoder<Object> allowBlankString() {
-        return new StringDecoder<>(allowBlankBase());
+    // See string(): NullAway generics limitation on Decoder<@Nullable Object, String> vs Decoder<I, String>.
+    @SuppressWarnings("NullAway")
+    public static StringDecoder<@Nullable Object> allowBlankString() {
+        return new StringDecoder<@Nullable Object>(allowBlankBase());
     }
 
-    private static Decoder<Object, String> allowBlankBase() {
+    private static Decoder<@Nullable Object, String> allowBlankBase() {
         return (in, path) -> {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
@@ -93,7 +101,7 @@ public final class ObjectDecoders {
      *
      * @return an integer decoder for {@code Object} input
      */
-    public static IntDecoder<Object> int_() {
+    public static IntDecoder<@Nullable Object> int_() {
         return new IntDecoder<>((in, path) -> {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
@@ -118,7 +126,7 @@ public final class ObjectDecoders {
      *
      * @return a long decoder for {@code Object} input
      */
-    public static LongDecoder<Object> long_() {
+    public static LongDecoder<@Nullable Object> long_() {
         return new LongDecoder<>((in, path) -> {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
@@ -143,7 +151,7 @@ public final class ObjectDecoders {
      *
      * @return a double decoder for {@code Object} input
      */
-    public static DoubleDecoder<Object> double_() {
+    public static DoubleDecoder<@Nullable Object> double_() {
         return new DoubleDecoder<>((in, path) -> {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
@@ -168,7 +176,7 @@ public final class ObjectDecoders {
      *
      * @return a float decoder for {@code Object} input
      */
-    public static FloatDecoder<Object> float_() {
+    public static FloatDecoder<@Nullable Object> float_() {
         return new FloatDecoder<>((in, path) -> {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
@@ -192,7 +200,7 @@ public final class ObjectDecoders {
      *
      * @return a boolean decoder for {@code Object} input
      */
-    public static BoolDecoder<Object> bool() {
+    public static BoolDecoder<@Nullable Object> bool() {
         return new BoolDecoder<>((in, path) -> {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
@@ -214,7 +222,7 @@ public final class ObjectDecoders {
      *
      * @return a decimal decoder for {@code Object} input
      */
-    public static DecimalDecoder<Object> decimal() {
+    public static DecimalDecoder<@Nullable Object> decimal() {
         return new DecimalDecoder<>((in, path) -> {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
@@ -241,7 +249,7 @@ public final class ObjectDecoders {
      *
      * @return a temporal decoder for {@code Object} input producing {@link LocalDate}
      */
-    public static TemporalDecoder<Object, LocalDate> date() {
+    public static TemporalDecoder<@Nullable Object, LocalDate> date() {
         return new TemporalDecoder<>((in, path) -> switch (in) {
             case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
             case LocalDate d -> Result.ok(d);
@@ -259,7 +267,7 @@ public final class ObjectDecoders {
      *
      * @return a temporal decoder for {@code Object} input producing {@link LocalTime}
      */
-    public static TemporalDecoder<Object, LocalTime> time() {
+    public static TemporalDecoder<@Nullable Object, LocalTime> time() {
         return new TemporalDecoder<>((in, path) -> switch (in) {
             case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
             case LocalTime t -> Result.ok(t);
@@ -276,7 +284,7 @@ public final class ObjectDecoders {
      *
      * @return a temporal decoder for {@code Object} input producing {@link LocalDateTime}
      */
-    public static TemporalDecoder<Object, LocalDateTime> dateTime() {
+    public static TemporalDecoder<@Nullable Object, LocalDateTime> dateTime() {
         return temporalOf(LocalDateTime.class, "date-time");
     }
 
@@ -289,7 +297,7 @@ public final class ObjectDecoders {
      *
      * @return a temporal decoder for {@code Object} input producing {@link Instant}
      */
-    public static TemporalDecoder<Object, Instant> iso8601() {
+    public static TemporalDecoder<@Nullable Object, Instant> iso8601() {
         return new TemporalDecoder<>((in, path) -> switch (in) {
             case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
             case Instant i -> Result.ok(i);
@@ -306,7 +314,7 @@ public final class ObjectDecoders {
      *
      * @return a temporal decoder for {@code Object} input producing {@link OffsetDateTime}
      */
-    public static TemporalDecoder<Object, OffsetDateTime> offsetDateTime() {
+    public static TemporalDecoder<@Nullable Object, OffsetDateTime> offsetDateTime() {
         return temporalOf(OffsetDateTime.class, "offset-date-time");
     }
 
@@ -315,7 +323,7 @@ public final class ObjectDecoders {
                 Map.of("expected", expected, "actual", actual.getClass().getSimpleName()));
     }
 
-    private static <T extends Comparable<? super T>> TemporalDecoder<Object, T> temporalOf(
+    private static <T extends Comparable<? super T>> TemporalDecoder<@Nullable Object, T> temporalOf(
             Class<T> type, String typeName) {
         return new TemporalDecoder<>((in, path) -> {
             if (in == null) {
@@ -339,10 +347,14 @@ public final class ObjectDecoders {
      * @param dec the inner decoder to apply when the value is non-null
      * @return a decoder that passes through {@code null} without error
      */
-    public static <T> Decoder<Object, T> nullable(Decoder<Object, T> dec) {
+    // The null branch deliberately produces a Result whose value is null (Decoder<..., @Nullable T>).
+    // NullAway cannot verify the type-parameter variance of the lambda's Result<@Nullable T> return,
+    // so this single honest nullness-widening site is suppressed.
+    @SuppressWarnings("NullAway")
+    public static <T> Decoder<@Nullable Object, @Nullable T> nullable(Decoder<@Nullable Object, T> dec) {
         return (in, path) -> {
             if (in == null) {
-                return Result.ok(null);
+                return Result.<@Nullable T>ok(null);
             }
             return dec.decode(in, path);
         };
@@ -359,7 +371,7 @@ public final class ObjectDecoders {
      * @param elementDec the decoder for each list element
      * @return a list decoder for {@code Object} input
      */
-    public static <T> ListDecoder<Object, T> list(Decoder<Object, T> elementDec) {
+    public static <T> ListDecoder<@Nullable Object, T> list(Decoder<@Nullable Object, T> elementDec) {
         return new ListDecoder<>((in, path) -> {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
@@ -397,7 +409,7 @@ public final class ObjectDecoders {
      * @param valDec the decoder for each map value
      * @return a record decoder for {@code Object} input
      */
-    public static <V> RecordDecoder<Object, V> map(Decoder<Object, V> valDec) {
+    public static <V> RecordDecoder<@Nullable Object, V> map(Decoder<@Nullable Object, V> valDec) {
         return new RecordDecoder<>((in, path) -> {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
@@ -436,7 +448,7 @@ public final class ObjectDecoders {
      *
      * @return a byte array decoder for {@code Object} input
      */
-    public static Decoder<Object, byte[]> bytes() {
+    public static Decoder<@Nullable Object, byte[]> bytes() {
         return (in, path) -> {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
@@ -458,8 +470,8 @@ public final class ObjectDecoders {
      * @param cls the enum class
      * @return a decoder that produces enum constants from string input
      */
-    public static <E extends Enum<E>> Decoder<Object, E> enumOf(Class<E> cls) {
-        return Decoders.enumOf(cls, allowBlankString());
+    public static <E extends Enum<E>> Decoder<@Nullable Object, E> enumOf(Class<E> cls) {
+        return Decoders.<@Nullable Object, E>enumOf(cls, allowBlankString());
     }
 
     /**
@@ -468,7 +480,7 @@ public final class ObjectDecoders {
      * @param expected the expected string value
      * @return a decoder that succeeds only when the input matches {@code expected}
      */
-    public static Decoder<Object, String> literal(String expected) {
-        return Decoders.literal(expected, allowBlankString());
+    public static Decoder<@Nullable Object, String> literal(String expected) {
+        return Decoders.<@Nullable Object>literal(expected, allowBlankString());
     }
 }

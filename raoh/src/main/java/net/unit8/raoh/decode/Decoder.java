@@ -5,6 +5,8 @@ import net.unit8.raoh.Ok;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -19,7 +21,7 @@ import java.util.function.Function;
  * @param <T> the decoded output type
  */
 @FunctionalInterface
-public interface Decoder<I, T> {
+public interface Decoder<I extends @Nullable Object, T extends @Nullable Object> {
     /**
      * Decodes the given input, returning a {@link Result} that is either
      * {@link Ok} with the decoded value or {@link Err} with validation issues.
@@ -49,7 +51,7 @@ public interface Decoder<I, T> {
      * @param f   the mapping function
      * @return a new decoder that applies {@code f} to successful results
      */
-    default <U> Decoder<I, U> map(Function<T, U> f) {
+    default <U> Decoder<I, U> map(Function<? super T, ? extends U> f) {
         return (in, path) -> this.decode(in, path).map(f);
     }
 
@@ -61,7 +63,7 @@ public interface Decoder<I, T> {
      * @param f   the mapping function returning a {@link Result}
      * @return a new decoder that flat-maps successful results through {@code f}
      */
-    default <U> Decoder<I, U> flatMap(Function<T, Result<U>> f) {
+    default <U> Decoder<I, U> flatMap(Function<? super T, ? extends Result<U>> f) {
         return (in, path) -> this.decode(in, path).flatMap(t -> {
             Result<U> r = f.apply(t);
             return switch (r) {
@@ -78,7 +80,7 @@ public interface Decoder<I, T> {
      * @param f   the mapping function receiving both the decoded value and the path
      * @return a new decoder
      */
-    default <U> Decoder<I, U> flatMapWithPath(BiFunction<T, Path, Result<U>> f) {
+    default <U> Decoder<I, U> flatMapWithPath(BiFunction<? super T, ? super Path, ? extends Result<U>> f) {
         return (in, path) -> this.decode(in, path)
                 .flatMap(t -> f.apply(t, path));
     }

@@ -5,6 +5,8 @@ import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -20,7 +22,7 @@ import java.util.Set;
  * @param <I> the input type
  * @param <T> the element type
  */
-public class ListDecoder<I, T> implements Decoder<I, List<T>> {
+public class ListDecoder<I extends @Nullable Object, T> implements Decoder<I, List<T>> {
 
     private final Decoder<I, List<T>> inner;
 

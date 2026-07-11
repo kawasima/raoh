@@ -50,7 +50,7 @@ public interface Encoder<T, O> {
      * @param f   the function to apply to the input before encoding
      * @return a new encoder whose input type is {@code S}
      */
-    default <S> Encoder<S, O> contramap(Function<S, T> f) {
+    default <S> Encoder<S, O> contramap(Function<? super S, ? extends T> f) {
         return value -> this.encode(f.apply(value));
     }
 

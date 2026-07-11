@@ -5,6 +5,8 @@ import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -15,7 +17,7 @@ import java.util.TreeSet;
  *
  * @param <I> the input type
  */
-public class IntDecoder<I> implements Decoder<I, Integer> {
+public class IntDecoder<I extends @Nullable Object> implements Decoder<I, Integer> {
 
     private final Decoder<I, Integer> inner;
 
@@ -50,7 +52,7 @@ public class IntDecoder<I> implements Decoder<I, Integer> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if below
      */
-    public IntDecoder<I> min(int n, String message) {
+    public IntDecoder<I> min(int n, @Nullable String message) {
         return chain((value, path) -> {
             if (value < n) {
                 var meta = Map.<String, Object>of("min", n, "actual", value);
@@ -79,7 +81,7 @@ public class IntDecoder<I> implements Decoder<I, Integer> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if above
      */
-    public IntDecoder<I> max(int n, String message) {
+    public IntDecoder<I> max(int n, @Nullable String message) {
         return chain((value, path) -> {
             if (value > n) {
                 var meta = Map.<String, Object>of("max", n, "actual", value);
@@ -110,7 +112,7 @@ public class IntDecoder<I> implements Decoder<I, Integer> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if outside
      */
-    public IntDecoder<I> range(int min, int max, String message) {
+    public IntDecoder<I> range(int min, int max, @Nullable String message) {
         return chain((value, path) -> {
             if (value < min || value > max) {
                 var meta = Map.<String, Object>of("min", min, "max", max, "actual", value);

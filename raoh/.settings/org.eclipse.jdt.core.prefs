@@ -1,0 +1,13 @@
+eclipse.preferences.version=1
+org.eclipse.jdt.core.compiler.codegen.targetPlatform=25
+org.eclipse.jdt.core.compiler.compliance=25
+org.eclipse.jdt.core.compiler.problem.enablePreviewFeatures=disabled
+org.eclipse.jdt.core.compiler.release=enabled
+org.eclipse.jdt.core.compiler.source=25
+# Quiet JDT "unchecked conversion to @NonNull" noise that arises where this
+# @NullMarked module interoperates with non-null-annotated JDK / library types
+# (Map.of, getClass().getSimpleName(), etc.). These are not nullness defects:
+# the authoritative gate is NullAway (mvn -Pnullcheck), which is clean.
+# Genuine null-contract violations (nullSpecViolation) stay enabled.
+org.eclipse.jdt.core.compiler.problem.nullUncheckedConversion=ignore
+org.eclipse.jdt.core.compiler.problem.pessimisticNullAnalysisForFreeTypeVariables=ignore

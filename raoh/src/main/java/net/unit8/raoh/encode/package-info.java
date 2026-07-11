@@ -11,4 +11,7 @@
  *   <li>{@link net.unit8.raoh.encode.PropertyEncoder} — field-level encoder</li>
  * </ul>
  */
+@NullMarked
 package net.unit8.raoh.encode;
+
+import org.jspecify.annotations.NullMarked;

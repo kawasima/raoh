@@ -5,6 +5,8 @@ import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
+import org.jspecify.annotations.Nullable;
+
 import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.net.URI;
@@ -32,7 +34,7 @@ import java.util.regex.Pattern;
  *
  * @param <I> the input type
  */
-public class StringDecoder<I> implements Decoder<I, String> {
+public class StringDecoder<I extends @Nullable Object> implements Decoder<I, String> {
 
     private static final int MAX_EMAIL_LENGTH = 254;
     private static final int MAX_URL_LENGTH = 2048;
@@ -48,7 +50,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
             "^[0-9A-HJKMNP-TV-Z]{26}$");
 
     private final Decoder<I, String> inner;
-    private final Decoder<I, String> base;
+    private final @Nullable Decoder<I, String> base;
 
     /**
      * Creates a new {@link StringDecoder} wrapping the given decoder.
@@ -67,7 +69,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param inner the underlying decoder that produces a string value
      * @param base  the original decoder before {@link #nonBlank()} was applied, or {@code null}
      */
-    public StringDecoder(Decoder<I, String> inner, Decoder<I, String> base) {
+    public StringDecoder(Decoder<I, String> inner, @Nullable Decoder<I, String> base) {
         this.inner = inner;
         this.base = base;
     }
@@ -148,7 +150,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#TOO_SHORT} if shorter
      */
-    public StringDecoder<I> minLength(int n, String message) {
+    public StringDecoder<I> minLength(int n, @Nullable String message) {
         return chain((value, path) -> {
             if (value.length() < n) {
                 var meta = Map.<String, Object>of("min", n, "actual", value.length());
@@ -177,7 +179,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#TOO_LONG} if longer
      */
-    public StringDecoder<I> maxLength(int n, String message) {
+    public StringDecoder<I> maxLength(int n, @Nullable String message) {
         return chain((value, path) -> {
             if (value.length() > n) {
                 var meta = Map.<String, Object>of("max", n, "actual", value.length());
@@ -206,7 +208,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_LENGTH} if the length differs
      */
-    public StringDecoder<I> fixedLength(int n, String message) {
+    public StringDecoder<I> fixedLength(int n, @Nullable String message) {
         return chain((value, path) -> {
             if (value.length() != n) {
                 var meta = Map.<String, Object>of("expected", n, "actual", value.length());
@@ -266,7 +268,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with the specified error code if the value does not match
      */
-    public StringDecoder<I> pattern(Pattern p, String code, String message) {
+    public StringDecoder<I> pattern(Pattern p, String code, @Nullable String message) {
         return chain((value, path) -> {
             if (!p.matcher(value).matches()) {
                 var meta = Map.<String, Object>of("pattern", p.pattern());
@@ -295,7 +297,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the prefix is absent
      */
-    public StringDecoder<I> startsWith(String prefix, String message) {
+    public StringDecoder<I> startsWith(String prefix, @Nullable String message) {
         return chain((value, path) -> {
             if (!value.startsWith(prefix)) {
                 var meta = Map.<String, Object>of("prefix", prefix);
@@ -324,7 +326,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the suffix is absent
      */
-    public StringDecoder<I> endsWith(String suffix, String message) {
+    public StringDecoder<I> endsWith(String suffix, @Nullable String message) {
         return chain((value, path) -> {
             if (!value.endsWith(suffix)) {
                 var meta = Map.<String, Object>of("suffix", suffix);
@@ -353,7 +355,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message   custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the substring is absent
      */
-    public StringDecoder<I> includes(String substring, String message) {
+    public StringDecoder<I> includes(String substring, @Nullable String message) {
         return chain((value, path) -> {
             if (!value.contains(substring)) {
                 var meta = Map.<String, Object>of("substring", substring);
@@ -382,7 +384,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid email
      */
-    public StringDecoder<I> email(String message) {
+    public StringDecoder<I> email(@Nullable String message) {
         return chain((value, path) -> {
             if (value.length() > MAX_EMAIL_LENGTH || !EMAIL_PATTERN.matcher(value).matches()) {
                 return message != null
@@ -420,7 +422,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a decoder producing {@link URI} from validated http/https URLs
      */
-    public Decoder<I, URI> url(String message) {
+    public Decoder<I, URI> url(@Nullable String message) {
         return (in, path) -> this.decode(in, path).flatMap(value -> {
             if (value.length() > MAX_URL_LENGTH) {
                 return message != null
@@ -460,7 +462,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid IPv4 address
      */
-    public StringDecoder<I> ipv4(String message) {
+    public StringDecoder<I> ipv4(@Nullable String message) {
         return chain((value, path) -> {
             if (value.length() > MAX_IP_LENGTH || !IPV4_PATTERN.matcher(value).matches()) {
                 return message != null
@@ -487,7 +489,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid IPv6 address
      */
-    public StringDecoder<I> ipv6(String message) {
+    public StringDecoder<I> ipv6(@Nullable String message) {
         return chain((value, path) -> {
             if (value.length() > MAX_IP_LENGTH || !isIPv6(value)) {
                 return message != null
@@ -513,7 +515,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid IP address
      */
-    public StringDecoder<I> ip(String message) {
+    public StringDecoder<I> ip(@Nullable String message) {
         return chain((value, path) -> {
             if (value.length() > MAX_IP_LENGTH
                     || (!IPV4_PATTERN.matcher(value).matches() && !isIPv6(value))) {
@@ -553,7 +555,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid CUID
      */
-    public StringDecoder<I> cuid(String message) {
+    public StringDecoder<I> cuid(@Nullable String message) {
         return chain((value, path) -> {
             if (!CUID_PATTERN.matcher(value).matches()) {
                 return message != null
@@ -579,7 +581,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid ULID
      */
-    public StringDecoder<I> ulid(String message) {
+    public StringDecoder<I> ulid(@Nullable String message) {
         return chain((value, path) -> {
             if (!ULID_PATTERN.matcher(value).matches()) {
                 return message != null
@@ -636,7 +638,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a decoder producing {@link UUID} from validated UUID strings
      */
-    public Decoder<I, UUID> uuid(String message) {
+    public Decoder<I, UUID> uuid(@Nullable String message) {
         return (in, path) -> this.decode(in, path).flatMap(value -> {
             try {
                 return Result.ok(UUID.fromString(value));
@@ -665,7 +667,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a decoder producing {@link URI} from validated URI strings
      */
-    public Decoder<I, URI> uri(String message) {
+    public Decoder<I, URI> uri(@Nullable String message) {
         return (in, path) -> this.decode(in, path).flatMap(value -> {
             try {
                 return Result.ok(URI.create(value));
@@ -692,7 +694,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link Instant}
      */
-    public TemporalDecoder<I, Instant> iso8601(String message) {
+    public TemporalDecoder<I, Instant> iso8601(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
                 return Result.ok(Instant.parse(value));
@@ -719,7 +721,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link LocalDate}
      */
-    public TemporalDecoder<I, LocalDate> date(String message) {
+    public TemporalDecoder<I, LocalDate> date(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
                 return Result.ok(LocalDate.parse(value));
@@ -746,7 +748,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link LocalTime}
      */
-    public TemporalDecoder<I, LocalTime> time(String message) {
+    public TemporalDecoder<I, LocalTime> time(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
                 return Result.ok(LocalTime.parse(value));
@@ -773,7 +775,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link LocalDateTime}
      */
-    public TemporalDecoder<I, LocalDateTime> dateTime(String message) {
+    public TemporalDecoder<I, LocalDateTime> dateTime(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
                 return Result.ok(LocalDateTime.parse(value));
@@ -800,7 +802,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link OffsetDateTime}
      */
-    public TemporalDecoder<I, OffsetDateTime> offsetDateTime(String message) {
+    public TemporalDecoder<I, OffsetDateTime> offsetDateTime(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
                 return Result.ok(OffsetDateTime.parse(value));
@@ -833,7 +835,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return an integer decoder with the parsed value
      */
-    public IntDecoder<I> toInt(String message) {
+    public IntDecoder<I> toInt(@Nullable String message) {
         return new IntDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
                 return Result.ok(Integer.parseInt(value));
@@ -866,7 +868,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a long decoder with the parsed value
      */
-    public LongDecoder<I> toLong(String message) {
+    public LongDecoder<I> toLong(@Nullable String message) {
         return new LongDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
                 return Result.ok(Long.parseLong(value));
@@ -899,7 +901,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @param message custom error message, or {@code null} for the default
      * @return a decimal decoder with the parsed value
      */
-    public DecimalDecoder<I> toDecimal(String message) {
+    public DecimalDecoder<I> toDecimal(@Nullable String message) {
         return new DecimalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
                 return Result.ok(new BigDecimal(value));
@@ -938,7 +940,7 @@ public class StringDecoder<I> implements Decoder<I, String> {
      * @return a boolean decoder with the parsed value
      * @see #toBool()
      */
-    public BoolDecoder<I> toBool(String message) {
+    public BoolDecoder<I> toBool(@Nullable String message) {
         return new BoolDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             Boolean parsed = switch (value.toLowerCase(Locale.ROOT)) {
                 case "true", "1", "yes", "on" -> Boolean.TRUE;

@@ -1,3 +1,7 @@
 target/
 .vscode/
 *.class
+
+# Eclipse/JDT: keep only the shared null-analysis config, ignore other generated prefs
+**/.settings/*
+!**/.settings/org.eclipse.jdt.core.prefs

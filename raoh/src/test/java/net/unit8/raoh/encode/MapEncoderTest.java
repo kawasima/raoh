@@ -2,6 +2,8 @@ package net.unit8.raoh.encode;
 
 import org.junit.jupiter.api.Test;
 
+import org.jspecify.annotations.Nullable;
+
 import java.math.BigDecimal;
 import java.util.Map;
 
@@ -22,7 +24,7 @@ class MapEncoderTest {
 
     // --- Encoders ---
 
-    static final Encoder<Item, Map<String, Object>> ITEM_ENCODER = object(
+    static final Encoder<Item, Map<String, @Nullable Object>> ITEM_ENCODER = object(
             property("id",    Item::id,    long_().contramap(ItemId::value)),
             property("name",  Item::name,  string()),
             property("price", Item::price, decimal())
@@ -67,15 +69,17 @@ class MapEncoderTest {
     }
 
     @Test
-    void nullablePassesThroughNull() {
-        var enc = nullable(string());
-        assertNull(enc.encode(null));
+    void nullablePropertyWritesNullWhenGetterReturnsNull() {
+        record Row(@Nullable String note) {}
+        var enc = object(nullableProperty("note", Row::note, string()));
+        assertNull(enc.encode(new Row(null)).get("note"));
     }
 
     @Test
-    void nullableDelegatesToInnerEncoderWhenNonNull() {
-        var enc = nullable(string());
-        assertEquals("hello", enc.encode("hello"));
+    void nullablePropertyEncodesValueWhenPresent() {
+        record Row(@Nullable String note) {}
+        var enc = object(nullableProperty("note", Row::note, string()));
+        assertEquals("hello", enc.encode(new Row("hello")).get("note"));
     }
 
     @Test
@@ -89,28 +93,32 @@ class MapEncoderTest {
     }
 
     @Test
-    void withDefaultEncodesDefaultWhenNull() {
-        var enc = withDefault(string(), "N/A");
-        assertEquals("N/A", enc.encode(null));
+    void propertyWithDefaultEncodesDefaultWhenNull() {
+        record Row(@Nullable String name) {}
+        var enc = object(propertyWithDefault("name", Row::name, string(), "N/A"));
+        assertEquals("N/A", enc.encode(new Row(null)).get("name"));
     }
 
     @Test
-    void withDefaultEncodesValueWhenNonNull() {
-        var enc = withDefault(string(), "N/A");
-        assertEquals("hello", enc.encode("hello"));
+    void propertyWithDefaultEncodesValueWhenNonNull() {
+        record Row(@Nullable String name) {}
+        var enc = object(propertyWithDefault("name", Row::name, string(), "N/A"));
+        assertEquals("hello", enc.encode(new Row("hello")).get("name"));
     }
 
     @Test
-    void withDefaultSupplierEncodesDefaultWhenNull() {
+    void propertyWithDefaultSupplierEncodesDefaultWhenNull() {
+        record Row(@Nullable String name) {}
         java.util.function.Supplier<String> supplier = () -> "generated";
-        var enc = withDefault(string(), supplier);
-        assertEquals("generated", enc.encode(null));
+        var enc = object(propertyWithDefault("name", Row::name, string(), supplier));
+        assertEquals("generated", enc.encode(new Row(null)).get("name"));
     }
 
     @Test
-    void withDefaultSupplierEncodesValueWhenNonNull() {
+    void propertyWithDefaultSupplierEncodesValueWhenNonNull() {
+        record Row(@Nullable String name) {}
         java.util.function.Supplier<String> supplier = () -> "generated";
-        var enc = withDefault(string(), supplier);
-        assertEquals("world", enc.encode("world"));
+        var enc = object(propertyWithDefault("name", Row::name, string(), supplier));
+        assertEquals("world", enc.encode(new Row("world")).get("name"));
     }
 }

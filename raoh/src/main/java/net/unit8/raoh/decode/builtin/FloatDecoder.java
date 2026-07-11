@@ -5,6 +5,8 @@ import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -18,7 +20,7 @@ import java.util.TreeSet;
  *
  * @param <I> the input type
  */
-public class FloatDecoder<I> implements Decoder<I, Float> {
+public class FloatDecoder<I extends @Nullable Object> implements Decoder<I, Float> {
 
     private final Decoder<I, Float> inner;
 
@@ -53,7 +55,7 @@ public class FloatDecoder<I> implements Decoder<I, Float> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if below
      */
-    public FloatDecoder<I> min(float n, String message) {
+    public FloatDecoder<I> min(float n, @Nullable String message) {
         return chain((value, path) -> {
             if (Float.compare(value, n) < 0) {
                 var meta = Map.<String, Object>of("min", n, "actual", value);
@@ -82,7 +84,7 @@ public class FloatDecoder<I> implements Decoder<I, Float> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if above
      */
-    public FloatDecoder<I> max(float n, String message) {
+    public FloatDecoder<I> max(float n, @Nullable String message) {
         return chain((value, path) -> {
             if (Float.compare(value, n) > 0) {
                 var meta = Map.<String, Object>of("max", n, "actual", value);
@@ -113,7 +115,7 @@ public class FloatDecoder<I> implements Decoder<I, Float> {
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if outside
      */
-    public FloatDecoder<I> range(float min, float max, String message) {
+    public FloatDecoder<I> range(float min, float max, @Nullable String message) {
         return chain((value, path) -> {
             if (Float.compare(value, min) < 0 || Float.compare(value, max) > 0) {
                 var meta = Map.<String, Object>of("min", min, "max", max, "actual", value);

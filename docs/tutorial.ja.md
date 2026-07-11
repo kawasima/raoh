@@ -1333,24 +1333,36 @@ Map<String, Object> row = ITEM_ENCODER.encode(new Item(new ItemId(42L), "Widget"
 | `combine(...).map(T::new)` | `object(property(...), ...)` |
 | `nested(subDecoder)` | `nested(subEncoder)` |
 | `list(elementDecoder)` | `list(elementEncoder)` |
-| `nullable(dec)` | `nullable(enc)` |
-| `withDefault(dec, v)` | `withDefault(enc, v)` |
+| `nullable(dec)` | `nullableProperty("x", T::x, enc)` |
+| `withDefault(dec, v)` | `propertyWithDefault("x", T::x, enc, v)` |
 
-## 31. エンコード — nullable と withDefault
+## 31. エンコード — nullableProperty と propertyWithDefault
 
-出力で null をそのまま通したい場合は `nullable(enc)` を使います：
+null を扱う分岐はエンコーダー本体ではなく property 層が担います。値エンコーダー（`string()` など）は常に非null 値を受け取る形のままで、デコーダー側の `field` / `optionalField` と対称です。
 
-```java
-property("description", Item::description, nullable(string()))
-// null → 出力でも null
-```
-
-null をデフォルト値に置き換えたい場合は `withDefault(enc, defaultValue)` を使います：
+getter が null を返しうるプロパティは `nullableProperty` を使います。null のときは値エンコーダーを呼ばず、マップに null を書き込みます：
 
 ```java
-property("tags", Article::tags, withDefault(list(nested(TAG_ENCODER)), List.of()))
-// null → 出力では []
+nullableProperty("description", Item::description, string())
+// getter が null → 出力でも null
 ```
+
+null をデフォルト値に置き換えたい場合は `propertyWithDefault` を使います：
+
+```java
+propertyWithDefault("tags", Article::tags, list(nested(TAG_ENCODER)), List.of())
+// getter が null → 出力では []
+```
+
+### null 解析を有効にしている場合の一行設定
+
+consumer 側のコードを `@NullMarked` にして厳格な null 解析（Eclipse JDT / ecj、NullAway、IntelliJ）を有効にしていると、raoh との境界で「unchecked conversion（`@NonNull` への未検査変換）」系の警告が出ることがあります。これらは nullness の欠陥ではなく、`@NullMarked` モジュールと非注釈の JDK / ライブラリ型との相互運用で生じる既知のノイズです。raoh 自身も `.settings/org.eclipse.jdt.core.prefs` に次の一行を置いて抑制しています。
+
+```
+org.eclipse.jdt.core.compiler.problem.nullUncheckedConversion=ignore
+```
+
+ecj のバッチ実行では `-properties` でこのキーを渡せば同じ効果になります。真の null 契約違反（`nullSpecViolation`）は有効なままです。
 
 ## 32. エンコード — ネストしたオブジェクト
 

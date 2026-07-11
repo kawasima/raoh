@@ -10,6 +10,8 @@ import net.unit8.raoh.Presence;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.decode.combinator.*;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -43,7 +45,7 @@ public final class MapDecoders {
      * @param dec  the decoder for the field value
      * @return a field decoder for {@code Map<String, Object>} input
      */
-    public static <T> FieldDecoder<Map<String, Object>, T> field(String name, Decoder<Object, T> dec) {
+    public static <T> FieldDecoder<Map<String, Object>, T> field(String name, Decoder<@Nullable Object, T> dec) {
         return new FieldDecoder<>() {
             @Override
             public String fieldName() { return name; }
@@ -68,7 +70,7 @@ public final class MapDecoders {
      * @param dec  the decoder for the field value when present
      * @return a decoder that produces {@code Optional<T>}
      */
-    public static <T> Decoder<Map<String, Object>, Optional<T>> optionalField(String name, Decoder<Object, T> dec) {
+    public static <T> Decoder<Map<String, Object>, Optional<T>> optionalField(String name, Decoder<@Nullable Object, T> dec) {
         return (in, path) -> {
             var fieldPath = path.append(name);
             if (in == null || !in.containsKey(name)) {
@@ -82,7 +84,7 @@ public final class MapDecoders {
      * Adapts a {@code Decoder<Map<String, Object>, T>} for use as a field value decoder.
      *
      * <p><strong>Why this is needed</strong></p>
-     * <p>{@link #field} and {@link net.unit8.raoh.decode.ObjectDecoders#list(Decoder) ObjectDecoders.list} accept a {@code Decoder<Object, T>} for the value,
+     * <p>{@link #field} and {@link net.unit8.raoh.decode.ObjectDecoders#list(Decoder) ObjectDecoders.list} accept a {@code Decoder<@Nullable Object, T>} for the value,
      * because field values arrive as raw {@code Object} from the enclosing map.
      * But a decoder built with {@link #combine} + {@link #field} internally produces a
      * {@code Decoder<Map<String, Object>, T>} — there is a type gap between {@code Object}
@@ -105,7 +107,7 @@ public final class MapDecoders {
      *
      * <p>Without {@code nested()}, the compiler rejects the second {@code field()} call because
      * {@code addressDecoder} has type {@code Decoder<Map<String,Object>, Address>} but
-     * {@code field()} requires {@code Decoder<Object, Address>}.
+     * {@code field()} requires {@code Decoder<@Nullable Object, Address>}.
      *
      * <p><strong>Note:</strong> {@code net.unit8.raoh.json.JsonDecoders} does not need a
      * {@code nested()} equivalent because all decoders there share the same input type
@@ -116,7 +118,7 @@ public final class MapDecoders {
      * @return a decoder whose input type is {@code Object}, suitable for use with {@link #field}
      */
     @SuppressWarnings("unchecked")
-    public static <T> Decoder<Object, T> nested(Decoder<Map<String, Object>, T> dec) {
+    public static <T> Decoder<@Nullable Object, T> nested(Decoder<Map<String, Object>, T> dec) {
         return (in, path) -> {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
@@ -150,7 +152,7 @@ public final class MapDecoders {
      * @param dec  the decoder for the field value when present and non-null
      * @return a decoder that produces {@link Presence Presence&lt;T&gt;}
      */
-    public static <T> Decoder<Map<String, Object>, Presence<T>> optionalNullableField(String name, Decoder<Object, T> dec) {
+    public static <T> Decoder<Map<String, Object>, Presence<T>> optionalNullableField(String name, Decoder<@Nullable Object, T> dec) {
         return (in, path) -> {
             var fieldPath = path.append(name);
             if (in == null || !in.containsKey(name)) {
