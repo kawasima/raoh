@@ -1379,3 +1379,29 @@ Encoder<Order, Map<String, Object>> ORDER_ENCODER = object(
         property("customer",  Order::customer,  nested(CUSTOMER_ENCODER)),
         property("items",     Order::items,     list(nested(ITEM_ENCODER)))
 );
+```
+
+## 33. Encoding — discriminate (tagged unions)
+
+Encode a sealed interface (tagged union) with `discriminate()`, which selects a variant by the value's runtime type and writes the discriminator tag into the output. It mirrors the decoder-side `discriminate()` (section 11): the decoder reads the tag from the input data, while the encoder chooses the tag from the value's type.
+
+```java
+sealed interface Shape permits Circle, Rect {}
+record Circle(double radius) implements Shape {}
+record Rect(double width, double height) implements Shape {}
+
+Encoder<Circle, Map<String, Object>> CIRCLE_ENCODER =
+        object(property("radius", Circle::radius, double_()));
+Encoder<Rect, Map<String, Object>> RECT_ENCODER = object(
+        property("width",  Rect::width,  double_()),
+        property("height", Rect::height, double_()));
+
+Encoder<Shape, Map<String, Object>> SHAPE_ENCODER = discriminate("type",
+        variant(Circle.class, "circle", CIRCLE_ENCODER),
+        variant(Rect.class,   "rect",   RECT_ENCODER));
+
+SHAPE_ENCODER.encode(new Circle(2.0));
+// => {type=circle, radius=2.0}
+```
+
+Declare each variant with `variant(type, tag, encoder)`. The tag is injected first and is authoritative, so variant encoders do not write it themselves. Dispatch is by exact `getClass()` match, which fits a sealed hierarchy whose permitted types are records or final classes. Since encoding is a total function, passing an unregistered type throws `IllegalArgumentException` (asymmetric with the decoder, which returns a `not_allowed` error).

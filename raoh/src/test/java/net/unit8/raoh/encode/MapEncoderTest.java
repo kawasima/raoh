@@ -4,7 +4,12 @@ import org.junit.jupiter.api.Test;
 
 import org.jspecify.annotations.Nullable;
 
+import net.unit8.raoh.decode.Decoder;
+import net.unit8.raoh.decode.ObjectDecoders;
+import net.unit8.raoh.decode.map.MapDecoders;
+
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 
 import static net.unit8.raoh.encode.MapEncoders.*;
@@ -120,5 +125,114 @@ class MapEncoderTest {
         java.util.function.Supplier<String> supplier = () -> "generated";
         var enc = object(propertyWithDefault("name", Row::name, string(), supplier));
         assertEquals("world", enc.encode(new Row("world")).get("name"));
+    }
+
+    // --- discriminate ---
+
+    sealed interface Shape permits Circle, Rect {}
+    record Circle(double radius) implements Shape {}
+    record Rect(double width, double height) implements Shape {}
+
+    static final Encoder<Circle, Map<String, @Nullable Object>> CIRCLE_ENCODER =
+            object(property("radius", Circle::radius, double_()));
+    static final Encoder<Rect, Map<String, @Nullable Object>> RECT_ENCODER = object(
+            property("width",  Rect::width,  double_()),
+            property("height", Rect::height, double_()));
+
+    static final Encoder<Shape, Map<String, @Nullable Object>> SHAPE_ENCODER = discriminate("type",
+            variant(Circle.class, "circle", CIRCLE_ENCODER),
+            variant(Rect.class,   "rect",   RECT_ENCODER));
+
+    @Test
+    void discriminateDispatchesAndInjectsTag() {
+        var circle = SHAPE_ENCODER.encode(new Circle(2.0));
+        assertEquals("circle", circle.get("type"));
+        assertEquals(2.0, circle.get("radius"));
+
+        var rect = SHAPE_ENCODER.encode(new Rect(3.0, 4.0));
+        assertEquals("rect", rect.get("type"));
+        assertEquals(3.0, rect.get("width"));
+        assertEquals(4.0, rect.get("height"));
+    }
+
+    @Test
+    void discriminatePlacesTagFirst() {
+        var keys = SHAPE_ENCODER.encode(new Circle(1.0)).keySet().stream().toList();
+        assertEquals("type", keys.getFirst());
+    }
+
+    @Test
+    void discriminateRoundTripsWithDecoder() {
+        Decoder<Map<String, Object>, Shape> dec = MapDecoders.discriminate("type", Map.of(
+                "circle", MapDecoders.field("radius", ObjectDecoders.decimal())
+                        .map(r -> new Circle(r.doubleValue())),
+                "rect", MapDecoders.combine(
+                                MapDecoders.field("width",  ObjectDecoders.decimal()),
+                                MapDecoders.field("height", ObjectDecoders.decimal()))
+                        .map((w, h) -> new Rect(w.doubleValue(), h.doubleValue()))));
+
+        for (Shape original : List.of(new Circle(2.0), new Rect(3.0, 4.0))) {
+            var encoded = SHAPE_ENCODER.encode(original);
+            // The encoder's output (Map<String, @Nullable Object>) feeds straight back into the decoder.
+            @SuppressWarnings("unchecked")
+            var asInput = (Map<String, Object>) (Map<String, ?>) encoded;
+            assertEquals(original, dec.decode(asInput).getOrThrow());
+        }
+    }
+
+    @Test
+    void discriminateThrowsForUnregisteredType() {
+        Encoder<Shape, Map<String, @Nullable Object>> enc =
+                discriminate("type", variant(Circle.class, "circle", CIRCLE_ENCODER));
+        assertThrows(IllegalArgumentException.class, () -> enc.encode(new Rect(1.0, 2.0)));
+    }
+
+    @Test
+    void discriminateThrowsForDuplicateVariant() {
+        assertThrows(IllegalArgumentException.class, () -> discriminate("type",
+                variant(Circle.class, "circle", CIRCLE_ENCODER),
+                variant(Circle.class, "disc",   CIRCLE_ENCODER)));
+    }
+
+    @Test
+    void discriminateThrowsForDuplicateTag() {
+        // Two distinct classes sharing one tag would emit a non-unique discriminator
+        // that the tag-keyed decoder side cannot round-trip.
+        assertThrows(IllegalArgumentException.class, () -> discriminate("type",
+                variant(Circle.class, "shape", CIRCLE_ENCODER),
+                variant(Rect.class,   "shape", RECT_ENCODER)));
+    }
+
+    @Test
+    void discriminateToleratesNullKeyFromVariant() {
+        // Keys are non-null by contract, but a variant encoder is arbitrary. A null key
+        // must not NPE during tag injection; the null-keyed entry passes through.
+        Encoder<Circle, Map<String, @Nullable Object>> nullKey = c -> {
+            var m = new java.util.LinkedHashMap<String, @Nullable Object>();
+            m.put(null, "x");
+            m.put("radius", c.radius());
+            return m;
+        };
+        Encoder<Shape, Map<String, @Nullable Object>> enc =
+                discriminate("type", variant(Circle.class, "circle", nullKey));
+
+        var out = enc.encode(new Circle(1.0));
+        assertEquals("circle", out.get("type"));
+        assertEquals(1.0, out.get("radius"));
+        assertTrue(out.containsKey(null));
+    }
+
+    @Test
+    void discriminateTagIsAuthoritativeOverVariantOutput() {
+        // A variant encoder that (incorrectly) also emits the discriminator key.
+        Encoder<Circle, Map<String, @Nullable Object>> rogue = object(
+                property("type",   c -> "WRONG",   string()),
+                property("radius", Circle::radius, double_()));
+        Encoder<Shape, Map<String, @Nullable Object>> enc =
+                discriminate("type", variant(Circle.class, "circle", rogue));
+
+        var out = enc.encode(new Circle(1.0));
+        assertEquals("circle", out.get("type"));
+        assertEquals(1.0, out.get("radius"));
     }
 }

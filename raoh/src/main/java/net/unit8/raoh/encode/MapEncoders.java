@@ -2,6 +2,7 @@ package net.unit8.raoh.encode;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -214,5 +215,120 @@ public final class MapEncoders {
         return values -> values.stream()
                 .map(elementEncoder::encode)
                 .toList();
+    }
+
+    /**
+     * A single tagged variant of a discriminated (tagged-union) encoder: the concrete subtype,
+     * the discriminator tag written for it, and the encoder that produces its body.
+     *
+     * <p>Created via {@link #variant(Class, String, Encoder)} and consumed by
+     * {@link #discriminate(String, Variant[])}. The {@code type} is matched against
+     * {@link Object#getClass()} of the value being encoded, so it must be the value's exact
+     * runtime class (see {@link #discriminate(String, Variant[])} for the implications).
+     *
+     * @param <S>     the concrete subtype this variant encodes
+     * @param type    the exact runtime class dispatched on
+     * @param tag     the discriminator value written under the discriminator key
+     * @param encoder the encoder producing the variant body (must not itself write the tag)
+     */
+    public record Variant<S>(
+            Class<S> type,
+            String tag,
+            Encoder<S, Map<String, @Nullable Object>> encoder) {}
+
+    /**
+     * Creates a {@link Variant} binding a concrete subtype to its discriminator tag and encoder.
+     *
+     * <p>The type parameter {@code S} ties the class and the encoder together so a mismatched
+     * pair fails to compile. It deliberately does not mention the union supertype {@code T} of
+     * {@link #discriminate(String, Variant[])}: that keeps type inference working when several
+     * {@code variant(...)} calls of different subtypes are passed to the same {@code discriminate}.
+     *
+     * @param <S>     the concrete subtype this variant encodes
+     * @param type    the exact runtime class to dispatch on
+     * @param tag     the discriminator value to write for this subtype
+     * @param encoder the encoder producing the variant body
+     * @return a variant for use with {@link #discriminate(String, Variant[])}
+     */
+    public static <S> Variant<S> variant(
+            Class<S> type, String tag, Encoder<S, Map<String, @Nullable Object>> encoder) {
+        return new Variant<>(type, tag, encoder);
+    }
+
+    /**
+     * Creates an encoder for a tagged union (typically a {@code sealed} interface) that selects a
+     * variant encoder by the value's runtime class and writes the discriminator tag into the output.
+     *
+     * <p>This is the encode-side mirror of
+     * {@link net.unit8.raoh.decode.map.MapDecoders#discriminate(String, Map)
+     * MapDecoders.discriminate}. The two are asymmetric by nature: the decoder reads the tag from
+     * the input data to choose a variant, whereas this encoder chooses a variant from the value's
+     * concrete type and then writes the tag. The discriminator entry is injected here, so variant
+     * encoders must not write it themselves.
+     *
+     * <p>The tag is placed first in the resulting {@link LinkedHashMap} and is authoritative: if a
+     * variant encoder also emits the discriminator key, that entry is discarded in favour of the
+     * injected tag. The return type matches {@link #object(PropertyEncoder[])}, so the result can be
+     * embedded via {@link #nested(Encoder)} or used as a top-level encoder.
+     *
+     * <p><strong>Exact-class dispatch.</strong> Variants are matched against
+     * {@link Object#getClass()}, i.e. by exact runtime class, not {@code instanceof}. This fits a
+     * {@code sealed} hierarchy whose permitted types are {@code record}s or {@code final} classes.
+     * A value whose class is a subclass of a registered non-final variant type will not match.
+     *
+     * <p><strong>Never fails for well-formed definitions.</strong> Consistent with {@link Encoder}
+     * being a total function, a correct definition covering every permitted subtype never throws at
+     * encode time. The runtime {@link IllegalArgumentException} below is a guard against a
+     * definition that omits a subtype — a programming error, not a data error (unlike the decoder,
+     * which returns an error result for an unknown tag).
+     *
+     * @param <T>       the union (supertype) being encoded
+     * @param fieldName the discriminator key written into the output map
+     * @param variants  the variants, each pairing a concrete class with its tag and encoder
+     * @return an encoder that dispatches on runtime class and injects the discriminator tag
+     * @throws IllegalArgumentException if two variants register the same class or the same tag
+     *         (both detected here), or, from the returned encoder, if it is given a value whose
+     *         class has no registered variant
+     */
+    @SafeVarargs
+    public static <T> Encoder<T, Map<String, @Nullable Object>> discriminate(
+            String fieldName, Variant<? extends T>... variants) {
+        var byClass = new LinkedHashMap<Class<?>, Variant<? extends T>>(variants.length * 2);
+        var seenTags = new HashSet<String>(variants.length * 2);
+        for (var v : variants) {
+            if (byClass.put(v.type(), v) != null) {
+                throw new IllegalArgumentException("duplicate variant for " + v.type().getName());
+            }
+            // Reject duplicate tags too: two classes sharing a tag would emit a non-unique
+            // discriminator that the tag-keyed decoder side cannot round-trip.
+            if (!seenTags.add(v.tag())) {
+                throw new IllegalArgumentException("duplicate variant tag '" + v.tag() + "'");
+            }
+        }
+        return value -> {
+            var v = byClass.get(value.getClass());
+            if (v == null) {
+                throw new IllegalArgumentException(
+                        "no encoder registered for " + value.getClass().getName()
+                        + "; known variants: "
+                        + byClass.keySet().stream().map(Class::getName).sorted().toList());
+            }
+            // value.getClass() == v.type() is verified above, so applying the variant encoder to
+            // this value is runtime-safe. Mirrors the unchecked cast in Decoders.discriminate.
+            @SuppressWarnings("unchecked")
+            var enc = (Encoder<T, Map<String, @Nullable Object>>) (Encoder<?, ?>) v.encoder();
+            var body = enc.encode(value);
+            var out = new LinkedHashMap<String, @Nullable Object>(body.size() + 2);
+            out.put(fieldName, v.tag());
+            body.forEach((k, val) -> {
+                // fieldName is non-null; call equals on it so a variant that emits a null key
+                // (keys are non-null by contract, but the encoder is arbitrary) drops through
+                // as a normal entry instead of throwing.
+                if (!fieldName.equals(k)) {
+                    out.put(k, val);
+                }
+            });
+            return out;
+        };
     }
 }
