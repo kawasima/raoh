@@ -96,6 +96,25 @@ class TraverseTest {
         assertEquals(2, issues.size());
     }
 
+    /**
+     * A decoder over a supertype must apply to a list of a subtype without any copy or cast.
+     * {@code Result.traverse}'s element type {@code I} is inferred from the arguments, so a
+     * {@code List<String>} decodes fine with a {@code Decoder<CharSequence, ...>}. This mirrors
+     * the raoh-jooq idiom {@code Result.traverse(query.fetch(), dec::decode)} where
+     * {@code query.fetch()} is an {@code org.jooq.Result<SomeRecordSubtype>} (a {@code List} of a
+     * subtype of {@code org.jooq.Record}) and {@code dec} is a {@code Decoder<org.jooq.Record, T>}.
+     * If this stops compiling, the jOOQ list-decode idiom has regressed.
+     */
+    @Test
+    void traverseAcceptsSubtypeElementList() {
+        Decoder<CharSequence, Integer> lengthDecoder = (in, path) -> Result.ok(in.length());
+        List<String> subtypeList = List.of("a", "bb", "ccc");
+
+        var result = Result.traverse(subtypeList, lengthDecoder::decode);
+        assertInstanceOf(Ok.class, result);
+        assertEquals(List.of(1, 2, 3), result.getOrThrow());
+    }
+
     @Test
     void decoderListConvenience() {
         Decoder<List<String>, List<Integer>> listDecoder = INT_DECODER.list();
