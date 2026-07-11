@@ -95,6 +95,7 @@ public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, Bi
      * @param min the minimum allowed value (inclusive)
      * @param max the maximum allowed value (inclusive)
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if outside
+     * @throws IllegalArgumentException if {@code min} is greater than {@code max}
      */
     public DecimalDecoder<I> range(BigDecimal min, BigDecimal max) {
         return range(min, max, null);
@@ -107,8 +108,12 @@ public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, Bi
      * @param max     the maximum allowed value (inclusive)
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if outside
+     * @throws IllegalArgumentException if {@code min} is greater than {@code max}
      */
     public DecimalDecoder<I> range(BigDecimal min, BigDecimal max, @Nullable String message) {
+        if (min.compareTo(max) > 0) {
+            throw new IllegalArgumentException("min (%s) must not be greater than max (%s)".formatted(min, max));
+        }
         return chain((value, path) -> {
             if (value.compareTo(min) < 0 || value.compareTo(max) > 0) {
                 var meta = Map.<String, Object>of("min", min, "max", max, "actual", value);
@@ -224,6 +229,7 @@ public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, Bi
      *
      * @param n the required divisor
      * @return a new decoder that fails with {@link ErrorCodes#NOT_MULTIPLE_OF} if not a multiple
+     * @throws IllegalArgumentException if {@code n} is zero
      */
     public DecimalDecoder<I> multipleOf(BigDecimal n) {
         return multipleOf(n, null);
@@ -235,8 +241,12 @@ public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, Bi
      * @param n       the required divisor
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#NOT_MULTIPLE_OF} if not a multiple
+     * @throws IllegalArgumentException if {@code n} is zero
      */
     public DecimalDecoder<I> multipleOf(BigDecimal n, @Nullable String message) {
+        if (n.signum() == 0) {
+            throw new IllegalArgumentException("divisor must not be zero");
+        }
         return chain((value, path) -> {
             if (value.remainder(n).compareTo(BigDecimal.ZERO) != 0) {
                 var meta = Map.<String, Object>of("divisor", n, "actual", value);

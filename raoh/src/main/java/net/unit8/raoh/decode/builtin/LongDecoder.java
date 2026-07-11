@@ -97,6 +97,7 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
      * @param min the minimum allowed value (inclusive)
      * @param max the maximum allowed value (inclusive)
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if outside
+     * @throws IllegalArgumentException if {@code min} is greater than {@code max}
      */
     public LongDecoder<I> range(long min, long max) {
         return range(min, max, null);
@@ -109,8 +110,12 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
      * @param max     the maximum allowed value (inclusive)
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if outside
+     * @throws IllegalArgumentException if {@code min} is greater than {@code max}
      */
     public LongDecoder<I> range(long min, long max, @Nullable String message) {
+        if (min > max) {
+            throw new IllegalArgumentException("min (%d) must not be greater than max (%d)".formatted(min, max));
+        }
         return chain((value, path) -> {
             if (value < min || value > max) {
                 var meta = Map.<String, Object>of("min", min, "max", max, "actual", value);
@@ -245,6 +250,7 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
      *
      * @param n the divisor
      * @return a new decoder that fails with {@link ErrorCodes#NOT_MULTIPLE_OF} if not divisible
+     * @throws IllegalArgumentException if {@code n} is zero
      */
     public LongDecoder<I> multipleOf(long n) {
         return multipleOf(n, null);
@@ -256,8 +262,12 @@ public class LongDecoder<I extends @Nullable Object> implements Decoder<I, Long>
      * @param n       the divisor
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#NOT_MULTIPLE_OF} if not divisible
+     * @throws IllegalArgumentException if {@code n} is zero
      */
     public LongDecoder<I> multipleOf(long n, @Nullable String message) {
+        if (n == 0) {
+            throw new IllegalArgumentException("divisor must not be zero");
+        }
         return chain((value, path) -> {
             if (value % n != 0) {
                 var meta = Map.<String, Object>of("divisor", n, "actual", value);

@@ -102,6 +102,7 @@ public class DoubleDecoder<I extends @Nullable Object> implements Decoder<I, Dou
      * @param min the minimum allowed value (inclusive)
      * @param max the maximum allowed value (inclusive)
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if outside
+     * @throws IllegalArgumentException if {@code min} is greater than {@code max}
      */
     public DoubleDecoder<I> range(double min, double max) {
         return range(min, max, null);
@@ -114,8 +115,12 @@ public class DoubleDecoder<I extends @Nullable Object> implements Decoder<I, Dou
      * @param max     the maximum allowed value (inclusive)
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if outside
+     * @throws IllegalArgumentException if {@code min} is greater than {@code max}
      */
     public DoubleDecoder<I> range(double min, double max, @Nullable String message) {
+        if (Double.compare(min, max) > 0) {
+            throw new IllegalArgumentException("min (%s) must not be greater than max (%s)".formatted(min, max));
+        }
         return chain((value, path) -> {
             if (Double.compare(value, min) < 0 || Double.compare(value, max) > 0) {
                 var meta = Map.<String, Object>of("min", min, "max", max, "actual", value);
