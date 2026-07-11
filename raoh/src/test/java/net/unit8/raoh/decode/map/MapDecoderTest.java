@@ -366,13 +366,27 @@ class MapDecoderTest {
     }
 
     @Test
-    void nullableField() {
-        var dec = field("val", nullable(string()));
-        // null value in map
+    void nullableFieldCollapsesAbsentAndPresentNull() {
+        var dec = nullableField("val", string());
+
+        // absent key -> null
+        assertNull(assertOk(dec.decode(Map.of())));
+
+        // present-null -> null (where optionalField(...).map(orElse(null)) would error)
         var mapWithNull = new java.util.HashMap<String, Object>();
         mapWithNull.put("val", null);
         assertNull(assertOk(dec.decode(mapWithNull)));
+
+        // present value -> decoded value
         assertEquals("x", assertOk(dec.decode(Map.of("val", "x"))));
+    }
+
+    @Test
+    void nullableFieldDecodesPresentValueThroughInnerDecoder() {
+        // The inner decoder still runs (and can fail) for a present, non-null value.
+        var dec = nullableField("name", string().nonBlank());
+        assertEquals("abc", assertOk(dec.decode(Map.of("name", "abc"))));
+        assertErr(dec.decode(Map.of("name", "  ")));
     }
 
     @Test
