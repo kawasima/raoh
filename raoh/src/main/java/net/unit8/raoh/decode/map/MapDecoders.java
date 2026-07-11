@@ -192,10 +192,14 @@ public final class MapDecoders {
      *         value is {@code null}
      */
     // Returns a Decoder<..., @Nullable T>. NullAway cannot verify the type-parameter nullness of the
-    // delegated field(...) return, the same honest widening already suppressed in ObjectDecoders.nullable.
+    // @Nullable T return, the same honest widening already suppressed in ObjectDecoders.nullable.
     @SuppressWarnings("NullAway")
     public static <T> Decoder<Map<String, Object>, @Nullable T> nullableField(String name, Decoder<@Nullable Object, T> dec) {
-        return field(name, ObjectDecoders.nullable(dec));
+        // A null map is treated as absent (-> null), consistent with optionalField / optionalNullableField;
+        // field(...) alone would reject it as a required error. For a non-null map, field handles the rest:
+        // an absent key reaches nullable(dec) as a null value, which decodes to null.
+        var inner = field(name, ObjectDecoders.nullable(dec));
+        return (in, path) -> in == null ? Result.<@Nullable T>ok(null) : inner.decode(in, path);
     }
 
     // --- discriminate ---

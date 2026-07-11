@@ -390,6 +390,15 @@ class MapDecoderTest {
     }
 
     @Test
+    void nullableFieldTreatsNullMapAsNull() {
+        // A null map is tolerated as absent -> null, consistent with optionalField /
+        // optionalNullableField (field alone would reject it as a required error).
+        var dec = nullableField("val", string());
+        Map<String, Object> nullMap = null;
+        assertNull(assertOk(dec.decode(nullMap)));
+    }
+
+    @Test
     void presenceTriState() {
         var dec = optionalNullableField("email", string());
         var absent = assertOk(dec.decode(Map.of()));
