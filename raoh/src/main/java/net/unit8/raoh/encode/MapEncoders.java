@@ -235,7 +235,9 @@ public final class MapEncoders {
     @SafeVarargs
     public static <T> Encoder<T, Map<String, @Nullable Object>> object(EntryEncoder<T>... entries) {
         return value -> {
-            var map = new LinkedHashMap<String, @Nullable Object>(entries.length * 2);
+            // No pre-size: an EntryEncoder may write zero or many keys, so the entry count is not a
+            // reliable bound on the output size.
+            var map = new LinkedHashMap<String, @Nullable Object>();
             for (var entry : entries) {
                 entry.encodeTo(value, map);
             }
