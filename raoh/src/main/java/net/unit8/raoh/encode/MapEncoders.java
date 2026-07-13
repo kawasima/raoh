@@ -290,6 +290,32 @@ public final class MapEncoders {
     }
 
     /**
+     * Creates an encoder that applies a value encoder to every value of a homogeneous
+     * {@code Map<String, V>}, preserving the keys.
+     *
+     * <p>The encode counterpart of
+     * {@link net.unit8.raoh.decode.ObjectDecoders#map(net.unit8.raoh.decode.Decoder) ObjectDecoders.map()}
+     * on the decoder side, so a value-map decoded in can be encoded back out. The result preserves
+     * insertion order (backed by {@link LinkedHashMap}). Like {@link #list}, this is the map sibling
+     * for a homogeneous collection; use it with {@link #nested} to encode a map of nested objects:
+     *
+     * <pre>{@code
+     * property("prices", Order::prices, mapOf(decimal()))
+     * }</pre>
+     *
+     * @param <V>          the value domain type
+     * @param valueEncoder the encoder for each map value
+     * @return an encoder that produces {@code Map<String, Object>}
+     */
+    public static <V> Encoder<Map<String, V>, Object> mapOf(Encoder<V, Object> valueEncoder) {
+        return values -> {
+            var out = new LinkedHashMap<String, Object>();
+            values.forEach((key, value) -> out.put(key, valueEncoder.encode(value)));
+            return out;
+        };
+    }
+
+    /**
      * A single tagged variant of a discriminated (tagged-union) encoder: the concrete subtype,
      * the discriminator tag written for it, and the encoder that produces its body.
      *
