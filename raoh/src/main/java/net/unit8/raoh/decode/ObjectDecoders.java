@@ -67,17 +67,6 @@ public final class ObjectDecoders {
         return new StringDecoder<@Nullable Object>(allowBlankBase());
     }
 
-    /**
-     * Creates a string decoder that preserves blank values (no trim or nonBlank validation).
-     *
-     * @return a string decoder for {@code Object} input that allows blank strings
-     */
-    // See string(): NullAway generics limitation on Decoder<@Nullable Object, String> vs Decoder<I, String>.
-    @SuppressWarnings("NullAway")
-    public static StringDecoder<@Nullable Object> allowBlankString() {
-        return new StringDecoder<@Nullable Object>(allowBlankBase());
-    }
-
     private static Decoder<@Nullable Object, String> allowBlankBase() {
         return (in, path) -> {
             if (in == null) {
@@ -470,7 +459,7 @@ public final class ObjectDecoders {
      * @return a decoder that produces enum constants from string input
      */
     public static <E extends Enum<E>> Decoder<@Nullable Object, E> enumOf(Class<E> cls) {
-        return Decoders.<@Nullable Object, E>enumOf(cls, allowBlankString());
+        return Decoders.<@Nullable Object, E>enumOf(cls, string());
     }
 
     /**
@@ -480,6 +469,6 @@ public final class ObjectDecoders {
      * @return a decoder that succeeds only when the input matches {@code expected}
      */
     public static Decoder<@Nullable Object, String> literal(String expected) {
-        return Decoders.<@Nullable Object>literal(expected, allowBlankString());
+        return Decoders.<@Nullable Object>literal(expected, string());
     }
 }

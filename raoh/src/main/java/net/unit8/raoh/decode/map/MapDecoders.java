@@ -218,7 +218,7 @@ public final class MapDecoders {
     public static <T> Decoder<Map<String, Object>, T> discriminate(
             String fieldName,
             Map<String, Decoder<Map<String, Object>, ? extends T>> variants) {
-        return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.allowBlankString()), variants);
+        return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.string()), variants);
     }
 
     /**
