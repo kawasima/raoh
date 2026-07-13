@@ -102,7 +102,8 @@ At release time this section is renamed to the chosen version with a date.
 
 ### Added
 
-- `raoh-encoder` module for encoding domain objects back into boundary representations.
+- Encoder API (`net.unit8.raoh.encode`: `Encoder`, `ObjectEncoders`, `MapEncoders`) for encoding
+  domain objects back into boundary representations, living in the core `raoh` module.
 - `double_()`, `float_()`, and `bytes()` decoders in `ObjectDecoders`.
 - Acceptance of `java.sql` temporal types (`Date`, `Time`, `Timestamp`) in the temporal decoders.
 - `ObjectEncoders.withDefault()` for null-to-default encoding.
