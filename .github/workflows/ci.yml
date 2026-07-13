@@ -53,9 +53,10 @@ jobs:
           java-version: '25'
           cache: maven
       # The examples live outside the reactor and depend on the current -SNAPSHOT,
-      # so install the library to the local repo first, then build each example.
-      - name: Install library to local repo
-        run: mvn -B --no-transfer-progress install -DskipTests
+      # so install the modules they use (raoh + raoh-json, and their parent) to the
+      # local repo first, then build each example.
+      - name: Install required modules to local repo
+        run: mvn -B --no-transfer-progress -pl raoh,raoh-json -am install -DskipTests
       - name: Build examples
         run: |
           mvn -B --no-transfer-progress -f examples/spring/pom.xml verify
