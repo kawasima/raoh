@@ -8,7 +8,8 @@
  *   <li>{@link net.unit8.raoh.encode.Encoder} — the core encoding interface</li>
  *   <li>{@link net.unit8.raoh.encode.ObjectEncoders} — primitive value encoders</li>
  *   <li>{@link net.unit8.raoh.encode.MapEncoders} — encoders producing {@code Map<String, Object>}</li>
- *   <li>{@link net.unit8.raoh.encode.PropertyEncoder} — field-level encoder</li>
+ *   <li>{@link net.unit8.raoh.encode.PropertyEncoder} — field-level encoder (exactly one key)</li>
+ *   <li>{@link net.unit8.raoh.encode.EntryEncoder} — general map-entry encoder (zero or more keys)</li>
  * </ul>
  */
 @NullMarked

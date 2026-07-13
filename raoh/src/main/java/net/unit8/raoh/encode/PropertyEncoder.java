@@ -2,6 +2,7 @@ package net.unit8.raoh.encode;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -18,11 +19,11 @@ import java.util.function.Supplier;
  * </ul>
  *
  * <p>Created via {@link MapEncoders#property(String, Function, Encoder)} and consumed by
- * {@link MapEncoders#object(PropertyEncoder[])}.
+ * {@link MapEncoders#object(EntryEncoder[])}.
  *
  * @param <T> the domain type from which the property is extracted
  */
-public final class PropertyEncoder<T> {
+public final class PropertyEncoder<T> implements EntryEncoder<T> {
 
     private final String key;
     private final Function<T, @Nullable Object> extractor;
@@ -125,5 +126,19 @@ public final class PropertyEncoder<T> {
      */
     public @Nullable Object encode(T value) {
         return extractor.apply(value);
+    }
+
+    /**
+     * Writes this property's single key/value pair into the output map.
+     *
+     * <p>Part of the {@link EntryEncoder} contract: a {@code PropertyEncoder} always writes
+     * exactly one entry (the value may be {@code null}).
+     *
+     * @param value the domain object being encoded
+     * @param out   the output map to write the entry into
+     */
+    @Override
+    public void encodeTo(T value, Map<String, @Nullable Object> out) {
+        out.put(key, encode(value));
     }
 }
