@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class StringDecoderTest {
 
-    // --- nonBlank / allowBlank ---
+    // --- nonBlank ---
 
     @Test
     void nonBlankAcceptsNonBlankRejectsWhitespace() {
