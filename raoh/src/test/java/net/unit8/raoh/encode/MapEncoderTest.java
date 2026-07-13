@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import org.jspecify.annotations.Nullable;
 
+import net.unit8.raoh.Presence;
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.decode.ObjectDecoders;
 import net.unit8.raoh.decode.map.MapDecoders;
@@ -11,6 +12,7 @@ import net.unit8.raoh.decode.map.MapDecoders;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static net.unit8.raoh.encode.MapEncoders.*;
 import static net.unit8.raoh.encode.ObjectEncoders.*;
@@ -234,5 +236,118 @@ class MapEncoderTest {
         var out = enc.encode(new Circle(1.0));
         assertEquals("circle", out.get("type"));
         assertEquals(1.0, out.get("radius"));
+    }
+
+    // --- optionalProperty / presenceProperty (#41, #61) ---
+
+    record Membership(long id, @Nullable List<String> groups) {}
+
+    @Test
+    void optionalPropertyOmitsKeyWhenNull() {
+        Encoder<Membership, Map<String, @Nullable Object>> enc = object(
+                property("id", Membership::id, long_()),
+                optionalProperty("groups", Membership::groups, list(string())));
+
+        var present = enc.encode(new Membership(1L, List.of("a", "b")));
+        assertEquals(List.of("a", "b"), present.get("groups"));
+
+        var absent = enc.encode(new Membership(2L, null));
+        assertFalse(absent.containsKey("groups")); // key omitted entirely, not written as null
+    }
+
+    @Test
+    void optionalPropertyVersusNullableProperty() {
+        record Row(@Nullable String note) {}
+        // nullableProperty writes the key with a null value; optionalProperty omits it.
+        var nullable = object(nullableProperty("note", Row::note, string())).encode(new Row(null));
+        assertTrue(nullable.containsKey("note"));
+        assertNull(nullable.get("note"));
+
+        var optional = object(optionalProperty("note", Row::note, string())).encode(new Row(null));
+        assertFalse(optional.containsKey("note"));
+    }
+
+    record Patch(Presence<String> nickname) {}
+
+    static final Encoder<Patch, Map<String, @Nullable Object>> PATCH_ENCODER =
+            object(presenceProperty("nickname", Patch::nickname, string()));
+
+    @Test
+    void presencePropertyAbsentOmitsKey() {
+        var out = PATCH_ENCODER.encode(new Patch(new Presence.Absent<>()));
+        assertFalse(out.containsKey("nickname"));
+    }
+
+    @Test
+    void presencePropertyPresentNullWritesNull() {
+        var out = PATCH_ENCODER.encode(new Patch(new Presence.PresentNull<>()));
+        assertTrue(out.containsKey("nickname"));
+        assertNull(out.get("nickname"));
+    }
+
+    @Test
+    void presencePropertyPresentWritesEncodedValue() {
+        var out = PATCH_ENCODER.encode(new Patch(new Presence.Present<>("bob")));
+        assertEquals("bob", out.get("nickname"));
+    }
+
+    @Test
+    void presencePropertyPresentWithNullValueIsWrittenAsNull() {
+        // A Present carrying a null value (a modeling error, but not enforced at runtime) is
+        // normalized to a null entry and never reaches the non-null value encoder.
+        var out = PATCH_ENCODER.encode(new Patch(new Presence.Present<>(null)));
+        assertTrue(out.containsKey("nickname"));
+        assertNull(out.get("nickname"));
+    }
+
+    @Test
+    void presencePropertyRoundTripsThroughOptionalNullableField() {
+        // The boundary-completeness test: decode-in (optionalNullableField -> Presence) and
+        // encode-out (presenceProperty) are exact inverses across all three states.
+        Decoder<Map<String, Object>, Presence<String>> dec =
+                MapDecoders.optionalNullableField("nickname", ObjectDecoders.string());
+
+        for (Presence<String> original : List.<Presence<String>>of(
+                new Presence.Absent<>(),
+                new Presence.PresentNull<>(),
+                new Presence.Present<>("bob"))) {
+            var encoded = PATCH_ENCODER.encode(new Patch(original));
+            @SuppressWarnings("unchecked")
+            var asInput = (Map<String, Object>) (Map<String, ?>) encoded;
+            assertEquals(original, dec.decode(asInput).getOrThrow());
+        }
+    }
+
+    @Test
+    void optionalPropertyRoundTripsThroughOptionalField() {
+        // The #41 half: optionalProperty (omit key) and optionalField (-> Optional) are inverses.
+        record Row(@Nullable String note) {}
+        Encoder<Row, Map<String, @Nullable Object>> enc =
+                object(optionalProperty("note", Row::note, string()));
+        Decoder<Map<String, Object>, Optional<String>> dec =
+                MapDecoders.optionalField("note", ObjectDecoders.string());
+
+        @SuppressWarnings("unchecked")
+        var present = (Map<String, Object>) (Map<String, ?>) enc.encode(new Row("hi"));
+        assertEquals(Optional.of("hi"), dec.decode(present).getOrThrow());
+
+        @SuppressWarnings("unchecked")
+        var absent = (Map<String, Object>) (Map<String, ?>) enc.encode(new Row(null));
+        assertEquals(Optional.empty(), dec.decode(absent).getOrThrow());
+    }
+
+    @Test
+    void objectMixesPropertyKinds() {
+        record User(long id, @Nullable String bio, Presence<String> nickname) {}
+        Encoder<User, Map<String, @Nullable Object>> enc = object(
+                property("id", User::id, long_()),
+                optionalProperty("bio", User::bio, string()),
+                presenceProperty("nickname", User::nickname, string()));
+
+        var full = enc.encode(new User(1L, "hi", new Presence.Present<>("bob")));
+        assertEquals(List.of("id", "bio", "nickname"), full.keySet().stream().toList());
+
+        var sparse = enc.encode(new User(2L, null, new Presence.Absent<>()));
+        assertEquals(List.of("id"), sparse.keySet().stream().toList()); // bio + nickname omitted
     }
 }
