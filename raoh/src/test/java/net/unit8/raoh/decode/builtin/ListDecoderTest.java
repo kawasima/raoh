@@ -3,6 +3,7 @@ package net.unit8.raoh.decode.builtin;
 import net.unit8.raoh.ErrorCodes;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -99,8 +100,11 @@ class ListDecoderTest {
     // --- conversion ---
 
     @Test
-    void toSetDeduplicatesElements() {
-        assertEquals(Set.of(1, 2, 3), decodeOk(list(int_()).toSet(), List.of(1, 2, 2, 3)));
+    void toSetDeduplicatesElementsPreservingInsertionOrder() {
+        var set = decodeOk(list(int_()).toSet(), List.of(3, 1, 3, 2));
+        // Deduplication: [3, 1, 3, 2] -> {3, 1, 2}, with first-seen (insertion) order preserved.
+        assertEquals(Set.of(1, 2, 3), set);
+        assertEquals(List.of(3, 1, 2), new ArrayList<>(set));
     }
 
     // --- base decoder behaviour ---

@@ -8,12 +8,10 @@ import java.net.URI;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
-import static net.unit8.raoh.decode.ObjectDecoders.allowBlankString;
 import static net.unit8.raoh.decode.ObjectDecoders.string;
 import static net.unit8.raoh.decode.builtin.BuiltinTestSupport.decodeErr;
 import static net.unit8.raoh.decode.builtin.BuiltinTestSupport.decodeOk;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -23,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class StringDecoderTest {
 
-    // --- nonBlank / allowBlank ---
+    // --- nonBlank ---
 
     @Test
     void nonBlankAcceptsNonBlankRejectsWhitespace() {
@@ -31,20 +29,6 @@ class StringDecoderTest {
         var issue = decodeErr(string().nonBlank(), "   ");
         assertEquals(ErrorCodes.BLANK, issue.code());
         assertEquals("must not be blank", issue.message());
-    }
-
-    @Test
-    void allowBlankReturnsBlankAcceptingDecoder() {
-        // string() retains a base decoder, so allowBlank() is permitted and yields a decoder
-        // that accepts blank input. Note: allowBlank() must be called directly on string();
-        // any chained constraint (e.g. nonBlank()) drops the base via chain().
-        assertEquals("  ", decodeOk(string().allowBlank(), "  "));
-    }
-
-    @Test
-    void allowBlankThrowsWhenNoBaseRetained() {
-        // allowBlankString() uses the single-argument constructor, so no base decoder is retained.
-        assertThrows(IllegalStateException.class, () -> allowBlankString().allowBlank());
     }
 
     // --- length constraints ---

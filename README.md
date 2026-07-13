@@ -288,7 +288,6 @@ Other:
 `StringDecoder` supports:
 
 - `nonBlank()`
-- `allowBlank()`
 - `minLength(...)`
 - `maxLength(...)`
 - `fixedLength(...)`
