@@ -11,6 +11,7 @@ import net.unit8.raoh.Presence;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.decode.Decoders;
+import net.unit8.raoh.decode.ObjectDecoders;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -467,7 +468,7 @@ class MapDecoderTest {
 
     @Test
     void allowBlankString() {
-        var dec = field("note", string().allowBlank());
+        var dec = field("note", ObjectDecoders.allowBlankString());
         assertEquals("", assertOk(dec.decode(Map.of("note", ""))));
         assertEquals("hello", assertOk(dec.decode(Map.of("note", "hello"))));
     }

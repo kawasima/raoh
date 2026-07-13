@@ -55,8 +55,7 @@ public final class JsonDecoders {
      * @return a decoder that extracts a string value from a JSON node
      */
     public static StringDecoder<JsonNode> string() {
-        Decoder<JsonNode, String> base = allowBlankBase();
-        return new StringDecoder<>(base, base);
+        return new StringDecoder<>(allowBlankBase());
     }
 
     /**

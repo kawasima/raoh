@@ -54,8 +54,8 @@ public final class ObjectDecoders {
      * <p>Returns {@code required} if the value is {@code null},
      * and {@code type_mismatch} if the value is not a {@link String}.
      * Blank strings are accepted by default; chain {@link net.unit8.raoh.decode.builtin.StringDecoder#nonBlank() nonBlank()}
-     * to reject them, or use {@link #allowBlankString()} when you explicitly want to allow blanks
-     * and suppress the {@link net.unit8.raoh.decode.builtin.StringDecoder#nonBlank() nonBlank()} default.
+     * to reject them. Constraints are additive — there is no opt-out combinator to remove a
+     * previously-applied constraint.
      *
      * @return a string decoder for {@code Object} input
      */
@@ -64,8 +64,7 @@ public final class ObjectDecoders {
     // the types are identical, so this is a checker generics limitation, not a nullness hole.
     @SuppressWarnings("NullAway")
     public static StringDecoder<@Nullable Object> string() {
-        Decoder<@Nullable Object, String> base = allowBlankBase();
-        return new StringDecoder<@Nullable Object>(base, base);
+        return new StringDecoder<@Nullable Object>(allowBlankBase());
     }
 
     /**

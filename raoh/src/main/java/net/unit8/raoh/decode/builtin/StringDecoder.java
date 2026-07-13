@@ -50,7 +50,6 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
             "^[0-9A-HJKMNP-TV-Z]{26}$");
 
     private final Decoder<I, String> inner;
-    private final @Nullable Decoder<I, String> base;
 
     /**
      * Creates a new {@link StringDecoder} wrapping the given decoder.
@@ -59,19 +58,6 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
      */
     public StringDecoder(Decoder<I, String> inner) {
         this.inner = inner;
-        this.base = null;
-    }
-
-    /**
-     * Creates a new {@link StringDecoder} wrapping the given decoder, retaining a base decoder
-     * for use by {@link #allowBlank()}.
-     *
-     * @param inner the underlying decoder that produces a string value
-     * @param base  the original decoder before {@link #nonBlank()} was applied, or {@code null}
-     */
-    public StringDecoder(Decoder<I, String> inner, @Nullable Decoder<I, String> base) {
-        this.inner = inner;
-        this.base = base;
     }
 
     @Override
@@ -115,22 +101,6 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
             }
             return Result.ok(value);
         });
-    }
-
-    /**
-     * Removes a previously-applied {@link #nonBlank()} constraint, restoring blank-string acceptance.
-     *
-     * @return a new decoder that accepts blank strings
-     * @throws IllegalStateException if this decoder was not created via {@code net.unit8.raoh.json.JsonDecoders#string()}
-     *         or {@link net.unit8.raoh.decode.ObjectDecoders#string()} (i.e., no base decoder is available to restore)
-     */
-    public StringDecoder<I> allowBlank() {
-        if (base == null) {
-            throw new IllegalStateException(
-                    "allowBlank() can only be called on a StringDecoder created by JsonDecoders.string() " +
-                    "or ObjectDecoders.string(), which retain the base decoder for restoration.");
-        }
-        return new StringDecoder<>(base);
     }
 
     /**
