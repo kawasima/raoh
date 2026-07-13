@@ -29,6 +29,8 @@ jobs:
       # a downloadable HTML artifact. Reporting only — no coverage thresholds.
       - name: Coverage summary
         if: always()
+        # Reporting only: never let a summary-parsing hiccup red an otherwise-green build.
+        continue-on-error: true
         run: |
           {
             echo "## Coverage (line)"
