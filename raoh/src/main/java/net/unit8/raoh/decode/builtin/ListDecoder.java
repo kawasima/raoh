@@ -186,7 +186,8 @@ public class ListDecoder<I extends @Nullable Object, T> implements Decoder<I, Li
      * @return a decoder that produces an unmodifiable {@link Set} from the list elements
      */
     public Decoder<I, Set<T>> toSet() {
-        return (in, path) -> this.decode(in, path).map(list -> Set.copyOf(new LinkedHashSet<>(list)));
+        return (in, path) -> this.decode(in, path)
+                .map(list -> Collections.unmodifiableSet(new LinkedHashSet<>(list)));
     }
 
     private ListDecoder<I, T> chain(Decoder<List<T>, List<T>> constraint) {
