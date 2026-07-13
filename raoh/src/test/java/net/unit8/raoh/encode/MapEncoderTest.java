@@ -10,6 +10,7 @@ import net.unit8.raoh.decode.ObjectDecoders;
 import net.unit8.raoh.decode.map.MapDecoders;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -349,5 +350,40 @@ class MapEncoderTest {
 
         var sparse = enc.encode(new User(2L, null, new Presence.Absent<>()));
         assertEquals(List.of("id"), sparse.keySet().stream().toList()); // bio + nickname omitted
+    }
+
+    // --- mapOf (#63) ---
+
+    @Test
+    void mapOfEncodesEachValuePreservingKeysAndOrder() {
+        Encoder<Map<String, BigDecimal>, Object> enc = mapOf(decimal());
+        var domain = new LinkedHashMap<String, BigDecimal>();
+        domain.put("usd", new BigDecimal("100"));
+        domain.put("eur", new BigDecimal("90"));
+
+        @SuppressWarnings("unchecked")
+        var out = (Map<String, Object>) enc.encode(domain);
+        assertEquals(new BigDecimal("100"), out.get("usd"));
+        assertEquals(new BigDecimal("90"), out.get("eur"));
+        assertEquals(List.of("usd", "eur"), out.keySet().stream().toList());
+    }
+
+    @Test
+    void mapOfEncodesEmptyMap() {
+        @SuppressWarnings("unchecked")
+        var out = (Map<String, Object>) mapOf(decimal()).encode(Map.of());
+        assertTrue(out.isEmpty());
+    }
+
+    @Test
+    void mapOfRoundTripsThroughObjectDecodersMap() {
+        // The value-map is the encode counterpart of ObjectDecoders.map:
+        // decode-in and encode-out are inverses.
+        Encoder<Map<String, BigDecimal>, Object> enc = mapOf(decimal());
+        Decoder<@Nullable Object, Map<String, BigDecimal>> dec =
+                ObjectDecoders.map(ObjectDecoders.decimal());
+
+        var domain = Map.of("usd", new BigDecimal("100"), "eur", new BigDecimal("90"));
+        assertEquals(domain, dec.decode(enc.encode(domain)).getOrThrow());
     }
 }
