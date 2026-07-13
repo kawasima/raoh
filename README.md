@@ -53,7 +53,7 @@ version once as a property — use the latest shown on the Maven Central badge a
         <version>${raoh.version}</version>
     </dependency>
 
-    <!-- Optional: decode Jackson JsonNode (pulls in Jackson 3) -->
+    <!-- Optional: decode Jackson JsonNode (Jackson 3 is a provided dependency — supply your own) -->
     <dependency>
         <groupId>net.unit8.raoh</groupId>
         <artifactId>raoh-json</artifactId>
@@ -617,6 +617,12 @@ Raoh ships three boundary modules for different input types:
 - **`MapDecoders`** — `Map<String, Object>` (`raoh`)
 
 Each provides the same set of helpers (`string()`, `field(...)`, `combine(...)`, etc.) adapted to its input type.
+
+Both integration modules scope their third-party library as `provided`: `raoh-json` for
+Jackson 3 (`tools.jackson.core:jackson-databind`) and `raoh-jooq` for jOOQ (`org.jooq:jooq`).
+Because each module exposes that library's type (`JsonNode`, `Record`) in its public API, a
+consumer already supplies it on the classpath — so `provided` avoids pinning a specific
+version transitively on downstreams. Add the matching library to your own build.
 
 See [docs/boundary-modules.md](docs/boundary-modules.md) for the full API listing and examples.
 
