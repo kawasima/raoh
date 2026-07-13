@@ -156,9 +156,44 @@ class StringDecoderTest {
     }
 
     @Test
+    void emailRejectsTooLongValue() {
+        // Matches the email pattern but exceeds the 254-character maximum, so only the
+        // length guard rejects it — exercising that branch independently of the pattern.
+        var tooLong = "a".repeat(64) + "@" + "b".repeat(250) + ".co";
+        var issue = decodeErr(string().email(), tooLong);
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals("not a valid email", issue.message());
+    }
+
+    @Test
     void urlAcceptsHttpsRejectsNonHttpScheme() {
         assertEquals(URI.create("https://example.com"), decodeOk(string().url(), "https://example.com"));
         var issue = decodeErr(string().url(), "ftp://example.com");
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals("not a valid URL", issue.message());
+    }
+
+    @Test
+    void urlRejectsTooLongValue() {
+        // Exceeds the 2048-character maximum, exercising the length guard branch of url().
+        var tooLong = "https://example.com/" + "a".repeat(2048);
+        var issue = decodeErr(string().url(), tooLong);
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals("not a valid URL", issue.message());
+    }
+
+    @Test
+    void urlRejectsMalformedValue() {
+        // The embedded space makes URI.create throw, exercising the parse-failure branch of url().
+        var issue = decodeErr(string().url(), "http://exa mple.com");
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals("not a valid URL", issue.message());
+    }
+
+    @Test
+    void urlRejectsMissingHost() {
+        // Valid http scheme but empty host, exercising the host==null/empty branch of url().
+        var issue = decodeErr(string().url(), "http://");
         assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
         assertEquals("not a valid URL", issue.message());
     }
