@@ -309,7 +309,8 @@ public final class MapEncoders {
      */
     public static <V> Encoder<Map<String, V>, Object> mapOf(Encoder<V, Object> valueEncoder) {
         return values -> {
-            var out = new LinkedHashMap<String, Object>();
+            // Output size is exactly the input size (one entry per value), so pre-size to avoid rehashes.
+            var out = LinkedHashMap.<String, Object>newLinkedHashMap(values.size());
             values.forEach((key, value) -> out.put(key, valueEncoder.encode(value)));
             return out;
         };
