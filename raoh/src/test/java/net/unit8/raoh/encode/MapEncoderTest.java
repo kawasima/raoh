@@ -12,6 +12,7 @@ import net.unit8.raoh.decode.map.MapDecoders;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static net.unit8.raoh.encode.MapEncoders.*;
 import static net.unit8.raoh.encode.ObjectEncoders.*;
@@ -291,6 +292,15 @@ class MapEncoderTest {
     }
 
     @Test
+    void presencePropertyPresentWithNullValueIsWrittenAsNull() {
+        // A Present carrying a null value (a modeling error, but not enforced at runtime) is
+        // normalized to a null entry and never reaches the non-null value encoder.
+        var out = PATCH_ENCODER.encode(new Patch(new Presence.Present<>(null)));
+        assertTrue(out.containsKey("nickname"));
+        assertNull(out.get("nickname"));
+    }
+
+    @Test
     void presencePropertyRoundTripsThroughOptionalNullableField() {
         // The boundary-completeness test: decode-in (optionalNullableField -> Presence) and
         // encode-out (presenceProperty) are exact inverses across all three states.
@@ -306,6 +316,24 @@ class MapEncoderTest {
             var asInput = (Map<String, Object>) (Map<String, ?>) encoded;
             assertEquals(original, dec.decode(asInput).getOrThrow());
         }
+    }
+
+    @Test
+    void optionalPropertyRoundTripsThroughOptionalField() {
+        // The #41 half: optionalProperty (omit key) and optionalField (-> Optional) are inverses.
+        record Row(@Nullable String note) {}
+        Encoder<Row, Map<String, @Nullable Object>> enc =
+                object(optionalProperty("note", Row::note, string()));
+        Decoder<Map<String, Object>, Optional<String>> dec =
+                MapDecoders.optionalField("note", ObjectDecoders.string());
+
+        @SuppressWarnings("unchecked")
+        var present = (Map<String, Object>) (Map<String, ?>) enc.encode(new Row("hi"));
+        assertEquals(Optional.of("hi"), dec.decode(present).getOrThrow());
+
+        @SuppressWarnings("unchecked")
+        var absent = (Map<String, Object>) (Map<String, ?>) enc.encode(new Row(null));
+        assertEquals(Optional.empty(), dec.decode(absent).getOrThrow());
     }
 
     @Test

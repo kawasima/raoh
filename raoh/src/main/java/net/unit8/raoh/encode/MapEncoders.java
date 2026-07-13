@@ -186,7 +186,9 @@ public final class MapEncoders {
      * <ul>
      *   <li>{@link Presence.Absent} — the key is omitted entirely;</li>
      *   <li>{@link Presence.PresentNull} — the key is written with a {@code null} value;</li>
-     *   <li>{@link Presence.Present} — the key is written with the encoded value.</li>
+     *   <li>{@link Presence.Present} — the key is written with the encoded value (a {@code Present}
+     *       carrying a {@code null} value is written as a {@code null} entry, never passed to the
+     *       value encoder).</li>
      * </ul>
      *
      * <p>This is the exact encode counterpart of
@@ -209,7 +211,10 @@ public final class MapEncoders {
             switch (p) {
                 case Presence.Absent<V> _ -> { }
                 case Presence.PresentNull<V> _ -> out.put(key, null);
-                case Presence.Present<V> present -> out.put(key, valueEncoder.encode(present.value()));
+                case Presence.Present<V> present -> {
+                    @Nullable V v = present.value();
+                    out.put(key, v == null ? null : valueEncoder.encode(v));
+                }
             }
         };
     }
