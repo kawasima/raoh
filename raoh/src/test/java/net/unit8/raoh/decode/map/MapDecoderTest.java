@@ -11,7 +11,6 @@ import net.unit8.raoh.Presence;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.decode.Decoders;
-import net.unit8.raoh.decode.ObjectDecoders;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -464,13 +463,6 @@ class MapDecoderTest {
     void typeMismatch() {
         var dec = field("age", int_());
         assertErr(dec.decode(Map.of("age", "thirty")));
-    }
-
-    @Test
-    void allowBlankString() {
-        var dec = field("note", ObjectDecoders.allowBlankString());
-        assertEquals("", assertOk(dec.decode(Map.of("note", ""))));
-        assertEquals("hello", assertOk(dec.decode(Map.of("note", "hello"))));
     }
 
     @Test

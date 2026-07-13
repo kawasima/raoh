@@ -172,7 +172,7 @@ public final class JooqRecordDecoders {
     public static <T> JooqRecordDecoder<T> discriminate(
             String fieldName,
             Map<String, Decoder<org.jooq.Record, ? extends T>> variants) {
-        return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.allowBlankString()), variants)::decode;
+        return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.string()), variants)::decode;
     }
 
     // --- combine delegates ---

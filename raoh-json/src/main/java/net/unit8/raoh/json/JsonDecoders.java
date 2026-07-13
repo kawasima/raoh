@@ -58,15 +58,6 @@ public final class JsonDecoders {
         return new StringDecoder<>(allowBlankBase());
     }
 
-    /**
-     * Creates a string decoder that preserves blank values (no trim or nonBlank validation).
-     *
-     * @return a string decoder that allows blank strings
-     */
-    public static StringDecoder<JsonNode> allowBlankString() {
-        return new StringDecoder<>(allowBlankBase());
-    }
-
     private static Decoder<JsonNode, String> allowBlankBase() {
         return (in, path) -> {
             if (in == null || in.isNull() || in.isMissingNode()) {
@@ -377,7 +368,7 @@ public final class JsonDecoders {
      * @return an enum decoder
      */
     public static <E extends Enum<E>> Decoder<JsonNode, E> enumOf(Class<E> cls) {
-        return Decoders.<JsonNode, E>enumOf(cls, allowBlankString());
+        return Decoders.<JsonNode, E>enumOf(cls, string());
     }
 
     /**
@@ -387,7 +378,7 @@ public final class JsonDecoders {
      * @return a literal decoder
      */
     public static Decoder<JsonNode, String> literal(String expected) {
-        return Decoders.<JsonNode>literal(expected, allowBlankString());
+        return Decoders.<JsonNode>literal(expected, string());
     }
 
     // --- discriminate ---
@@ -403,7 +394,7 @@ public final class JsonDecoders {
     public static <T> Decoder<JsonNode, T> discriminate(
             String fieldName,
             Map<String, Decoder<JsonNode, ? extends T>> variants) {
-        return Decoders.<JsonNode, T>discriminate(fieldName, field(fieldName, allowBlankString()), variants);
+        return Decoders.<JsonNode, T>discriminate(fieldName, field(fieldName, string()), variants);
     }
 
     // --- strict ---
