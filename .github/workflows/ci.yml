@@ -24,6 +24,33 @@ jobs:
           cache: maven
       - name: Build and test
         run: mvn -B --no-transfer-progress verify
+      # JaCoCo (configured in the parent pom) writes per-module reports under
+      # target/site/jacoco during `verify`. Surface them as a job-summary table and
+      # a downloadable HTML artifact. Reporting only — no coverage thresholds.
+      - name: Coverage summary
+        if: always()
+        run: |
+          {
+            echo "## Coverage (line)"
+            echo "| Module | Covered/Total | % |"
+            echo "|---|---|---|"
+            for f in $(find . -path '*/target/site/jacoco/jacoco.xml' | sort); do
+              mod=$(echo "$f" | sed -E 's#\./([^/]+)/target.*#\1#')
+              c=$(grep -o '<counter type="LINE" missed="[0-9]*" covered="[0-9]*"/>' "$f" | tail -1)
+              missed=$(echo "$c" | sed -E 's/.*missed="([0-9]*)".*/\1/')
+              covered=$(echo "$c" | sed -E 's/.*covered="([0-9]*)".*/\1/')
+              total=$((missed + covered))
+              pct=$(awk "BEGIN{ if ($total>0) printf \"%.1f\", 100*$covered/$total; else print \"n/a\" }")
+              echo "| $mod | $covered/$total | ${pct}% |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-coverage
+          path: '**/target/site/jacoco/'
+          if-no-files-found: warn
 
   nullcheck:
     name: NullAway null-analysis gate (JDK 25)

@@ -85,6 +85,10 @@ version once as a property — use the latest shown on the Maven Central badge a
 mvn clean test
 ```
 
+`mvn verify` additionally runs [JaCoCo](https://www.jacoco.org/jacoco/) and writes a
+per-module coverage report to `target/site/jacoco/` (reporting only — no thresholds are
+enforced). CI publishes the same reports as a job-summary table and a downloadable artifact.
+
 ## Package Layout
 
 ### Core (`raoh`)
