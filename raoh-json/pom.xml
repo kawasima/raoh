@@ -25,10 +25,17 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!--
+            Jackson is scoped 'provided': raoh-json exposes Jackson's JsonNode in its
+            public API, so any consumer already supplies Jackson 3 on their classpath.
+            Keeping it 'provided' (matching jOOQ in raoh-jooq) avoids pinning a specific
+            Jackson 3.x version transitively on downstreams.
+        -->
         <dependency>
             <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
