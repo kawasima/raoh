@@ -11,9 +11,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Direct unit tests for {@link DoubleDecoder}. Comparisons use
+ * Direct unit tests for {@link DoubleDecoder}. The decoder's range checks use
  * {@link Double#compare(double, double)}, so {@code NaN} is treated as greater than
- * every other value; the range test guards that behaviour.
+ * every other value; the {@code rangeRejectsNaN} test guards that behaviour.
  */
 class DoubleDecoderTest {
 

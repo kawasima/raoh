@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Direct unit tests for {@link FloatDecoder}, mirroring {@link DoubleDecoderTest} for the
- * {@code float} type. Comparisons use {@link Float#compare(float, float)}.
+ * {@code float} type. The decoder's range checks use {@link Float#compare(float, float)}.
  */
 class FloatDecoderTest {
 
