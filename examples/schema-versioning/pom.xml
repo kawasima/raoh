@@ -13,7 +13,7 @@
 
     <groupId>net.unit8.raoh.examples</groupId>
     <artifactId>raoh-schema-versioning-example</artifactId>
-    <version>0.4.1</version>
+    <version>0.6.0-SNAPSHOT</version>
     <name>Raoh Schema Versioning Example</name>
     <description>Demonstrates schema-versioned decoding with Raoh's discriminate()</description>
 
