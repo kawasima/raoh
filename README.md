@@ -53,11 +53,18 @@ version once as a property — use the latest shown on the Maven Central badge a
         <version>${raoh.version}</version>
     </dependency>
 
-    <!-- Optional: decode Jackson JsonNode (Jackson 3 is a provided dependency — supply your own) -->
+    <!-- Optional: decode Jackson JsonNode -->
     <dependency>
         <groupId>net.unit8.raoh</groupId>
         <artifactId>raoh-json</artifactId>
         <version>${raoh.version}</version>
+    </dependency>
+    <!-- raoh-json scopes Jackson as 'provided', so add Jackson 3 yourself.
+         Note the groupId is tools.jackson.core (Jackson 3), not com.fasterxml.jackson (Jackson 2). -->
+    <dependency>
+        <groupId>tools.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>3.1.0</version>
     </dependency>
 
     <!-- Optional: decode jOOQ Record (jOOQ is a provided dependency) -->
