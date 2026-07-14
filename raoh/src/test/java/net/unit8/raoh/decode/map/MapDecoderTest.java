@@ -1226,13 +1226,10 @@ class MapDecoderTest {
     void refineInsideNullableIsNotConsultedForNull() {
         // refine is applied to the inner non-null decoder; nullable wraps it outside,
         // so a null input short-circuits and the predicate is never called.
-        var calls = new java.util.concurrent.atomic.AtomicInteger();
-        var dec = nullable(int_().refine(n -> {
-            calls.incrementAndGet();
-            return n % 2 == 0;
-        }, "must_be_even", "must be even"));
+        var dec = nullable(int_().refine(
+                n -> fail("predicate must not run for null input"),
+                "must_be_even", "must be even"));
         assertNull(assertOk(dec.decode(null)));
-        assertEquals(0, calls.get());
     }
 
     // --- Helpers ---

@@ -116,7 +116,7 @@ public interface Decoder<I extends @Nullable Object, T extends @Nullable Object>
      * @return a decoder that fails with the given code and message when {@code ok} rejects the value
      */
     default Decoder<I, T> refine(Predicate<? super T> ok, String code, String message) {
-        return refine(ok, (v, path) -> Result.failCustom(path, code, message, Map.of()));
+        return refine(ok, code, message, v -> Map.of());
     }
 
     /**
@@ -153,8 +153,7 @@ public interface Decoder<I extends @Nullable Object, T extends @Nullable Object>
      */
     default Decoder<I, T> refine(Predicate<? super T> ok,
                                  BiFunction<? super T, ? super Path, ? extends Result<T>> onFail) {
-        return (in, path) -> this.decode(in, path)
-                .flatMap(t -> ok.test(t) ? Result.ok(t) : onFail.apply(t, path));
+        return flatMapWithPath((t, path) -> ok.test(t) ? Result.ok(t) : onFail.apply(t, path));
     }
 
     /**
