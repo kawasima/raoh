@@ -46,9 +46,19 @@ public class ListDecoder<I extends @Nullable Object, T> implements Decoder<I, Li
      * @return a new decoder that fails with {@link ErrorCodes#TOO_SMALL} if the list is empty
      */
     public ListDecoder<I, T> nonempty() {
+        return nonempty(null);
+    }
+
+    /**
+     * Requires the list to be non-empty.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_SMALL} if the list is empty
+     */
+    public ListDecoder<I, T> nonempty(@Nullable String message) {
         return chain((value, path) -> {
             if (value.isEmpty()) {
-                return Result.fail(path, ErrorCodes.TOO_SMALL, "must not be empty",
+                return Result.failWith(path, ErrorCodes.TOO_SMALL, message, "must not be empty",
                         Map.of("min", 1, "actual", 0));
             }
             return Result.ok(value);
@@ -62,9 +72,20 @@ public class ListDecoder<I extends @Nullable Object, T> implements Decoder<I, Li
      * @return a new decoder that fails with {@link ErrorCodes#TOO_SMALL} if below
      */
     public ListDecoder<I, T> minSize(int n) {
+        return minSize(n, null);
+    }
+
+    /**
+     * Restricts the list to have at least {@code n} elements.
+     *
+     * @param n       the minimum number of elements (inclusive)
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_SMALL} if below
+     */
+    public ListDecoder<I, T> minSize(int n, @Nullable String message) {
         return chain((value, path) -> {
             if (value.size() < n) {
-                return Result.fail(path, ErrorCodes.TOO_SMALL,
+                return Result.failWith(path, ErrorCodes.TOO_SMALL, message,
                         "must have at least %d elements".formatted(n),
                         Map.of("min", n, "actual", value.size()));
             }
@@ -79,9 +100,20 @@ public class ListDecoder<I extends @Nullable Object, T> implements Decoder<I, Li
      * @return a new decoder that fails with {@link ErrorCodes#TOO_BIG} if above
      */
     public ListDecoder<I, T> maxSize(int n) {
+        return maxSize(n, null);
+    }
+
+    /**
+     * Restricts the list to have at most {@code n} elements.
+     *
+     * @param n       the maximum number of elements (inclusive)
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_BIG} if above
+     */
+    public ListDecoder<I, T> maxSize(int n, @Nullable String message) {
         return chain((value, path) -> {
             if (value.size() > n) {
-                return Result.fail(path, ErrorCodes.TOO_BIG,
+                return Result.failWith(path, ErrorCodes.TOO_BIG, message,
                         "must have at most %d elements".formatted(n),
                         Map.of("max", n, "actual", value.size()));
             }
@@ -96,9 +128,20 @@ public class ListDecoder<I extends @Nullable Object, T> implements Decoder<I, Li
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_SIZE} if the size differs
      */
     public ListDecoder<I, T> fixedSize(int n) {
+        return fixedSize(n, null);
+    }
+
+    /**
+     * Restricts the list to have exactly {@code n} elements.
+     *
+     * @param n       the required number of elements
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_SIZE} if the size differs
+     */
+    public ListDecoder<I, T> fixedSize(int n, @Nullable String message) {
         return chain((value, path) -> {
             if (value.size() != n) {
-                return Result.fail(path, ErrorCodes.INVALID_SIZE,
+                return Result.failWith(path, ErrorCodes.INVALID_SIZE, message,
                         "must have exactly %d elements".formatted(n),
                         Map.of("expected", n, "actual", value.size()));
             }
@@ -113,12 +156,23 @@ public class ListDecoder<I extends @Nullable Object, T> implements Decoder<I, Li
      * @return a new decoder that fails with {@link ErrorCodes#MISSING_ELEMENT} if the element is absent
      */
     public ListDecoder<I, T> contains(T element) {
+        return contains(element, null);
+    }
+
+    /**
+     * Requires the list to contain the specified element.
+     *
+     * @param element the element that must be present
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#MISSING_ELEMENT} if the element is absent
+     */
+    public ListDecoder<I, T> contains(T element, @Nullable String message) {
         Objects.requireNonNull(element, "element must not be null");
-        var message = "must contain %s".formatted(element);
         return chain((value, path) -> {
             if (!value.contains(element)) {
                 var meta = Map.<String, Object>of("expected", element);
-                return Result.fail(path, ErrorCodes.MISSING_ELEMENT, message, meta);
+                return Result.failWith(path, ErrorCodes.MISSING_ELEMENT, message,
+                        "must contain %s".formatted(element), meta);
             }
             return Result.ok(value);
         });
@@ -159,6 +213,16 @@ public class ListDecoder<I extends @Nullable Object, T> implements Decoder<I, Li
      * @return a new decoder that fails with {@link ErrorCodes#DUPLICATE_ELEMENT} if duplicates are found
      */
     public ListDecoder<I, T> unique() {
+        return unique(null);
+    }
+
+    /**
+     * Requires all elements in the list to be unique (no duplicates).
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#DUPLICATE_ELEMENT} if duplicates are found
+     */
+    public ListDecoder<I, T> unique(@Nullable String message) {
         return chain((value, path) -> {
             var seen = new HashSet<T>();
             LinkedHashSet<T> duplicates = null;
@@ -173,7 +237,7 @@ public class ListDecoder<I extends @Nullable Object, T> implements Decoder<I, Li
             if (duplicates != null) {
                 var duplicatesList = Collections.unmodifiableList(new ArrayList<>(duplicates));
                 var meta = Map.<String, Object>of("duplicates", duplicatesList);
-                return Result.fail(path, ErrorCodes.DUPLICATE_ELEMENT,
+                return Result.failWith(path, ErrorCodes.DUPLICATE_ELEMENT, message,
                         "must not contain duplicates: %s".formatted(duplicatesList), meta);
             }
             return Result.ok(value);

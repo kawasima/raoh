@@ -12,7 +12,9 @@ import static net.unit8.raoh.decode.ObjectDecoders.list;
 import static net.unit8.raoh.decode.builtin.BuiltinTestSupport.decodeErr;
 import static net.unit8.raoh.decode.builtin.BuiltinTestSupport.decodeOk;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Direct unit tests for {@link ListDecoder}, covering the size, content, and uniqueness
@@ -95,6 +97,70 @@ class ListDecoderTest {
         assertEquals(ErrorCodes.DUPLICATE_ELEMENT, issue.code());
         assertEquals("must not contain duplicates: [1]", issue.message());
         assertEquals(List.of(1), issue.meta().get("duplicates"));
+    }
+
+    // --- custom messages ---
+
+    @Test
+    void nonemptyUsesCustomMessageAndKeepsMeta() {
+        var issue = decodeErr(list(int_()).nonempty("pick at least one"), List.of());
+        assertEquals(ErrorCodes.TOO_SMALL, issue.code());
+        assertEquals("pick at least one", issue.message());
+        assertTrue(issue.customMessage());
+        assertEquals(1, issue.meta().get("min"));
+        assertEquals(0, issue.meta().get("actual"));
+    }
+
+    @Test
+    void minSizeUsesCustomMessageAndKeepsMeta() {
+        var issue = decodeErr(list(int_()).minSize(2, "need two"), List.of(1));
+        assertEquals(ErrorCodes.TOO_SMALL, issue.code());
+        assertEquals("need two", issue.message());
+        assertTrue(issue.customMessage());
+        assertEquals(2, issue.meta().get("min"));
+        assertEquals(1, issue.meta().get("actual"));
+    }
+
+    @Test
+    void maxSizeUsesCustomMessage() {
+        var issue = decodeErr(list(int_()).maxSize(2, "too many"), List.of(1, 2, 3));
+        assertEquals(ErrorCodes.TOO_BIG, issue.code());
+        assertEquals("too many", issue.message());
+        assertTrue(issue.customMessage());
+    }
+
+    @Test
+    void fixedSizeUsesCustomMessage() {
+        var issue = decodeErr(list(int_()).fixedSize(2, "exactly two"), List.of(1, 2, 3));
+        assertEquals(ErrorCodes.INVALID_SIZE, issue.code());
+        assertEquals("exactly two", issue.message());
+        assertTrue(issue.customMessage());
+    }
+
+    @Test
+    void containsUsesCustomMessageAndKeepsMeta() {
+        var issue = decodeErr(list(int_()).contains(2, "must include 2"), List.of(1, 3));
+        assertEquals(ErrorCodes.MISSING_ELEMENT, issue.code());
+        assertEquals("must include 2", issue.message());
+        assertTrue(issue.customMessage());
+        assertEquals(2, issue.meta().get("expected"));
+    }
+
+    @Test
+    void uniqueUsesCustomMessageAndKeepsMeta() {
+        var issue = decodeErr(list(int_()).unique("options must be distinct"), List.of(1, 1, 2));
+        assertEquals(ErrorCodes.DUPLICATE_ELEMENT, issue.code());
+        assertEquals("options must be distinct", issue.message());
+        assertTrue(issue.customMessage());
+        assertEquals(List.of(1), issue.meta().get("duplicates"));
+    }
+
+    @Test
+    void nullCustomMessageFallsBackToDefault() {
+        // A null message keeps the built-in default and leaves customMessage() false.
+        var issue = decodeErr(list(int_()).minSize(2, null), List.of(1));
+        assertEquals("must have at least 2 elements", issue.message());
+        assertFalse(issue.customMessage());
     }
 
     // --- conversion ---
