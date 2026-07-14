@@ -36,7 +36,7 @@ Start [jetshell](https://github.com/kawasima/jetshell) and load Raoh:
 
 ```bash
 jetshell
-/resolve net.unit8.raoh:raoh:0.5.0
+/resolve net.unit8.raoh:raoh:0.6.0
 import static net.unit8.raoh.decode.ObjectDecoders.*;
 import static net.unit8.raoh.decode.map.MapDecoders.*;
 import static net.unit8.raoh.decode.Decoders.*;
@@ -1357,7 +1357,7 @@ Tuple elements are accessed as `_1`, `_2`, ... `_8` when not using pattern match
 
 ---
 
-## 30. Encoding — domain objects to Map
+## 29. Encoding — domain objects to Map
 
 Raoh also provides encoders that perform the reverse operation: converting domain objects into `Map<String, Object>` for JDBC binding, JSON serialization, or other boundary output.
 
@@ -1389,7 +1389,7 @@ The encoder API mirrors the decoder side:
 | `nullable(dec)` | `nullableProperty("x", T::x, enc)` |
 | `withDefault(dec, v)` | `propertyWithDefault("x", T::x, enc, v)` |
 
-## 31. Encoding — nullableProperty and propertyWithDefault
+## 30. Encoding — nullableProperty and propertyWithDefault
 
 Null handling lives in the property layer, not inside the encoder. Value encoders (such as
 `string()`) always receive a non-null value, mirroring `field` / `optionalField` on the decoder side.
@@ -1424,7 +1424,7 @@ org.eclipse.jdt.core.compiler.problem.nullUncheckedConversion=ignore
 For a batch ecj build, pass this key via `-properties`. Genuine null-contract violations
 (`nullSpecViolation`) stay enabled.
 
-## 32. Encoding — nested objects
+## 31. Encoding — nested objects
 
 Use `nested()` to embed structured encoders inside a parent, and `list()` to encode collections:
 
@@ -1436,7 +1436,7 @@ Encoder<Order, Map<String, Object>> ORDER_ENCODER = object(
 );
 ```
 
-## 33. Encoding — discriminate (tagged unions)
+## 32. Encoding — discriminate (tagged unions)
 
 Encode a sealed interface (tagged union) with `discriminate()`, which selects a variant by the value's runtime type and writes the discriminator tag into the output. It mirrors the decoder-side `discriminate()` (section 11): the decoder reads the tag from the input data, while the encoder chooses the tag from the value's type.
 

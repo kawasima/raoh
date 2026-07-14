@@ -36,7 +36,7 @@ Ok[ドメインオブジェクト]  または  Err[{path: "/email", code: "inval
 
 ```bash
 jetshell
-/resolve net.unit8.raoh:raoh:0.5.0
+/resolve net.unit8.raoh:raoh:0.6.0
 import static net.unit8.raoh.decode.ObjectDecoders.*;
 import static net.unit8.raoh.decode.map.MapDecoders.*;
 import static net.unit8.raoh.decode.Decoders.*;
@@ -1359,7 +1359,7 @@ switch (dec.decode(input)) {
 
 ---
 
-## 30. エンコード — ドメインオブジェクトから Map へ
+## 29. エンコード — ドメインオブジェクトから Map へ
 
 Raoh はデコーダーの逆操作として、ドメインオブジェクトを `Map<String, Object>` に変換するエンコーダーも提供しています。JDBC バインディングや JSON シリアライズに使えます。
 
@@ -1391,7 +1391,7 @@ Map<String, Object> row = ITEM_ENCODER.encode(new Item(new ItemId(42L), "Widget"
 | `nullable(dec)` | `nullableProperty("x", T::x, enc)` |
 | `withDefault(dec, v)` | `propertyWithDefault("x", T::x, enc, v)` |
 
-## 31. エンコード — nullableProperty と propertyWithDefault
+## 30. エンコード — nullableProperty と propertyWithDefault
 
 null を扱う分岐はエンコーダー本体ではなく property 層が担います。値エンコーダー（`string()` など）は常に非null 値を受け取る形のままで、デコーダー側の `field` / `optionalField` と対称です。
 
@@ -1419,7 +1419,7 @@ org.eclipse.jdt.core.compiler.problem.nullUncheckedConversion=ignore
 
 ecj のバッチ実行では `-properties` でこのキーを渡せば同じ効果になります。真の null 契約違反（`nullSpecViolation`）は有効なままです。
 
-## 32. エンコード — ネストしたオブジェクト
+## 31. エンコード — ネストしたオブジェクト
 
 `nested()` で構造化エンコーダーを親に埋め込み、`list()` でコレクションをエンコードします：
 
@@ -1431,7 +1431,7 @@ Encoder<Order, Map<String, Object>> ORDER_ENCODER = object(
 );
 ```
 
-## 33. エンコード — discriminate（タグ付きユニオン）
+## 32. エンコード — discriminate（タグ付きユニオン）
 
 sealed インターフェース（タグ付きユニオン）は `discriminate()` でエンコードします。値の実行時型でバリアントを選び、ディスクリミネーターのタグを出力に書き込みます。デコーダー側の `discriminate()`（第11節）の鏡像です。デコーダーが入力データからタグを読むのに対し、エンコーダーは値の型からタグを選びます。
 

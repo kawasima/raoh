@@ -763,12 +763,14 @@ Map<String, Object> row = ITEM_ENCODER.encode(item);
 
 `ObjectEncoders` provides: `string()`, `int_()`, `long_()`, `double_()`, `float_()`, `bool()`, `decimal()`, `date()`, `time()`, `dateTime()`, `iso8601()`, `offsetDateTime()`, `enumOf()`.
 
-Null handling:
+Null / optionality is handled in the property layer (encoders themselves are total, non-null functions):
 
-- `nullable(enc)` — passes `null` through as-is
-- `withDefault(enc, defaultValue)` — encodes a default value when the input is `null`
+- `nullableProperty(key, getter, enc)` — writes `key: null` when the getter returns `null`
+- `propertyWithDefault(key, getter, enc, default)` — writes a default (value or `Supplier`) when the getter returns `null`
+- `optionalProperty(key, getter, enc)` — omits the key entirely when the getter returns `null`
+- `presenceProperty(key, getter, enc)` — round-trips the tri-state `Presence` (omit / `null` / value)
 
-`MapEncoders` provides: `property()`, `object()`, `nested()`, `list()`.
+`MapEncoders` provides: `property()`, `nullableProperty()`, `propertyWithDefault()`, `optionalProperty()`, `presenceProperty()`, `object()`, `nested()`, `list()`, `mapOf()`, and `variant()` / `discriminate()` for tagged unions.
 
 ## Comparisons
 
