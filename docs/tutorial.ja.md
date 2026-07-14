@@ -505,6 +505,54 @@ pricesDec.decode(Map.of("prices", Map.of("apple", 120, "banana", 80)))
 // ==> Ok[{apple=120, banana=80}]
 ```
 
+### 文字列に格納された JSON をデコードする
+
+JSON を文字列として持つケースはよくあります。`VARCHAR` カラムに JSON を保存する、あるいは JSON ボディのフィールド値自体が JSON 文字列（二重エンコード）になっている、といった形です。素朴に書くと、Jackson で手パースして例外を握り潰しがちです。
+
+```java
+// アンチパターン: パース失敗が空マップに化けて、エラーが闇に消える
+field("params", string()).map(s -> {
+    try { return mapper.readValue(s, Map.class); }
+    catch (Exception e) { return Map.of(); }   // silent data loss
+});
+```
+
+これでは不正な行が「空の params を持つ正常な行」になり、Raoh の issue 蓄積モデルが台無しです。
+
+`pipe` を使えば、パース段を「失敗を issue として報告するデコーダー」として挟めます。文字列 → パース → 内側のデコーダー、と繋ぐだけです。この例では JSON パーサーとして Jackson を使います（`var mapper = new tools.jackson.databind.ObjectMapper();`。raoh-json を使っているなら既に classpath にあります）。
+
+```java
+// String を JSON としてパースするデコーダー。失敗は握り潰さず issue にする（ここが肝）
+Decoder<String, Map<String, Object>> parseJson = (s, path) -> {
+    try {
+        Map<String, Object> parsed = (Map<String, Object>) mapper.readValue(s, Map.class);
+        return Result.ok(parsed);
+    } catch (Exception e) {
+        return Result.fail(path, "invalid_format", "JSONとして解析できません");
+    }
+};
+
+record Params(String kind, int count) {}
+var paramsDec = combine(
+        field("kind",  string()),
+        field("count", int_())
+).map(Params::new);
+
+// "params" は JSON を格納した文字列カラム
+var dec = field("params", string().pipe(parseJson).pipe(paramsDec));
+
+dec.decode(Map.of("params", "{\"kind\":\"like\",\"count\":3}"))
+// ==> Ok[Params[kind=like, count=3]]
+
+dec.decode(Map.of("params", "not json"))
+// ==> Err[/params: JSONとして解析できません]
+
+dec.decode(Map.of("params", "{\"kind\":\"like\"}"))
+// ==> Err[/params/count: is required]
+```
+
+パース失敗は `params` のパスに、内側のフィールド不足は `/params/count` のように**ネストしたパス**で報告されます。JSON-in-a-string も最後まで `Result` / `Issues` のパイプラインに留まり、握り潰しが起きません。
+
 ---
 
 ## 9. Optional / Nullable / 三値フィールド

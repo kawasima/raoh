@@ -503,6 +503,54 @@ pricesDec.decode(Map.of("prices", Map.of("apple", 120, "banana", 80)))
 // ==> Ok[{apple=120, banana=80}]
 ```
 
+### Decoding JSON stored in a string
+
+JSON is often kept as a string — a `VARCHAR` column holding JSON, or a JSON body field whose value is itself a JSON string (double-encoded). The naive approach hand-parses with Jackson and swallows the exception:
+
+```java
+// Anti-pattern: a parse failure becomes an empty map and the error vanishes
+field("params", string()).map(s -> {
+    try { return mapper.readValue(s, Map.class); }
+    catch (Exception e) { return Map.of(); }   // silent data loss
+});
+```
+
+A malformed row then decodes as a "valid row with empty params", defeating Raoh's issue-accumulation model.
+
+With `pipe` you can insert the parse step as a decoder that reports failures as issues: string → parse → inner decoder. This example uses Jackson as the parser (`var mapper = new tools.jackson.databind.ObjectMapper();` — already on your classpath if you use raoh-json).
+
+```java
+// A decoder that parses a String as JSON, reporting failures as issues instead of swallowing them
+Decoder<String, Map<String, Object>> parseJson = (s, path) -> {
+    try {
+        Map<String, Object> parsed = (Map<String, Object>) mapper.readValue(s, Map.class);
+        return Result.ok(parsed);
+    } catch (Exception e) {
+        return Result.fail(path, "invalid_format", "cannot be parsed as JSON");
+    }
+};
+
+record Params(String kind, int count) {}
+var paramsDec = combine(
+        field("kind",  string()),
+        field("count", int_())
+).map(Params::new);
+
+// "params" is a string column holding JSON
+var dec = field("params", string().pipe(parseJson).pipe(paramsDec));
+
+dec.decode(Map.of("params", "{\"kind\":\"like\",\"count\":3}"))
+// ==> Ok[Params[kind=like, count=3]]
+
+dec.decode(Map.of("params", "not json"))
+// ==> Err[/params: cannot be parsed as JSON]
+
+dec.decode(Map.of("params", "{\"kind\":\"like\"}"))
+// ==> Err[/params/count: is required]
+```
+
+A parse failure surfaces at the `params` path; a missing inner field surfaces at a **nested path** like `/params/count`. The JSON-in-a-string stays inside the `Result` / `Issues` pipeline end to end — nothing is swallowed.
+
 ---
 
 ## 9. Optional / Nullable / Three-state fields
