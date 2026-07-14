@@ -14,6 +14,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -752,6 +753,81 @@ public final class Decoders {
                 }
             };
         };
+    }
+
+    /**
+     * A single tagged variant of a discriminated (tagged-union) decoder: the discriminator tag
+     * and the decoder that produces the variant's value.
+     *
+     * <p>Created via {@link #variant(String, Decoder)} and consumed by the typed
+     * {@link #discriminate(String, Decoder, Variant[])}. This is the decode-side mirror of
+     * {@link net.unit8.raoh.encode.MapEncoders.Variant MapEncoders.Variant}, but dispatches on the
+     * tag <em>string</em> rather than the runtime class, so it carries no {@code Class} token.
+     *
+     * @param <I>     the input type
+     * @param <S>     the value type this variant decodes to
+     * @param tag     the discriminator value that selects this variant; must not be {@code null}
+     * @param decoder the decoder producing the variant value; must not be {@code null}
+     */
+    public record Variant<I extends @Nullable Object, S>(String tag, Decoder<I, S> decoder) {
+        /**
+         * Creates a variant, rejecting a {@code null} tag or decoder.
+         *
+         * @throws NullPointerException if {@code tag} or {@code decoder} is {@code null}
+         */
+        public Variant {
+            Objects.requireNonNull(tag, "tag must not be null");
+            Objects.requireNonNull(decoder, "decoder must not be null");
+        }
+    }
+
+    /**
+     * Creates a {@link Variant} binding a discriminator tag to its decoder.
+     *
+     * @param <I>     the input type
+     * @param <S>     the value type this variant decodes to
+     * @param tag     the discriminator value that selects this variant
+     * @param decoder the decoder producing the variant value
+     * @return a variant for use with {@link #discriminate(String, Decoder, Variant[])}
+     */
+    public static <I extends @Nullable Object, S> Variant<I, S> variant(String tag, Decoder<I, S> decoder) {
+        return new Variant<>(tag, decoder);
+    }
+
+    /**
+     * Typed, cast-free variant of {@link #discriminate(String, Decoder, Map)}: dispatches to a
+     * {@link Variant}'s decoder by the decoded tag.
+     *
+     * <p>This is the decode-side mirror of
+     * {@link net.unit8.raoh.encode.MapEncoders#discriminate(String, net.unit8.raoh.encode.MapEncoders.Variant[])
+     * MapEncoders.discriminate}. Because each variant is typed {@code Variant<I, ? extends T>} and
+     * {@code T} is pinned by the target type, no per-arm up-cast to the supertype is needed
+     * (unlike the {@code Map}-based overload, whose common value type forces a cast on every arm).
+     *
+     * <p>Passing zero variants is permitted and yields a decoder that fails every tag with
+     * {@link ErrorCodes#NOT_ALLOWED}, matching {@code discriminate(fieldName, tagDec, Map.of())}.
+     *
+     * @param <I>       the input type
+     * @param <T>       the decoded (supertype) type
+     * @param fieldName the discriminator field name, used for error path reporting
+     * @param tagDec    a decoder that extracts the discriminator value as a string
+     * @param variants  the variants, each pairing a tag with its decoder
+     * @return a discriminating decoder
+     * @throws IllegalArgumentException if two variants share the same tag
+     */
+    @SafeVarargs
+    public static <I extends @Nullable Object, T> Decoder<I, T> discriminate(
+            String fieldName, Decoder<I, String> tagDec, Variant<I, ? extends T>... variants) {
+        var map = HashMap.<String, Decoder<I, ? extends T>>newHashMap(variants.length);
+        for (var v : variants) {
+            // Detect duplicates via an explicit presence check rather than the return of put(...),
+            // so it does not hinge on values being non-null.
+            if (map.containsKey(v.tag())) {
+                throw new IllegalArgumentException("duplicate variant tag '" + v.tag() + "'");
+            }
+            map.put(v.tag(), v.decoder());
+        }
+        return discriminate(fieldName, tagDec, map);
     }
 
     /**

@@ -335,6 +335,19 @@ class JsonDecoderTest {
     }
 
     @Test
+    void typedDiscriminateIsCastFree() {
+        // Explicit target type pins T = Contact, so the variant arms need no up-cast.
+        Decoder<JsonNode, Contact> contactDec = discriminate("type",
+                variant("phone", field("number", string()).map(Phone::new)),
+                variant("email", field("address", email()).map(EmailContact::new)));
+
+        assertInstanceOf(Phone.class, assertOk(contactDec.decode(
+                parse("{\"type\":\"phone\",\"number\":\"090-1234-5678\"}"))));
+        assertInstanceOf(EmailContact.class, assertOk(contactDec.decode(
+                parse("{\"type\":\"email\",\"address\":\"a@b.com\"}"))));
+    }
+
+    @Test
     void uuidParsing() {
         var dec = field("id", string().uuid());
         var id = assertOk(dec.decode(parse("{\"id\":\"550e8400-e29b-41d4-a716-446655440000\"}")));

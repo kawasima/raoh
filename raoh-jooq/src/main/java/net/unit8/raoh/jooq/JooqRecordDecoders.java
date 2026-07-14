@@ -175,6 +175,36 @@ public final class JooqRecordDecoders {
         return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.string()), variants)::decode;
     }
 
+    /**
+     * Creates a {@link Decoders.Variant} for use with {@link #discriminate(String, Decoders.Variant[])},
+     * with the input type pinned to {@link org.jooq.Record}.
+     *
+     * @param <S>     the value type this variant decodes to
+     * @param tag     the discriminator value that selects this variant
+     * @param decoder the decoder producing the variant value
+     * @return a variant for use with {@link #discriminate(String, Decoders.Variant[])}
+     */
+    public static <S> Decoders.Variant<org.jooq.Record, S> variant(
+            String tag, Decoder<org.jooq.Record, S> decoder) {
+        return Decoders.variant(tag, decoder);
+    }
+
+    /**
+     * Typed, cast-free variant of {@link #discriminate(String, Map)}: dispatches on the string value
+     * of the discriminator column. See {@link Decoders#discriminate(String, Decoder, Decoders.Variant[])}.
+     *
+     * @param <T>       the decoded (supertype) type
+     * @param fieldName the discriminator column name (e.g., {@code "type"})
+     * @param variants  the variants, each pairing a tag with its decoder
+     * @return a discriminating decoder
+     * @throws IllegalArgumentException if two variants share the same tag
+     */
+    @SafeVarargs
+    public static <T> JooqRecordDecoder<T> discriminate(
+            String fieldName, Decoders.Variant<org.jooq.Record, ? extends T>... variants) {
+        return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.string()), variants)::decode;
+    }
+
     // --- combine delegates ---
 
     /**
