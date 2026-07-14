@@ -470,18 +470,20 @@ class JsonDecoderTest {
     }
 
     @Test
-    void doubleDecodesFloatingPointAndInteger() {
+    void doubleDecodesFloatingPointAndIntegerAndRejectsNonNumber() {
         var dec = field("v", double_());
-        // A JSON floating-point value.
         assertEquals(3.14, assertOk(dec.decode(parse("{\"v\":3.14}"))), 1e-9);
         // A JSON integer is a valid number and widens to double.
         assertEquals(5.0, assertOk(dec.decode(parse("{\"v\":5}"))), 1e-9);
+        assertErr(dec.decode(parse("{\"v\":\"3.14\"}")));
     }
 
     @Test
-    void doubleRejectsNonNumber() {
+    void doubleRejectsOutOfRangeInsteadOfThrowing() {
         var dec = field("v", double_());
-        assertErr(dec.decode(parse("{\"v\":\"3.14\"}")));
+        // A 401-digit integer does not fit a finite double. Jackson 3's doubleValue() throws for
+        // this; the decoder must convert it to an Err, not let the exception escape decode().
+        assertErr(dec.decode(parse("{\"v\":" + "1" + "0".repeat(400) + "}")));
     }
 
     @Test
@@ -492,10 +494,13 @@ class JsonDecoderTest {
     }
 
     @Test
-    void floatDecodesAndRejectsNonNumber() {
+    void floatDecodesAndRejectsNonNumberAndOutOfRange() {
         var dec = field("v", float_());
         assertEquals(1.5f, assertOk(dec.decode(parse("{\"v\":1.5}"))), 1e-6f);
         assertErr(dec.decode(parse("{\"v\":true}")));
+        // 1e40 is a valid double but outside the finite float range; floatValue() throws in
+        // Jackson 3, so the decoder must reject it rather than propagate the exception.
+        assertErr(dec.decode(parse("{\"v\":1e40}")));
     }
 
     @Test

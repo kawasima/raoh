@@ -24,6 +24,7 @@ import net.unit8.raoh.decode.combinator.*;
 
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.exc.JsonNodeException;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -116,10 +117,9 @@ public final class JsonDecoders {
     /**
      * Creates a double decoder.
      *
-     * <p>Accepts any JSON number (integer or floating-point) and reads it via
-     * {@link JsonNode#doubleValue()}. This mirrors {@link #decimal()} in accepting the whole
-     * numeric range; use {@code double_()} when the domain wants a primitive {@code double}
-     * (and the {@link DoubleDecoder} constraint API) rather than a {@link java.math.BigDecimal}.
+     * <p>Accepts any JSON number; a value that does not fit a finite {@code double}
+     * (e.g. a very large integer literal) fails with {@code type_mismatch}, mirroring how
+     * {@link #int_()} rejects a number that does not fit its target type.
      *
      * @return a decoder that extracts a double value from a JSON node
      */
@@ -132,16 +132,24 @@ public final class JsonDecoders {
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
                         Map.of("expected", "double", "actual", in.getNodeType().name().toLowerCase()));
             }
-            return Result.ok(in.doubleValue());
+            try {
+                return Result.ok(in.doubleValue());
+            } catch (JsonNodeException e) {
+                // Jackson 3's doubleValue() is strict: it throws when the numeric node does not fit
+                // a finite double. Convert that to a decode error rather than letting an unchecked
+                // exception escape decode().
+                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
+                        Map.of("expected", "double"));
+            }
         });
     }
 
     /**
      * Creates a float decoder.
      *
-     * <p>Accepts any JSON number (integer or floating-point) and narrows it via
-     * {@link JsonNode#floatValue()}. Like {@link #double_()}, but produces a primitive
-     * {@code float}; values outside the {@code float} range narrow per Java's usual rules.
+     * <p>Like {@link #double_()}, but produces a primitive {@code float}; a value that does not
+     * fit a finite {@code float} (e.g. a magnitude above the {@code float} range) fails with
+     * {@code type_mismatch}.
      *
      * @return a decoder that extracts a float value from a JSON node
      */
@@ -154,7 +162,14 @@ public final class JsonDecoders {
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
                         Map.of("expected", "float", "actual", in.getNodeType().name().toLowerCase()));
             }
-            return Result.ok(in.floatValue());
+            try {
+                return Result.ok(in.floatValue());
+            } catch (JsonNodeException e) {
+                // See double_(): Jackson 3's floatValue() throws for a value outside the finite
+                // float range; surface it as a decode error instead.
+                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
+                        Map.of("expected", "float"));
+            }
         });
     }
 
