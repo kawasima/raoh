@@ -133,11 +133,16 @@ public final class JsonDecoders {
                         Map.of("expected", "double", "actual", in.getNodeType().name().toLowerCase()));
             }
             try {
-                return Result.ok(in.doubleValue());
+                double v = in.doubleValue();
+                // A very large integer node makes Jackson 3's doubleValue() throw (caught below); a
+                // large decimal node instead yields an infinity. Reject both as out-of-range rather
+                // than returning Infinity or letting the unchecked exception escape decode().
+                if (Double.isInfinite(v)) {
+                    return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
+                            Map.of("expected", "double"));
+                }
+                return Result.ok(v);
             } catch (JsonNodeException e) {
-                // Jackson 3's doubleValue() is strict: it throws when the numeric node does not fit
-                // a finite double. Convert that to a decode error rather than letting an unchecked
-                // exception escape decode().
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
                         Map.of("expected", "double"));
             }

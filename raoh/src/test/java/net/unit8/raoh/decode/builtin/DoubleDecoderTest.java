@@ -68,6 +68,15 @@ class DoubleDecoderTest {
     }
 
     @Test
+    void rejectsOutOfRangeMagnitude() {
+        // A magnitude beyond the double range narrows to Infinity; the base decoder rejects it
+        // rather than silently yielding Infinity.
+        var huge = new java.math.BigInteger("1" + "0".repeat(400));
+        assertEquals(ErrorCodes.TYPE_MISMATCH, decodeErr(double_(), huge).code());
+        assertEquals(ErrorCodes.TYPE_MISMATCH, decodeErr(double_(), Double.POSITIVE_INFINITY).code());
+    }
+
+    @Test
     void rangeRejectsInvertedBoundsAtConstruction() {
         assertThrows(IllegalArgumentException.class, () -> double_().range(10.0, 1.0));
     }

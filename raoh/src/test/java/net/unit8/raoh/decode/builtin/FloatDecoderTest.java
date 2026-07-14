@@ -67,6 +67,13 @@ class FloatDecoderTest {
     }
 
     @Test
+    void rejectsOutOfRangeMagnitude() {
+        // 1e40 exceeds the float range; narrowing gives Infinity, which the base decoder rejects.
+        assertEquals(ErrorCodes.TYPE_MISMATCH, decodeErr(float_(), 1e40).code());
+        assertEquals(ErrorCodes.TYPE_MISMATCH, decodeErr(float_(), Float.POSITIVE_INFINITY).code());
+    }
+
+    @Test
     void rangeRejectsInvertedBoundsAtConstruction() {
         assertThrows(IllegalArgumentException.class, () -> float_().range(10.0f, 1.0f));
     }

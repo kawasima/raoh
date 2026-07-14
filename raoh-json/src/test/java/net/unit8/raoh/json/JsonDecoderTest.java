@@ -484,6 +484,8 @@ class JsonDecoderTest {
         // A 401-digit integer does not fit a finite double. Jackson 3's doubleValue() throws for
         // this; the decoder must convert it to an Err, not let the exception escape decode().
         assertErr(dec.decode(parse("{\"v\":" + "1" + "0".repeat(400) + "}")));
+        // A large decimal literal instead narrows to Infinity (no throw); rejected all the same.
+        assertErr(dec.decode(parse("{\"v\":1e400}")));
     }
 
     @Test

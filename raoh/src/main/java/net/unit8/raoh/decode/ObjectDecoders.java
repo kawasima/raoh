@@ -133,9 +133,9 @@ public final class ObjectDecoders {
     /**
      * Creates a double decoder.
      *
-     * <p>Accepts {@link Double} values directly, and widens other {@link Number} subtypes
-     * via {@link Number#doubleValue()}. Returns {@code required} if the value is {@code null},
-     * and {@code type_mismatch} if the value is not a number.
+     * <p>Accepts any {@link Number} via {@link Number#doubleValue()}. Returns {@code required} if
+     * the value is {@code null}, and {@code type_mismatch} if the value is not a number or its
+     * magnitude is beyond the {@code double} range (i.e. narrows to an infinity).
      *
      * @return a double decoder for {@code Object} input
      */
@@ -144,11 +144,17 @@ public final class ObjectDecoders {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
-            if (in instanceof Double d) {
-                return Result.ok(d);
-            }
             if (in instanceof Number n) {
-                return Result.ok(n.doubleValue());
+                double d = n.doubleValue();
+                // A magnitude beyond the double range (e.g. a huge BigInteger, or Double.INFINITY)
+                // is a representation failure, not a valid value — reject it rather than silently
+                // yielding Infinity. NaN is left to flow through so range constraints can reject it
+                // as out_of_range (see DoubleDecoderTest#rangeRejectsNaN).
+                if (Double.isInfinite(d)) {
+                    return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
+                            Map.of("expected", "double"));
+                }
+                return Result.ok(d);
             }
             return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
                     Map.of("expected", "double", "actual", in.getClass().getSimpleName()));
@@ -158,9 +164,9 @@ public final class ObjectDecoders {
     /**
      * Creates a float decoder.
      *
-     * <p>Accepts {@link Float} values directly, and narrows other {@link Number} subtypes
-     * via {@link Number#floatValue()}. Returns {@code required} if the value is {@code null},
-     * and {@code type_mismatch} if the value is not a number.
+     * <p>Accepts any {@link Number} via {@link Number#floatValue()}. Returns {@code required} if
+     * the value is {@code null}, and {@code type_mismatch} if the value is not a number or its
+     * magnitude is beyond the {@code float} range (i.e. narrows to an infinity).
      *
      * @return a float decoder for {@code Object} input
      */
@@ -169,11 +175,15 @@ public final class ObjectDecoders {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
-            if (in instanceof Float f) {
-                return Result.ok(f);
-            }
             if (in instanceof Number n) {
-                return Result.ok(n.floatValue());
+                float f = n.floatValue();
+                // See double_(): a value beyond the float range narrows to Infinity — reject it as a
+                // representation failure. NaN flows through for range constraints to catch.
+                if (Float.isInfinite(f)) {
+                    return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
+                            Map.of("expected", "float"));
+                }
+                return Result.ok(f);
             }
             return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
                     Map.of("expected", "float", "actual", in.getClass().getSimpleName()));
