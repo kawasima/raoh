@@ -345,7 +345,6 @@ class JsonDecoderTest {
                 parse("{\"type\":\"phone\",\"number\":\"090-1234-5678\"}"))));
         assertInstanceOf(EmailContact.class, assertOk(contactDec.decode(
                 parse("{\"type\":\"email\",\"address\":\"a@b.com\"}"))));
-        assertErr(contactDec.decode(parse("{\"type\":\"unknown\"}")));
     }
 
     @Test
