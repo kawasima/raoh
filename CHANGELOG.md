@@ -28,6 +28,16 @@ At release time this section is renamed to the chosen version with a date.
   value when the getter returns `null`, so the map entry is never `null`.
 - **`MapEncoders.discriminate(...)`** — tagged-union encoding, mirroring the decoder side; rejects
   duplicate discriminator tags at construction ([#44](https://github.com/kawasima/raoh/issues/44)).
+- **`EntryEncoder<T>` abstraction plus `MapEncoders.optionalProperty(...)` / `presenceProperty(...)`.**
+  `EntryEncoder` writes zero-or-more keys into the output map; `PropertyEncoder` (always one key) is a
+  special case. `optionalProperty` omits the key when the getter returns `null` (the encode dual of
+  decode's `optionalField` → `Optional`, distinct from `nullableProperty` which writes `key: null`);
+  `presenceProperty` round-trips the tri-state `Presence` (`Absent` → omit, `PresentNull` → write
+  `null`, `Present(v)` → write the value) ([#41](https://github.com/kawasima/raoh/issues/41),
+  [#61](https://github.com/kawasima/raoh/issues/61)).
+- **`MapEncoders.mapOf(...)`** — encodes a homogeneous `Map<String, V>` by applying a value encoder
+  to each value, the encode mirror of `ObjectDecoders.map(...)`
+  ([#63](https://github.com/kawasima/raoh/issues/63)).
 - **`nullableField(...)`** targeting `@Nullable T`, in core `MapDecoders`, `JsonDecoders`, and
   `JooqRecordDecoders` ([#46](https://github.com/kawasima/raoh/issues/46),
   [#53](https://github.com/kawasima/raoh/issues/53)).
@@ -80,6 +90,10 @@ At release time this section is renamed to the chosen version with a date.
   ([#60](https://github.com/kawasima/raoh/issues/60)).
 - `ListDecoder.toSet()` now preserves insertion order (previously unspecified via `Set.copyOf`)
   ([#69](https://github.com/kawasima/raoh/issues/69)).
+- **`MapEncoders.object(...)` now accepts `EntryEncoder<T>...`** (was `PropertyEncoder<T>...`).
+  Source-compatible — `PropertyEncoder` implements `EntryEncoder`, so `object(property(...), ...)`
+  is unchanged — but binary-incompatible (the erased parameter type changed), so recompile against
+  the new version ([#41](https://github.com/kawasima/raoh/issues/41)).
 
 ### Removed
 
@@ -113,6 +127,10 @@ At release time this section is renamed to the chosen version with a date.
 - **Breaking (source):** the removed `ObjectEncoders.nullable` / `withDefault`,
   `StringDecoder.allowBlank()` + two-arg constructor, and `allowBlankString()` no longer compile;
   migrate as noted above.
+- **Breaking (binary):** `MapEncoders.object(...)` changed its varargs element type
+  (`PropertyEncoder<T>...` → `EntryEncoder<T>...`); source stays compatible but a recompile is
+  needed. Otherwise the encoder additions (`optionalProperty` / `presenceProperty` / `mapOf`) are
+  purely additive.
 - **Breaking (packaging):** `raoh-json` no longer brings Jackson transitively — add
   `tools.jackson.core:jackson-databind` (Jackson 3) to your own build.
 - Otherwise runtime-unchanged (the full test suite passes). Consumers running null analysis need no

@@ -42,7 +42,7 @@ version once as a property — use the latest shown on the Maven Central badge a
 ```xml
 <properties>
     <!-- Use the latest version from the Maven Central badge above -->
-    <raoh.version>0.5.0</raoh.version>
+    <raoh.version>0.6.0</raoh.version>
 </properties>
 
 <dependencies>
