@@ -470,6 +470,50 @@ class JsonDecoderTest {
     }
 
     @Test
+    void doubleDecodesFloatingPointAndIntegerAndRejectsNonNumber() {
+        var dec = field("v", double_());
+        assertEquals(3.14, assertOk(dec.decode(parse("{\"v\":3.14}"))), 1e-9);
+        // A JSON integer is a valid number and widens to double.
+        assertEquals(5.0, assertOk(dec.decode(parse("{\"v\":5}"))), 1e-9);
+        assertErr(dec.decode(parse("{\"v\":\"3.14\"}")));
+    }
+
+    @Test
+    void doubleRejectsOutOfRangeInsteadOfThrowing() {
+        var dec = field("v", double_());
+        // A 401-digit integer does not fit a finite double. Jackson 3's doubleValue() throws for
+        // this; the decoder must convert it to an Err, not let the exception escape decode().
+        assertErr(dec.decode(parse("{\"v\":" + "1" + "0".repeat(400) + "}")));
+        // A large decimal literal instead narrows to Infinity (no throw); rejected all the same.
+        assertErr(dec.decode(parse("{\"v\":1e400}")));
+    }
+
+    @Test
+    void doubleConstraintApplies() {
+        var dec = field("v", double_().range(0.0, 1.0));
+        assertEquals(0.5, assertOk(dec.decode(parse("{\"v\":0.5}"))), 1e-9);
+        assertErr(dec.decode(parse("{\"v\":2.5}")));
+    }
+
+    @Test
+    void floatDecodesAndRejectsNonNumberAndOutOfRange() {
+        var dec = field("v", float_());
+        assertEquals(1.5f, assertOk(dec.decode(parse("{\"v\":1.5}"))), 1e-6f);
+        assertErr(dec.decode(parse("{\"v\":true}")));
+        // 1e40 is a valid double but outside the finite float range; floatValue() throws in
+        // Jackson 3, so the decoder must reject it rather than propagate the exception.
+        assertErr(dec.decode(parse("{\"v\":1e40}")));
+    }
+
+    @Test
+    void floatRejectsInfiniteNodeWithoutThrowing() {
+        // A node whose floatValue() yields Infinity directly (rather than throwing) must still be
+        // rejected — this exercises the explicit isInfinite guard, not the exception path.
+        var infiniteNode = mapper.getNodeFactory().numberNode(Float.POSITIVE_INFINITY);
+        assertErr(float_().decode(infiniteNode, Path.ROOT));
+    }
+
+    @Test
     void pipeDecoder() {
         // pipe string decoder to another decoder that parses the string further
         Decoder<String, Integer> parseInt = (in, path) -> {

@@ -13,6 +13,8 @@ import net.unit8.raoh.decode.Decoders;
 import net.unit8.raoh.decode.FieldDecoder;
 import net.unit8.raoh.decode.builtin.BoolDecoder;
 import net.unit8.raoh.decode.builtin.DecimalDecoder;
+import net.unit8.raoh.decode.builtin.DoubleDecoder;
+import net.unit8.raoh.decode.builtin.FloatDecoder;
 import net.unit8.raoh.decode.builtin.IntDecoder;
 import net.unit8.raoh.decode.builtin.ListDecoder;
 import net.unit8.raoh.decode.builtin.LongDecoder;
@@ -22,6 +24,7 @@ import net.unit8.raoh.decode.combinator.*;
 
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.exc.JsonNodeException;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -108,6 +111,76 @@ public final class JsonDecoders {
                         Map.of("expected", "long", "actual", in.getNodeType().name().toLowerCase()));
             }
             return Result.ok(in.longValue());
+        });
+    }
+
+    /**
+     * Creates a double decoder.
+     *
+     * <p>Accepts any JSON number; a value that does not fit a finite {@code double}
+     * (e.g. a very large integer literal) fails with {@code type_mismatch}, mirroring how
+     * {@link #int_()} rejects a number that does not fit its target type.
+     *
+     * @return a decoder that extracts a double value from a JSON node
+     */
+    public static DoubleDecoder<JsonNode> double_() {
+        return new DoubleDecoder<>((in, path) -> {
+            if (in == null || in.isNull() || in.isMissingNode()) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (!in.isNumber()) {
+                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
+                        Map.of("expected", "double", "actual", in.getNodeType().name().toLowerCase()));
+            }
+            try {
+                double v = in.doubleValue();
+                // A very large integer node makes Jackson 3's doubleValue() throw (caught below); a
+                // large decimal node instead yields an infinity. Reject both as out-of-range rather
+                // than returning Infinity or letting the unchecked exception escape decode().
+                if (Double.isInfinite(v)) {
+                    return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
+                            Map.of("expected", "double"));
+                }
+                return Result.ok(v);
+            } catch (JsonNodeException e) {
+                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
+                        Map.of("expected", "double"));
+            }
+        });
+    }
+
+    /**
+     * Creates a float decoder.
+     *
+     * <p>Like {@link #double_()}, but produces a primitive {@code float}; a value that does not
+     * fit a finite {@code float} (e.g. a magnitude above the {@code float} range) fails with
+     * {@code type_mismatch}.
+     *
+     * @return a decoder that extracts a float value from a JSON node
+     */
+    public static FloatDecoder<JsonNode> float_() {
+        return new FloatDecoder<>((in, path) -> {
+            if (in == null || in.isNull() || in.isMissingNode()) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (!in.isNumber()) {
+                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
+                        Map.of("expected", "float", "actual", in.getNodeType().name().toLowerCase()));
+            }
+            try {
+                float v = in.floatValue();
+                // Jackson 3's floatValue() throws for most out-of-range nodes (caught below), but
+                // enforce the finite contract explicitly too — a node that narrows to Infinity
+                // without throwing must still be rejected, matching double_().
+                if (Float.isInfinite(v)) {
+                    return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
+                            Map.of("expected", "float"));
+                }
+                return Result.ok(v);
+            } catch (JsonNodeException e) {
+                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
+                        Map.of("expected", "float"));
+            }
         });
     }
 
