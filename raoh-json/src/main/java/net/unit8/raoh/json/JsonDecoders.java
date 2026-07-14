@@ -45,6 +45,17 @@ import java.util.Set;
  *     field("age", int_().range(0, 150))
  * ).map(User::new);
  * }</pre>
+ *
+ * <p><strong>Temporals.</strong> There are intentionally no temporal primitives here
+ * (no {@code date()} / {@code dateTime()} / {@code iso8601()} factory). A JSON temporal is
+ * always a string, so decode it through {@link #string()} and one of its temporal conversions —
+ * {@code string().date()}, {@code string().time()}, {@code string().dateTime()},
+ * {@code string().offsetDateTime()}, or {@code string().iso8601()} for an {@link java.time.Instant}:
+ *
+ * <pre>{@code
+ * field("bornOn",    string().date())            // LocalDate
+ * field("createdAt", string().iso8601())         // Instant
+ * }</pre>
  */
 public final class JsonDecoders {
 
