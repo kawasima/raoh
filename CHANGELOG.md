@@ -15,6 +15,14 @@ At release time this section is renamed to the chosen version with a date.
 
 ### Added
 
+- **`Decoder.refine(...)`** — a generic predicate-based refinement combinator (three overloads: a
+  `code`/`message` pair, a metadata-carrying variant, and a fully caller-controlled `onFail` variant).
+  Keeps the value unchanged on success and produces an `Issue` at the current path on failure, with a
+  caller-supplied error code (no new built-in code) whose message survives `MessageResolver`. This is
+  the ergonomic form of the common `flatMapWithPath` "keep the value, or fail with a domain rule"
+  idiom, and is the direct analogue of Zod's `.refine()`. Refinement failures accumulate with sibling
+  errors through `combine`. There is no encoder-side dual: the encode side is a total function with no
+  failure channel ([#93](https://github.com/kawasima/raoh/issues/93)).
 - **jspecify `@NullMarked` nullness contract** across the `raoh` core module, extended to the
   `raoh-json` and `raoh-jooq` sibling modules. Consumers running null analysis (Eclipse JDT / ecj,
   NullAway, IntelliJ) receive precise, declared contracts instead of guessed ones
