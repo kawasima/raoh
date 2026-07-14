@@ -72,11 +72,11 @@ class GuardWeaveMojoTest {
         set(mojo, "packages", FIXTURE_PACKAGE_GLOB);
         set(mojo, "target", mainDir.toString());
         set(mojo, "testTarget", testDir.toString());
-        set(mojo, "weaveMain", false);
+        // weaveMain is left unset → the field's default (false) must gate off main weaving.
         mojo.execute();
 
         assertTrue(isWoven(testClass), "the guard must be woven into test classes");
-        assertFalse(isWoven(mainClass), "main classes must NOT be woven when weaveMain=false");
+        assertFalse(isWoven(mainClass), "main classes must NOT be woven by default");
     }
 
     @Test
