@@ -492,6 +492,13 @@ field("codes", list(string()).fixedSize(3)).decode(Map.of("codes", List.of("X", 
 // ==> Err[/codes: size must be exactly 3]
 ```
 
+リスト制約（`nonempty` / `minSize` / `maxSize` / `fixedSize` / `contains` / `unique`）とレコードのサイズ制約は、末尾に任意のカスタムメッセージを取る overload を持ちます（数値・文字列の制約と同様）。マルチセレクトのフォーム検証などで有用です:
+
+```java
+field("tags", list(string()).minSize(1, "タグは1つ以上選んでください")).decode(Map.of("tags", List.of()))
+// ==> Err[/tags: タグは1つ以上選んでください]
+```
+
 ---
 
 ## 8. マップのデコード
@@ -660,33 +667,33 @@ contactDec.decode(Map.of("kind", "fax", "value", "123"))
 
 ### discriminate — フィールド値によるディスパッチ
 
-ディスクリミネーターフィールド名が固定の場合、`discriminate()` は `oneOf()` よりクリーンな代替手段です:
+ディスクリミネーターフィールド名が固定の場合、`discriminate()` は `oneOf()` よりクリーンな代替手段です。`variant(tag, decoder)` を並べると、各アームは部分型のデコーダーをそのまま書けます。戻り値の型 `Decoder<..., Shape>` が `T = Shape` を固定するので、`(Shape)` へのアップキャストは要りません:
 
 ```java
 sealed interface Shape {}
 record Circle(double radius) implements Shape {}
 record Rect(double width, double height) implements Shape {}
 
-var shapeDec = discriminate("type", Map.of(
-        "circle", combine(
-                field("type", literal("circle")),
-                field("radius", double_().positive())
-        ).map((t, r) -> (Shape) new Circle(r)),
-        "rect", combine(
-                field("type", literal("rect")),
+Decoder<Map<String, Object>, Shape> shapeDec = discriminate("type",
+        variant("circle", field("radius", double_().positive()).map(Circle::new)),
+        variant("rect", combine(
                 field("width", double_().positive()),
                 field("height", double_().positive())
-        ).map((t, w, h) -> (Shape) new Rect(w, h))
-));
+        ).map(Rect::new)));
 
 shapeDec.decode(Map.of("type", "circle", "radius", 5.0))
 // ==> Ok[Circle[radius=5.0]]
 
 shapeDec.decode(Map.of("type", "rect", "width", 3.0, "height", 4.0))
 // ==> Ok[Rect[width=3.0, height=4.0]]
+
+shapeDec.decode(Map.of("type", "hexagon"))
+// ==> Err[/type: must be one of [circle, rect]]
 ```
 
-`discriminate()` はフィールド値を先に読み取り、一致するデコーダーにディスパッチします。`oneOf()` のようにすべての候補を試すわけではないため、より効率的でエラーメッセージも明確です。
+`discriminate()` はフィールド値を先に読み取り、一致するデコーダーにディスパッチします。`oneOf()` のようにすべての候補を試すわけではないため、より効率的でエラーメッセージも明確です。同じタグが2つあると構築時に `IllegalArgumentException` になります。
+
+バリアントの集合を実行時に組み立てたい場合は、`Map` を取る `discriminate("type", Map.of(...))` 形式も使えます（この場合は各アームをスーパータイプへキャストする必要があります）。エンコード側の `MapEncoders.variant(...)` / `discriminate(...)` と対称です。
 
 ---
 

@@ -490,6 +490,13 @@ field("codes", list(string()).fixedSize(3)).decode(Map.of("codes", List.of("X", 
 // ==> Err[/codes: size must be exactly 3]
 ```
 
+The list constraints (`nonempty` / `minSize` / `maxSize` / `fixedSize` / `contains` / `unique`) and the record size constraints each take an optional trailing custom message, like the string/numeric constraints — handy for multi-select form validation:
+
+```java
+field("tags", list(string()).minSize(1, "select at least one tag")).decode(Map.of("tags", List.of()))
+// ==> Err[/tags: select at least one tag]
+```
+
 ---
 
 ## 8. Decoding maps
@@ -658,33 +665,33 @@ When no candidate matches, a `no variant matched` error is returned.
 
 ### discriminate — dispatch by field value
 
-When the discriminator field name is fixed, `discriminate()` provides a cleaner alternative to `oneOf()`:
+When the discriminator field name is fixed, `discriminate()` provides a cleaner alternative to `oneOf()`. List the arms as `variant(tag, decoder)`; each arm can return its own subtype directly. The result type `Decoder<..., Shape>` pins `T = Shape`, so no `(Shape)` up-cast is needed:
 
 ```java
 sealed interface Shape {}
 record Circle(double radius) implements Shape {}
 record Rect(double width, double height) implements Shape {}
 
-var shapeDec = discriminate("type", Map.of(
-        "circle", combine(
-                field("type", literal("circle")),
-                field("radius", double_().positive())
-        ).map((t, r) -> (Shape) new Circle(r)),
-        "rect", combine(
-                field("type", literal("rect")),
+Decoder<Map<String, Object>, Shape> shapeDec = discriminate("type",
+        variant("circle", field("radius", double_().positive()).map(Circle::new)),
+        variant("rect", combine(
                 field("width", double_().positive()),
                 field("height", double_().positive())
-        ).map((t, w, h) -> (Shape) new Rect(w, h))
-));
+        ).map(Rect::new)));
 
 shapeDec.decode(Map.of("type", "circle", "radius", 5.0))
 // ==> Ok[Circle[radius=5.0]]
 
 shapeDec.decode(Map.of("type", "rect", "width", 3.0, "height", 4.0))
 // ==> Ok[Rect[width=3.0, height=4.0]]
+
+shapeDec.decode(Map.of("type", "hexagon"))
+// ==> Err[/type: must be one of [circle, rect]]
 ```
 
-`discriminate()` reads the field value first and dispatches to the matching decoder — it does not try all candidates like `oneOf()`. This is more efficient and produces clearer error messages.
+`discriminate()` reads the field value first and dispatches to the matching decoder — it does not try all candidates like `oneOf()`. This is more efficient and produces clearer error messages. Two variants sharing a tag fail with `IllegalArgumentException` at construction.
+
+To assemble the variant set at run time, the `Map`-taking form `discriminate("type", Map.of(...))` is still available (there each arm must be up-cast to the supertype). This mirrors `MapEncoders.variant(...)` / `discriminate(...)` on the encode side.
 
 ---
 

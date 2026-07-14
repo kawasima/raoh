@@ -392,6 +392,9 @@ Temporal decoders (`iso8601()`, `date()`, `time()`, `localDateTime()`, `offsetDa
 - `maxSize(...)`
 - `fixedSize(...)`
 
+Each constraint above (except `containsAll` / `toSet`) also takes an optional trailing custom
+message, e.g. `list(string()).minSize(1, "select at least one")`.
+
 ## Object Decoding
 
 Raoh distinguishes these cases:

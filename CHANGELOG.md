@@ -34,6 +34,21 @@ At release time this section is renamed to the chosen version with a date.
 - **Message overloads across the numeric decoders**, with `DecimalDecoder` brought to parity
   (`min` / `max` / `range` / `multipleOf` / sign / `scale`)
   ([#54](https://github.com/kawasima/raoh/issues/54)).
+- **Custom-message overloads on `ListDecoder` and `RecordDecoder` constraints**
+  (`nonempty` / `minSize` / `maxSize` / `fixedSize` / `contains` / `unique`, and the record
+  size constraints), matching the string/numeric decoders. `ListDecoder.containsAll(T...)` is
+  intentionally left out, mirroring the `StringDecoder.oneOf(String...)` varargs precedent
+  ([#87](https://github.com/kawasima/raoh/issues/87)).
+- **`JsonDecoders.double_()` / `float_()`** — the JSON boundary reached floating-point parity with
+  `ObjectDecoders`, giving a primitive `double`/`float` (and the `DoubleDecoder`/`FloatDecoder`
+  constraint API) instead of only `decimal()` → `BigDecimal`. JSON temporals stay on the canonical
+  `string().iso8601()` / `date()` / `dateTime()` path (documented, no new primitives)
+  ([#86](https://github.com/kawasima/raoh/issues/86)).
+- **Typed, cast-free `variant()` / `discriminate(field, Variant...)` on the decode side**, in core
+  `Decoders` and re-exported from `MapDecoders` / `JsonDecoders` / `JooqRecordDecoders`. Mirrors the
+  encoder's `variant()` / `discriminate()`, removing the per-arm up-cast the `Map`-based form
+  requires; rejects duplicate tags at construction. The `Map`-based overload stays for back-compat
+  ([#82](https://github.com/kawasima/raoh/issues/82)).
 - **CI**: GitHub Actions workflow for build/test and the NullAway null-analysis gate.
 
 ### Changed
@@ -87,6 +102,11 @@ At release time this section is renamed to the chosen version with a date.
   ([#66](https://github.com/kawasima/raoh/issues/66)).
 - Encode `discriminate` guards against a `null` variant key at tag injection
   ([#44](https://github.com/kawasima/raoh/issues/44)).
+- `JsonDecoders.double_()` / `float_()` reject an out-of-range magnitude with `type_mismatch`
+  instead of letting Jackson 3's strict `doubleValue()` / `floatValue()` throw out of `decode()`;
+  `ObjectDecoders.double_()` / `float_()` were aligned to reject the same rather than silently
+  returning `Infinity` (both keep `NaN` flowing through for range constraints to catch)
+  ([#86](https://github.com/kawasima/raoh/issues/86)).
 
 ### Compatibility
 

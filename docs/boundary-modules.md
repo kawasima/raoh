@@ -6,7 +6,7 @@
 
 Supported helpers include:
 
-- `string()`, `int_()`, `long_()`, `bool()`, `decimal()`
+- `string()`, `int_()`, `long_()`, `double_()`, `float_()`, `bool()`, `decimal()`
 - `field(...)`
 - `optionalField(...)`
 - `nullable(...)`
@@ -15,7 +15,7 @@ Supported helpers include:
 - `map(...)`
 - `enumOf(...)`
 - `literal(...)`
-- `discriminate(...)`
+- `variant(...)` / `discriminate(...)` — tagged unions; the typed `discriminate(field, variant(...)...)` form is cast-free
 - `strict(...)`
 - `combine(...)`
 
@@ -41,6 +41,7 @@ Supported helpers include:
 - `optionalNullableField(...)`
 - `nested(...)`
 - `enumOf(...)`
+- `variant(...)` / `discriminate(...)` — tagged unions (e.g. single-table inheritance keyed on a column)
 - `combine(...)`
 
 This module is a good fit when you fetch data from a database via jOOQ and want to map flat query results (including JOIN results) into nested domain objects.
@@ -96,6 +97,7 @@ Supported helpers include:
 - `map(...)`
 - `enumOf(...)`
 - `literal(...)`
+- `variant(...)` / `discriminate(...)` — tagged unions; the typed `discriminate(field, variant(...)...)` form is cast-free
 - `strict(...)`
 - `combine(...)`
 
