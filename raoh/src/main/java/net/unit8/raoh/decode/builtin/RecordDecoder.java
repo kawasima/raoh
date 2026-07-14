@@ -39,9 +39,19 @@ public class RecordDecoder<I extends @Nullable Object, V> implements Decoder<I, 
      * @return a new decoder that fails with {@link ErrorCodes#TOO_SMALL} if the map is empty
      */
     public RecordDecoder<I, V> nonempty() {
+        return nonempty(null);
+    }
+
+    /**
+     * Requires the record to have at least one entry.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_SMALL} if the map is empty
+     */
+    public RecordDecoder<I, V> nonempty(@Nullable String message) {
         return chain((value, path) -> {
             if (value.isEmpty()) {
-                return Result.fail(path, ErrorCodes.TOO_SMALL, "must not be empty",
+                return Result.failWith(path, ErrorCodes.TOO_SMALL, message, "must not be empty",
                         Map.of("min", 1, "actual", 0));
             }
             return Result.ok(value);
@@ -55,9 +65,20 @@ public class RecordDecoder<I extends @Nullable Object, V> implements Decoder<I, 
      * @return a new decoder that fails with {@link ErrorCodes#TOO_SMALL} if the map has fewer entries
      */
     public RecordDecoder<I, V> minSize(int n) {
+        return minSize(n, null);
+    }
+
+    /**
+     * Requires the record to have at least {@code n} entries.
+     *
+     * @param n       the minimum number of entries
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_SMALL} if the map has fewer entries
+     */
+    public RecordDecoder<I, V> minSize(int n, @Nullable String message) {
         return chain((value, path) -> {
             if (value.size() < n) {
-                return Result.fail(path, ErrorCodes.TOO_SMALL,
+                return Result.failWith(path, ErrorCodes.TOO_SMALL, message,
                         "must have at least %d entries".formatted(n),
                         Map.of("min", n, "actual", value.size()));
             }
@@ -72,9 +93,20 @@ public class RecordDecoder<I extends @Nullable Object, V> implements Decoder<I, 
      * @return a new decoder that fails with {@link ErrorCodes#TOO_BIG} if the map has more entries
      */
     public RecordDecoder<I, V> maxSize(int n) {
+        return maxSize(n, null);
+    }
+
+    /**
+     * Requires the record to have at most {@code n} entries.
+     *
+     * @param n       the maximum number of entries
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#TOO_BIG} if the map has more entries
+     */
+    public RecordDecoder<I, V> maxSize(int n, @Nullable String message) {
         return chain((value, path) -> {
             if (value.size() > n) {
-                return Result.fail(path, ErrorCodes.TOO_BIG,
+                return Result.failWith(path, ErrorCodes.TOO_BIG, message,
                         "must have at most %d entries".formatted(n),
                         Map.of("max", n, "actual", value.size()));
             }
@@ -89,9 +121,20 @@ public class RecordDecoder<I extends @Nullable Object, V> implements Decoder<I, 
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_SIZE} if the map size differs
      */
     public RecordDecoder<I, V> fixedSize(int n) {
+        return fixedSize(n, null);
+    }
+
+    /**
+     * Requires the record to have exactly {@code n} entries.
+     *
+     * @param n       the required number of entries
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#INVALID_SIZE} if the map size differs
+     */
+    public RecordDecoder<I, V> fixedSize(int n, @Nullable String message) {
         return chain((value, path) -> {
             if (value.size() != n) {
-                return Result.fail(path, ErrorCodes.INVALID_SIZE,
+                return Result.failWith(path, ErrorCodes.INVALID_SIZE, message,
                         "must have exactly %d entries".formatted(n),
                         Map.of("expected", n, "actual", value.size()));
             }
