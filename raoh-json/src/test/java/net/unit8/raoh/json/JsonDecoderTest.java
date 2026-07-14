@@ -470,6 +470,35 @@ class JsonDecoderTest {
     }
 
     @Test
+    void doubleDecodesFloatingPointAndInteger() {
+        var dec = field("v", double_());
+        // A JSON floating-point value.
+        assertEquals(3.14, assertOk(dec.decode(parse("{\"v\":3.14}"))), 1e-9);
+        // A JSON integer is a valid number and widens to double.
+        assertEquals(5.0, assertOk(dec.decode(parse("{\"v\":5}"))), 1e-9);
+    }
+
+    @Test
+    void doubleRejectsNonNumber() {
+        var dec = field("v", double_());
+        assertErr(dec.decode(parse("{\"v\":\"3.14\"}")));
+    }
+
+    @Test
+    void doubleConstraintApplies() {
+        var dec = field("v", double_().range(0.0, 1.0));
+        assertEquals(0.5, assertOk(dec.decode(parse("{\"v\":0.5}"))), 1e-9);
+        assertErr(dec.decode(parse("{\"v\":2.5}")));
+    }
+
+    @Test
+    void floatDecodesAndRejectsNonNumber() {
+        var dec = field("v", float_());
+        assertEquals(1.5f, assertOk(dec.decode(parse("{\"v\":1.5}"))), 1e-6f);
+        assertErr(dec.decode(parse("{\"v\":true}")));
+    }
+
+    @Test
     void pipeDecoder() {
         // pipe string decoder to another decoder that parses the string further
         Decoder<String, Integer> parseInt = (in, path) -> {

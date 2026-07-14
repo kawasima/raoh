@@ -13,6 +13,8 @@ import net.unit8.raoh.decode.Decoders;
 import net.unit8.raoh.decode.FieldDecoder;
 import net.unit8.raoh.decode.builtin.BoolDecoder;
 import net.unit8.raoh.decode.builtin.DecimalDecoder;
+import net.unit8.raoh.decode.builtin.DoubleDecoder;
+import net.unit8.raoh.decode.builtin.FloatDecoder;
 import net.unit8.raoh.decode.builtin.IntDecoder;
 import net.unit8.raoh.decode.builtin.ListDecoder;
 import net.unit8.raoh.decode.builtin.LongDecoder;
@@ -108,6 +110,51 @@ public final class JsonDecoders {
                         Map.of("expected", "long", "actual", in.getNodeType().name().toLowerCase()));
             }
             return Result.ok(in.longValue());
+        });
+    }
+
+    /**
+     * Creates a double decoder.
+     *
+     * <p>Accepts any JSON number (integer or floating-point) and reads it via
+     * {@link JsonNode#doubleValue()}. This mirrors {@link #decimal()} in accepting the whole
+     * numeric range; use {@code double_()} when the domain wants a primitive {@code double}
+     * (and the {@link DoubleDecoder} constraint API) rather than a {@link java.math.BigDecimal}.
+     *
+     * @return a decoder that extracts a double value from a JSON node
+     */
+    public static DoubleDecoder<JsonNode> double_() {
+        return new DoubleDecoder<>((in, path) -> {
+            if (in == null || in.isNull() || in.isMissingNode()) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (!in.isNumber()) {
+                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
+                        Map.of("expected", "double", "actual", in.getNodeType().name().toLowerCase()));
+            }
+            return Result.ok(in.doubleValue());
+        });
+    }
+
+    /**
+     * Creates a float decoder.
+     *
+     * <p>Accepts any JSON number (integer or floating-point) and narrows it via
+     * {@link JsonNode#floatValue()}. Like {@link #double_()}, but produces a primitive
+     * {@code float}; values outside the {@code float} range narrow per Java's usual rules.
+     *
+     * @return a decoder that extracts a float value from a JSON node
+     */
+    public static FloatDecoder<JsonNode> float_() {
+        return new FloatDecoder<>((in, path) -> {
+            if (in == null || in.isNull() || in.isMissingNode()) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            if (!in.isNumber()) {
+                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
+                        Map.of("expected", "float", "actual", in.getNodeType().name().toLowerCase()));
+            }
+            return Result.ok(in.floatValue());
         });
     }
 
