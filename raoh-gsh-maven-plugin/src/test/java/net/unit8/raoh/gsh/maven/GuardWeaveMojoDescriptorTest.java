@@ -8,6 +8,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.InputStream;
 
@@ -36,19 +37,26 @@ class GuardWeaveMojoDescriptorTest {
     /** Parses the generated plugin descriptor from the test classpath. */
     private static Document descriptor() throws Exception {
         var factory = DocumentBuilderFactory.newInstance();
-        // Our own build artifact, but disable external entity resolution on principle.
-        factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        // Our own build artifact, but harden the parser anyway: forbid DOCTYPE outright (which also
+        // blocks external-entity expansion) and turn on secure processing.
+        factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
         try (InputStream in = GuardWeaveMojoDescriptorTest.class.getResourceAsStream(DESCRIPTOR)) {
             assertNotNull(in, "plugin.xml must be generated under target/classes before tests run");
             return factory.newDocumentBuilder().parse(in);
         }
     }
 
-    /** The single {@code <mojo>} element for the {@code weave} goal. */
+    /** The {@code <mojo>} element for the {@code weave} goal, ignoring any other goals the plugin may add. */
     private static Element weaveMojo() throws Exception {
         NodeList mojos = descriptor().getElementsByTagName("mojo");
-        assertEquals(1, mojos.getLength(), "descriptor should declare exactly one mojo");
-        return (Element) mojos.item(0);
+        for (int i = 0; i < mojos.getLength(); i++) {
+            Element mojo = (Element) mojos.item(i);
+            if ("weave".equals(childText(mojo, "goal"))) {
+                return mojo;
+            }
+        }
+        throw new AssertionError("descriptor must declare a mojo for the 'weave' goal");
     }
 
     /** Text content of the first direct child of {@code parent} named {@code tag}, or null if absent. */
@@ -107,15 +115,21 @@ class GuardWeaveMojoDescriptorTest {
 
     @Test
     void defaultsTargetDirectoriesToProjectBuildOutputs() throws Exception {
-        assertEquals("${project.build.outputDirectory}", configEntry("target").getAttribute("default-value"),
+        Element target = configEntry("target");
+        Element testTarget = configEntry("testTarget");
+        assertNotNull(target, "configuration must declare an entry for target");
+        assertNotNull(testTarget, "configuration must declare an entry for testTarget");
+        assertEquals("${project.build.outputDirectory}", target.getAttribute("default-value"),
                 "target must default to the main output directory");
-        assertEquals("${project.build.testOutputDirectory}", configEntry("testTarget").getAttribute("default-value"),
+        assertEquals("${project.build.testOutputDirectory}", testTarget.getAttribute("default-value"),
                 "testTarget must default to the test output directory");
     }
 
     @Test
     void defaultsWeaveMainToFalse() throws Exception {
-        assertEquals("false", configEntry("weaveMain").getAttribute("default-value"),
+        Element weaveMain = configEntry("weaveMain");
+        assertNotNull(weaveMain, "configuration must declare an entry for weaveMain");
+        assertEquals("false", weaveMain.getAttribute("default-value"),
                 "weaveMain must default to false so guards never leak into packaged main artifacts");
     }
 }
