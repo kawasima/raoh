@@ -128,10 +128,16 @@ public interface Decoder<I extends @Nullable Object, T extends @Nullable Object>
      *               n -> Map.of("actual", n));
      * }</pre>
      *
+     * <p>{@code metaFn} must return a non-null map, and the map itself must not contain {@code null}
+     * values — {@link Map#of} throws {@link NullPointerException} on a {@code null} value. When the
+     * refined value may be {@code null} (see the nullness note on {@link #refine(Predicate, String, String)}),
+     * guard the payload accordingly (e.g. return {@link Map#of()} for a {@code null} value).
+     *
      * @param ok      the predicate the decoded value must satisfy
      * @param code    the error code to report on failure
      * @param message the error message to report on failure
-     * @param metaFn  a function producing the issue metadata from the failing value
+     * @param metaFn  a function producing the issue metadata from the failing value; must be non-null
+     *                and must not put {@code null} values into the map
      * @return a decoder that fails with the given code, message, and metadata when {@code ok} rejects the value
      */
     default Decoder<I, T> refine(Predicate<? super T> ok, String code, String message,
