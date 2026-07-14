@@ -392,6 +392,19 @@ class JooqDecoderTest {
     }
 
     @Test
+    void typedDiscriminateIsCastFree() {
+        // Explicit target type pins T = Payment, so the variant arms need no up-cast.
+        Decoder<org.jooq.Record, Payment> dec = discriminate("type",
+                variant("credit_card", field("card_number", string()).map(CreditCard::new)),
+                variant("bank_transfer", field("bank_code", string()).map(BankTransfer::new)));
+
+        var ccRec = record("type", "credit_card", "card_number", "4111", "bank_code", "");
+        assertInstanceOf(CreditCard.class, ((Ok<Payment>) dec.decode(ccRec)).value());
+        var btRec = record("type", "bank_transfer", "card_number", "", "bank_code", "MUFG");
+        assertInstanceOf(BankTransfer.class, ((Ok<Payment>) dec.decode(btRec)).value());
+    }
+
+    @Test
     void discriminateUnknownTag() {
         Decoder<org.jooq.Record, Payment> dec = discriminate("type", Map.of(
                 "credit_card", field("card_number", string()).map(CreditCard::new)

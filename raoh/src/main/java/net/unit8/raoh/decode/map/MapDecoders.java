@@ -222,6 +222,36 @@ public final class MapDecoders {
     }
 
     /**
+     * Creates a {@link Decoders.Variant} for use with {@link #discriminate(String, Decoders.Variant[])},
+     * with the input type pinned to {@code Map<String, Object>}.
+     *
+     * @param <S>     the value type this variant decodes to
+     * @param tag     the discriminator value that selects this variant
+     * @param decoder the decoder producing the variant value
+     * @return a variant for use with {@link #discriminate(String, Decoders.Variant[])}
+     */
+    public static <S> Decoders.Variant<Map<String, Object>, S> variant(
+            String tag, Decoder<Map<String, Object>, S> decoder) {
+        return Decoders.variant(tag, decoder);
+    }
+
+    /**
+     * Typed, cast-free variant of {@link #discriminate(String, Map)}: dispatches on the string value
+     * of the discriminator field. See {@link Decoders#discriminate(String, Decoder, Decoders.Variant[])}.
+     *
+     * @param <T>       the decoded (supertype) type
+     * @param fieldName the discriminator field name (e.g., {@code "type"})
+     * @param variants  the variants, each pairing a tag with its decoder
+     * @return a discriminating decoder
+     * @throws IllegalArgumentException if two variants share the same tag
+     */
+    @SafeVarargs
+    public static <T> Decoder<Map<String, Object>, T> discriminate(
+            String fieldName, Decoders.Variant<Map<String, Object>, ? extends T>... variants) {
+        return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.string()), variants);
+    }
+
+    /**
      * Wraps a decoder to reject maps containing keys not in the given set.
      *
      * @param <T>         the decoded value type

@@ -931,6 +931,24 @@ class MapDecoderTest {
         }
     }
 
+    @Test
+    void typedDiscriminateIsCastFreeAndMatchesMapForm() {
+        // Cast-free: the variant arms need no (Shape) up-cast; T is pinned by the target type.
+        Decoder<Map<String, Object>, Shape> typed = discriminate("type",
+                variant("circle", field("radius", decimal()).map(r -> new Circle(r.doubleValue()))),
+                variant("rect", combine(field("width", decimal()), field("height", decimal()))
+                        .map((w, h) -> new Rect(w.doubleValue(), h.doubleValue()))));
+        Decoder<Map<String, Object>, Shape> mapForm = discriminate("type", Map.of(
+                "circle", field("radius", decimal()).map(r -> new Circle(r.doubleValue())),
+                "rect", combine(field("width", decimal()), field("height", decimal()))
+                        .map((w, h) -> new Rect(w.doubleValue(), h.doubleValue()))));
+
+        var input = Map.<String, Object>of("type", "rect", "width", 3.0, "height", 4.0);
+        // The typed form produces the same result as the Map form.
+        assertEquals(assertOk(mapForm.decode(input)), assertOk(typed.decode(input)));
+        assertInstanceOf(Rect.class, assertOk(typed.decode(input)));
+    }
+
     // --- combine(List) ---
 
     @Test
