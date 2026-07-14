@@ -43,7 +43,7 @@ Use jetshell to verify code snippets in `docs/tutorial.ja.md`.
 
 ### Setup
 
-jetshell must be on PATH. Run in non-interactive (batch) mode by piping a script file:
+jetshell must be on PATH (use **1.0.2 or later**). Run in non-interactive (batch) mode by piping a script file:
 
 ```sh
 cat input.jsh | jetshell
@@ -89,7 +89,7 @@ Notes:
 - **`list(subDec)`** where `subDec: Decoder<Map<String,Object>,T>` requires `list(nested(subDec))`.
 - **`Decoder.fail()`** does not exist — use `(in, path) -> Result.fail(path, code, message)` (one-line lambda; closed as low-value convenience).
 - **`flatMap` returning `Decoder`** does not work — `flatMap` expects `Function<T, Result<U>>`, not `Function<T, Decoder<I,U>>`. Use a full `Decoder<I,T>` lambda instead.
-- **`sealed interface`** in JShell requires all permits classes declared in the same snippet; use plain `interface` as a workaround.
+- **`sealed interface`** works as-is on jetshell 1.0.2+ (a contiguous `sealed` type plus its permitted subtypes in one script compiles like normal Java source). On 1.0.1 and earlier it failed unless you used a plain `interface`; that workaround is no longer needed. See [jetshell#17](https://github.com/kawasima/jetshell/issues/17).
 
 ## Development Flow
 
