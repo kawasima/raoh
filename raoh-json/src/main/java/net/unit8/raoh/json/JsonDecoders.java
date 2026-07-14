@@ -168,10 +168,16 @@ public final class JsonDecoders {
                         Map.of("expected", "float", "actual", in.getNodeType().name().toLowerCase()));
             }
             try {
-                return Result.ok(in.floatValue());
+                float v = in.floatValue();
+                // Jackson 3's floatValue() throws for most out-of-range nodes (caught below), but
+                // enforce the finite contract explicitly too — a node that narrows to Infinity
+                // without throwing must still be rejected, matching double_().
+                if (Float.isInfinite(v)) {
+                    return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
+                            Map.of("expected", "float"));
+                }
+                return Result.ok(v);
             } catch (JsonNodeException e) {
-                // See double_(): Jackson 3's floatValue() throws for a value outside the finite
-                // float range; surface it as a decode error instead.
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
                         Map.of("expected", "float"));
             }

@@ -506,6 +506,14 @@ class JsonDecoderTest {
     }
 
     @Test
+    void floatRejectsInfiniteNodeWithoutThrowing() {
+        // A node whose floatValue() yields Infinity directly (rather than throwing) must still be
+        // rejected — this exercises the explicit isInfinite guard, not the exception path.
+        var infiniteNode = mapper.getNodeFactory().numberNode(Float.POSITIVE_INFINITY);
+        assertErr(float_().decode(infiniteNode, Path.ROOT));
+    }
+
+    @Test
     void pipeDecoder() {
         // pipe string decoder to another decoder that parses the string further
         Decoder<String, Integer> parseInt = (in, path) -> {
