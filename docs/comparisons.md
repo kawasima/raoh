@@ -43,6 +43,38 @@ combine(
 
 The schema is already the parsing pipeline.
 
+## Encoding
+
+Encoding is the dual of decoding, but the two composition idioms are deliberately different.
+Decode composes fields with the applicative `combine(field(...), ...).map(ctor)`. Encode composes
+with `object(property(...), ...)` (from `MapEncoders`):
+
+```java
+import static net.unit8.raoh.encode.MapEncoders.*;
+import static net.unit8.raoh.encode.ObjectEncoders.*;
+
+Encoder<User, Map<String, Object>> user = object(
+        property("id",    User::id,    uuid().contramap(UserId::value)),
+        property("email", User::email, string().contramap(Email::value)),
+        property("age",   User::age,   int_().contramap(Age::value))
+);
+```
+
+There is intentionally no encode-side `combine`. Decode's `combine` is applicative *because decode
+can fail and must accumulate errors across fields*; an encoder is a total function with no failure
+channel (see #43 and the `refine` discussion in #93), so there is nothing to accumulate. `object(...)`
+is the encode idiom, and the asymmetry with `combine` is by design, not a gap.
+
+To produce JSON, encode to a `Map<String, Object>` and hand it to Jackson:
+
+```java
+Map<String, Object> body = user.encode(aUser);
+JsonNode json = objectMapper.valueToTree(body); // Jackson serialization is already good here
+```
+
+A dedicated `JsonEncoders` (domain → `JsonNode`) is tracked in #94; for now the one-liner above
+covers the common case.
+
 ## Elm Decoder Comparison
 
 Raoh also has a strong family resemblance to Elm's `Json.Decode.Decoder`.

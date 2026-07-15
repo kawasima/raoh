@@ -15,6 +15,12 @@ At release time this section is renamed to the chosen version with a date.
 
 ### Added
 
+- **`ObjectEncoders.bytes()` / `uuid()` / `uri()`** — the encode duals of the existing decoders.
+  `bytes()` passes a `byte[]` through as-is (for JDBC binary columns); `uuid()` and `uri()` emit the
+  canonical string form, round-tripping `StringDecoder.uuid()` / `uri()`. Also documents in
+  `comparisons.md` that `object(property(...), ...)` — not a symmetric `combine` — is the intended
+  encode idiom, and how to bridge a `Map<String, Object>` to a Jackson `JsonNode`
+  ([#94](https://github.com/kawasima/raoh/issues/94)).
 - **`Decoder.refine(...)`** — a generic predicate-based refinement combinator (three overloads: a
   `code`/`message` pair, a metadata-carrying variant, and a fully caller-controlled `onFail` variant).
   Keeps the value unchanged on success and produces an `Issue` at the current path on failure, with a

@@ -3,11 +3,13 @@ package net.unit8.raoh.encode;
 import org.jspecify.annotations.NonNull;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 /**
  * Factory for primitive {@code Encoder} instances that encode domain values to {@code Object}.
@@ -94,6 +96,22 @@ public final class ObjectEncoders {
     }
 
     /**
+     * Returns an encoder that passes a {@code byte[]} through as-is.
+     *
+     * <p>The dual of {@link net.unit8.raoh.decode.ObjectDecoders#bytes()}, which accepts raw
+     * {@code byte[]} values directly (not base64). Suitable for JDBC binary columns such as
+     * PostgreSQL {@code BYTEA} or SQL standard {@code VARBINARY}.
+     *
+     * <p>The array is returned as-is and is <strong>not</strong> defensively copied, so the encoded
+     * value shares storage with the source object (consistent with the decoder). Do not mutate it.
+     *
+     * @return a byte array encoder
+     */
+    public static Encoder<byte @NonNull [], Object> bytes() {
+        return v -> v;
+    }
+
+    /**
      * Returns an encoder that converts an {@link Instant} to its ISO-8601 string representation.
      *
      * @return an instant encoder
@@ -143,6 +161,30 @@ public final class ObjectEncoders {
      * @return an offset date-time encoder
      */
     public static Encoder<@NonNull OffsetDateTime, Object> offsetDateTime() {
+        return v -> v.toString();
+    }
+
+    /**
+     * Returns an encoder that converts a {@link UUID} to its canonical string representation.
+     *
+     * <p>The dual of {@link net.unit8.raoh.decode.builtin.StringDecoder#uuid()}
+     * ({@link UUID#fromString(String)}); {@code UUID.fromString(uuid.toString())} round-trips exactly.
+     *
+     * @return a UUID encoder
+     */
+    public static Encoder<@NonNull UUID, Object> uuid() {
+        return v -> v.toString();
+    }
+
+    /**
+     * Returns an encoder that converts a {@link URI} to its string representation.
+     *
+     * <p>The dual of {@link net.unit8.raoh.decode.builtin.StringDecoder#uri()}
+     * ({@link URI#create(String)}); {@code URI.create(uri.toString())} round-trips exactly.
+     *
+     * @return a URI encoder
+     */
+    public static Encoder<@NonNull URI, Object> uri() {
         return v -> v.toString();
     }
 
