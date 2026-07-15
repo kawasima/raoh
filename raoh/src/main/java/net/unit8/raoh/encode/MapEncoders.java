@@ -298,10 +298,16 @@ public final class MapEncoders {
      * reference their own {@code static final} field before its initializer completes:
      *
      * <pre>{@code
-     * static final Encoder<Node, Map<String, Object>> NODE = object(
-     *         property("value",    Node::value,    int_()),
-     *         property("children", Node::children, list(nested(lazy(() -> Encoders.NODE)))));
+     * final class Schema {
+     *     static final Encoder<Node, Map<String, @Nullable Object>> NODE = object(
+     *             property("value",    Node::value,    int_()),
+     *             property("children", Node::children, list(nested(lazy(() -> Schema.NODE)))));
+     * }
      * }</pre>
+     *
+     * <p>The supplier must qualify the self-reference ({@code Schema.NODE} rather than a bare
+     * {@code NODE}), because a simple name would be an illegal forward reference inside the field's
+     * own initializer.
      *
      * @param <T>      the domain type to encode from
      * @param <O>      the external representation type to encode to
