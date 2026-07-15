@@ -488,6 +488,11 @@ class JooqDecoderTest {
 
         var result = dec.decode(rec);
         assertInstanceOf(Err.class, result);
-        assertEquals(2, ((Err<User>) result).issues().asList().size());
+        var issues = ((Err<User>) result).issues();
+        assertEquals(2, issues.asList().size());
+        // Both absent columns must be reported, not just counted.
+        var byPath = issues.groupByPath();
+        assertEquals(ErrorCodes.MISSING_FIELD, byPath.get("/age").getFirst().code());
+        assertEquals(ErrorCodes.MISSING_FIELD, byPath.get("/email").getFirst().code());
     }
 }

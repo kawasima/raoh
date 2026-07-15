@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -31,8 +32,9 @@ import static org.junit.jupiter.api.Assertions.fail;
  * {@link ObjectDecoders#enumOf(Class)}.
  *
  * <p>Each test asserts the documented contract (Javadoc), not the current implementation shape:
- * expected error codes/messages/metadata are taken from the spec, and the decoders under test are
- * driven by tiny hand-written stubs so the exact success/failure of each input is controlled.
+ * expected error codes and metadata are taken from the spec, and the decoders under test are driven
+ * by tiny hand-written stubs so the exact success/failure of each input is controlled. Fallback
+ * message wording is deliberately not asserted — it is not part of the documented contract.
  */
 class DecodersCombinatorTest {
 
@@ -221,10 +223,9 @@ class DecodersCombinatorTest {
             case Err<Color>(var issues) -> {
                 var issue = issues.asList().getFirst();
                 assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+                // Spec: the error lists the accepted values — the lower-cased constant names.
                 var allowed = (List<?>) issue.meta().get("allowed");
-                // The allowed list is the lower-cased constant names.
-                assertEquals(3, allowed.size());
-                assertNotNull(allowed);
+                assertEquals(Set.of("red", "green", "blue"), Set.copyOf(allowed));
             }
         }
     }
