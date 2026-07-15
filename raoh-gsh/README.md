@@ -1,5 +1,9 @@
 # raoh-gsh — Domain Construction Guard (Runtime)
 
+> **Experimental / incubating.** The `raoh-gsh*` modules build on the evolving JDK ClassFile API and
+> may change outside the core library's SemVer promise. They are a test/CI-time tool, separate from
+> the stability guarantees of `raoh` / `raoh-json` / `raoh-jooq`.
+
 Runtime library for the domain construction guard. Provides `DomainConstructionScope` and `DomainConstructionGuardException`.
 
 Within a `DomainConstructionScope`, any woven domain object construction is checked against the call stack. If a `decode` method in a class implementing `net.unit8.raoh.decode.Decoder` is on the stack, construction is allowed. If not (i.e., a direct `new`), a `DomainConstructionGuardException` is thrown. Outside of a scope, no checking occurs — so production code is never affected.
