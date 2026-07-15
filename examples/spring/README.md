@@ -1,7 +1,7 @@
 # Raoh Spring Example
 
 A Spring Boot application demonstrating Raoh at both the **HTTP boundary** (JSON decoding)
-and the **JDBC boundary** (row decoding with `MapDecoders`).
+and the **JDBC boundary** (row decoding with `MapDecoders`, and row *encoding* with `MapEncoders`).
 
 ## What it shows
 
@@ -9,10 +9,17 @@ and the **JDBC boundary** (row decoding with `MapDecoders`).
 | --- | --- |
 | `JsonDecoders.combine` + `field` | Request body decoding in `MembershipDecoders` |
 | `MapDecoders.combine` + `field` | JDBC row decoding (`USER_ROW`, `GROUP_ROW`, etc.) |
+| `MapEncoders.object` + `property` | JDBC row encoding in `MapMembershipEncoders` |
 | `Decoder#list()` | Decoding a variable-length list of rows from `JdbcClient` |
 | `Result.map2` | Combining user + group-memberships from two queries |
 | `Decoders.withDefault` | Optional fields with defaults (`description`, `role`) |
 | `StringDecoder` chain | `.trim().nonBlank().maxLength()`, `.toLowerCase().email()` |
+
+The write path shows the symmetry directly: `UserController` decodes the request body into a
+`CreateUserCommand`, and `UserRepository.insert` hands that command to
+`MapMembershipEncoders.NEW_USER_ROW` to build the INSERT columns — decode at the HTTP boundary,
+encode at the JDBC one, with no hand-built intermediate value. `MembershipEncoderTest` also checks
+that `USER_ROW` and the row decoder round-trip to the same `User`.
 
 ## Domain model
 
