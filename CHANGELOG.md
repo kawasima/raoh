@@ -15,6 +15,10 @@ At release time this section is renamed to the chosen version with a date.
 
 ### Added
 
+- **`MapEncoders.lazy(Supplier<Encoder>)`** — the encode counterpart of `Decoders.lazy`, for
+  self-referential (recursive) encoders. Closes the last decode/encode asymmetry among the structural
+  combinators: a recursive domain type (e.g. a tree) that decodes via `lazy` can now be encoded back
+  the same way ([#94](https://github.com/kawasima/raoh/issues/94)).
 - **`ObjectEncoders.bytes()` / `uuid()` / `uri()`** — the encode duals of the existing decoders.
   `bytes()` passes a `byte[]` through as-is (for JDBC binary columns); `uuid()` and `uri()` emit the
   canonical string form, round-tripping `StringDecoder.uuid()` / `uri()`. Also documents in

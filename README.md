@@ -776,7 +776,7 @@ Null / optionality is handled in the property layer (encoders themselves are tot
 - `optionalProperty(key, getter, enc)` — omits the key entirely when the getter returns `null`
 - `presenceProperty(key, getter, enc)` — round-trips the tri-state `Presence` (omit / `null` / value)
 
-`MapEncoders` provides: `property()`, `nullableProperty()`, `propertyWithDefault()`, `optionalProperty()`, `presenceProperty()`, `object()`, `nested()`, `list()`, `mapOf()`, and `variant()` / `discriminate()` for tagged unions.
+`MapEncoders` provides: `property()`, `nullableProperty()`, `propertyWithDefault()`, `optionalProperty()`, `presenceProperty()`, `object()`, `nested()`, `list()`, `mapOf()`, `lazy()` (for recursive encoders), and `variant()` / `discriminate()` for tagged unions.
 
 ### Scope
 

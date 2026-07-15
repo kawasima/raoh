@@ -406,4 +406,5 @@ class MapEncoderTest {
         var domain = Map.of("usd", new BigDecimal("100"), "eur", new BigDecimal("90"));
         assertEquals(domain, dec.decode(enc.encode(domain)).getOrThrow());
     }
+
 }

@@ -15,6 +15,17 @@ import java.util.function.Supplier;
  * Factory for encoders that produce {@code Map<String, Object>} — the format consumed by
  * Spring JDBC's {@code JdbcClient} named-parameter binding.
  *
+ * <p>The one exception is {@link #lazy}, which is boundary-agnostic (it defers any
+ * {@code Encoder<T, O>}) and so does not produce a map itself. It lives here deliberately: there is
+ * no encode-side counterpart to the decoder's boundary-agnostic
+ * {@link net.unit8.raoh.decode.Decoders Decoders} class, and there is no reason to add one. Most of
+ * what fills {@code Decoders} — {@code withDefault}, {@code recover}, {@code oneOf}, {@code strict} —
+ * exists to handle failure, and an encoder is a total function that cannot fail; the value-mapping
+ * operations ({@link Encoder#contramap contramap}, {@link Encoder#andThen andThen}) live on the
+ * interface. An {@code Encoders} class would therefore hold {@code lazy} and nothing else. Since
+ * recursion is reached through {@link #nested} / {@link #list} in practice, {@code lazy} is kept
+ * next to them.
+ *
  * <p>This is the encoding counterpart of
  * {@link net.unit8.raoh.decode.map.MapDecoders MapDecoders}. The API mirrors the decoder side
  * deliberately so that decoder and encoder definitions can be written side by side:
@@ -287,6 +298,35 @@ public final class MapEncoders {
         return values -> values.stream()
                 .map(elementEncoder::encode)
                 .toList();
+    }
+
+    /**
+     * Creates a lazily-evaluated encoder, resolving the underlying encoder on each invocation.
+     *
+     * <p>The encode counterpart of
+     * {@link net.unit8.raoh.decode.Decoders#lazy(java.util.function.Supplier) Decoders.lazy()}.
+     * Use it to define self-referential (recursive) encoders, which would otherwise reference their
+     * own {@code static final} field before its initializer completes:
+     *
+     * <pre>{@code
+     * final class Schema {
+     *     static final Encoder<Node, Map<String, @Nullable Object>> NODE = object(
+     *             property("value",    Node::value,    int_()),
+     *             property("children", Node::children, list(nested(lazy(() -> Schema.NODE)))));
+     * }
+     * }</pre>
+     *
+     * <p>The supplier must qualify the self-reference ({@code Schema.NODE} rather than a bare
+     * {@code NODE}), because a simple name would be an illegal forward reference inside the field's
+     * own initializer.
+     *
+     * @param <T>      the domain type to encode from
+     * @param <O>      the external representation type to encode to
+     * @param supplier supplies the encoder on each invocation
+     * @return a lazy encoder that delegates to the supplied encoder
+     */
+    public static <T, O> Encoder<T, O> lazy(Supplier<Encoder<T, O>> supplier) {
+        return value -> supplier.get().encode(value);
     }
 
     /**
