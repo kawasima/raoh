@@ -31,7 +31,9 @@ If you are coming from a validator-oriented library, the main difference in feel
 
 ## Requirements
 
-- Java 25
+- **Java 25** (an LTS release). Raoh targets a modern Java LTS baseline deliberately: the API relies
+  on records, sealed types, pattern matching, and JSpecify type-use nullness, so it does not attempt
+  to support older baselines.
 
 ## Installation
 
@@ -115,6 +117,10 @@ Test/CI-time guard that detects accidental `new` construction of domain objects 
 - `raoh-gsh`: runtime — `DomainConstructionScope`, `DomainConstructionGuardException`
 - `raoh-gsh-weaver`: bytecode weaver (ClassFile API), Java Agent, CLI
 - `raoh-gsh-maven-plugin`: Maven plugin for build-time weaving
+
+**Stability:** the `raoh-gsh*` modules are experimental / incubating. Their bytecode-weaving surface
+is built on the evolving JDK ClassFile API and may change outside the core library's SemVer promise;
+treat them as separate from the stability guarantees of `raoh` / `raoh-json` / `raoh-jooq`.
 
 See [raoh-gsh README](raoh-gsh/README.md) for usage.
 
@@ -761,7 +767,7 @@ Map<String, Object> row = ITEM_ENCODER.encode(item);
 
 ### Built-in Encoders
 
-`ObjectEncoders` provides: `string()`, `int_()`, `long_()`, `double_()`, `float_()`, `bool()`, `decimal()`, `date()`, `time()`, `dateTime()`, `iso8601()`, `offsetDateTime()`, `enumOf()`.
+`ObjectEncoders` provides: `string()`, `int_()`, `long_()`, `double_()`, `float_()`, `bool()`, `decimal()`, `bytes()`, `date()`, `time()`, `dateTime()`, `iso8601()`, `offsetDateTime()`, `uuid()`, `uri()`, `enumOf()`.
 
 Null / optionality is handled in the property layer (encoders themselves are total, non-null functions):
 
@@ -771,6 +777,10 @@ Null / optionality is handled in the property layer (encoders themselves are tot
 - `presenceProperty(key, getter, enc)` — round-trips the tri-state `Presence` (omit / `null` / value)
 
 `MapEncoders` provides: `property()`, `nullableProperty()`, `propertyWithDefault()`, `optionalProperty()`, `presenceProperty()`, `object()`, `nested()`, `list()`, `mapOf()`, `lazy()` (for recursive encoders), and `variant()` / `discriminate()` for tagged unions.
+
+### Scope
+
+Encoding targets the `Map<String, Object>` boundary by design. To produce JSON, encode to a map and bridge with Jackson (`objectMapper.valueToTree(map)`); to write with jOOQ, hand the map to the DSL. There is intentionally **no** separate JSON or jOOQ encoder, and no encode-side `combine`: an encoder is a total function with no failure channel, so the write path does not need the error accumulation that justifies the applicative `combine` and the boundary decoder modules on the decode side. See the [Encoding](docs/comparisons.md#encoding) notes for the reasoning.
 
 ## Comparisons
 

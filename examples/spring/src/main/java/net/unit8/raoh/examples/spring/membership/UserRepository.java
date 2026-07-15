@@ -1,5 +1,8 @@
 package net.unit8.raoh.examples.spring.membership;
 
+import net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.CreateUserCommand;
+
+import org.jspecify.annotations.Nullable;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Repository;
@@ -12,10 +15,13 @@ import java.util.Optional;
 
 /**
  * Data access for users, using Spring's {@link JdbcClient} and Raoh's
- * {@link MapMembershipDecoders} to decode JDBC rows.
+ * {@link MapMembershipDecoders} to decode JDBC rows and {@link MapMembershipEncoders} to encode
+ * them back.
  *
  * <p>Key Raoh patterns demonstrated here:
  * <ul>
+ *   <li>{@link MapMembershipEncoders#NEW_USER_ROW} in {@link #insert(CreateUserCommand)} — encode a
+ *       decoded command into the INSERT columns, the mirror of row decoding</li>
  *   <li>{@code Decoder.list()} in {@link #findAll()} — decode all rows with error accumulation</li>
  *   <li>{@link net.unit8.raoh.Result#map2 Result.map2} + {@link net.unit8.raoh.decode.Decoder#list() Decoder.list()}
  *       in {@link #findByIdWithGroups(long)} — merge results from two independent queries</li>
@@ -36,17 +42,21 @@ public class UserRepository {
     }
 
     /**
-     * Inserts a new user row.
+     * Inserts a new user row from a decoded create command.
      *
-     * @param name  the display name
-     * @param email the email address
+     * @param cmd the decoded create-user command
      * @return the generated user ID
      */
-    public UserId insert(String name, EmailAddress email) {
+    public UserId insert(CreateUserCommand cmd) {
+        // Encode the decoded command straight into the INSERT columns — the write-side mirror of
+        // decoding a JDBC row with MapMembershipDecoders.USER_ROW. The whole write path is then
+        // decode-then-encode: JSON in, column map out, with no hand-built intermediate value.
+        Map<String, @Nullable Object> row = MapMembershipEncoders.NEW_USER_ROW.encode(cmd);
+
         var keyHolder = new GeneratedKeyHolder();
-        jdbc.sql("INSERT INTO users (name, email) VALUES (?, ?)")
-                .param(name)
-                .param(email.value())
+        jdbc.sql("INSERT INTO users (name, email) VALUES (:name, :email)")
+                .param("name", row.get("name"))
+                .param("email", row.get("email"))
                 .update(keyHolder);
         return new UserId(keyHolder.getKey().longValue());
     }

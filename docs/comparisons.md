@@ -134,8 +134,12 @@ Map<String, Object> body = user.encode(aUser);
 JsonNode json = objectMapper.valueToTree(body); // Jackson serialization is already good here
 ```
 
-A dedicated `JsonEncoders` (domain → `JsonNode`) is tracked in #94; for now the one-liner above
-covers the common case.
+Encoding targets the `Map<String, Object>` boundary by design; the Jackson bridge above is the
+intended way to reach JSON. Unlike decode — where `JsonDecoders` earns its place by adding error
+accumulation and structured issues on top of Jackson's weak data-binding — the write path has no
+errors to accumulate and Jackson's serialization is already good, so a dedicated `JsonEncoders`
+(domain → `JsonNode`) would add little. It is discussed in #94 but is not a planned part of the core
+boundary story; the one-liner above is the recommended approach.
 
 ## Elm Decoder Comparison
 
