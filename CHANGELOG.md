@@ -10,8 +10,7 @@ detailed from the current development cycle onward.
 
 ## [Unreleased]
 
-The accumulated development line since `0.5.0` (previously tracked as `0.6.0-SNAPSHOT`).
-At release time this section is renamed to the chosen version with a date.
+## [0.6.0] - 2026-07-15
 
 ### Added
 
@@ -250,7 +249,8 @@ At release time this section is renamed to the chosen version with a date.
   `Presence`), `Map<String, Object>` decoders, error model, a Spring Boot example, and a README with
   an Elm-decoder comparison.
 
-[Unreleased]: https://github.com/kawasima/raoh/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/kawasima/raoh/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/kawasima/raoh/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/kawasima/raoh/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/kawasima/raoh/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/kawasima/raoh/compare/v0.3.1...v0.4.0

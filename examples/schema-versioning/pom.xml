@@ -13,13 +13,13 @@
 
     <groupId>net.unit8.raoh.examples</groupId>
     <artifactId>raoh-schema-versioning-example</artifactId>
-    <version>0.6.0-SNAPSHOT</version>
+    <version>0.6.0</version>
     <name>Raoh Schema Versioning Example</name>
     <description>Demonstrates schema-versioned decoding with Raoh's discriminate()</description>
 
     <properties>
         <java.version>25</java.version>
-        <raoh.version>0.6.0-SNAPSHOT</raoh.version>
+        <raoh.version>0.6.0</raoh.version>
     </properties>
 
     <dependencies>
