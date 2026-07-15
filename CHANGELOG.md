@@ -25,7 +25,8 @@ At release time this section is renamed to the chosen version with a date.
   `.merge()`/`.extend()`/`.pick()`/`.omit()`/`.partial()` in Raoh's nominal-typed model by extracting
   each field's value decoder into a variable and reusing it across related shapes (subset `combine`
   for pick/omit, extra fragments for merge/extend, `optionalNullableField` + `Presence` for PATCH).
-  No structural schema operators are planned ([#95](https://github.com/kawasima/raoh/issues/95)).
+  Raoh has no structural schema operators today; the fragment-reuse pattern is the recommended
+  approach ([#95](https://github.com/kawasima/raoh/issues/95)).
 - **`Decoder.refine(...)`** — a generic predicate-based refinement combinator (three overloads: a
   `code`/`message` pair, a metadata-carrying variant, and a fully caller-controlled `onFail` variant).
   Keeps the value unchanged on success and produces an `Issue` at the current path on failure, with a

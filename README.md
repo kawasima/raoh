@@ -31,9 +31,9 @@ If you are coming from a validator-oriented library, the main difference in feel
 
 ## Requirements
 
-- **Java 25** (current LTS). Raoh targets the latest Java LTS deliberately: the API relies on
-  records, sealed types, pattern matching, and JSpecify type-use nullness, so it does not attempt to
-  support older baselines.
+- **Java 25** (an LTS release). Raoh targets a modern Java LTS baseline deliberately: the API relies
+  on records, sealed types, pattern matching, and JSpecify type-use nullness, so it does not attempt
+  to support older baselines.
 
 ## Installation
 
