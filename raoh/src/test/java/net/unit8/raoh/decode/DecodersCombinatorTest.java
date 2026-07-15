@@ -144,8 +144,9 @@ class DecodersCombinatorTest {
             case Ok<String>(var v) -> fail("expected Err, got " + v);
             case Err<String>(var issues) -> {
                 var issue = issues.asList().getFirst();
+                // The error code is the documented contract; the fallback message wording is not,
+                // so it is deliberately not asserted here.
                 assertEquals(ErrorCodes.ONE_OF_FAILED, issue.code());
-                assertEquals("no variant matched", issue.message());
                 // Spec: the error carries one meta entry per failed candidate, in order.
                 var candidates = (List<?>) issue.meta().get("candidates");
                 assertEquals(2, candidates.size());
@@ -239,14 +240,14 @@ class DecodersCombinatorTest {
 
     private static String firstCode(Result<?> result) {
         return switch (result) {
-            case Ok<?> ignored -> fail("expected Err, got Ok");
+            case Ok<?> _ -> fail("expected Err, got Ok");
             case Err<?>(var issues) -> issues.asList().getFirst().code();
         };
     }
 
     private static int issueCount(Result<?> result) {
         return switch (result) {
-            case Ok<?> ignored -> fail("expected Err, got Ok");
+            case Ok<?> _ -> fail("expected Err, got Ok");
             case Err<?>(var issues) -> issues.asList().size();
         };
     }

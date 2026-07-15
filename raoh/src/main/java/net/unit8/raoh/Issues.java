@@ -100,7 +100,11 @@ public record Issues(List<Issue> asList) {
     /**
      * Flattens issues into a map of JSON Pointer paths to lists of error messages.
      *
-     * @return a map from path to error messages
+     * <p>Both the keys and the messages under each key keep the order in which the issues were
+     * accumulated: paths appear in first-seen order, and each path's messages in the order they were
+     * added. This lets callers render errors in input order rather than an arbitrary one.
+     *
+     * @return a map from path to error messages, in accumulation order
      */
     public Map<String, List<String>> flatten() {
         return asList.stream()
@@ -179,7 +183,10 @@ public record Issues(List<Issue> asList) {
     /**
      * Groups issues by their JSON Pointer path.
      *
-     * @return a map from path to list of issues at that path
+     * <p>Like {@link #flatten()}, paths appear in first-seen order and the issues under each path
+     * keep their accumulation order.
+     *
+     * @return a map from path to list of issues at that path, in accumulation order
      */
     public Map<String, List<Issue>> groupByPath() {
         return asList.stream()

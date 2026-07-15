@@ -67,7 +67,7 @@ class IssuesTest {
         var flat = issues.flatten();
         assertEquals(List.of("is required", "not a valid email"), flat.get("/email"));
         assertEquals(List.of("is required"), flat.get("/address/city"));
-        // First-seen path ordering (LinkedHashMap): /email precedes /address/city.
+        // flatten() documents accumulation order: paths appear in first-seen order.
         assertEquals(List.of("/email", "/address/city"), List.copyOf(flat.keySet()));
     }
 
