@@ -761,7 +761,7 @@ Map<String, Object> row = ITEM_ENCODER.encode(item);
 
 ### Built-in Encoders
 
-`ObjectEncoders` provides: `string()`, `int_()`, `long_()`, `double_()`, `float_()`, `bool()`, `decimal()`, `date()`, `time()`, `dateTime()`, `iso8601()`, `offsetDateTime()`, `enumOf()`.
+`ObjectEncoders` provides: `string()`, `int_()`, `long_()`, `double_()`, `float_()`, `bool()`, `decimal()`, `bytes()`, `date()`, `time()`, `dateTime()`, `iso8601()`, `offsetDateTime()`, `uuid()`, `uri()`, `enumOf()`.
 
 Null / optionality is handled in the property layer (encoders themselves are total, non-null functions):
 
@@ -771,6 +771,10 @@ Null / optionality is handled in the property layer (encoders themselves are tot
 - `presenceProperty(key, getter, enc)` — round-trips the tri-state `Presence` (omit / `null` / value)
 
 `MapEncoders` provides: `property()`, `nullableProperty()`, `propertyWithDefault()`, `optionalProperty()`, `presenceProperty()`, `object()`, `nested()`, `list()`, `mapOf()`, and `variant()` / `discriminate()` for tagged unions.
+
+### Scope
+
+Encoding targets the `Map<String, Object>` boundary by design. To produce JSON, encode to a map and bridge with Jackson (`objectMapper.valueToTree(map)`); to write with jOOQ, hand the map to the DSL. There is intentionally **no** separate JSON or jOOQ encoder, and no encode-side `combine`: an encoder is a total function with no failure channel, so the write path does not need the error accumulation that justifies the applicative `combine` and the boundary decoder modules on the decode side. See the [Encoding](docs/comparisons.md#encoding) notes for the reasoning.
 
 ## Comparisons
 
