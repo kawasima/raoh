@@ -15,6 +15,9 @@ If you know Zod, the closest equivalents are:
 | `z.array(dec)` | `list(dec)` |
 | `z.record(dec)` | `map(dec)` |
 | `z.object({...})` | `combine(field(...), ...).map(...)` |
+| `.merge()` / `.extend()` | reuse field-decoder fragments — see [Schema reuse](#schema-reuse) |
+| `.pick()` / `.omit()` | combine a subset of fragments — see [Schema reuse](#schema-reuse) |
+| `.partial()` | reuse fragments with `optionalNullableField` — see [Schema reuse](#schema-reuse) |
 | `.optional()` | `optionalField(name, dec)` |
 | `.nullable()` | `nullable(dec)` |
 | `.default(v)` | `withDefault(dec, v)` |
@@ -42,6 +45,65 @@ combine(
 ```
 
 The schema is already the parsing pipeline.
+
+## Schema reuse
+
+Zod derives one object schema from another with `.merge()`, `.extend()`, `.pick()`, `.omit()`, and
+`.partial()`. Those operators rely on Zod's first-class field map (`ZodObject.shape`) and TypeScript's
+structural typing to reshape the *result type*. Java has neither: `combine(...).map(ctor)` produces a
+nominal record type, and the caller must name each target type explicitly. So Raoh has no structural
+schema operators — but the value they provide (defining a field's parsing and validation once and
+reusing it across related request shapes) is available today by extracting the **value decoders** into
+variables:
+
+```java
+// Define each field's parsing + validation once — the part worth reusing.
+var emailValue = string().trim().toLowerCase().email().map(Email::new); // Decoder<Object, Email>
+var nameValue  = string().nonBlank().map(Name::new);
+var roleValue  = enumOf(Role.class);
+```
+
+**merge / extend** — compose different shapes from the shared fragments:
+
+```java
+Decoder<Map<String, Object>, CreateUser> createUser = combine(
+        field("email", emailValue),
+        field("name",  nameValue)
+).map(CreateUser::new);
+
+Decoder<Map<String, Object>, AdminUser> adminUser = combine(
+        field("email", emailValue),
+        field("name",  nameValue),
+        field("role",  roleValue)      // extend: one more field, same fragments reused
+).map(AdminUser::new);
+```
+
+**pick / omit** — combine only the subset of fragments you want:
+
+```java
+Decoder<Map<String, Object>, Contact> contact = combine(
+        field("email", emailValue),
+        field("role",  roleValue)
+).map(Contact::new);
+```
+
+**partial (PATCH)** — reuse the same value decoders, wrapped with `optionalNullableField` so every
+field becomes a `Presence` (`Absent` / `PresentNull` / `Present`):
+
+```java
+Decoder<Map<String, Object>, UserPatch> userPatch = combine(
+        optionalNullableField("email", emailValue),
+        optionalNullableField("name",  nameValue)
+).map(UserPatch::new);
+
+record UserPatch(Presence<Email> email, Presence<Name> name) {}
+```
+
+The `Presence` tri-state distinguishes "field absent" from "field explicitly null" — exactly what a
+PATCH request needs. In every case the target type (`UserPatch`, `Contact`, …) is written by the
+caller; Java cannot derive it structurally the way Zod does. A first-class schema-object
+representation is discussed in #95, but in Raoh's nominal-typed model the fragment-reuse pattern above
+is the intended approach.
 
 ## Encoding
 
