@@ -10,10 +10,12 @@ import net.unit8.raoh.decode.ObjectDecoders;
 import net.unit8.raoh.decode.map.MapDecoders;
 
 import java.math.BigDecimal;
+import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static net.unit8.raoh.encode.MapEncoders.*;
 import static net.unit8.raoh.encode.ObjectEncoders.*;
@@ -98,6 +100,24 @@ class MapEncoderTest {
     @Test
     void floatEncoderPassesThrough() {
         assertEquals(2.5f, float_().encode(2.5f));
+    }
+
+    @Test
+    void bytesEncoderPassesThrough() {
+        byte[] b = {1, 2, 3};
+        assertSame(b, bytes().encode(b));
+    }
+
+    @Test
+    void uuidEncodesToCanonicalString() {
+        var u = UUID.fromString("00000000-0000-0000-0000-000000000001");
+        assertEquals("00000000-0000-0000-0000-000000000001", uuid().encode(u));
+    }
+
+    @Test
+    void uriEncodesToString() {
+        var u = URI.create("https://example.com/x?q=1");
+        assertEquals("https://example.com/x?q=1", uri().encode(u));
     }
 
     @Test
