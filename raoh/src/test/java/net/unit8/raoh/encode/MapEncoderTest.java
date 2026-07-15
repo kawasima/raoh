@@ -406,4 +406,38 @@ class MapEncoderTest {
         var domain = Map.of("usd", new BigDecimal("100"), "eur", new BigDecimal("90"));
         assertEquals(domain, dec.decode(enc.encode(domain)).getOrThrow());
     }
+
+    // --- lazy: recursive encoders ---
+
+    record Node(int value, List<Node> children) {}
+
+    /**
+     * A self-referential encoder — it only compiles because {@code lazy} defers the reference to
+     * {@code NODE} until encode time, after this field's initializer has completed.
+     */
+    static final Encoder<Node, Map<String, @Nullable Object>> NODE = object(
+            property("value",    Node::value,    int_()),
+            property("children", Node::children, list(nested(lazy(() -> MapEncoderTest.NODE)))));
+
+    @Test
+    void lazyEnablesRecursiveEncoding() {
+        var tree = new Node(1, List.of(
+                new Node(2, List.of()),
+                new Node(3, List.of(new Node(4, List.of())))));
+
+        var map = NODE.encode(tree);
+        assertEquals(1, map.get("value"));
+
+        var children = (List<?>) map.get("children");
+        assertEquals(2, children.size());
+
+        var child0 = (Map<?, ?>) children.get(0);
+        assertEquals(2, child0.get("value"));
+        assertEquals(List.of(), child0.get("children"));
+
+        var child1 = (Map<?, ?>) children.get(1);
+        assertEquals(3, child1.get("value"));
+        var grandchild = (Map<?, ?>) ((List<?>) child1.get("children")).getFirst();
+        assertEquals(4, grandchild.get("value"));
+    }
 }

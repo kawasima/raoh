@@ -290,6 +290,29 @@ public final class MapEncoders {
     }
 
     /**
+     * Creates a lazily-evaluated encoder, resolving the underlying encoder on each invocation.
+     *
+     * <p>The encode counterpart of
+     * {@link net.unit8.raoh.decode.Decoders#lazy(java.util.function.Supplier) Decoders.lazy()} on
+     * the decoder side. Use it to define self-referential (recursive) encoders, which would otherwise
+     * reference their own {@code static final} field before its initializer completes:
+     *
+     * <pre>{@code
+     * static final Encoder<Node, Map<String, Object>> NODE = object(
+     *         property("value",    Node::value,    int_()),
+     *         property("children", Node::children, list(nested(lazy(() -> Encoders.NODE)))));
+     * }</pre>
+     *
+     * @param <T>      the domain type to encode from
+     * @param <O>      the external representation type to encode to
+     * @param supplier supplies the encoder on each invocation
+     * @return a lazy encoder that delegates to the supplied encoder
+     */
+    public static <T, O> Encoder<T, O> lazy(Supplier<Encoder<T, O>> supplier) {
+        return value -> supplier.get().encode(value);
+    }
+
+    /**
      * Creates an encoder that applies a value encoder to every value of a homogeneous
      * {@code Map<String, V>}, preserving the keys.
      *
