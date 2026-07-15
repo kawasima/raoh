@@ -102,6 +102,9 @@ public final class ObjectEncoders {
      * {@code byte[]} values directly (not base64). Suitable for JDBC binary columns such as
      * PostgreSQL {@code BYTEA} or SQL standard {@code VARBINARY}.
      *
+     * <p>The array is returned as-is and is <strong>not</strong> defensively copied, so the encoded
+     * value shares storage with the source object (consistent with the decoder). Do not mutate it.
+     *
      * @return a byte array encoder
      */
     public static Encoder<byte @NonNull [], Object> bytes() {
