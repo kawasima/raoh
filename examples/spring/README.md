@@ -1,7 +1,7 @@
 # Raoh Spring Example
 
 A Spring Boot application demonstrating Raoh at both the **HTTP boundary** (JSON decoding)
-and the **JDBC boundary** (row decoding with `MapDecoders`).
+and the **JDBC boundary** (row decoding with `MapDecoders`, and row *encoding* with `MapEncoders`).
 
 ## What it shows
 
@@ -9,6 +9,7 @@ and the **JDBC boundary** (row decoding with `MapDecoders`).
 | --- | --- |
 | `JsonDecoders.combine` + `field` | Request body decoding in `MembershipDecoders` |
 | `MapDecoders.combine` + `field` | JDBC row decoding (`USER_ROW`, `GROUP_ROW`, etc.) |
+| `MapEncoders.object` + `property` | JDBC row **encoding** — `UserRepository.insert` builds the column map with `MapMembershipEncoders.USER_ROW`, the exact inverse of the row decoder (round-trip verified in `MembershipEncoderTest`) |
 | `Decoder#list()` | Decoding a variable-length list of rows from `JdbcClient` |
 | `Result.map2` | Combining user + group-memberships from two queries |
 | `Decoders.withDefault` | Optional fields with defaults (`description`, `role`) |
