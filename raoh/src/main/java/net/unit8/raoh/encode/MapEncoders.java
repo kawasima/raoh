@@ -15,6 +15,11 @@ import java.util.function.Supplier;
  * Factory for encoders that produce {@code Map<String, Object>} — the format consumed by
  * Spring JDBC's {@code JdbcClient} named-parameter binding.
  *
+ * <p>The one exception is {@link #lazy}, which is boundary-agnostic (it defers any
+ * {@code Encoder<T, O>}). It lives here because encode has no counterpart to the decoder side's
+ * boundary-agnostic {@link net.unit8.raoh.decode.Decoders Decoders} class, and recursion is reached
+ * through {@link #nested} / {@link #list} in practice.
+ *
  * <p>This is the encoding counterpart of
  * {@link net.unit8.raoh.decode.map.MapDecoders MapDecoders}. The API mirrors the decoder side
  * deliberately so that decoder and encoder definitions can be written side by side:
@@ -293,9 +298,9 @@ public final class MapEncoders {
      * Creates a lazily-evaluated encoder, resolving the underlying encoder on each invocation.
      *
      * <p>The encode counterpart of
-     * {@link net.unit8.raoh.decode.Decoders#lazy(java.util.function.Supplier) Decoders.lazy()} on
-     * the decoder side. Use it to define self-referential (recursive) encoders, which would otherwise
-     * reference their own {@code static final} field before its initializer completes:
+     * {@link net.unit8.raoh.decode.Decoders#lazy(java.util.function.Supplier) Decoders.lazy()}.
+     * Use it to define self-referential (recursive) encoders, which would otherwise reference their
+     * own {@code static final} field before its initializer completes:
      *
      * <pre>{@code
      * final class Schema {
