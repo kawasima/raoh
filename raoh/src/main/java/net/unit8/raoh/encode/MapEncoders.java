@@ -16,9 +16,15 @@ import java.util.function.Supplier;
  * Spring JDBC's {@code JdbcClient} named-parameter binding.
  *
  * <p>The one exception is {@link #lazy}, which is boundary-agnostic (it defers any
- * {@code Encoder<T, O>}). It lives here because encode has no counterpart to the decoder side's
- * boundary-agnostic {@link net.unit8.raoh.decode.Decoders Decoders} class, and recursion is reached
- * through {@link #nested} / {@link #list} in practice.
+ * {@code Encoder<T, O>}) and so does not produce a map itself. It lives here deliberately: there is
+ * no encode-side counterpart to the decoder's boundary-agnostic
+ * {@link net.unit8.raoh.decode.Decoders Decoders} class, and there is no reason to add one. Most of
+ * what fills {@code Decoders} — {@code withDefault}, {@code recover}, {@code oneOf}, {@code strict} —
+ * exists to handle failure, and an encoder is a total function that cannot fail; the value-mapping
+ * operations ({@link Encoder#contramap contramap}, {@link Encoder#andThen andThen}) live on the
+ * interface. An {@code Encoders} class would therefore hold {@code lazy} and nothing else. Since
+ * recursion is reached through {@link #nested} / {@link #list} in practice, {@code lazy} is kept
+ * next to them.
  *
  * <p>This is the encoding counterpart of
  * {@link net.unit8.raoh.decode.map.MapDecoders MapDecoders}. The API mirrors the decoder side
