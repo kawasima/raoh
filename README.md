@@ -31,7 +31,9 @@ If you are coming from a validator-oriented library, the main difference in feel
 
 ## Requirements
 
-- Java 25
+- **Java 25** (current LTS). Raoh targets the latest Java LTS deliberately: the API relies on
+  records, sealed types, pattern matching, and JSpecify type-use nullness, so it does not attempt to
+  support older baselines.
 
 ## Installation
 
@@ -115,6 +117,10 @@ Test/CI-time guard that detects accidental `new` construction of domain objects 
 - `raoh-gsh`: runtime — `DomainConstructionScope`, `DomainConstructionGuardException`
 - `raoh-gsh-weaver`: bytecode weaver (ClassFile API), Java Agent, CLI
 - `raoh-gsh-maven-plugin`: Maven plugin for build-time weaving
+
+**Stability:** the `raoh-gsh*` modules are experimental / incubating. Their bytecode-weaving surface
+is built on the evolving JDK ClassFile API and may change outside the core library's SemVer promise;
+treat them as separate from the stability guarantees of `raoh` / `raoh-json` / `raoh-jooq`.
 
 See [raoh-gsh README](raoh-gsh/README.md) for usage.
 
