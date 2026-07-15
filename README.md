@@ -795,3 +795,14 @@ The intended workflow is:
 3. Either get a fully-typed object or a structured error value.
 
 This avoids passing partially-valid data deeper into the application and keeps the domain model focused on valid states.
+
+## Upgrading
+
+Breaking changes and the migration for each are recorded in the **Compatibility** section of
+[CHANGELOG.md](CHANGELOG.md) for the release that introduces them.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the build, the branch/PR workflow, and the conventions a
+change is expected to follow. For security reports, see [SECURITY.md](SECURITY.md) — please do not
+open a public issue.
