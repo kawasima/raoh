@@ -431,4 +431,63 @@ class JooqDecoderTest {
         assertEquals(ErrorCodes.MISSING_FIELD, issue.code());
         assertEquals("/type", issue.path().toJsonPointer());
     }
+
+    // -------------------------------------------------------------------------
+    // Error accumulation across a combine (applicative, not fail-fast)
+    // -------------------------------------------------------------------------
+
+    @Test
+    void combineAccumulatesEveryFieldError() {
+        // Two columns are absent; the applicative combine must report BOTH, not stop at the first.
+        var rec = record("age", "not-a-number"); // name & email absent, age wrong type
+
+        Decoder<org.jooq.Record, User> dec = combine(
+                field("name",  string()),
+                field("age",   int_()),
+                field("email", string())
+        ).map(User::new);
+
+        var result = dec.decode(rec);
+        assertInstanceOf(Err.class, result);
+        var issues = ((Err<User>) result).issues().asList();
+        assertEquals(3, issues.size(), "all three field failures must accumulate");
+        var byPath = ((Err<User>) result).issues().groupByPath();
+        assertEquals(ErrorCodes.MISSING_FIELD, byPath.get("/name").getFirst().code());
+        assertEquals(ErrorCodes.TYPE_MISMATCH, byPath.get("/age").getFirst().code());
+        assertEquals(ErrorCodes.MISSING_FIELD, byPath.get("/email").getFirst().code());
+    }
+
+    // -------------------------------------------------------------------------
+    // List-based combine (CombinerList) at the jOOQ boundary
+    // -------------------------------------------------------------------------
+
+    @Test
+    void combineListFormDecodesAllFields() {
+        var rec = record("name", "Alice", "age", 30, "email", "alice@example.com");
+
+        Decoder<org.jooq.Record, User> dec = combine(java.util.List.of(
+                field("name",  string()),
+                field("age",   int_()),
+                field("email", string())
+        )).map(vals -> new User((String) vals[0], (int) vals[1], (String) vals[2]));
+
+        var result = dec.decode(rec);
+        assertInstanceOf(Ok.class, result);
+        assertEquals("Alice", ((Ok<User>) result).value().name());
+    }
+
+    @Test
+    void combineListFormAccumulatesErrors() {
+        var rec = record("name", "Alice"); // age & email absent
+
+        Decoder<org.jooq.Record, User> dec = combine(java.util.List.of(
+                field("name",  string()),
+                field("age",   int_()),
+                field("email", string())
+        )).map(vals -> new User((String) vals[0], (int) vals[1], (String) vals[2]));
+
+        var result = dec.decode(rec);
+        assertInstanceOf(Err.class, result);
+        assertEquals(2, ((Err<User>) result).issues().asList().size());
+    }
 }
