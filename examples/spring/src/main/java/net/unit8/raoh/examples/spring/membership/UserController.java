@@ -59,7 +59,9 @@ public class UserController {
         // Pattern matching on the sealed type ensures both cases are handled at compile time.
         return switch (CREATE_USER.decode(body)) {
             case Ok<CreateUserCommand>(var cmd) -> {
-                UserId id = users.insert(cmd.name(), cmd.email());
+                // The decoded command is handed straight to the repository, which encodes it into
+                // the INSERT columns — decode at the HTTP boundary, encode at the JDBC one.
+                UserId id = users.insert(cmd);
                 yield ResponseEntity.status(HttpStatus.CREATED)
                         .body(users.findById(id.value()).orElseThrow());
             }

@@ -1,10 +1,12 @@
 package net.unit8.raoh.examples.spring.membership;
 
+import net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.CreateUserCommand;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * Unit tests for the write-side encoders, demonstrating that {@link MapMembershipEncoders} and
@@ -12,6 +14,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * boundary — the decode+encode symmetry the library is built around.
  */
 class MembershipEncoderTest {
+
+    @Test
+    void newUserRowEncodesOnlyTheInsertableColumns() {
+        var cmd = new CreateUserCommand("Alice", new EmailAddress("alice@example.com"));
+
+        Map<String, Object> row = MapMembershipEncoders.NEW_USER_ROW.encode(cmd);
+
+        assertEquals("Alice", row.get("name"));
+        assertEquals("alice@example.com", row.get("email"));
+        // The id is database-generated, so it must not appear in the INSERT shape.
+        assertFalse(row.containsKey("id"));
+    }
 
     @Test
     void userRowEncodesToFlatColumns() {
