@@ -104,40 +104,83 @@ Features progress through this lifecycle:
 
 ## Release Flow
 
-Releases are done locally (no CI). Steps:
+Releases are done locally (no CI). `deploy` publishes straight to Maven Central
+(`autoPublish=true`, `waitUntil=published`) and **cannot be undone** — a published version is
+permanent. Everything before step 5 is reversible; treat step 5 as the point of no return.
 
-1. On `develop`, set the release version in all POMs:
+1. Close any issue the CHANGELOG lists as done. The release notes are generated from the issues
+   and PRs merged since the last tag, so an implemented-but-open issue silently misses them.
+
+2. On `develop`, rename the CHANGELOG's `## [Unreleased]` section to `## [X.Y.Z] - <date>`, leave a
+   fresh empty `## [Unreleased]` above it, and add the compare links at the bottom:
+
+   ```
+   [Unreleased]: https://github.com/kawasima/raoh/compare/vX.Y.Z...HEAD
+   [X.Y.Z]: https://github.com/kawasima/raoh/compare/v<prev>...vX.Y.Z
+   ```
+
+3. Set the release version in all POMs:
 
    ```sh
    ./scripts/bump-version.sh X.Y.Z
+   mvn clean test
    ```
 
    Commit: `release: set version X.Y.Z`
 
-2. Merge `develop` into `main` (fast-forward):
+   `bump-version.sh` seds the version string across every POM. Check `git diff` before committing —
+   it should touch nothing but `<version>` / `<raoh.version>`. Maven also rewrites the checked-in
+   `*/.settings/org.eclipse.jdt.core.prefs` files as a side effect of any build; revert those rather
+   than committing them.
+
+4. Merge `develop` into `main` (fast-forward):
 
    ```sh
    git checkout main && git merge --ff-only develop
    ```
 
-3. On `main`, deploy to Maven Central and create a GitHub release:
+5. On `main`, dry-run the release build, then deploy:
 
    ```sh
-   mvn clean deploy -Prelease
+   mvn clean verify -Prelease   # source + javadoc + GPG signing, no publish
+   mvn clean deploy -Prelease   # irreversible
+   ```
+
+   Run the dry run first — it exercises GPG signing, which is the step most likely to fail, while
+   nothing has been published yet.
+
+   **The deploy needs a real terminal.** `~/.gnupg/gpg.conf` uses `pinentry-mode loopback` with no
+   `pinentry-mac` installed, so GPG reads the passphrase from `/dev/tty` and fails with
+   `cannot open '/dev/tty'` in any non-interactive shell (including Claude Code's). Run this command
+   yourself in a terminal. Passing `-Dgpg.passphrase=` is not an option: the gpg plugin sets
+   `bestPractices=true`, which rejects it by design.
+
+6. Push `main`, **then** create the GitHub release:
+
+   ```sh
+   git push origin main
    gh release create vX.Y.Z --target main --title "vX.Y.Z" --generate-notes
    ```
 
-4. Back on `develop`, bump to next SNAPSHOT:
+   Order matters. `--target main` resolves against the *remote* branch, so creating the release
+   before pushing tags the previous commit.
+
+7. Back on `develop`, bump to the next SNAPSHOT and push:
 
    ```sh
    git checkout develop
    ./scripts/bump-version.sh X.Y.(Z+1)-SNAPSHOT
+   git push origin develop
    ```
 
    Commit: `chore: bump version to X.Y.(Z+1)-SNAPSHOT`
 
-5. Push both branches:
+8. Verify the release landed:
 
    ```sh
-   git push origin main develop
+   curl -s -o /dev/null -w "%{http_code}" \
+     https://repo1.maven.org/maven2/net/unit8/raoh/raoh/X.Y.Z/raoh-X.Y.Z.pom
+   git ls-remote origin refs/heads/main refs/heads/develop refs/tags/vX.Y.Z
    ```
+
+   Confirm the artifact returns `200` and that the tag points at the same commit as `main`.
