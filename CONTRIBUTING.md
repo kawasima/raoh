@@ -17,9 +17,10 @@ mvn verify            # additionally runs JaCoCo (reporting only — no threshol
 mvn -Pnullcheck compile   # the NullAway null-analysis gate (requires JDK 25)
 ```
 
-CI runs three jobs on every push to `develop` / `main`: the build and test suite, the `nullcheck`
-gate, and a build of each module under `examples/` against the freshly installed snapshot. Run at
-least `mvn clean test` and `mvn -Pnullcheck compile` locally before opening a PR.
+CI runs three jobs — the build and test suite, the `nullcheck` gate, and a build of each module under
+`examples/` against the freshly installed snapshot — both on pushes to `develop` / `main` and on
+pull requests targeting them, so your PR gets the same checks. Running them locally first still
+saves a round trip.
 
 The `examples/` modules are **not** part of the reactor — they are built separately against the
 installed snapshot:

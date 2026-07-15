@@ -12,8 +12,8 @@ visible only to the maintainers.
 A useful report includes the affected version, the input that triggers the problem, and what an
 attacker gains. If you have a proof of concept, a failing test against `develop` is ideal.
 
-Expect an initial response within a few days. Raoh is a small, single-maintainer project, so please
-allow reasonable time for a fix before disclosing publicly.
+Raoh is a small, single-maintainer project. Reports are acknowledged and fixed on a best-effort
+basis — please allow reasonable time before disclosing publicly.
 
 ## Supported versions
 

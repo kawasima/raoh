@@ -19,10 +19,10 @@ Decoder<Map<String, Object>, User> dec = combine(
         field("age",   int_().range(0, 150))
 ).map(User::new);
 
-// 2. The input
-var input = Map.<String, Object>of("email", "…", "age", …);
+// 2. The input that triggers it
+var input = Map.<String, Object>of("email", "alice@example.com", "age", 200);
 
-// 3. The result — issues.toJsonList() pastes well
+// 3. What you get — issues.toJsonList() pastes well
 System.out.println(dec.decode(input));
 ```
 
