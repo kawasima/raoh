@@ -23,7 +23,8 @@ If you know Zod, the closest equivalents are:
 | `z.lazy(() => dec)` | `lazy(() -> dec)` |
 | `.strict()` | `combine(...).strict(f)` |
 | `.transform(...)` | `map(...)` |
-| `.refine(...)` / `.superRefine(...)` | `flatMap(...)` or `flatMapWithPath(...)` |
+| `.refine(...)` | `refine(...)` |
+| `.superRefine(...)` | `flatMapWithPath(...)` |
 | `.pipe(...)` | `pipe(...)` |
 
 The important difference is conceptual:

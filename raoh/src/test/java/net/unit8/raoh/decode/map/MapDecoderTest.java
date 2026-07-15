@@ -1149,6 +1149,89 @@ class MapDecoderTest {
         }
     }
 
+    // --- refine ---
+
+    @Test
+    void refinePassesValidValueThrough() {
+        var dec = field("age", int_().refine(n -> n % 2 == 0, "must_be_even", "must be even"));
+        assertEquals(42, assertOk(dec.decode(Map.of("age", 42))));
+    }
+
+    @Test
+    void refineReportsFailureAtFieldPathWithCodeAndMessage() {
+        var dec = field("age", int_().refine(n -> n % 2 == 0, "must_be_even", "must be even"));
+        switch (dec.decode(Map.of("age", 7))) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> {
+                var issue = issues.asList().getFirst();
+                assertEquals("/age", issue.path().toJsonPointer());
+                assertEquals("must_be_even", issue.code());
+                assertEquals("must be even", issue.message());
+            }
+        }
+    }
+
+    @Test
+    void refineMessageSurvivesResolve() {
+        // The caller-supplied message must not be overwritten by MessageResolver,
+        // since "must_be_even" is not a registered error code.
+        var dec = field("age", int_().refine(n -> n % 2 == 0, "must_be_even", "must be even"));
+        assertResolvesTo(dec.decode(Map.of("age", 7)), "must be even");
+    }
+
+    @Test
+    void refineWithMetaCarriesFailingValue() {
+        var dec = field("age", int_().refine(
+                n -> n % 2 == 0, "must_be_even", "must be even",
+                n -> Map.of("actual", n)));
+        switch (dec.decode(Map.of("age", 7))) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> {
+                var issue = issues.asList().getFirst();
+                assertEquals("must_be_even", issue.code());
+                assertEquals(7, issue.meta().get("actual"));
+            }
+        }
+    }
+
+    @Test
+    void refineWithOnFailProducesCustomIssue() {
+        var dec = field("age", int_().refine(
+                n -> n >= 18,
+                (n, path) -> Result.fail(path, "underage", "must be at least 18, was " + n)));
+        switch (dec.decode(Map.of("age", 15))) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> {
+                var issue = issues.asList().getFirst();
+                assertEquals("/age", issue.path().toJsonPointer());
+                assertEquals("underage", issue.code());
+                assertEquals("must be at least 18, was 15", issue.message());
+            }
+        }
+    }
+
+    @Test
+    void refineAccumulatesWithSiblingErrors() {
+        var dec = combine(
+                field("width", int_().refine(n -> n > 0, "must_be_positive", "must be positive")),
+                field("height", int_().refine(n -> n > 0, "must_be_positive", "must be positive"))
+        ).map((w, h) -> w + "x" + h);
+        switch (dec.decode(Map.of("width", -1, "height", -2))) {
+            case Ok(_) -> fail("Expected Err");
+            case Err(var issues) -> assertEquals(2, issues.asList().size());
+        }
+    }
+
+    @Test
+    void refineInsideNullableIsNotConsultedForNull() {
+        // refine is applied to the inner non-null decoder; nullable wraps it outside,
+        // so a null input short-circuits and the predicate is never called.
+        var dec = nullable(int_().refine(
+                n -> fail("predicate must not run for null input"),
+                "must_be_even", "must be even"));
+        assertNull(assertOk(dec.decode(null)));
+    }
+
     // --- Helpers ---
 
     static <T> T assertOk(Result<T> result) {
