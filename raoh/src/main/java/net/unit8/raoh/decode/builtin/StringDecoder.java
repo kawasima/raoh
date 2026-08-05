@@ -104,7 +104,9 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
     }
 
     /**
-     * Restricts the string to be at least {@code n} characters long.
+     * Restricts the string to be at least {@code n} characters long, counted in Unicode code
+     * points via {@link String#codePointCount(int, int)}, so a supplementary-plane character
+     * counts as one.
      *
      * @param n the minimum length
      * @return a new decoder that fails with {@link ErrorCodes#TOO_SHORT} if shorter
@@ -114,7 +116,9 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
     }
 
     /**
-     * Restricts the string to be at least {@code n} characters long.
+     * Restricts the string to be at least {@code n} characters long, counted in Unicode code
+     * points via {@link String#codePointCount(int, int)}, so a supplementary-plane character
+     * counts as one.
      *
      * @param n       the minimum length
      * @param message custom error message, or {@code null} for the default
@@ -122,8 +126,9 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
      */
     public StringDecoder<I> minLength(int n, @Nullable String message) {
         return chain((value, path) -> {
-            if (value.length() < n) {
-                var meta = Map.<String, Object>of("min", n, "actual", value.length());
+            int length = codePointLength(value);
+            if (length < n) {
+                var meta = Map.<String, Object>of("min", n, "actual", length);
                 return message != null
                         ? Result.failCustom(path, ErrorCodes.TOO_SHORT, message, meta)
                         : Result.fail(path, ErrorCodes.TOO_SHORT, "must be at least %d characters".formatted(n), meta);
@@ -133,7 +138,9 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
     }
 
     /**
-     * Restricts the string to be at most {@code n} characters long.
+     * Restricts the string to be at most {@code n} characters long, counted in Unicode code
+     * points via {@link String#codePointCount(int, int)}, so a supplementary-plane character
+     * counts as one.
      *
      * @param n the maximum length
      * @return a new decoder that fails with {@link ErrorCodes#TOO_LONG} if longer
@@ -143,7 +150,9 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
     }
 
     /**
-     * Restricts the string to be at most {@code n} characters long.
+     * Restricts the string to be at most {@code n} characters long, counted in Unicode code
+     * points via {@link String#codePointCount(int, int)}, so a supplementary-plane character
+     * counts as one.
      *
      * @param n       the maximum length
      * @param message custom error message, or {@code null} for the default
@@ -151,8 +160,9 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
      */
     public StringDecoder<I> maxLength(int n, @Nullable String message) {
         return chain((value, path) -> {
-            if (value.length() > n) {
-                var meta = Map.<String, Object>of("max", n, "actual", value.length());
+            int length = codePointLength(value);
+            if (length > n) {
+                var meta = Map.<String, Object>of("max", n, "actual", length);
                 return message != null
                         ? Result.failCustom(path, ErrorCodes.TOO_LONG, message, meta)
                         : Result.fail(path, ErrorCodes.TOO_LONG, "must be at most %d characters".formatted(n), meta);
@@ -162,7 +172,9 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
     }
 
     /**
-     * Restricts the string to be exactly {@code n} characters long.
+     * Restricts the string to be exactly {@code n} characters long, counted in Unicode code
+     * points via {@link String#codePointCount(int, int)}, so a supplementary-plane character
+     * counts as one.
      *
      * @param n the required length
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_LENGTH} if the length differs
@@ -172,7 +184,9 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
     }
 
     /**
-     * Restricts the string to be exactly {@code n} characters long.
+     * Restricts the string to be exactly {@code n} characters long, counted in Unicode code
+     * points via {@link String#codePointCount(int, int)}, so a supplementary-plane character
+     * counts as one.
      *
      * @param n       the required length
      * @param message custom error message, or {@code null} for the default
@@ -180,8 +194,9 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
      */
     public StringDecoder<I> fixedLength(int n, @Nullable String message) {
         return chain((value, path) -> {
-            if (value.length() != n) {
-                var meta = Map.<String, Object>of("expected", n, "actual", value.length());
+            int length = codePointLength(value);
+            if (length != n) {
+                var meta = Map.<String, Object>of("expected", n, "actual", length);
                 return message != null
                         ? Result.failCustom(path, ErrorCodes.INVALID_LENGTH, message, meta)
                         : Result.fail(path, ErrorCodes.INVALID_LENGTH, "must be exactly %d characters".formatted(n), meta);
@@ -369,7 +384,9 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
      * Decodes the string value to a {@link URI}, validating that it is a valid http or https URL.
      *
      * <p>Requires an absolute URL with the {@code http} or {@code https} scheme and a
-     * non-empty host. The maximum accepted length is 2048 characters.
+     * non-empty host. Values longer than 2048 UTF-16 code units are rejected before parsing; this
+     * caps the input handed to {@link URI}, and is neither a character count nor a bound on the
+     * percent-encoded form actually sent.
      * Uses {@link URI} parsing to avoid ReDoS from regex backtracking.
      *
      * <p>This is a terminal method — the returned decoder produces {@link URI},
@@ -386,7 +403,9 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
      * Decodes the string value to a {@link URI}, validating that it is a valid http or https URL.
      *
      * <p>Requires an absolute URL with the {@code http} or {@code https} scheme and a
-     * non-empty host. The maximum accepted length is 2048 characters.
+     * non-empty host. Values longer than 2048 UTF-16 code units are rejected before parsing; this
+     * caps the input handed to {@link URI}, and is neither a character count nor a bound on the
+     * percent-encoded form actually sent.
      * Uses {@link URI} parsing to avoid ReDoS from regex backtracking.
      *
      * @param message custom error message, or {@code null} for the default
@@ -926,6 +945,21 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
                     : Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected boolean",
                             Map.of("expected", "boolean"));
         }));
+    }
+
+    /**
+     * The number of characters in {@code s}, counted in Unicode code points rather than the UTF-16
+     * units a JVM {@code String} stores. A character outside the basic multilingual plane — a
+     * supplementary-plane kanji such as {@code 𠮷}, an emoji — occupies two units and is one
+     * character, so the two counts disagree exactly where a length limit on a name or a remarks
+     * field would be surprising to whoever hits it.
+     *
+     * <p>This is not the grapheme cluster a reader counts: a base letter with a combining accent is
+     * two code points, and an emoji joined with zero-width joiners is several. That unit depends on
+     * Unicode segmentation and is not what a stored-length constraint is about.
+     */
+    private static int codePointLength(String s) {
+        return s.codePointCount(0, s.length());
     }
 
     private StringDecoder<I> chain(Decoder<String, String> constraint) {
