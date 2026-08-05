@@ -13,10 +13,10 @@ import java.util.function.BiFunction;
  * @param <I> the input type
  * @param <A> the first decoder's output type
  * @param <B> the second decoder's output type
- * @param da  the first decoder
- * @param db  the second decoder
+ * @param da  the first component
+ * @param db  the second component
  */
-public record Combiner2<I, A, B>(Decoder<I, A> da, Decoder<I, B> db) {
+public record Combiner2<I, A, B>(CombinePart<I, A> da, CombinePart<I, B> db) {
 
     /**
      * Applies a constructor function to the decoded values with error accumulation.

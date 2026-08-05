@@ -10,10 +10,25 @@ detailed from the current development cycle onward.
 
 ## [Unreleased]
 
-> **This release removes published API and closes a public class hierarchy.** `Decoders.strict(Decoder, Set)`
-> is gone and the builtin decoders are `final`, so it is a breaking release rather than a patch.
+> **This is a breaking release, not a patch.** `FieldDecoder` is gone, the combiners take `CombinePart`
+> values instead of `Decoder`s, `Decoders.strict(Decoder, Set)` is removed, and the builtin decoders
+> are `final`.
 
 ### Added
+
+- **`CombinePart<I, T>`** — an explicit component of a `combine(...)` schema, replacing `FieldDecoder`.
+  A part is **not** a `Decoder`, which is the whole point: `field("age", int_())` declares the field
+  it consumes, and an ordinary `Decoder` wrapper cannot take one, so it cannot quietly erase that
+  declaration. Wrapping means composing inside the part; converting is deliberate, via `asDecoder()`.
+  Build one with `CombinePart.named(name, decoder[, inputFields])` or `CombinePart.flat(decoder)`
+  ([#114](https://github.com/kawasima/raoh/issues/114)).
+
+- **`flat(...)`** in `MapDecoders`, `JsonDecoders` and `JooqRecordDecoders` — lifts a decoder that
+  reads the same whole input into a combine component, which is how a flat JOIN row gets split
+  across several decoders. This was previously the second, undocumented role of `nested(...)`; the
+  two need different types now, so `nested(...)` keeps its meaning (adapting a decoder for use as a
+  field *value*) and `flat(...)` takes the other one
+  ([#114](https://github.com/kawasima/raoh/issues/114)).
 
 - **`InputFields<I>`** — enumerates the field names present in an input, so `strict` works on any
   representation rather than only on `Map`. `MapDecoders.MAP_FIELDS` and `JsonDecoders.JSON_FIELDS`
@@ -23,6 +38,15 @@ detailed from the current development cycle onward.
   ([#113](https://github.com/kawasima/raoh/issues/113)).
 
 ### Fixed
+
+- **A schema can no longer lose a field by being wrapped.** `FieldDecoder` was both a `Decoder` and
+  a carrier of schema metadata, so any ordinary `Decoder` wrapper erased the metadata and `strict()`
+  then rejected a field the schema plainly contained — silently, with no compile error. Combiners now
+  take `CombinePart` values, which are not `Decoder`s, so that wrapper is a compile error. The same
+  fragility ran the other way: a new combinator on `Decoder` reintroduced the bug unless someone
+  remembered to override it on `FieldDecoder`, which is why seven such overrides existed. Composition
+  now happens inside a part, so there is nothing to keep in sync
+  ([#114](https://github.com/kawasima/raoh/issues/114)).
 
 - **`combine(...).strict(f)` now rejects unknown fields on the JSON boundary.** The explicit
   `JsonDecoders.strict(dec, knownFields)` always worked, but the ergonomic combiner form hardcoded
@@ -59,6 +83,23 @@ detailed from the current development cycle onward.
   ([#109](https://github.com/kawasima/raoh/issues/109)).
 
 ### Changed
+
+- **`FieldDecoder` is removed**, along with the seven combinator overrides it carried. The field
+  factories in `MapDecoders`, `JsonDecoders` and `JooqRecordDecoders` return `CombinePart`, and the
+  sixteen `Combiner*` records plus `CombinerList` take `CombinePart` components. A part still decodes
+  on its own — `field("age", int_()).decode(map)` — and appends its own name, so standalone and
+  combined use share one path contract. Passing one where a `Decoder` is wanted needs an explicit
+  `asDecoder()` ([#114](https://github.com/kawasima/raoh/issues/114)).
+
+- **`JooqRecordDecoders.nested(...)` is renamed `flat(...)`**, matching the new distinction between
+  reading a field's value and reading the same whole input
+  ([#114](https://github.com/kawasima/raoh/issues/114)).
+
+- **`Combiner#strict()` reports two failures separately.** A combiner containing a `flat(...)`
+  component is refused because its declared field set is unknown; a combiner whose boundary has no
+  `InputFields` — jOOQ, whose fields are named but whose `Record` has no scanner — is refused for
+  that reason instead. Both happen when the strict decoder is assembled
+  ([#114](https://github.com/kawasima/raoh/issues/114)).
 
 - **`Decoders.strict(Decoder, Set)` is removed.** It was generic in the input type but only scanned
   `Map`, and that gap between what the signature promised and what the implementation did is what

@@ -26,24 +26,24 @@ import net.unit8.raoh.Result;
  * @param <O> the fourteenth decoder's output type
  * @param <P> the fifteenth decoder's output type
  * @param <Q> the sixteenth decoder's output type
- * @param da  the first decoder
- * @param db  the second decoder
- * @param dc  the third decoder
- * @param dd  the fourth decoder
- * @param de  the fifth decoder
- * @param df  the sixth decoder
- * @param dg  the seventh decoder
- * @param dh  the eighth decoder
- * @param dj  the ninth decoder
- * @param dk  the tenth decoder
- * @param dl  the eleventh decoder
- * @param dm  the twelfth decoder
- * @param dn  the thirteenth decoder
- * @param do_ the fourteenth decoder
- * @param dp  the fifteenth decoder
- * @param dq  the sixteenth decoder
+ * @param da  the first component
+ * @param db  the second component
+ * @param dc  the third component
+ * @param dd  the fourth component
+ * @param de  the fifth component
+ * @param df  the sixth component
+ * @param dg  the seventh component
+ * @param dh  the eighth component
+ * @param dj  the ninth component
+ * @param dk  the tenth component
+ * @param dl  the eleventh component
+ * @param dm  the twelfth component
+ * @param dn  the thirteenth component
+ * @param do_  the fourteenth component
+ * @param dp  the fifteenth component
+ * @param dq  the sixteenth component
  */
-public record Combiner16<I, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q>(Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd, Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh, Decoder<I, J> dj, Decoder<I, K> dk, Decoder<I, L> dl, Decoder<I, M> dm, Decoder<I, N> dn, Decoder<I, O> do_, Decoder<I, P> dp, Decoder<I, Q> dq) {
+public record Combiner16<I, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q>(CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd, CombinePart<I, E> de, CombinePart<I, F> df, CombinePart<I, G> dg, CombinePart<I, H> dh, CombinePart<I, J> dj, CombinePart<I, K> dk, CombinePart<I, L> dl, CombinePart<I, M> dm, CombinePart<I, N> dn, CombinePart<I, O> do_, CombinePart<I, P> dp, CombinePart<I, Q> dq) {
 
     /**
      * Applies a constructor function to the decoded values with error accumulation.

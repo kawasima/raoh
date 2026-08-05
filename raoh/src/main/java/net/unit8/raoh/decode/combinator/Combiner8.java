@@ -18,16 +18,16 @@ import net.unit8.raoh.Result;
  * @param <F> the sixth decoder's output type
  * @param <G> the seventh decoder's output type
  * @param <H> the eighth decoder's output type
- * @param da  the first decoder
- * @param db  the second decoder
- * @param dc  the third decoder
- * @param dd  the fourth decoder
- * @param de  the fifth decoder
- * @param df  the sixth decoder
- * @param dg  the seventh decoder
- * @param dh  the eighth decoder
+ * @param da  the first component
+ * @param db  the second component
+ * @param dc  the third component
+ * @param dd  the fourth component
+ * @param de  the fifth component
+ * @param df  the sixth component
+ * @param dg  the seventh component
+ * @param dh  the eighth component
  */
-public record Combiner8<I, A, B, C, D, E, F, G, H>(Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd, Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh) {
+public record Combiner8<I, A, B, C, D, E, F, G, H>(CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd, CombinePart<I, E> de, CombinePart<I, F> df, CombinePart<I, G> dg, CombinePart<I, H> dh) {
 
     /**
      * Applies a constructor function to the decoded values with error accumulation.

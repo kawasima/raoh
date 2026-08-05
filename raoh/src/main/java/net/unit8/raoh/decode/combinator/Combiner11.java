@@ -21,19 +21,19 @@ import net.unit8.raoh.Result;
  * @param <J> the ninth decoder's output type
  * @param <K> the tenth decoder's output type
  * @param <L> the eleventh decoder's output type
- * @param da  the first decoder
- * @param db  the second decoder
- * @param dc  the third decoder
- * @param dd  the fourth decoder
- * @param de  the fifth decoder
- * @param df  the sixth decoder
- * @param dg  the seventh decoder
- * @param dh  the eighth decoder
- * @param dj  the ninth decoder
- * @param dk  the tenth decoder
- * @param dl  the eleventh decoder
+ * @param da  the first component
+ * @param db  the second component
+ * @param dc  the third component
+ * @param dd  the fourth component
+ * @param de  the fifth component
+ * @param df  the sixth component
+ * @param dg  the seventh component
+ * @param dh  the eighth component
+ * @param dj  the ninth component
+ * @param dk  the tenth component
+ * @param dl  the eleventh component
  */
-public record Combiner11<I, A, B, C, D, E, F, G, H, J, K, L>(Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd, Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh, Decoder<I, J> dj, Decoder<I, K> dk, Decoder<I, L> dl) {
+public record Combiner11<I, A, B, C, D, E, F, G, H, J, K, L>(CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd, CombinePart<I, E> de, CombinePart<I, F> df, CombinePart<I, G> dg, CombinePart<I, H> dh, CombinePart<I, J> dj, CombinePart<I, K> dk, CombinePart<I, L> dl) {
 
     /**
      * Applies a constructor function to the decoded values with error accumulation.

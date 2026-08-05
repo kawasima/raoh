@@ -43,7 +43,7 @@ public final class Decoders {
      * @return a combiner that can be applied with a function
      */
     public static <I, A, B> Combiner2<I, A, B> combine(
-            Decoder<I, A> da, Decoder<I, B> db) {
+            CombinePart<I, A> da, CombinePart<I, B> db) {
         return new Combiner2<>(da, db);
     }
 
@@ -58,10 +58,10 @@ public final class Decoders {
      * @param db  the second decoder
      * @param dc  the third decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <I, A, B, C> Combiner3<I, A, B, C> combine(
-            Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc) {
+            CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc) {
         return new Combiner3<>(da, db, dc);
     }
 
@@ -78,10 +78,10 @@ public final class Decoders {
      * @param dc  the third decoder
      * @param dd  the fourth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <I, A, B, C, D> Combiner4<I, A, B, C, D> combine(
-            Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd) {
+            CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd) {
         return new Combiner4<>(da, db, dc, dd);
     }
 
@@ -100,11 +100,11 @@ public final class Decoders {
      * @param dd  the fourth decoder
      * @param de  the fifth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <I, A, B, C, D, E> Combiner5<I, A, B, C, D, E> combine(
-            Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
-            Decoder<I, E> de) {
+            CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd,
+            CombinePart<I, E> de) {
         return new Combiner5<>(da, db, dc, dd, de);
     }
 
@@ -125,11 +125,11 @@ public final class Decoders {
      * @param de  the fifth decoder
      * @param df  the sixth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <I, A, B, C, D, E, F> Combiner6<I, A, B, C, D, E, F> combine(
-            Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
-            Decoder<I, E> de, Decoder<I, F> df) {
+            CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd,
+            CombinePart<I, E> de, CombinePart<I, F> df) {
         return new Combiner6<>(da, db, dc, dd, de, df);
     }
 
@@ -152,11 +152,11 @@ public final class Decoders {
      * @param df  the sixth decoder
      * @param dg  the seventh decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <I, A, B, C, D, E, F, G> Combiner7<I, A, B, C, D, E, F, G> combine(
-            Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
-            Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg) {
+            CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd,
+            CombinePart<I, E> de, CombinePart<I, F> df, CombinePart<I, G> dg) {
         return new Combiner7<>(da, db, dc, dd, de, df, dg);
     }
 
@@ -181,11 +181,11 @@ public final class Decoders {
      * @param dg  the seventh decoder
      * @param dh  the eighth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <I, A, B, C, D, E, F, G, H> Combiner8<I, A, B, C, D, E, F, G, H> combine(
-            Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
-            Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh) {
+            CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd,
+            CombinePart<I, E> de, CombinePart<I, F> df, CombinePart<I, G> dg, CombinePart<I, H> dh) {
         return new Combiner8<>(da, db, dc, dd, de, df, dg, dh);
     }
 
@@ -212,12 +212,12 @@ public final class Decoders {
      * @param dh  the eighth decoder
      * @param dj  the ninth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <I, A, B, C, D, E, F, G, H, J> Combiner9<I, A, B, C, D, E, F, G, H, J> combine(
-            Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
-            Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
-            Decoder<I, J> dj) {
+            CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd,
+            CombinePart<I, E> de, CombinePart<I, F> df, CombinePart<I, G> dg, CombinePart<I, H> dh,
+            CombinePart<I, J> dj) {
         return new Combiner9<>(da, db, dc, dd, de, df, dg, dh, dj);
     }
 
@@ -246,12 +246,12 @@ public final class Decoders {
      * @param dj  the ninth decoder
      * @param dk  the tenth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <I, A, B, C, D, E, F, G, H, J, K> Combiner10<I, A, B, C, D, E, F, G, H, J, K> combine(
-            Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
-            Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
-            Decoder<I, J> dj, Decoder<I, K> dk) {
+            CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd,
+            CombinePart<I, E> de, CombinePart<I, F> df, CombinePart<I, G> dg, CombinePart<I, H> dh,
+            CombinePart<I, J> dj, CombinePart<I, K> dk) {
         return new Combiner10<>(da, db, dc, dd, de, df, dg, dh, dj, dk);
     }
 
@@ -282,12 +282,12 @@ public final class Decoders {
      * @param dk  the tenth decoder
      * @param dl  the eleventh decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <I, A, B, C, D, E, F, G, H, J, K, L> Combiner11<I, A, B, C, D, E, F, G, H, J, K, L> combine(
-            Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
-            Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
-            Decoder<I, J> dj, Decoder<I, K> dk, Decoder<I, L> dl) {
+            CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd,
+            CombinePart<I, E> de, CombinePart<I, F> df, CombinePart<I, G> dg, CombinePart<I, H> dh,
+            CombinePart<I, J> dj, CombinePart<I, K> dk, CombinePart<I, L> dl) {
         return new Combiner11<>(da, db, dc, dd, de, df, dg, dh, dj, dk, dl);
     }
 
@@ -320,12 +320,12 @@ public final class Decoders {
      * @param dl  the eleventh decoder
      * @param dm  the twelfth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <I, A, B, C, D, E, F, G, H, J, K, L, M> Combiner12<I, A, B, C, D, E, F, G, H, J, K, L, M> combine(
-            Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
-            Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
-            Decoder<I, J> dj, Decoder<I, K> dk, Decoder<I, L> dl, Decoder<I, M> dm) {
+            CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd,
+            CombinePart<I, E> de, CombinePart<I, F> df, CombinePart<I, G> dg, CombinePart<I, H> dh,
+            CombinePart<I, J> dj, CombinePart<I, K> dk, CombinePart<I, L> dl, CombinePart<I, M> dm) {
         return new Combiner12<>(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm);
     }
 
@@ -360,13 +360,13 @@ public final class Decoders {
      * @param dm  the twelfth decoder
      * @param dn  the thirteenth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <I, A, B, C, D, E, F, G, H, J, K, L, M, N> Combiner13<I, A, B, C, D, E, F, G, H, J, K, L, M, N> combine(
-            Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
-            Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
-            Decoder<I, J> dj, Decoder<I, K> dk, Decoder<I, L> dl, Decoder<I, M> dm,
-            Decoder<I, N> dn) {
+            CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd,
+            CombinePart<I, E> de, CombinePart<I, F> df, CombinePart<I, G> dg, CombinePart<I, H> dh,
+            CombinePart<I, J> dj, CombinePart<I, K> dk, CombinePart<I, L> dl, CombinePart<I, M> dm,
+            CombinePart<I, N> dn) {
         return new Combiner13<>(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn);
     }
 
@@ -403,13 +403,13 @@ public final class Decoders {
      * @param dn  the thirteenth decoder
      * @param do_ the fourteenth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <I, A, B, C, D, E, F, G, H, J, K, L, M, N, O> Combiner14<I, A, B, C, D, E, F, G, H, J, K, L, M, N, O> combine(
-            Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
-            Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
-            Decoder<I, J> dj, Decoder<I, K> dk, Decoder<I, L> dl, Decoder<I, M> dm,
-            Decoder<I, N> dn, Decoder<I, O> do_) {
+            CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd,
+            CombinePart<I, E> de, CombinePart<I, F> df, CombinePart<I, G> dg, CombinePart<I, H> dh,
+            CombinePart<I, J> dj, CombinePart<I, K> dk, CombinePart<I, L> dl, CombinePart<I, M> dm,
+            CombinePart<I, N> dn, CombinePart<I, O> do_) {
         return new Combiner14<>(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_);
     }
 
@@ -448,13 +448,13 @@ public final class Decoders {
      * @param do_ the fourteenth decoder
      * @param dp  the fifteenth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <I, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> Combiner15<I, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> combine(
-            Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
-            Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
-            Decoder<I, J> dj, Decoder<I, K> dk, Decoder<I, L> dl, Decoder<I, M> dm,
-            Decoder<I, N> dn, Decoder<I, O> do_, Decoder<I, P> dp) {
+            CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd,
+            CombinePart<I, E> de, CombinePart<I, F> df, CombinePart<I, G> dg, CombinePart<I, H> dh,
+            CombinePart<I, J> dj, CombinePart<I, K> dk, CombinePart<I, L> dl, CombinePart<I, M> dm,
+            CombinePart<I, N> dn, CombinePart<I, O> do_, CombinePart<I, P> dp) {
         return new Combiner15<>(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_, dp);
     }
 
@@ -495,13 +495,13 @@ public final class Decoders {
      * @param dp  the fifteenth decoder
      * @param dq  the sixteenth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <I, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> Combiner16<I, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> combine(
-            Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc, Decoder<I, D> dd,
-            Decoder<I, E> de, Decoder<I, F> df, Decoder<I, G> dg, Decoder<I, H> dh,
-            Decoder<I, J> dj, Decoder<I, K> dk, Decoder<I, L> dl, Decoder<I, M> dm,
-            Decoder<I, N> dn, Decoder<I, O> do_, Decoder<I, P> dp, Decoder<I, Q> dq) {
+            CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc, CombinePart<I, D> dd,
+            CombinePart<I, E> de, CombinePart<I, F> df, CombinePart<I, G> dg, CombinePart<I, H> dh,
+            CombinePart<I, J> dj, CombinePart<I, K> dk, CombinePart<I, L> dl, CombinePart<I, M> dm,
+            CombinePart<I, N> dn, CombinePart<I, O> do_, CombinePart<I, P> dp, CombinePart<I, Q> dq) {
         return new Combiner16<>(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_, dp, dq);
     }
 
@@ -514,11 +514,11 @@ public final class Decoders {
      * are not sufficient. See {@link CombinerList} for usage examples.
      *
      * @param <I>      the input type
-     * @param decoders the decoders to combine; must not be empty
+     * @param parts the components to combine; must not be empty
      * @return a combiner on which {@code .map(f)} or {@code .flatMap(f)} can be called
      */
-    public static <I> CombinerList<I> combine(List<Decoder<I, ?>> decoders) {
-        return new CombinerList<>(decoders);
+    public static <I> CombinerList<I> combine(List<CombinePart<I, ?>> parts) {
+        return new CombinerList<>(parts);
     }
 
     // --- Utility combinators ---

@@ -13,11 +13,11 @@ import net.unit8.raoh.Result;
  * @param <A> the first decoder's output type
  * @param <B> the second decoder's output type
  * @param <C> the third decoder's output type
- * @param da  the first decoder
- * @param db  the second decoder
- * @param dc  the third decoder
+ * @param da  the first component
+ * @param db  the second component
+ * @param dc  the third component
  */
-public record Combiner3<I, A, B, C>(Decoder<I, A> da, Decoder<I, B> db, Decoder<I, C> dc) {
+public record Combiner3<I, A, B, C>(CombinePart<I, A> da, CombinePart<I, B> db, CombinePart<I, C> dc) {
 
     /**
      * Applies a constructor function to the decoded values with error accumulation.

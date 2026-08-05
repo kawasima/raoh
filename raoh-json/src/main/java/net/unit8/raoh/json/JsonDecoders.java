@@ -10,8 +10,8 @@ import net.unit8.raoh.Presence;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.decode.Decoders;
-import net.unit8.raoh.decode.FieldDecoder;
 import net.unit8.raoh.decode.InputFields;
+import net.unit8.raoh.decode.combinator.CombinePart;
 import net.unit8.raoh.decode.builtin.BoolDecoder;
 import net.unit8.raoh.decode.builtin.DecimalDecoder;
 import net.unit8.raoh.decode.builtin.DoubleDecoder;
@@ -65,7 +65,7 @@ public final class JsonDecoders {
     /**
      * How to enumerate the property names of a JSON object input.
      *
-     * <p>Every field factory here hands this to the {@link FieldDecoder} it builds, so a combiner
+     * <p>Every field factory here hands this to the {@link CombinePart} it builds, so a combiner
      * assembled from them can be made strict. A {@code null} node, or one that is not an object,
      * has no fields.
      */
@@ -252,37 +252,25 @@ public final class JsonDecoders {
      * @param dec  the decoder for the field value
      * @return a decoder for the named field
      */
-    public static <T> FieldDecoder<JsonNode, T> field(String name, Decoder<JsonNode, T> dec) {
-        return new FieldDecoder<>() {
-            @Override
-            public String fieldName() { return name; }
-
-            @Override
-            public Optional<InputFields<JsonNode>> inputFields() {
-                return Optional.of(JSON_FIELDS);
+    public static <T> CombinePart<JsonNode, T> field(String name, Decoder<JsonNode, T> dec) {
+        return CombinePart.named(name, (in, fieldPath) -> {
+            if (in == null || !in.isObject()) {
+                return Result.fail(fieldPath, ErrorCodes.TYPE_MISMATCH, "expected object",
+                        Map.of("expected", "object", "actual",
+                                in == null ? "null" : in.getNodeType().name().toLowerCase()));
             }
-
-            @Override
-            public Result<T> decode(JsonNode in, Path path) {
-                var fieldPath = path.append(name);
-                if (in == null || !in.isObject()) {
-                    return Result.fail(fieldPath, ErrorCodes.TYPE_MISMATCH, "expected object",
-                            Map.of("expected", "object", "actual",
-                                    in == null ? "null" : in.getNodeType().name().toLowerCase()));
-                }
-                var node = in.get(name);
-                if (node == null) {
-                    node = tools.jackson.databind.node.MissingNode.getInstance();
-                }
-                return dec.decode(node, fieldPath);
+            var node = in.get(name);
+            if (node == null) {
+                node = tools.jackson.databind.node.MissingNode.getInstance();
             }
-        };
+            return dec.decode(node, fieldPath);
+        }, JSON_FIELDS);
     }
 
     /**
      * Extracts an optional field. Returns {@link Optional#empty()} if absent.
      *
-     * <p>The returned decoder is a {@link FieldDecoder} at runtime even though it is declared as a
+     * <p>The returned decoder is a {@link CombinePart} at runtime even though it is declared as a
      * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
      * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
      * overrides through their bridge methods.
@@ -292,9 +280,8 @@ public final class JsonDecoders {
      * @param dec  the decoder for the field value
      * @return a decoder that produces an {@link Optional}
      */
-    public static <T> Decoder<JsonNode, Optional<T>> optionalField(String name, Decoder<JsonNode, T> dec) {
-        return FieldDecoder.named(name, (in, path) -> {
-            var fieldPath = path.append(name);
+    public static <T> CombinePart<JsonNode, Optional<T>> optionalField(String name, Decoder<JsonNode, T> dec) {
+        return CombinePart.named(name, (in, fieldPath) -> {
             if (in == null || !in.isObject()) {
                 return Result.ok(Optional.empty());
             }
@@ -333,7 +320,7 @@ public final class JsonDecoders {
     /**
      * Extracts a field with tri-state presence semantics (absent / null / present).
      *
-     * <p>The returned decoder is a {@link FieldDecoder} at runtime even though it is declared as a
+     * <p>The returned decoder is a {@link CombinePart} at runtime even though it is declared as a
      * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
      * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
      * overrides through their bridge methods.
@@ -343,9 +330,8 @@ public final class JsonDecoders {
      * @param dec  the decoder for the field value
      * @return a decoder that produces a {@link Presence} value
      */
-    public static <T> Decoder<JsonNode, Presence<T>> optionalNullableField(String name, Decoder<JsonNode, T> dec) {
-        return FieldDecoder.named(name, (in, path) -> {
-            var fieldPath = path.append(name);
+    public static <T> CombinePart<JsonNode, Presence<T>> optionalNullableField(String name, Decoder<JsonNode, T> dec) {
+        return CombinePart.named(name, (in, fieldPath) -> {
             if (in == null || !in.isObject()) {
                 return Result.ok(new Presence.Absent<>());
             }
@@ -372,7 +358,7 @@ public final class JsonDecoders {
      * populate a plain {@code @Nullable} domain field or constructor argument without an intermediate
      * {@code Optional} or {@code Presence}.
      *
-     * <p>The returned decoder is a {@link FieldDecoder} at runtime even though it is declared as a
+     * <p>The returned decoder is a {@link CombinePart} at runtime even though it is declared as a
      * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
      * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
      * overrides through their bridge methods.
@@ -386,9 +372,8 @@ public final class JsonDecoders {
     // Returns a Decoder<..., @Nullable T>. NullAway cannot verify the type-parameter nullness of the
     // @Nullable T return, the same honest widening already suppressed in JsonDecoders.nullable.
     @SuppressWarnings("NullAway")
-    public static <T> Decoder<JsonNode, @Nullable T> nullableField(String name, Decoder<JsonNode, T> dec) {
-        return FieldDecoder.named(name, (in, path) -> {
-            var fieldPath = path.append(name);
+    public static <T> CombinePart<JsonNode, @Nullable T> nullableField(String name, Decoder<JsonNode, T> dec) {
+        return CombinePart.named(name, (in, fieldPath) -> {
             // A null / non-object input is treated as absent (-> null), consistent with optionalField /
             // optionalNullableField (field alone would reject it as a required error).
             if (in == null || !in.isObject()) {
@@ -509,7 +494,7 @@ public final class JsonDecoders {
     public static <T> Decoder<JsonNode, T> discriminate(
             String fieldName,
             Map<String, Decoder<JsonNode, ? extends T>> variants) {
-        return Decoders.<JsonNode, T>discriminate(fieldName, field(fieldName, string()), variants);
+        return Decoders.<JsonNode, T>discriminate(fieldName, field(fieldName, string()).asDecoder(), variants);
     }
 
     /**
@@ -538,7 +523,7 @@ public final class JsonDecoders {
     @SafeVarargs
     public static <T> Decoder<JsonNode, T> discriminate(
             String fieldName, Decoders.Variant<JsonNode, ? extends T>... variants) {
-        return Decoders.discriminate(fieldName, field(fieldName, string()), variants);
+        return Decoders.discriminate(fieldName, field(fieldName, string()).asDecoder(), variants);
     }
 
     // --- strict ---
@@ -559,6 +544,21 @@ public final class JsonDecoders {
         return Decoders.strict(dec, knownFields, JSON_FIELDS);
     }
 
+    /**
+     * Lifts a decoder that reads the same whole node into a {@code combine} component, for
+     * splitting one flat object across several decoders.
+     *
+     * <p>The decoder is opaque, so the component declares no fields and the combiner cannot be made
+     * strict. Use {@link #field} for components whose field names are known.
+     *
+     * @param <T> the decoded value type
+     * @param dec the decoder to read the same node with
+     * @return a combine component reading the whole input
+     */
+    public static <T> CombinePart<JsonNode, T> flat(Decoder<JsonNode, T> dec) {
+        return CombinePart.flat(dec);
+    }
+
     // --- Delegate combine to Decoders ---
 
     /**
@@ -569,10 +569,10 @@ public final class JsonDecoders {
      * @param da  the first decoder
      * @param db  the second decoder
      * @return a combiner that can be applied with a function
-     * @see Decoders#combine(Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B> Combiner2<JsonNode, A, B> combine(
-            Decoder<JsonNode, A> da, Decoder<JsonNode, B> db) {
+            CombinePart<JsonNode, A> da, CombinePart<JsonNode, B> db) {
         return Decoders.combine(da, db);
     }
 
@@ -586,10 +586,10 @@ public final class JsonDecoders {
      * @param db  the second decoder
      * @param dc  the third decoder
      * @return a combiner that can be applied with a function
-     * @see Decoders#combine(Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C> Combiner3<JsonNode, A, B, C> combine(
-            Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc) {
+            CombinePart<JsonNode, A> da, CombinePart<JsonNode, B> db, CombinePart<JsonNode, C> dc) {
         return Decoders.combine(da, db, dc);
     }
 
@@ -605,11 +605,11 @@ public final class JsonDecoders {
      * @param dc  the third decoder
      * @param dd  the fourth decoder
      * @return a combiner that can be applied with a function
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D> Combiner4<JsonNode, A, B, C, D> combine(
-            Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
-            Decoder<JsonNode, D> dd) {
+            CombinePart<JsonNode, A> da, CombinePart<JsonNode, B> db, CombinePart<JsonNode, C> dc,
+            CombinePart<JsonNode, D> dd) {
         return Decoders.combine(da, db, dc, dd);
     }
 
@@ -627,11 +627,11 @@ public final class JsonDecoders {
      * @param dd  the fourth decoder
      * @param de  the fifth decoder
      * @return a combiner that can be applied with a function
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E> Combiner5<JsonNode, A, B, C, D, E> combine(
-            Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
-            Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de) {
+            CombinePart<JsonNode, A> da, CombinePart<JsonNode, B> db, CombinePart<JsonNode, C> dc,
+            CombinePart<JsonNode, D> dd, CombinePart<JsonNode, E> de) {
         return Decoders.combine(da, db, dc, dd, de);
     }
 
@@ -651,11 +651,11 @@ public final class JsonDecoders {
      * @param de  the fifth decoder
      * @param df  the sixth decoder
      * @return a combiner that can be applied with a function
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F> Combiner6<JsonNode, A, B, C, D, E, F> combine(
-            Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
-            Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df) {
+            CombinePart<JsonNode, A> da, CombinePart<JsonNode, B> db, CombinePart<JsonNode, C> dc,
+            CombinePart<JsonNode, D> dd, CombinePart<JsonNode, E> de, CombinePart<JsonNode, F> df) {
         return Decoders.combine(da, db, dc, dd, de, df);
     }
 
@@ -677,12 +677,12 @@ public final class JsonDecoders {
      * @param df  the sixth decoder
      * @param dg  the seventh decoder
      * @return a combiner that can be applied with a function
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G> Combiner7<JsonNode, A, B, C, D, E, F, G> combine(
-            Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
-            Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
-            Decoder<JsonNode, G> dg) {
+            CombinePart<JsonNode, A> da, CombinePart<JsonNode, B> db, CombinePart<JsonNode, C> dc,
+            CombinePart<JsonNode, D> dd, CombinePart<JsonNode, E> de, CombinePart<JsonNode, F> df,
+            CombinePart<JsonNode, G> dg) {
         return Decoders.combine(da, db, dc, dd, de, df, dg);
     }
 
@@ -706,12 +706,12 @@ public final class JsonDecoders {
      * @param dg  the seventh decoder
      * @param dh  the eighth decoder
      * @return a combiner that can be applied with a function
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H> Combiner8<JsonNode, A, B, C, D, E, F, G, H> combine(
-            Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
-            Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
-            Decoder<JsonNode, G> dg, Decoder<JsonNode, H> dh) {
+            CombinePart<JsonNode, A> da, CombinePart<JsonNode, B> db, CombinePart<JsonNode, C> dc,
+            CombinePart<JsonNode, D> dd, CombinePart<JsonNode, E> de, CombinePart<JsonNode, F> df,
+            CombinePart<JsonNode, G> dg, CombinePart<JsonNode, H> dh) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh);
     }
 
@@ -737,12 +737,12 @@ public final class JsonDecoders {
      * @param dh  the eighth decoder
      * @param dj  the ninth decoder
      * @return a combiner that can be applied with a function
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J> Combiner9<JsonNode, A, B, C, D, E, F, G, H, J> combine(
-            Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
-            Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
-            Decoder<JsonNode, G> dg, Decoder<JsonNode, H> dh, Decoder<JsonNode, J> dj) {
+            CombinePart<JsonNode, A> da, CombinePart<JsonNode, B> db, CombinePart<JsonNode, C> dc,
+            CombinePart<JsonNode, D> dd, CombinePart<JsonNode, E> de, CombinePart<JsonNode, F> df,
+            CombinePart<JsonNode, G> dg, CombinePart<JsonNode, H> dh, CombinePart<JsonNode, J> dj) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj);
     }
 
@@ -770,13 +770,13 @@ public final class JsonDecoders {
      * @param dj  the ninth decoder
      * @param dk  the tenth decoder
      * @return a combiner that can be applied with a function
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J, K> Combiner10<JsonNode, A, B, C, D, E, F, G, H, J, K> combine(
-            Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
-            Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
-            Decoder<JsonNode, G> dg, Decoder<JsonNode, H> dh, Decoder<JsonNode, J> dj,
-            Decoder<JsonNode, K> dk) {
+            CombinePart<JsonNode, A> da, CombinePart<JsonNode, B> db, CombinePart<JsonNode, C> dc,
+            CombinePart<JsonNode, D> dd, CombinePart<JsonNode, E> de, CombinePart<JsonNode, F> df,
+            CombinePart<JsonNode, G> dg, CombinePart<JsonNode, H> dh, CombinePart<JsonNode, J> dj,
+            CombinePart<JsonNode, K> dk) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk);
     }
 
@@ -806,13 +806,13 @@ public final class JsonDecoders {
      * @param dk  the tenth decoder
      * @param dl  the eleventh decoder
      * @return a combiner that can be applied with a function
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L> Combiner11<JsonNode, A, B, C, D, E, F, G, H, J, K, L> combine(
-            Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
-            Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
-            Decoder<JsonNode, G> dg, Decoder<JsonNode, H> dh, Decoder<JsonNode, J> dj,
-            Decoder<JsonNode, K> dk, Decoder<JsonNode, L> dl) {
+            CombinePart<JsonNode, A> da, CombinePart<JsonNode, B> db, CombinePart<JsonNode, C> dc,
+            CombinePart<JsonNode, D> dd, CombinePart<JsonNode, E> de, CombinePart<JsonNode, F> df,
+            CombinePart<JsonNode, G> dg, CombinePart<JsonNode, H> dh, CombinePart<JsonNode, J> dj,
+            CombinePart<JsonNode, K> dk, CombinePart<JsonNode, L> dl) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl);
     }
 
@@ -844,13 +844,13 @@ public final class JsonDecoders {
      * @param dl  the eleventh decoder
      * @param dm  the twelfth decoder
      * @return a combiner that can be applied with a function
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M> Combiner12<JsonNode, A, B, C, D, E, F, G, H, J, K, L, M> combine(
-            Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
-            Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
-            Decoder<JsonNode, G> dg, Decoder<JsonNode, H> dh, Decoder<JsonNode, J> dj,
-            Decoder<JsonNode, K> dk, Decoder<JsonNode, L> dl, Decoder<JsonNode, M> dm) {
+            CombinePart<JsonNode, A> da, CombinePart<JsonNode, B> db, CombinePart<JsonNode, C> dc,
+            CombinePart<JsonNode, D> dd, CombinePart<JsonNode, E> de, CombinePart<JsonNode, F> df,
+            CombinePart<JsonNode, G> dg, CombinePart<JsonNode, H> dh, CombinePart<JsonNode, J> dj,
+            CombinePart<JsonNode, K> dk, CombinePart<JsonNode, L> dl, CombinePart<JsonNode, M> dm) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm);
     }
 
@@ -884,14 +884,14 @@ public final class JsonDecoders {
      * @param dm  the twelfth decoder
      * @param dn  the thirteenth decoder
      * @return a combiner that can be applied with a function
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N> Combiner13<JsonNode, A, B, C, D, E, F, G, H, J, K, L, M, N> combine(
-            Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
-            Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
-            Decoder<JsonNode, G> dg, Decoder<JsonNode, H> dh, Decoder<JsonNode, J> dj,
-            Decoder<JsonNode, K> dk, Decoder<JsonNode, L> dl, Decoder<JsonNode, M> dm,
-            Decoder<JsonNode, N> dn) {
+            CombinePart<JsonNode, A> da, CombinePart<JsonNode, B> db, CombinePart<JsonNode, C> dc,
+            CombinePart<JsonNode, D> dd, CombinePart<JsonNode, E> de, CombinePart<JsonNode, F> df,
+            CombinePart<JsonNode, G> dg, CombinePart<JsonNode, H> dh, CombinePart<JsonNode, J> dj,
+            CombinePart<JsonNode, K> dk, CombinePart<JsonNode, L> dl, CombinePart<JsonNode, M> dm,
+            CombinePart<JsonNode, N> dn) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn);
     }
 
@@ -927,14 +927,14 @@ public final class JsonDecoders {
      * @param dn  the thirteenth decoder
      * @param do_ the fourteenth decoder
      * @return a combiner that can be applied with a function
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O> Combiner14<JsonNode, A, B, C, D, E, F, G, H, J, K, L, M, N, O> combine(
-            Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
-            Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
-            Decoder<JsonNode, G> dg, Decoder<JsonNode, H> dh, Decoder<JsonNode, J> dj,
-            Decoder<JsonNode, K> dk, Decoder<JsonNode, L> dl, Decoder<JsonNode, M> dm,
-            Decoder<JsonNode, N> dn, Decoder<JsonNode, O> do_) {
+            CombinePart<JsonNode, A> da, CombinePart<JsonNode, B> db, CombinePart<JsonNode, C> dc,
+            CombinePart<JsonNode, D> dd, CombinePart<JsonNode, E> de, CombinePart<JsonNode, F> df,
+            CombinePart<JsonNode, G> dg, CombinePart<JsonNode, H> dh, CombinePart<JsonNode, J> dj,
+            CombinePart<JsonNode, K> dk, CombinePart<JsonNode, L> dl, CombinePart<JsonNode, M> dm,
+            CombinePart<JsonNode, N> dn, CombinePart<JsonNode, O> do_) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_);
     }
 
@@ -972,14 +972,14 @@ public final class JsonDecoders {
      * @param do_ the fourteenth decoder
      * @param dp  the fifteenth decoder
      * @return a combiner that can be applied with a function
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> Combiner15<JsonNode, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> combine(
-            Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
-            Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
-            Decoder<JsonNode, G> dg, Decoder<JsonNode, H> dh, Decoder<JsonNode, J> dj,
-            Decoder<JsonNode, K> dk, Decoder<JsonNode, L> dl, Decoder<JsonNode, M> dm,
-            Decoder<JsonNode, N> dn, Decoder<JsonNode, O> do_, Decoder<JsonNode, P> dp) {
+            CombinePart<JsonNode, A> da, CombinePart<JsonNode, B> db, CombinePart<JsonNode, C> dc,
+            CombinePart<JsonNode, D> dd, CombinePart<JsonNode, E> de, CombinePart<JsonNode, F> df,
+            CombinePart<JsonNode, G> dg, CombinePart<JsonNode, H> dh, CombinePart<JsonNode, J> dj,
+            CombinePart<JsonNode, K> dk, CombinePart<JsonNode, L> dl, CombinePart<JsonNode, M> dm,
+            CombinePart<JsonNode, N> dn, CombinePart<JsonNode, O> do_, CombinePart<JsonNode, P> dp) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_, dp);
     }
 
@@ -1019,26 +1019,26 @@ public final class JsonDecoders {
      * @param dp  the fifteenth decoder
      * @param dq  the sixteenth decoder
      * @return a combiner that can be applied with a function
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> Combiner16<JsonNode, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> combine(
-            Decoder<JsonNode, A> da, Decoder<JsonNode, B> db, Decoder<JsonNode, C> dc,
-            Decoder<JsonNode, D> dd, Decoder<JsonNode, E> de, Decoder<JsonNode, F> df,
-            Decoder<JsonNode, G> dg, Decoder<JsonNode, H> dh, Decoder<JsonNode, J> dj,
-            Decoder<JsonNode, K> dk, Decoder<JsonNode, L> dl, Decoder<JsonNode, M> dm,
-            Decoder<JsonNode, N> dn, Decoder<JsonNode, O> do_, Decoder<JsonNode, P> dp,
-            Decoder<JsonNode, Q> dq) {
+            CombinePart<JsonNode, A> da, CombinePart<JsonNode, B> db, CombinePart<JsonNode, C> dc,
+            CombinePart<JsonNode, D> dd, CombinePart<JsonNode, E> de, CombinePart<JsonNode, F> df,
+            CombinePart<JsonNode, G> dg, CombinePart<JsonNode, H> dh, CombinePart<JsonNode, J> dj,
+            CombinePart<JsonNode, K> dk, CombinePart<JsonNode, L> dl, CombinePart<JsonNode, M> dm,
+            CombinePart<JsonNode, N> dn, CombinePart<JsonNode, O> do_, CombinePart<JsonNode, P> dp,
+            CombinePart<JsonNode, Q> dq) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_, dp, dq);
     }
 
     /**
      * Returns a {@link CombinerList} for combining more than 16 decoders.
      *
-     * @param decoders the decoders to combine
+     * @param parts the components to combine
      * @return a combiner on which {@code .map(f)} or {@code .flatMap(f)} can be called
      * @see Decoders#combine(List)
      */
-    public static CombinerList<JsonNode> combine(List<Decoder<JsonNode, ?>> decoders) {
-        return Decoders.combine(decoders);
+    public static CombinerList<JsonNode> combine(List<CombinePart<JsonNode, ?>> parts) {
+        return Decoders.combine(parts);
     }
 }

@@ -318,11 +318,11 @@ customerDec.decode(Map.of(
 
 ---
 
-## 6. Structuring flat data — nested
+## 6. Structuring flat data — flat
 
-DB JOIN results and CSV files often arrive as flat data with all columns at the same level. Using `nested`, you can assemble a structured domain model from this flat input.
+DB JOIN results and CSV files often arrive as flat data with all columns at the same level. Using `flat`, you can assemble a structured domain model from this flat input.
 
-Whereas `field("address", nested(addressDec))` in section 5 requires a nested structure in the input, using `nested` at the top level lets each decoder read its own fields from the same flat input.
+Whereas `field("address", nested(addressDec))` in section 5 requires a nested structure in the input, `flat` lets each decoder read its own fields from the same flat input.
 
 ```java
 record UserName(String first, String last) {}
@@ -339,8 +339,8 @@ var deptDec = combine(
         field("dept_code", string().nonBlank())
 ).map(Department::new);
 
-// Passing decoders directly to combine shares the same flat input
-var employeeDec = combine(userNameDec, deptDec).map(Employee::new);
+// flat(...) lifts a whole-input decoder into a combine component
+var employeeDec = combine(flat(userNameDec), flat(deptDec)).map(Employee::new);
 ```
 
 Pass a flat Map that resembles a JOIN result:
@@ -355,7 +355,9 @@ employeeDec.decode(Map.of(
 // ==> Ok[Employee[name=UserName[first=Alice, last=Smith], dept=Department[name=Engineering, code=ENG]]]
 ```
 
-With `combine(decA, decB)`, both decoders share the same flat input. In contrast, `field("address", nested(decA))` extracts the value for the `address` key and passes it to `decA`.
+With `combine(flat(decA), flat(decB))`, both decoders share the same flat input. In contrast, `field("address", nested(decA))` extracts the value for the `address` key and passes it to `decA`.
+
+A `flat` component reads the input opaquely, so a combiner containing one cannot be made `strict` — see section 17.
 
 If field names collide (e.g., both tables have a `name` column), use SQL aliases to disambiguate before decoding.
 
@@ -389,7 +391,9 @@ deptPresenceDec.decode(row)
 
 ### One-to-many JOIN — assembling a parent-child model from flat rows
 
-A one-to-many JOIN query returns a list of flat rows with repeated parent columns. To assemble them into a parent-child domain model like `Order { lines: [OrderLine] }`, decode each row with `nested` and then group by the parent key.
+A one-to-many JOIN query returns a list of flat rows with repeated parent columns. To assemble them into a parent-child domain model like `Order { lines: [OrderLine] }`, decode each row with `flat` and then group by the parent key.
+
+`flat(dec)` lifts a decoder that reads the *same whole input* into a combine component, as opposed to `field(name, dec)`, which reads one named field. A `flat` component reads the input opaquely, so a combiner containing one cannot be made `strict` — there is no way to say which fields the schema covers.
 
 ```java
 record OrderHeader(String orderId, String customerName) {}
@@ -411,8 +415,8 @@ var lineDec = combine(
 
 // Decode parent and child from each row simultaneously
 var rowDec = combine(
-        nested(headerDec),
-        nested(lineDec)
+        flat(headerDec),
+        flat(lineDec)
 ).map((h, l) -> Map.entry(h, l));
 ```
 

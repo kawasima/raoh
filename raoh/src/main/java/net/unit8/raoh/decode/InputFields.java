@@ -11,7 +11,8 @@ import java.util.Collection;
  * unknown fields without knowing anything about the input representation. Each boundary module
  * supplies one shared instance — {@code MapDecoders} for {@code Map<String, Object>},
  * {@code JsonDecoders} for Jackson's {@code JsonNode} — and its field factories hand it to every
- * {@link FieldDecoder} they build, so a combiner can recover it from its components.
+ * {@link net.unit8.raoh.decode.combinator.CombinePart CombinePart} they build, so a
+ * combiner can recover it from its components.
  *
  * <p>Implement this to bring {@code strict} to an input representation the library does not cover.
  * Return an empty collection for an input that has no field structure at all, including
