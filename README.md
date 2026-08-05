@@ -323,6 +323,7 @@ Other:
 - `trim()`
 - `toLowerCase()`
 - `toUpperCase()`
+- `normalize(...)` — Unicode normalization, NFC by default
 - `uuid()`
 - `uri()` — accepts any scheme, returns `URI`
 - `iso8601()`
