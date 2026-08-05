@@ -10,6 +10,32 @@ detailed from the current development cycle onward.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`strict()` no longer rejects a valid field as `unknown_field`.** `Combiner#strict()` collects
+  known field names by testing each sub-decoder with `instanceof FieldDecoder`, and two things
+  broke that. Composing a field decoder — `field("age", int_()).refine(...)`, `.map(...)`,
+  `.pipe(...)` — returned a plain `Decoder` and dropped the name. And `optionalField`,
+  `optionalNullableField` and `nullableField` were never `FieldDecoder` to begin with, so any
+  `strict()` schema containing an optional field rejected that field outright. `FieldDecoder` now
+  overrides `map`, `flatMap`, `flatMapWithPath`, `pipe` and all three `refine` overloads with a
+  covariant return type, and the three optional-field factories return a `FieldDecoder` in both
+  `MapDecoders` and `JsonDecoders` — their declared return type stays `Decoder`, so this is binary
+  compatible; the combinators reach the `FieldDecoder` overrides through their bridge methods even
+  from a `Decoder`-typed reference. `list()` is deliberately not overridden: it changes the input
+  type to `List<I>`, so a single field name no longer describes it
+  ([#109](https://github.com/kawasima/raoh/issues/109)).
+
+- **A refinement on a field now reports at the field's path.** `field("age", int_())` appends the
+  name inside its own `decode`, so a combinator wrapped around it only saw the enclosing path: one
+  decoder reported a type mismatch at `/age` but a refinement failure on the enclosing object, and
+  one level down the failure landed on `/user` instead of `/user/age`. `FieldDecoder` now threads
+  the field's path through `flatMap` (the rebase target), `flatMapWithPath`, `pipe` and all three
+  `refine` overloads, so `field("age", int_()).refine(...)` and
+  `field("age", int_().refine(...))` agree. Error **paths move** for those four combinators — code
+  that keys off the old enclosing path needs updating
+  ([#109](https://github.com/kawasima/raoh/issues/109)).
+
 ### Changed
 
 - **The `ObjectDecoders` temporal decoders now accept ISO-8601 text**, the representation the

@@ -266,13 +266,18 @@ public final class JsonDecoders {
     /**
      * Extracts an optional field. Returns {@link Optional#empty()} if absent.
      *
+     * <p>The returned decoder is a {@link FieldDecoder} at runtime even though it is declared as a
+     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
+     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
+     * overrides through their bridge methods.
+     *
      * @param <T>  the decoded field type
      * @param name the field name
      * @param dec  the decoder for the field value
      * @return a decoder that produces an {@link Optional}
      */
     public static <T> Decoder<JsonNode, Optional<T>> optionalField(String name, Decoder<JsonNode, T> dec) {
-        return (in, path) -> {
+        return FieldDecoder.named(name, (in, path) -> {
             var fieldPath = path.append(name);
             if (in == null || !in.isObject()) {
                 return Result.ok(Optional.empty());
@@ -282,7 +287,7 @@ public final class JsonDecoders {
                 return Result.ok(Optional.empty());
             }
             return dec.decode(node, fieldPath).map(Optional::of);
-        };
+        });
     }
 
     /**
@@ -312,13 +317,18 @@ public final class JsonDecoders {
     /**
      * Extracts a field with tri-state presence semantics (absent / null / present).
      *
+     * <p>The returned decoder is a {@link FieldDecoder} at runtime even though it is declared as a
+     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
+     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
+     * overrides through their bridge methods.
+     *
      * @param <T>  the decoded field type
      * @param name the field name
      * @param dec  the decoder for the field value
      * @return a decoder that produces a {@link Presence} value
      */
     public static <T> Decoder<JsonNode, Presence<T>> optionalNullableField(String name, Decoder<JsonNode, T> dec) {
-        return (in, path) -> {
+        return FieldDecoder.named(name, (in, path) -> {
             var fieldPath = path.append(name);
             if (in == null || !in.isObject()) {
                 return Result.ok(new Presence.Absent<>());
@@ -331,7 +341,7 @@ public final class JsonDecoders {
                 return Result.ok(new Presence.PresentNull<>());
             }
             return dec.decode(node, fieldPath).map(v -> (Presence<T>) new Presence.Present<>(v));
-        };
+        });
     }
 
     /**
@@ -346,6 +356,11 @@ public final class JsonDecoders {
      * populate a plain {@code @Nullable} domain field or constructor argument without an intermediate
      * {@code Optional} or {@code Presence}.
      *
+     * <p>The returned decoder is a {@link FieldDecoder} at runtime even though it is declared as a
+     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
+     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
+     * overrides through their bridge methods.
+     *
      * @param <T>  the decoded value type
      * @param name the field name
      * @param dec  the decoder for the field value when present and non-null
@@ -356,7 +371,7 @@ public final class JsonDecoders {
     // @Nullable T return, the same honest widening already suppressed in JsonDecoders.nullable.
     @SuppressWarnings("NullAway")
     public static <T> Decoder<JsonNode, @Nullable T> nullableField(String name, Decoder<JsonNode, T> dec) {
-        return (in, path) -> {
+        return FieldDecoder.named(name, (in, path) -> {
             var fieldPath = path.append(name);
             // A null / non-object input is treated as absent (-> null), consistent with optionalField /
             // optionalNullableField (field alone would reject it as a required error).
@@ -370,7 +385,7 @@ public final class JsonDecoders {
                 return Result.<@Nullable T>ok(null);
             }
             return dec.decode(node, fieldPath);
-        };
+        });
     }
 
     // --- list / map ---

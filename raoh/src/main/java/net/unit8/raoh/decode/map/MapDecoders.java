@@ -65,19 +65,24 @@ public final class MapDecoders {
      * Creates an optional field decoder. If the field is absent from the map,
      * the result is {@code Optional.empty()} rather than an error.
      *
+     * <p>The returned decoder is a {@link FieldDecoder} at runtime even though it is declared as a
+     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
+     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
+     * overrides through their bridge methods.
+     *
      * @param <T>  the decoded value type
      * @param name the field name (map key)
      * @param dec  the decoder for the field value when present
      * @return a decoder that produces {@code Optional<T>}
      */
     public static <T> Decoder<Map<String, Object>, Optional<T>> optionalField(String name, Decoder<@Nullable Object, T> dec) {
-        return (in, path) -> {
+        return FieldDecoder.named(name, (in, path) -> {
             var fieldPath = path.append(name);
             if (in == null || !in.containsKey(name)) {
                 return Result.ok(Optional.empty());
             }
             return dec.decode(in.get(name), fieldPath).map(Optional::of);
-        };
+        });
     }
 
     /**
@@ -147,13 +152,18 @@ public final class MapDecoders {
      * and {@link Presence.Present} with the decoded value otherwise.
      * This is useful for PATCH-style updates where the three states have different semantics.
      *
+     * <p>The returned decoder is a {@link FieldDecoder} at runtime even though it is declared as a
+     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
+     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
+     * overrides through their bridge methods.
+     *
      * @param <T>  the decoded value type
      * @param name the field name (map key)
      * @param dec  the decoder for the field value when present and non-null
      * @return a decoder that produces {@link Presence Presence&lt;T&gt;}
      */
     public static <T> Decoder<Map<String, Object>, Presence<T>> optionalNullableField(String name, Decoder<@Nullable Object, T> dec) {
-        return (in, path) -> {
+        return FieldDecoder.named(name, (in, path) -> {
             var fieldPath = path.append(name);
             if (in == null || !in.containsKey(name)) {
                 return Result.ok(new Presence.Absent<>());
@@ -164,7 +174,7 @@ public final class MapDecoders {
             }
             return dec.decode(value, fieldPath)
                     .map(v -> (Presence<T>) new Presence.Present<>(v));
-        };
+        });
     }
 
     /**
@@ -185,6 +195,11 @@ public final class MapDecoders {
      * instead fails on a present {@code null}, because {@code optionalField} only treats an absent key
      * as empty and then feeds the {@code null} value to a non-null {@code dec}.
      *
+     * <p>The returned decoder is a {@link FieldDecoder} at runtime even though it is declared as a
+     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
+     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
+     * overrides through their bridge methods.
+     *
      * @param <T>  the decoded value type
      * @param name the field name (map key)
      * @param dec  the decoder for the field value when present and non-null
@@ -199,7 +214,8 @@ public final class MapDecoders {
         // field(...) alone would reject it as a required error. For a non-null map, field handles the rest:
         // an absent key reaches nullable(dec) as a null value, which decodes to null.
         var inner = field(name, ObjectDecoders.nullable(dec));
-        return (in, path) -> in == null ? Result.<@Nullable T>ok(null) : inner.decode(in, path);
+        return FieldDecoder.named(name,
+                (in, path) -> in == null ? Result.<@Nullable T>ok(null) : inner.decode(in, path));
     }
 
     // --- discriminate ---
