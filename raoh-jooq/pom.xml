@@ -51,6 +51,16 @@
         </dependency>
     </dependencies>
 
+    <build>
+        <plugins>
+            <!-- Public API diff against ${japicmp.baseline}; configured in the parent POM. -->
+            <plugin>
+                <groupId>com.github.siom79.japicmp</groupId>
+                <artifactId>japicmp-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
     <profiles>
         <!--
             NullAway null-analysis gate for the @NullMarked contract of this module.

@@ -24,6 +24,25 @@ jobs:
           cache: maven
       - name: Build and test
         run: mvn -B --no-transfer-progress verify
+      # The API diff is a detector, so the build must fail when it did not run — a plugin
+      # declaration dropped from a module POM would otherwise leave `verify` green, the job
+      # summary empty and nobody any the wiser, which is the silence this check exists to
+      # end. The module list is spelled out here on purpose rather than derived from the
+      # POMs: derived, it would shrink along with the declaration it is meant to catch.
+      # Reporting the result is a separate step below, and is allowed to fail on its own.
+      - name: Verify API diff reports
+        if: success()
+        run: |
+          status=0
+          for report in raoh/target/japicmp/api-diff.md \
+                        raoh-json/target/japicmp/api-diff.md \
+                        raoh-jooq/target/japicmp/api-diff.md; do
+            if [ ! -s "$report" ]; then
+              echo "::error::No API diff report at $report — is the japicmp plugin still declared in that module's POM?"
+              status=1
+            fi
+          done
+          exit $status
       # JaCoCo (configured in the parent pom) writes per-module reports under
       # target/site/jacoco during `verify`. Surface them as a job-summary table and
       # a downloadable HTML artifact. Reporting only — no coverage thresholds.
@@ -52,6 +71,40 @@ jobs:
         with:
           name: jacoco-coverage
           path: '**/target/site/jacoco/'
+          if-no-files-found: warn
+      # japicmp (configured in the parent pom) diffs the published API of raoh, raoh-json
+      # and raoh-jooq against the last release during `verify`, writing a report under
+      # target/japicmp. Show it here so a change to the API surface is visible on the PR
+      # that makes it. Reporting only — before 1.0 the build does not fail on a break; see
+      # the plugin's comment in the parent pom.
+      - name: Public API diff
+        if: always()
+        # Reporting only: never let a summary-formatting hiccup red an otherwise-green build.
+        continue-on-error: true
+        run: |
+          baseline=$(sed -n 's#.*<japicmp.baseline>\(.*\)</japicmp.baseline>.*#\1#p' pom.xml)
+          {
+            echo "## Public API diff (baseline ${baseline})"
+            for f in $(find . -path '*/target/japicmp/api-diff.md' | sort); do
+              mod=$(echo "$f" | sed -E 's#\./([^/]+)/target.*#\1#')
+              size=$(wc -c < "$f")
+              echo "### $mod"
+              # The job summary caps at 1 MiB. A report that big belongs in the artifact.
+              if [ "$size" -le 262144 ]; then
+                # Drop the report's own H1 and demote its headings two levels, so its
+                # sections nest under the module heading instead of outranking it.
+                sed -e '/^# Compatibility Report$/d' -e 's/^#/###/' "$f"
+              else
+                echo "Report is ${size} bytes — see the japicmp-api-diff artifact."
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload API diff reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: japicmp-api-diff
+          path: '**/target/japicmp/'
           if-no-files-found: warn
 
   nullcheck:
