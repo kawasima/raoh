@@ -270,10 +270,10 @@ public final class JsonDecoders {
     /**
      * Extracts an optional field. Returns {@link Optional#empty()} if absent.
      *
-     * <p>The returned decoder is a {@link CombinePart} at runtime even though it is declared as a
-     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
-     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
-     * overrides through their bridge methods.
+     * <p>The returned {@link CombinePart} keeps its field declaration through {@code map},
+     * {@code refine}, {@code pipe} and the other component combinators, so {@code strict()} still
+     * sees the name after composition. Convert it with {@code asDecoder()} where a plain
+     * {@link Decoder} is required, giving up that declaration deliberately.
      *
      * @param <T>  the decoded field type
      * @param name the field name
@@ -320,10 +320,10 @@ public final class JsonDecoders {
     /**
      * Extracts a field with tri-state presence semantics (absent / null / present).
      *
-     * <p>The returned decoder is a {@link CombinePart} at runtime even though it is declared as a
-     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
-     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
-     * overrides through their bridge methods.
+     * <p>The returned {@link CombinePart} keeps its field declaration through {@code map},
+     * {@code refine}, {@code pipe} and the other component combinators, so {@code strict()} still
+     * sees the name after composition. Convert it with {@code asDecoder()} where a plain
+     * {@link Decoder} is required, giving up that declaration deliberately.
      *
      * @param <T>  the decoded field type
      * @param name the field name
@@ -358,10 +358,10 @@ public final class JsonDecoders {
      * populate a plain {@code @Nullable} domain field or constructor argument without an intermediate
      * {@code Optional} or {@code Presence}.
      *
-     * <p>The returned decoder is a {@link CombinePart} at runtime even though it is declared as a
-     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
-     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
-     * overrides through their bridge methods.
+     * <p>The returned {@link CombinePart} keeps its field declaration through {@code map},
+     * {@code refine}, {@code pipe} and the other component combinators, so {@code strict()} still
+     * sees the name after composition. Convert it with {@code asDecoder()} where a plain
+     * {@link Decoder} is required, giving up that declaration deliberately.
      *
      * @param <T>  the decoded value type
      * @param name the field name

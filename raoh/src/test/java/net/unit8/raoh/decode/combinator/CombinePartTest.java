@@ -165,6 +165,26 @@ class CombinePartTest {
         assertAccepted(dec.decode(INPUT));
     }
 
+    /**
+     * A combiner can be wrong in more than one way at once. An undeclared component is reported
+     * first, because it is the more fundamental fault: the schema's field set is unknown, so which
+     * scanner wins would not matter even if the scanners agreed.
+     */
+    @Test
+    void anUndeclaredComponentIsReportedBeforeConflictingScanners() {
+        InputFields<Map<String, Object>> nameOnly =
+                in -> in.containsKey("name") ? List.of("name") : List.of();
+        var withOwnScanner = CombinePart.named("name",
+                (Map<String, Object> in, Path path) -> Result.ok((String) in.get("name")), nameOnly);
+        var opaque = flat(combine(field("age", int_()), field("name", string())).map((age, name) -> age));
+
+        var thrown = assertThrows(IllegalStateException.class,
+                () -> Decoders.combine(opaque, withOwnScanner, field("age", int_()))
+                        .strict((a, b, c) -> a + b + c));
+        assertTrue(thrown.getMessage().contains("do not declare the fields they consume"),
+                thrown.getMessage());
+    }
+
     // --- strict: input-field enumeration ---
 
     /**

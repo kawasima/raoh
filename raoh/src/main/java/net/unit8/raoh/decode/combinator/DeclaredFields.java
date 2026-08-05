@@ -1,6 +1,6 @@
 package net.unit8.raoh.decode.combinator;
 
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -39,8 +39,7 @@ sealed interface DeclaredFields {
         if (!(left instanceof Known(var leftNames)) || !(right instanceof Known(var rightNames))) {
             return new Unknown();
         }
-        // Declaration order is kept so that a diagnostic can list the fields as they were written.
-        var names = new LinkedHashSet<String>(leftNames);
+        var names = new HashSet<String>(leftNames);
         names.addAll(rightNames);
         return new Known(names);
     }

@@ -37,6 +37,7 @@ final class CombinerSupport {
     static <I, T> Decoder<I, T> strict(Decoder<I, T> dec, CombinePart<I, ?>... parts) {
         DeclaredFields declared = new DeclaredFields.Known(Set.of());
         InputFields<I> inputFields = null;
+        boolean conflictingScanners = false;
 
         for (var part : parts) {
             @SuppressWarnings("unchecked")
@@ -50,21 +51,25 @@ final class CombinerSupport {
             if (inputFields == null) {
                 inputFields = candidate;
             } else if (inputFields != candidate) {
-                throw new IllegalStateException(
-                        "strict() got two different InputFields from the components of one "
-                                + "combiner, so what counts as an unknown field would depend on the "
-                                + "order they were written in; every field of one schema must share "
-                                + "a single InputFields instance");
+                // Recorded rather than thrown, so that an undeclared component is still reported
+                // as such: a combiner that is wrong in both ways is first of all wrong in that one.
+                conflictingScanners = true;
             }
         }
 
-        // Checked before the scanner so that a flat component is always reported as such, rather
-        // than as a missing scanner it was never going to supply.
         if (!(declared instanceof DeclaredFields.Known(var names))) {
             throw new IllegalStateException(
                     "strict() cannot be applied because one or more combine components do not "
                             + "declare the fields they consume; a flat(...) component reads the "
                             + "whole input opaquely, so the schema's field set is unknown");
+        }
+
+        if (conflictingScanners) {
+            throw new IllegalStateException(
+                    "strict() got two different InputFields from the components of one "
+                            + "combiner, so what counts as an unknown field would depend on the "
+                            + "order they were written in; every field of one schema must share "
+                            + "a single InputFields instance");
         }
 
         if (inputFields == null) {

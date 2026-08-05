@@ -25,8 +25,8 @@ detailed from the current development cycle onward.
 
 - **`flat(...)`** in `MapDecoders`, `JsonDecoders` and `JooqRecordDecoders` — lifts a decoder that
   reads the same whole input into a combine component, which is how a flat JOIN row gets split
-  across several decoders. This was previously the second, undocumented role of `nested(...)`; the
-  two need different types now, so `nested(...)` keeps its meaning (adapting a decoder for use as a
+  across several decoders. This was previously the second role of `nested(...)`, documented in the
+  tutorial alongside the first; the two need different types now, so `nested(...)` keeps its meaning (adapting a decoder for use as a
   field *value*) and `flat(...)` takes the other one
   ([#114](https://github.com/kawasima/raoh/issues/114)).
 

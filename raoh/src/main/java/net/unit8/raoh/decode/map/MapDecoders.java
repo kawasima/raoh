@@ -68,10 +68,10 @@ public final class MapDecoders {
      * Creates an optional field decoder. If the field is absent from the map,
      * the result is {@code Optional.empty()} rather than an error.
      *
-     * <p>The returned decoder is a {@link CombinePart} at runtime even though it is declared as a
-     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
-     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
-     * overrides through their bridge methods.
+     * <p>The returned {@link CombinePart} keeps its field declaration through {@code map},
+     * {@code refine}, {@code pipe} and the other component combinators, so {@code strict()} still
+     * sees the name after composition. Convert it with {@code asDecoder()} where a plain
+     * {@link Decoder} is required, giving up that declaration deliberately.
      *
      * @param <T>  the decoded value type
      * @param name the field name (map key)
@@ -154,10 +154,10 @@ public final class MapDecoders {
      * and {@link Presence.Present} with the decoded value otherwise.
      * This is useful for PATCH-style updates where the three states have different semantics.
      *
-     * <p>The returned decoder is a {@link CombinePart} at runtime even though it is declared as a
-     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
-     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
-     * overrides through their bridge methods.
+     * <p>The returned {@link CombinePart} keeps its field declaration through {@code map},
+     * {@code refine}, {@code pipe} and the other component combinators, so {@code strict()} still
+     * sees the name after composition. Convert it with {@code asDecoder()} where a plain
+     * {@link Decoder} is required, giving up that declaration deliberately.
      *
      * @param <T>  the decoded value type
      * @param name the field name (map key)
@@ -196,10 +196,10 @@ public final class MapDecoders {
      * instead fails on a present {@code null}, because {@code optionalField} only treats an absent key
      * as empty and then feeds the {@code null} value to a non-null {@code dec}.
      *
-     * <p>The returned decoder is a {@link CombinePart} at runtime even though it is declared as a
-     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
-     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
-     * overrides through their bridge methods.
+     * <p>The returned {@link CombinePart} keeps its field declaration through {@code map},
+     * {@code refine}, {@code pipe} and the other component combinators, so {@code strict()} still
+     * sees the name after composition. Convert it with {@code asDecoder()} where a plain
+     * {@link Decoder} is required, giving up that declaration deliberately.
      *
      * @param <T>  the decoded value type
      * @param name the field name (map key)
