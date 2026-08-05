@@ -112,6 +112,26 @@ string().uuid().decode("550e8400-e29b-41d4-a716-446655440000")
 // ==> Ok[550e8400-e29b-41d4-a716-446655440000]
 ```
 
+### Normalization
+
+`minLength` / `maxLength` / `fixedLength` count code points, but the same が is one code point composed (U+304C) and two decomposed (U+304B U+3099). Neither form is exotic: macOS filenames are decomposed, and some IME and clipboard paths deliver decomposed text. Chaining `normalize()` first makes the count the same whichever form arrives.
+
+```java
+String nfd = "か\u3099";   // decomposed が (U+304B U+3099)
+
+string().maxLength(1).decode(nfd)
+// ==> Err[/: must be at most 1 characters]
+
+string().normalize().maxLength(1).decode(nfd)
+// ==> Ok[が]
+```
+
+The default is NFC; `normalize(Normalizer.Form.NFKC)` selects another form. NFKC also erases the distinction between halfwidth ｱ and fullwidth ア, which suits a search key but not a stored name.
+
+It is a transform like `trim()` and `toLowerCase()`, so it applies in the order written: `maxLength(20).normalize()` checks the length of the input as it arrived, then normalizes.
+
+Normalization only unifies canonically equivalent strings. A variation sequence (葛 + U+E0101) stays two code points under every form, and counting what a user perceives as one character needs grapheme cluster segmentation, which is a separate thing.
+
 ### URI / URL validation
 
 ```java

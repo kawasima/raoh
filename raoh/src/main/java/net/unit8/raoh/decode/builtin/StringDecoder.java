@@ -11,6 +11,7 @@ import java.math.BigDecimal;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.text.Normalizer;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,6 +21,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -611,6 +613,50 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      */
     public StringDecoder<I> toUpperCase() {
         return new StringDecoder<>((in, path) -> this.decode(in, path).map(String::toUpperCase));
+    }
+
+    /**
+     * Normalizes the decoded string to {@link Normalizer.Form#NFC}.
+     *
+     * <p>Canonically equivalent inputs — {@code U+304C} and {@code U+304B U+3099}, the same が
+     * composed and decomposed — become the same string, so the constraints that follow no longer
+     * depend on how the client happened to encode the text. Neither form is exotic: macOS filenames
+     * are decomposed, and some IME and clipboard paths deliver decomposed text.
+     *
+     * @return a new decoder that applies {@link Normalizer.Form#NFC} to the value
+     */
+    public StringDecoder<I> normalize() {
+        return normalize(Normalizer.Form.NFC);
+    }
+
+    /**
+     * Normalizes the decoded string to the given Unicode normalization form.
+     *
+     * <p>{@link #normalize()} — NFC — is the form to reach for on stored text. NFKC additionally
+     * folds compatibility characters, erasing the distinction between halfwidth ｱ and fullwidth ア
+     * and between ㍿ and 株式会社, which suits a search key but discards information a name field is
+     * meant to keep.
+     *
+     * <p>Normalization is a transform, not a constraint, and it composes in the order it is
+     * written: {@code string().normalize().maxLength(20)} counts the normalized value, whereas
+     * {@code string().maxLength(20).normalize()} checks the length of the input as it arrived.
+     *
+     * <p>What it does not do: variation sequences are normalization-stable by design, so 葛 followed
+     * by {@code U+E0101} stays two code points under every form. Nor does normalization produce a
+     * count of user-perceived characters — that is grapheme cluster segmentation, a different
+     * constraint rather than a more accurate version of this one.
+     *
+     * <p>The value is normalized; the arguments of later constraints are not. A literal passed to
+     * {@link #oneOf} or {@link #startsWith} has to be written in the same form to match — with the
+     * NFC default that is what a Java source literal already is.
+     *
+     * @param form the normalization form to apply
+     * @return a new decoder that applies {@code form} to the value
+     */
+    public StringDecoder<I> normalize(Normalizer.Form form) {
+        Objects.requireNonNull(form, "form");
+        return new StringDecoder<>((in, path) ->
+                this.decode(in, path).map(value -> Normalizer.normalize(value, form)));
     }
 
     // --- Type conversions ---

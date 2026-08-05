@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.net.URI;
+import java.text.Normalizer;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -290,6 +291,75 @@ class StringDecoderTest {
     @Test
     void toUpperCaseUppercasesValue() {
         assertEquals("ABC", decodeOk(string().toUpperCase(), "abc"));
+    }
+
+    // --- normalization ---
+    //
+    // Written as escapes on purpose: NFC_GA and NFD_GA are indistinguishable as literals.
+
+    /** が — one code point. */
+    private static final String NFC_GA = "\u304C";
+
+    /** か + combining voiced sound mark — canonically equivalent to {@link #NFC_GA}, two code points. */
+    private static final String NFD_GA = "\u304B\u3099";
+
+    /** 葛 followed by variation selector U+E0101 — an ideographic variation sequence. */
+    private static final String IVS_KATSU = "\u845B\uDB40\uDD01";
+
+    /** ｱ — halfwidth katakana, a compatibility character NFC leaves alone. */
+    private static final String HALFWIDTH_A = "\uFF71";
+
+    @Test
+    void normalizeComposesCanonicallyEquivalentInput() {
+        assertEquals(NFC_GA, decodeOk(string().normalize(), NFD_GA));
+    }
+
+    /**
+     * The point of the transform: the same text counts the same however the client encoded it.
+     */
+    @Test
+    void normalizeMakesTheLengthIndependentOfTheInputForm() {
+        assertEquals(NFC_GA, decodeOk(string().normalize().maxLength(1), NFD_GA));
+    }
+
+    @Test
+    void normalizeMakesOneOfMatchCanonicallyEquivalentInput() {
+        assertEquals(NFC_GA, decodeOk(string().normalize().oneOf(NFC_GA), NFD_GA));
+    }
+
+    /**
+     * Transforms and constraints compose in the order they are written, and normalization is no
+     * exception: put after a constraint, it runs after that constraint has already seen the raw form.
+     */
+    @Test
+    void constraintsPlacedBeforeNormalizeSeeTheInputForm() {
+        var issue = decodeErr(string().maxLength(1).normalize(), NFD_GA);
+        assertEquals(ErrorCodes.TOO_LONG, issue.code());
+        assertEquals(2, issue.meta().get("actual"));
+    }
+
+    /**
+     * Variation sequences are normalization-stable by design, so {@code normalize()} neither strips
+     * the selector nor shortens the count. Stripping variation selectors and counting grapheme
+     * clusters are separate constraints, not a more thorough version of this one.
+     */
+    @Test
+    void normalizeKeepsVariationSequencesIntact() {
+        assertEquals(IVS_KATSU, decodeOk(string().normalize(), IVS_KATSU));
+
+        var issue = decodeErr(string().normalize().maxLength(1), IVS_KATSU);
+        assertEquals(ErrorCodes.TOO_LONG, issue.code());
+        assertEquals(2, issue.meta().get("actual"));
+    }
+
+    @Test
+    void normalizeDefaultsToNfcAndSoKeepsCompatibilityCharacters() {
+        assertEquals(HALFWIDTH_A, decodeOk(string().normalize(), HALFWIDTH_A));
+    }
+
+    @Test
+    void normalizeWithNfkcFoldsCompatibilityCharacters() {
+        assertEquals("\u30A2", decodeOk(string().normalize(Normalizer.Form.NFKC), HALFWIDTH_A));
     }
 
     // --- type conversions ---

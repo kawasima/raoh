@@ -37,6 +37,18 @@ detailed from the current development cycle onward.
   `CombinePart.named(name, decoder, inputFields)`
   ([#113](https://github.com/kawasima/raoh/issues/113)).
 
+- **`StringDecoder.normalize()` / `normalize(Normalizer.Form)`** — a transform that canonicalizes the
+  decoded string, so the constraints written after it stop depending on how the client encoded the
+  text. The same が is one code point composed and two decomposed, and macOS filenames and some IME
+  and clipboard paths deliver the decomposed form, so a `maxLength(20)` on a name field otherwise
+  varies with the sender. The default is NFC; pass a `Normalizer.Form` for another — NFKC suits a
+  search key, where folding halfwidth ｱ into ア is wanted, and not a stored name. It is a transform
+  rather than an implicit step inside `string()`, which keeps the choice of form with the caller and
+  keeps the order meaningful: `maxLength(20).normalize()` checks the input as it arrived. It unifies
+  canonically equivalent strings and nothing else — a variation sequence such as 葛 followed by
+  U+E0101 is normalization-stable and still counts as two code points
+  ([#106](https://github.com/kawasima/raoh/issues/106)).
+
 ### Fixed
 
 - **A schema can no longer lose a field by being wrapped.** `FieldDecoder` was both a `Decoder` and
