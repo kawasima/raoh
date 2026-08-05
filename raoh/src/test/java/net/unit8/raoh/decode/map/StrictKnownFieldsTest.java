@@ -3,11 +3,15 @@ package net.unit8.raoh.decode.map;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Ok;
+import net.unit8.raoh.Presence;
 import net.unit8.raoh.Result;
+import net.unit8.raoh.decode.Decoder;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static net.unit8.raoh.decode.ObjectDecoders.int_;
 import static net.unit8.raoh.decode.ObjectDecoders.string;
@@ -83,6 +87,43 @@ class StrictKnownFieldsTest {
                 field("name", string()),
                 nullableField("age", int_())
         ).strict((name, age) -> name + age).decode(INPUT));
+    }
+
+    /**
+     * The optional-field factories declare {@link Decoder} but return a
+     * {@link net.unit8.raoh.decode.FieldDecoder FieldDecoder}, so the declared type must not matter:
+     * a combinator called on a {@code Decoder}-typed reference still reaches the {@code FieldDecoder}
+     * override through its bridge method, and the name survives. Keeping the declaration at
+     * {@code Decoder} is what makes this change binary compatible.
+     */
+    @Test
+    void optionalFieldKeepsItsNameThroughADecoderTypedReference() {
+        Decoder<Map<String, Object>, Optional<Integer>> age = optionalField("age", int_());
+
+        assertAccepted(combine(
+                field("name", string()),
+                age.refine(v -> true, "always_ok", "always ok")
+        ).strict((name, value) -> name + value.orElse(0)).decode(INPUT));
+
+        assertAccepted(combine(
+                field("name", string()),
+                age.map(v -> v.orElse(0))
+        ).strict((name, value) -> name + value).decode(INPUT));
+    }
+
+    @Test
+    void optionalNullableAndNullableFieldsKeepTheirNamesThroughADecoderTypedReference() {
+        Decoder<Map<String, Object>, Presence<Integer>> presence = optionalNullableField("age", int_());
+        assertAccepted(combine(
+                field("name", string()),
+                presence.refine(v -> true, "always_ok", "always ok")
+        ).strict((name, value) -> name + value).decode(INPUT));
+
+        Decoder<Map<String, Object>, @Nullable Integer> nullable = nullableField("age", int_());
+        assertAccepted(combine(
+                field("name", string()),
+                nullable.refine(v -> true, "always_ok", "always ok")
+        ).strict((name, value) -> name + value).decode(INPUT));
     }
 
     @Test

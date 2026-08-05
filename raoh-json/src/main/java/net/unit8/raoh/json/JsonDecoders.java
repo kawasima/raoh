@@ -266,12 +266,17 @@ public final class JsonDecoders {
     /**
      * Extracts an optional field. Returns {@link Optional#empty()} if absent.
      *
+     * <p>The returned decoder is a {@link FieldDecoder} at runtime even though it is declared as a
+     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
+     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
+     * overrides through their bridge methods.
+     *
      * @param <T>  the decoded field type
      * @param name the field name
      * @param dec  the decoder for the field value
-     * @return a field decoder that produces an {@link Optional}
+     * @return a decoder that produces an {@link Optional}
      */
-    public static <T> FieldDecoder<JsonNode, Optional<T>> optionalField(String name, Decoder<JsonNode, T> dec) {
+    public static <T> Decoder<JsonNode, Optional<T>> optionalField(String name, Decoder<JsonNode, T> dec) {
         return FieldDecoder.named(name, (in, path) -> {
             var fieldPath = path.append(name);
             if (in == null || !in.isObject()) {
@@ -312,12 +317,17 @@ public final class JsonDecoders {
     /**
      * Extracts a field with tri-state presence semantics (absent / null / present).
      *
+     * <p>The returned decoder is a {@link FieldDecoder} at runtime even though it is declared as a
+     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
+     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
+     * overrides through their bridge methods.
+     *
      * @param <T>  the decoded field type
      * @param name the field name
      * @param dec  the decoder for the field value
-     * @return a field decoder that produces a {@link Presence} value
+     * @return a decoder that produces a {@link Presence} value
      */
-    public static <T> FieldDecoder<JsonNode, Presence<T>> optionalNullableField(String name, Decoder<JsonNode, T> dec) {
+    public static <T> Decoder<JsonNode, Presence<T>> optionalNullableField(String name, Decoder<JsonNode, T> dec) {
         return FieldDecoder.named(name, (in, path) -> {
             var fieldPath = path.append(name);
             if (in == null || !in.isObject()) {
@@ -346,16 +356,21 @@ public final class JsonDecoders {
      * populate a plain {@code @Nullable} domain field or constructor argument without an intermediate
      * {@code Optional} or {@code Presence}.
      *
+     * <p>The returned decoder is a {@link FieldDecoder} at runtime even though it is declared as a
+     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
+     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
+     * overrides through their bridge methods.
+     *
      * @param <T>  the decoded value type
      * @param name the field name
      * @param dec  the decoder for the field value when present and non-null
-     * @return a field decoder that produces the decoded value, or {@code null} when the key is absent or
-     *         its value is JSON {@code null}
+     * @return a decoder that produces the decoded value, or {@code null} when the key is absent or its
+     *         value is JSON {@code null}
      */
     // Returns a Decoder<..., @Nullable T>. NullAway cannot verify the type-parameter nullness of the
     // @Nullable T return, the same honest widening already suppressed in JsonDecoders.nullable.
     @SuppressWarnings("NullAway")
-    public static <T> FieldDecoder<JsonNode, @Nullable T> nullableField(String name, Decoder<JsonNode, T> dec) {
+    public static <T> Decoder<JsonNode, @Nullable T> nullableField(String name, Decoder<JsonNode, T> dec) {
         return FieldDecoder.named(name, (in, path) -> {
             var fieldPath = path.append(name);
             // A null / non-object input is treated as absent (-> null), consistent with optionalField /

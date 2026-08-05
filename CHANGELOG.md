@@ -20,7 +20,9 @@ detailed from the current development cycle onward.
   `strict()` schema containing an optional field rejected that field outright. `FieldDecoder` now
   overrides `map`, `flatMap`, `flatMapWithPath`, `pipe` and all three `refine` overloads with a
   covariant return type, and the three optional-field factories return a `FieldDecoder` in both
-  `MapDecoders` and `JsonDecoders`. `list()` is deliberately not overridden: it changes the input
+  `MapDecoders` and `JsonDecoders` — their declared return type stays `Decoder`, so this is binary
+  compatible; the combinators reach the `FieldDecoder` overrides through their bridge methods even
+  from a `Decoder`-typed reference. `list()` is deliberately not overridden: it changes the input
   type to `List<I>`, so a single field name no longer describes it
   ([#109](https://github.com/kawasima/raoh/issues/109)).
 
@@ -35,11 +37,6 @@ detailed from the current development cycle onward.
   ([#109](https://github.com/kawasima/raoh/issues/109)).
 
 ### Changed
-
-- **`optionalField`, `optionalNullableField` and `nullableField` return `FieldDecoder`** rather
-  than `Decoder`, in both `MapDecoders` and `JsonDecoders`. Source compatible, but **binary
-  incompatible** — the method descriptors change, so code compiled against 0.6.0 must be
-  recompiled ([#109](https://github.com/kawasima/raoh/issues/109)).
 
 - **The `ObjectDecoders` temporal decoders now accept ISO-8601 text**, the representation the
   matching `ObjectEncoders` factory writes, so a codec pair built over the neutral `Object` tree
