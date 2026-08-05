@@ -41,10 +41,10 @@ class FieldDecoderTest {
     }
 
     @Test
-    void flatMapWithPathKeepsTheName() {
-        var dec = LENGTH.flatMapWithPath((n, path) -> Result.ok(path.append("n").toJsonPointer() + n));
+    void flatMapWithPathKeepsTheNameAndReceivesTheFieldPath() {
+        var dec = LENGTH.flatMapWithPath((n, path) -> Result.ok(path.toJsonPointer() + n));
         assertEquals("len", dec.fieldName());
-        assertEquals("/n3", dec.decode("abc", Path.ROOT).getOrThrow());
+        assertEquals("/len3", dec.decode("abc", Path.ROOT).getOrThrow());
     }
 
     @Test
@@ -63,6 +63,7 @@ class FieldDecoderTest {
         var issue = firstIssue(dec.decode("abc", Path.ROOT));
         assertEquals("must_be_even", issue.code());
         assertEquals("must be even", issue.message());
+        assertEquals("/len", issue.path().toJsonPointer());
     }
 
     @Test
@@ -83,7 +84,7 @@ class FieldDecoderTest {
         assertEquals("len", dec.fieldName());
 
         var issue = firstIssue(dec.decode("abc", Path.ROOT));
-        assertEquals("/odd", issue.path().toJsonPointer());
+        assertEquals("/len/odd", issue.path().toJsonPointer());
     }
 
     @Test

@@ -6,12 +6,14 @@ import net.unit8.raoh.Ok;
 import net.unit8.raoh.Result;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 
 import static net.unit8.raoh.decode.ObjectDecoders.int_;
 import static net.unit8.raoh.decode.ObjectDecoders.string;
 import static net.unit8.raoh.decode.map.MapDecoders.combine;
 import static net.unit8.raoh.decode.map.MapDecoders.field;
+import static net.unit8.raoh.decode.map.MapDecoders.nested;
 import static net.unit8.raoh.decode.map.MapDecoders.nullableField;
 import static net.unit8.raoh.decode.map.MapDecoders.optionalField;
 import static net.unit8.raoh.decode.map.MapDecoders.optionalNullableField;
@@ -102,36 +104,80 @@ class StrictKnownFieldsTest {
     }
 
     /**
-     * A refinement applied outside {@code field(...)} reports at the enclosing path, not at the
-     * field path — {@code field(name, dec)} appends the name inside its own {@code decode}, so a
-     * combinator wrapped around it only ever sees the enclosing path. Applying the refinement to
-     * the inner decoder instead reports at {@code /age}. This predates the name-preservation fix
-     * and is asserted here to pin the current behaviour.
+     * A refinement reports at the field's path whether it is applied inside or outside
+     * {@code field(...)}. The two spellings express the same rule about the same value, so they
+     * must not disagree about where the failure belongs.
      */
     @Test
-    void refinementOutsideFieldReportsAtTheEnclosingPath() {
+    void refinementReportsAtTheFieldPathEitherWayRound() {
         var outer = combine(
                 field("name", string()),
                 field("age", int_()).refine(a -> a % 2 == 1, "must_be_odd", "must be odd")
         ).strict((name, age) -> name + age);
-
-        switch (outer.decode(INPUT)) {
-            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
-            case Err(var issues) -> {
-                var issue = issues.asList().getFirst();
-                assertEquals("must_be_odd", issue.code());
-                assertEquals("", issue.path().toJsonPointer());
-            }
-        }
 
         var inner = combine(
                 field("name", string()),
                 field("age", int_().refine(a -> a % 2 == 1, "must_be_odd", "must be odd"))
         ).strict((name, age) -> name + age);
 
-        switch (inner.decode(INPUT)) {
-            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
-            case Err(var issues) -> assertEquals("/age", issues.asList().getFirst().path().toJsonPointer());
+        for (var dec : List.of(outer, inner)) {
+            switch (dec.decode(INPUT)) {
+                case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+                case Err(var issues) -> {
+                    var issue = issues.asList().getFirst();
+                    assertEquals("must_be_odd", issue.code());
+                    assertEquals("/age", issue.path().toJsonPointer());
+                }
+            }
         }
+    }
+
+    /**
+     * The same decoder must not report two different paths depending on which check failed. Before
+     * the field's path was threaded through the overridden combinators, a type mismatch landed on
+     * {@code /age} while a refinement failure landed on the enclosing object.
+     */
+    @Test
+    void typeMismatchAndRefinementFailureShareTheFieldPath() {
+        var dec = field("age", int_()).refine(a -> a % 2 == 1, "must_be_odd", "must be odd");
+
+        assertEquals("/age", firstIssuePath(dec.decode(Map.of("age", "not-a-number"))));
+        assertEquals("/age", firstIssuePath(dec.decode(Map.of("age", 20))));
+    }
+
+    @Test
+    void flatMapAndPipeFailuresLandOnTheFieldPath() {
+        var flatMapped = field("age", int_()).flatMap(a -> Result.fail("boom", "boom"));
+        assertEquals("/age", firstIssuePath(flatMapped.decode(Map.of("age", 20))));
+
+        var piped = field("age", int_()).pipe((a, path) -> Result.fail(path, "boom", "boom"));
+        assertEquals("/age", firstIssuePath(piped.decode(Map.of("age", 20))));
+    }
+
+    @Test
+    void aNestedFieldReportsAtItsFullPath() {
+        var dec = field("user", nested(combine(
+                field("age", int_()).refine(a -> a % 2 == 1, "must_be_odd", "must be odd"),
+                field("name", string())
+        ).map((age, name) -> name + age)));
+
+        assertEquals("/user/age",
+                firstIssuePath(dec.decode(Map.of("user", Map.of("age", 20, "name", "Taro")))));
+    }
+
+    @Test
+    void chainedRefinementsAppendTheFieldNameOnlyOnce() {
+        var dec = field("age", int_())
+                .refine(a -> a > 0, "must_be_positive", "must be positive")
+                .refine(a -> a % 2 == 1, "must_be_odd", "must be odd");
+
+        assertEquals("/age", firstIssuePath(dec.decode(INPUT)));
+    }
+
+    private static String firstIssuePath(Result<?> result) {
+        return switch (result) {
+            case Ok(var v) -> throw new AssertionError("Expected Err, got Ok: " + v);
+            case Err(var issues) -> issues.asList().getFirst().path().toJsonPointer();
+        };
     }
 }

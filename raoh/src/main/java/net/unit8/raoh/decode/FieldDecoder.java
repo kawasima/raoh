@@ -1,5 +1,7 @@
 package net.unit8.raoh.decode;
 
+import net.unit8.raoh.Err;
+import net.unit8.raoh.Ok;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
@@ -27,6 +29,15 @@ import java.util.function.Predicate;
  *
  * <p>{@link #list()} is deliberately not overridden: it changes the input type to
  * {@code List<I>}, so a single field name no longer describes what it decodes.
+ *
+ * <p><strong>Path contract:</strong> a {@code FieldDecoder} decodes its value at
+ * {@code path.append(fieldName())}, and the overrides here report failures there rather than at
+ * the enclosing path. Without that, a single decoder would report two different paths depending on
+ * which check failed — {@code field("age", int_()).refine(...)} put a type mismatch at
+ * {@code /age} but a refinement failure on the enclosing object. Anything handed to
+ * {@link #named} is expected to honour the same contract; the {@code field}, {@code optionalField},
+ * {@code optionalNullableField} and {@code nullableField} factories in {@code MapDecoders} and
+ * {@code JsonDecoders} all do.
  *
  * @param <I> the input type
  * @param <T> the decoded output type
@@ -78,7 +89,7 @@ public interface FieldDecoder<I extends @Nullable Object, T extends @Nullable Ob
 
     /**
      * Transforms the decoded value with a function that may itself fail, staying bound to the
-     * same field.
+     * same field. Issues produced by {@code f} are rebased onto the field's path.
      *
      * @param <U> the new output type
      * @param f   the mapping function returning a {@link Result}
@@ -86,24 +97,32 @@ public interface FieldDecoder<I extends @Nullable Object, T extends @Nullable Ob
      */
     @Override
     default <U> FieldDecoder<I, U> flatMap(Function<? super T, ? extends Result<U>> f) {
-        return named(fieldName(), Decoder.super.flatMap(f));
+        return named(fieldName(), (in, path) -> this.decode(in, path).flatMap(t -> {
+            Result<U> r = f.apply(t);
+            return switch (r) {
+                case Ok<U> ok -> ok;
+                case Err<U> err -> Result.err(err.issues().rebase(path.append(fieldName())));
+            };
+        }));
     }
 
     /**
-     * Like {@link #flatMap}, but the mapping function also receives the current path. Stays bound
+     * Like {@link #flatMap}, but the mapping function also receives the field's path. Stays bound
      * to the same field.
      *
      * @param <U> the new output type
-     * @param f   the mapping function receiving both the decoded value and the path
+     * @param f   the mapping function receiving both the decoded value and the field's path
      * @return a field decoder for the same field, producing {@code U}
      */
     @Override
     default <U> FieldDecoder<I, U> flatMapWithPath(BiFunction<? super T, ? super Path, ? extends Result<U>> f) {
-        return named(fieldName(), Decoder.super.flatMapWithPath(f));
+        return named(fieldName(), (in, path) -> this.decode(in, path)
+                .flatMap(t -> f.apply(t, path.append(fieldName()))));
     }
 
     /**
-     * Pipes the decoded value into another decoder, staying bound to the same field.
+     * Pipes the decoded value into another decoder, staying bound to the same field. The next
+     * decoder runs at the field's path, so its failures land there.
      *
      * @param <U>  the new output type
      * @param next the decoder to apply to this decoder's output
@@ -111,11 +130,13 @@ public interface FieldDecoder<I extends @Nullable Object, T extends @Nullable Ob
      */
     @Override
     default <U> FieldDecoder<I, U> pipe(Decoder<T, U> next) {
-        return named(fieldName(), Decoder.super.pipe(next));
+        return named(fieldName(), (in, path) -> this.decode(in, path)
+                .flatMap(t -> next.decode(t, path.append(fieldName()))));
     }
 
     /**
-     * Refines the decoded value with a predicate, staying bound to the same field.
+     * Refines the decoded value with a predicate, staying bound to the same field. The failure is
+     * reported at the field's path.
      *
      * @param ok      the predicate the decoded value must satisfy
      * @param code    the error code to report on failure
@@ -145,7 +166,7 @@ public interface FieldDecoder<I extends @Nullable Object, T extends @Nullable Ob
 
     /**
      * Refines the decoded value with a predicate whose failure branch is caller-controlled.
-     * Stays bound to the same field.
+     * Stays bound to the same field; {@code onFail} receives the field's path.
      *
      * @param ok     the predicate the decoded value must satisfy
      * @param onFail builds the failing result from the rejected value and the current path

@@ -24,6 +24,16 @@ detailed from the current development cycle onward.
   type to `List<I>`, so a single field name no longer describes it
   ([#109](https://github.com/kawasima/raoh/issues/109)).
 
+- **A refinement on a field now reports at the field's path.** `field("age", int_())` appends the
+  name inside its own `decode`, so a combinator wrapped around it only saw the enclosing path: one
+  decoder reported a type mismatch at `/age` but a refinement failure on the enclosing object, and
+  one level down the failure landed on `/user` instead of `/user/age`. `FieldDecoder` now threads
+  the field's path through `flatMap` (the rebase target), `flatMapWithPath`, `pipe` and all three
+  `refine` overloads, so `field("age", int_()).refine(...)` and
+  `field("age", int_().refine(...))` agree. Error **paths move** for those four combinators — code
+  that keys off the old enclosing path needs updating
+  ([#109](https://github.com/kawasima/raoh/issues/109)).
+
 ### Changed
 
 - **`optionalField`, `optionalNullableField` and `nullableField` return `FieldDecoder`** rather
