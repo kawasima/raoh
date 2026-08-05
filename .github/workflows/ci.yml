@@ -24,6 +24,25 @@ jobs:
           cache: maven
       - name: Build and test
         run: mvn -B --no-transfer-progress verify
+      # The API diff is a detector, so the build must fail when it did not run — a plugin
+      # declaration dropped from a module POM would otherwise leave `verify` green, the job
+      # summary empty and nobody any the wiser, which is the silence this check exists to
+      # end. The module list is spelled out here on purpose rather than derived from the
+      # POMs: derived, it would shrink along with the declaration it is meant to catch.
+      # Reporting the result is a separate step below, and is allowed to fail on its own.
+      - name: Verify API diff reports
+        if: success()
+        run: |
+          status=0
+          for report in raoh/target/japicmp/api-diff.md \
+                        raoh-json/target/japicmp/api-diff.md \
+                        raoh-jooq/target/japicmp/api-diff.md; do
+            if [ ! -s "$report" ]; then
+              echo "::error::No API diff report at $report — is the japicmp plugin still declared in that module's POM?"
+              status=1
+            fi
+          done
+          exit $status
       # JaCoCo (configured in the parent pom) writes per-module reports under
       # target/site/jacoco during `verify`. Surface them as a job-summary table and
       # a downloadable HTML artifact. Reporting only — no coverage thresholds.
