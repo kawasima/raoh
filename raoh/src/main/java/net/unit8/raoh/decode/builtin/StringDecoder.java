@@ -620,8 +620,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      *
      * <p>Canonically equivalent inputs — {@code U+304C} and {@code U+304B U+3099}, the same が
      * composed and decomposed — become the same string, so the constraints that follow no longer
-     * depend on how the client happened to encode the text. Neither form is exotic: macOS filenames
-     * are decomposed, and some IME and clipboard paths deliver decomposed text.
+     * depend on how the client happened to encode the text. Decomposed text is not exotic: filenames
+     * originating from HFS+, and some macOS, IME and clipboard paths, deliver it in that form.
      *
      * @return a new decoder that applies {@link Normalizer.Form#NFC} to the value
      */
@@ -632,10 +632,11 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Normalizes the decoded string to the given Unicode normalization form.
      *
-     * <p>{@link #normalize()} — NFC — is the form to reach for on stored text. NFKC additionally
-     * folds compatibility characters, erasing the distinction between halfwidth ｱ and fullwidth ア
-     * and between ㍿ and 株式会社, which suits a search key but discards information a name field is
-     * meant to keep.
+     * <p>How much the form unifies is the choice being made here. NFC and NFD unify canonically
+     * equivalent strings and keep compatibility distinctions; NFKC and NFKD fold compatibility
+     * equivalents as well, erasing the difference between halfwidth ｱ and fullwidth ア and between
+     * ㍿ and 株式会社. That suits a search key and discards information a stored name is meant to
+     * keep, which is why {@link #normalize()} is NFC.
      *
      * <p>Normalization is a transform, not a constraint, and it composes in the order it is
      * written: {@code string().normalize().maxLength(20)} counts the normalized value, whereas
@@ -647,8 +648,10 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * constraint rather than a more accurate version of this one.
      *
      * <p>The value is normalized; the arguments of later constraints are not. A literal passed to
-     * {@link #oneOf} or {@link #startsWith} has to be written in the same form to match — with the
-     * NFC default that is what a Java source literal already is.
+     * {@link #oneOf} or {@link #startsWith} therefore has to be written in the same form, or
+     * normalized explicitly, to match. The Java language does not normalize string literals — a
+     * literal holds whatever the source file or the escape sequence spells out — so a decomposed
+     * literal stays decomposed and will not match a value normalized to NFC.
      *
      * @param form the normalization form to apply
      * @return a new decoder that applies {@code form} to the value

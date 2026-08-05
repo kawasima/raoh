@@ -114,7 +114,7 @@ string().uuid().decode("550e8400-e29b-41d4-a716-446655440000")
 
 ### Normalization
 
-`minLength` / `maxLength` / `fixedLength` count code points, but the same が is one code point composed (U+304C) and two decomposed (U+304B U+3099). Neither form is exotic: macOS filenames are decomposed, and some IME and clipboard paths deliver decomposed text. Chaining `normalize()` first makes the count the same whichever form arrives.
+`minLength` / `maxLength` / `fixedLength` count code points, but the same が is one code point composed (U+304C) and two decomposed (U+304B U+3099). Decomposed text is not exotic: filenames originating from HFS+, and some macOS, IME and clipboard paths, deliver it in that form. Chaining `normalize()` first makes the count the same whichever form arrives.
 
 ```java
 String nfd = "か\u3099";   // decomposed が (U+304B U+3099)
@@ -130,7 +130,9 @@ The default is NFC; `normalize(Normalizer.Form.NFKC)` selects another form. NFKC
 
 It is a transform like `trim()` and `toLowerCase()`, so it applies in the order written: `maxLength(20).normalize()` checks the length of the input as it arrived, then normalizes.
 
-Normalization only unifies canonically equivalent strings. A variation sequence (葛 + U+E0101) stays two code points under every form, and counting what a user perceives as one character needs grapheme cluster segmentation, which is a separate thing.
+How much a form unifies differs: NFC and NFD unify canonically equivalent strings and keep compatibility distinctions, while NFKC and NFKD fold compatibility equivalents as well. Under every form a variation sequence (葛 + U+E0101) stays two code points, and counting what a user perceives as one character needs grapheme cluster segmentation, which is a separate thing.
+
+The value is normalized; the arguments of later constraints are not. Java does not normalize string literals, so `oneOf("か\u3099")` keeps its decomposed argument and will not match a value normalized to NFC. Write the literal in the same form, or normalize it explicitly.
 
 ### URI / URL validation
 

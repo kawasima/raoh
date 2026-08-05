@@ -39,14 +39,17 @@ detailed from the current development cycle onward.
 
 - **`StringDecoder.normalize()` / `normalize(Normalizer.Form)`** — a transform that canonicalizes the
   decoded string, so the constraints written after it stop depending on how the client encoded the
-  text. The same が is one code point composed and two decomposed, and macOS filenames and some IME
-  and clipboard paths deliver the decomposed form, so a `maxLength(20)` on a name field otherwise
-  varies with the sender. The default is NFC; pass a `Normalizer.Form` for another — NFKC suits a
-  search key, where folding halfwidth ｱ into ア is wanted, and not a stored name. It is a transform
-  rather than an implicit step inside `string()`, which keeps the choice of form with the caller and
-  keeps the order meaningful: `maxLength(20).normalize()` checks the input as it arrived. It unifies
-  canonically equivalent strings and nothing else — a variation sequence such as 葛 followed by
-  U+E0101 is normalization-stable and still counts as two code points
+  text. The same が is one code point composed and two decomposed, and filenames originating from
+  HFS+ and some macOS, IME and clipboard paths deliver the decomposed form, so a `maxLength(20)` on
+  a name field otherwise varies with the sender. The default is NFC; pass a `Normalizer.Form` for
+  another. How much a form unifies differs — NFC and NFD unify canonically equivalent strings and
+  keep compatibility distinctions, while NFKC and NFKD fold compatibility equivalents as well, which
+  suits a search key and not a stored name. It is a transform rather than an implicit step inside
+  `string()`, which keeps the choice of form with the caller and keeps the order meaningful:
+  `maxLength(20).normalize()` checks the input as it arrived. Two things it does not do under any
+  form: a variation sequence such as 葛 followed by U+E0101 is normalization-stable and still counts
+  as two code points, and the arguments of later constraints are left alone — Java does not normalize
+  string literals, so a decomposed literal passed to `oneOf` will not match a value normalized to NFC
   ([#106](https://github.com/kawasima/raoh/issues/106)).
 
 ### Fixed
