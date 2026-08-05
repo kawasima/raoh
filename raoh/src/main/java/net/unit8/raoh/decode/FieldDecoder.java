@@ -8,6 +8,7 @@ import net.unit8.raoh.Result;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -18,7 +19,8 @@ import java.util.function.Predicate;
  * <p>Returned by {@code field(name, dec)} factory methods. The field name is used by
  * {@link net.unit8.raoh.decode.combinator.Combiner2#strict(java.util.function.BiFunction) Combiner#strict()}
  * to automatically collect the set of known fields, eliminating the need to enumerate
- * them manually in {@link Decoders#strict(Decoder, java.util.Set)}.
+ * them manually in {@link net.unit8.raoh.decode.map.MapDecoders#strict MapDecoders.strict}
+ * or {@code JsonDecoders.strict}.
  *
  * <p>The combinators that keep a decoder bound to the same field — {@link #map}, {@link #flatMap},
  * {@link #flatMapWithPath}, {@link #pipe}, and {@link #refine} — are overridden here with a
@@ -29,6 +31,13 @@ import java.util.function.Predicate;
  *
  * <p>{@link #list()} is deliberately not overridden: it changes the input type to
  * {@code List<I>}, so a single field name no longer describes what it decodes.
+ *
+ * <p>A field decoder may also carry an {@link InputFields}: how to enumerate the field names of
+ * the input it reads. {@code Combiner#strict()} recovers it from its components, which is what lets
+ * a strict schema reject unknown fields on any boundary without the combiner knowing which one it
+ * is on. The field factories in {@code MapDecoders} and {@code JsonDecoders} supply it; a decoder
+ * built with the two-argument {@link #named(String, Decoder)} does not, and a combiner made only of
+ * those cannot be made strict.
  *
  * <p><strong>Path contract:</strong> a {@code FieldDecoder} decodes its value at
  * {@code path.append(fieldName())}, and the overrides here report failures there rather than at
@@ -52,6 +61,18 @@ public interface FieldDecoder<I extends @Nullable Object, T extends @Nullable Ob
     String fieldName();
 
     /**
+     * Returns how to enumerate the field names of this decoder's input, when it is known.
+     *
+     * <p>Empty means this decoder is not bound to a known input boundary — it carries a field name
+     * but nothing that can list what the input actually contains.
+     *
+     * @return the input's field enumeration, or empty when unknown
+     */
+    default Optional<InputFields<I>> inputFields() {
+        return Optional.empty();
+    }
+
+    /**
      * Binds {@code dec} to {@code name}, producing a {@link FieldDecoder} that delegates every
      * decode to it.
      *
@@ -62,10 +83,36 @@ public interface FieldDecoder<I extends @Nullable Object, T extends @Nullable Ob
      * @return a field decoder bound to {@code name}
      */
     static <I extends @Nullable Object, T extends @Nullable Object> FieldDecoder<I, T> named(String name, Decoder<I, T> dec) {
+        return rebind(name, dec, Optional.empty());
+    }
+
+    /**
+     * Binds {@code dec} to {@code name} on a known input boundary, so that a combiner built from it
+     * can be made strict.
+     *
+     * @param <I>    the input type
+     * @param <T>    the decoded output type
+     * @param name   the field name to bind to
+     * @param dec    the decoder to delegate to
+     * @param fields how to enumerate the field names of the input
+     * @return a field decoder bound to {@code name} and to {@code fields}
+     */
+    static <I extends @Nullable Object, T extends @Nullable Object> FieldDecoder<I, T> named(
+            String name, Decoder<I, T> dec, InputFields<I> fields) {
+        return rebind(name, dec, Optional.of(fields));
+    }
+
+    private static <I extends @Nullable Object, T extends @Nullable Object> FieldDecoder<I, T> rebind(
+            String name, Decoder<I, T> dec, Optional<InputFields<I>> fields) {
         return new FieldDecoder<>() {
             @Override
             public String fieldName() {
                 return name;
+            }
+
+            @Override
+            public Optional<InputFields<I>> inputFields() {
+                return fields;
             }
 
             @Override
@@ -84,7 +131,7 @@ public interface FieldDecoder<I extends @Nullable Object, T extends @Nullable Ob
      */
     @Override
     default <U> FieldDecoder<I, U> map(Function<? super T, ? extends U> f) {
-        return named(fieldName(), Decoder.super.map(f));
+        return rebind(fieldName(), Decoder.super.map(f), inputFields());
     }
 
     /**
@@ -97,13 +144,13 @@ public interface FieldDecoder<I extends @Nullable Object, T extends @Nullable Ob
      */
     @Override
     default <U> FieldDecoder<I, U> flatMap(Function<? super T, ? extends Result<U>> f) {
-        return named(fieldName(), (in, path) -> this.decode(in, path).flatMap(t -> {
+        return rebind(fieldName(), (in, path) -> this.decode(in, path).flatMap(t -> {
             Result<U> r = f.apply(t);
             return switch (r) {
                 case Ok<U> ok -> ok;
                 case Err<U> err -> Result.err(err.issues().rebase(path.append(fieldName())));
             };
-        }));
+        }), inputFields());
     }
 
     /**
@@ -116,8 +163,8 @@ public interface FieldDecoder<I extends @Nullable Object, T extends @Nullable Ob
      */
     @Override
     default <U> FieldDecoder<I, U> flatMapWithPath(BiFunction<? super T, ? super Path, ? extends Result<U>> f) {
-        return named(fieldName(), (in, path) -> this.decode(in, path)
-                .flatMap(t -> f.apply(t, path.append(fieldName()))));
+        return rebind(fieldName(), (in, path) -> this.decode(in, path)
+                .flatMap(t -> f.apply(t, path.append(fieldName()))), inputFields());
     }
 
     /**
@@ -130,8 +177,8 @@ public interface FieldDecoder<I extends @Nullable Object, T extends @Nullable Ob
      */
     @Override
     default <U> FieldDecoder<I, U> pipe(Decoder<T, U> next) {
-        return named(fieldName(), (in, path) -> this.decode(in, path)
-                .flatMap(t -> next.decode(t, path.append(fieldName()))));
+        return rebind(fieldName(), (in, path) -> this.decode(in, path)
+                .flatMap(t -> next.decode(t, path.append(fieldName()))), inputFields());
     }
 
     /**

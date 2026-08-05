@@ -1,14 +1,10 @@
 package net.unit8.raoh.decode.combinator;
 
 import net.unit8.raoh.decode.Decoder;
-import net.unit8.raoh.decode.Decoders;
 import net.unit8.raoh.Err;
-import net.unit8.raoh.decode.FieldDecoder;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.Result;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 /**
  * Combines 4 decoders for applicative-style validation with error accumulation.
@@ -78,7 +74,7 @@ public record Combiner4<I, A, B, C, D>(Decoder<I, A> da, Decoder<I, B> db, Decod
      * @return a strict decoder that fails on unknown fields
      */
     public <T> Decoder<I, T> strict(Function4<A, B, C, D, T> f) {
-        return Decoders.strict(map(f), knownFields());
+        return CombinerSupport.strict(map(f), da, db, dc, dd);
     }
 
     /**
@@ -89,15 +85,7 @@ public record Combiner4<I, A, B, C, D>(Decoder<I, A> da, Decoder<I, B> db, Decod
      * @return a strict decoder that fails on unknown fields
      */
     public <T> Decoder<I, T> strictFlatMap(Function4<A, B, C, D, Result<T>> f) {
-        return Decoders.strict(flatMap(f), knownFields());
+        return CombinerSupport.strict(flatMap(f), da, db, dc, dd);
     }
 
-    private Set<String> knownFields() {
-        var fields = new LinkedHashSet<String>();
-        if (da instanceof FieldDecoder<I, A> fd) fields.add(fd.fieldName());
-        if (db instanceof FieldDecoder<I, B> fd) fields.add(fd.fieldName());
-        if (dc instanceof FieldDecoder<I, C> fd) fields.add(fd.fieldName());
-        if (dd instanceof FieldDecoder<I, D> fd) fields.add(fd.fieldName());
-        return Set.copyOf(fields);
-    }
 }

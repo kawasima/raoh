@@ -11,6 +11,7 @@ import net.unit8.raoh.Result;
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.decode.Decoders;
 import net.unit8.raoh.decode.FieldDecoder;
+import net.unit8.raoh.decode.InputFields;
 import net.unit8.raoh.decode.builtin.BoolDecoder;
 import net.unit8.raoh.decode.builtin.DecimalDecoder;
 import net.unit8.raoh.decode.builtin.DoubleDecoder;
@@ -60,6 +61,16 @@ import java.util.Set;
 public final class JsonDecoders {
 
     private JsonDecoders() {}
+
+    /**
+     * How to enumerate the property names of a JSON object input.
+     *
+     * <p>Every field factory here hands this to the {@link FieldDecoder} it builds, so a combiner
+     * assembled from them can be made strict. A {@code null} node, or one that is not an object,
+     * has no fields.
+     */
+    public static final InputFields<JsonNode> JSON_FIELDS =
+            in -> in != null && in.isObject() ? in.propertyNames() : List.of();
 
     // --- Primitive decoders ---
 
@@ -247,6 +258,11 @@ public final class JsonDecoders {
             public String fieldName() { return name; }
 
             @Override
+            public Optional<InputFields<JsonNode>> inputFields() {
+                return Optional.of(JSON_FIELDS);
+            }
+
+            @Override
             public Result<T> decode(JsonNode in, Path path) {
                 var fieldPath = path.append(name);
                 if (in == null || !in.isObject()) {
@@ -287,7 +303,7 @@ public final class JsonDecoders {
                 return Result.ok(Optional.empty());
             }
             return dec.decode(node, fieldPath).map(Optional::of);
-        });
+        }, JSON_FIELDS);
     }
 
     /**
@@ -341,7 +357,7 @@ public final class JsonDecoders {
                 return Result.ok(new Presence.PresentNull<>());
             }
             return dec.decode(node, fieldPath).map(v -> (Presence<T>) new Presence.Present<>(v));
-        });
+        }, JSON_FIELDS);
     }
 
     /**
@@ -385,7 +401,7 @@ public final class JsonDecoders {
                 return Result.<@Nullable T>ok(null);
             }
             return dec.decode(node, fieldPath);
-        });
+        }, JSON_FIELDS);
     }
 
     // --- list / map ---
@@ -530,8 +546,9 @@ public final class JsonDecoders {
     /**
      * Wraps a decoder to reject unknown fields not in the given set.
      *
-     * <p>This overrides the core {@link Decoders#strict} to add JsonNode object support:
-     * unknown properties in a JSON object are reported as {@code unknown_field} issues.
+     * <p>The JSON-boundary convenience over
+     * {@link Decoders#strict(Decoder, Set, InputFields) Decoders.strict}: unknown properties in a
+     * JSON object are reported as {@code unknown_field} issues.
      *
      * @param <T>         the decoded type
      * @param dec         the underlying decoder
@@ -539,25 +556,7 @@ public final class JsonDecoders {
      * @return a strict decoder
      */
     public static <T> Decoder<JsonNode, T> strict(Decoder<JsonNode, T> dec, Set<String> knownFields) {
-        return (in, path) -> {
-            var issues = Issues.EMPTY;
-            if (in != null && in.isObject()) {
-                for (var name : in.propertyNames()) {
-                    if (!knownFields.contains(name)) {
-                        issues = issues.add(Issue.of(path.append(name), ErrorCodes.UNKNOWN_FIELD,
-                                "unknown field", Map.of("field", name)));
-                    }
-                }
-            }
-            var decResult = dec.decode(in, path);
-            if (issues.isEmpty()) {
-                return decResult;
-            }
-            return switch (decResult) {
-                case Ok<T> _ -> Result.err(issues);
-                case Err<T> err -> Result.err(err.issues().merge(issues));
-            };
-        };
+        return Decoders.strict(dec, knownFields, JSON_FIELDS);
     }
 
     // --- Delegate combine to Decoders ---

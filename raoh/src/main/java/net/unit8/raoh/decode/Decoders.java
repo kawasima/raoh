@@ -652,24 +652,33 @@ public final class Decoders {
     }
 
     /**
-     * Wraps a decoder to reject unknown fields not in the given set.
+     * Wraps a decoder to reject fields that are present in the input but not in
+     * {@code knownFields}.
+     *
+     * <p>{@code inputFields} is what makes this work on any boundary: it decides how the field
+     * names of {@code I} are enumerated, so this method never needs to know whether the input is a
+     * {@code Map}, a {@code JsonNode}, or something else. {@code MapDecoders.strict} and
+     * {@code JsonDecoders.strict} are the boundary-specific conveniences over this one.
+     *
+     * <p>Unknown fields are reported as {@link ErrorCodes#UNKNOWN_FIELD} issues at the field's path
+     * and merged with whatever {@code dec} itself reports, so a payload with both an unknown field
+     * and an invalid known one produces both.
      *
      * @param <I>         the input type
      * @param <T>         the output type
      * @param dec         the underlying decoder
      * @param knownFields the set of allowed field names
+     * @param inputFields how to enumerate the field names present in the input
      * @return a strict decoder that fails on unknown fields
      */
-    public static <I extends @Nullable Object, T> Decoder<I, T> strict(Decoder<I, T> dec, Set<String> knownFields) {
+    public static <I extends @Nullable Object, T> Decoder<I, T> strict(
+            Decoder<I, T> dec, Set<String> knownFields, InputFields<I> inputFields) {
         return (in, path) -> {
             var issues = Issues.EMPTY;
-            if (in instanceof Map<?, ?> rawMap) {
-                for (var key : rawMap.keySet()) {
-                    var name = String.valueOf(key);
-                    if (!knownFields.contains(name)) {
-                        issues = issues.add(Issue.of(path.append(name), ErrorCodes.UNKNOWN_FIELD,
-                                "unknown field", Map.of("field", name)));
-                    }
+            for (var name : inputFields.fieldNames(in)) {
+                if (!knownFields.contains(name)) {
+                    issues = issues.add(Issue.of(path.append(name), ErrorCodes.UNKNOWN_FIELD,
+                            "unknown field", Map.of("field", name)));
                 }
             }
 

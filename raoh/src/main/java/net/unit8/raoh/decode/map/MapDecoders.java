@@ -3,6 +3,7 @@ package net.unit8.raoh.decode.map;
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.decode.Decoders;
 import net.unit8.raoh.decode.FieldDecoder;
+import net.unit8.raoh.decode.InputFields;
 import net.unit8.raoh.decode.ObjectDecoders;
 import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Path;
@@ -32,6 +33,15 @@ public final class MapDecoders {
 
     private MapDecoders() {}
 
+    /**
+     * How to enumerate the keys of a {@code Map} input.
+     *
+     * <p>Every field factory here hands this to the {@link FieldDecoder} it builds, so a combiner
+     * assembled from them can be made strict. A {@code null} map has no keys.
+     */
+    public static final InputFields<Map<String, Object>> MAP_FIELDS =
+            in -> in == null ? List.of() : List.copyOf(in.keySet());
+
     // --- field / optionalField / optionalNullableField ---
 
     /**
@@ -49,6 +59,11 @@ public final class MapDecoders {
         return new FieldDecoder<>() {
             @Override
             public String fieldName() { return name; }
+
+            @Override
+            public Optional<InputFields<Map<String, Object>>> inputFields() {
+                return Optional.of(MAP_FIELDS);
+            }
 
             @Override
             public Result<T> decode(Map<String, Object> in, Path path) {
@@ -82,7 +97,7 @@ public final class MapDecoders {
                 return Result.ok(Optional.empty());
             }
             return dec.decode(in.get(name), fieldPath).map(Optional::of);
-        });
+        }, MAP_FIELDS);
     }
 
     /**
@@ -174,7 +189,7 @@ public final class MapDecoders {
             }
             return dec.decode(value, fieldPath)
                     .map(v -> (Presence<T>) new Presence.Present<>(v));
-        });
+        }, MAP_FIELDS);
     }
 
     /**
@@ -215,7 +230,8 @@ public final class MapDecoders {
         // an absent key reaches nullable(dec) as a null value, which decodes to null.
         var inner = field(name, ObjectDecoders.nullable(dec));
         return FieldDecoder.named(name,
-                (in, path) -> in == null ? Result.<@Nullable T>ok(null) : inner.decode(in, path));
+                (in, path) -> in == null ? Result.<@Nullable T>ok(null) : inner.decode(in, path),
+                MAP_FIELDS);
     }
 
     // --- discriminate ---
@@ -276,7 +292,7 @@ public final class MapDecoders {
      * @return a decoder that fails with {@code unknown_field} for unrecognized keys
      */
     public static <T> Decoder<Map<String, Object>, T> strict(Decoder<Map<String, Object>, T> dec, java.util.Set<String> knownFields) {
-        return Decoders.strict(dec, knownFields);
+        return Decoders.strict(dec, knownFields, MAP_FIELDS);
     }
 
     // --- Delegate combine to Decoders ---
