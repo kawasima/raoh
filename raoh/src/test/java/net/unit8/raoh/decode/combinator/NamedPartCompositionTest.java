@@ -5,7 +5,9 @@ import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Issue;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.Result;
+import net.unit8.raoh.Path;
 import net.unit8.raoh.decode.Decoder;
+import net.unit8.raoh.decode.Decoders;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -120,6 +122,12 @@ class NamedPartCompositionTest {
      * declaration and the boundary scanner, so {@code strict()} still knows the schema afterwards.
      * The path matrix above proves the failure location survives each combinator; this proves the
      * metadata does.
+     *
+     * <p>The sibling component deliberately carries no scanner. {@code CombinerSupport} takes the
+     * first one any component offers, so pairing the transformed component with an ordinary
+     * {@code field(...)} would let the sibling's scanner cover for a dropped one — the assertion
+     * would pass while testing nothing. Here the transformed component is the only possible source,
+     * so rejecting {@code extra} can only mean it kept its own.
      */
     @ParameterizedTest(name = "strict() still works after {0}")
     @MethodSource("passingCombinators")
@@ -127,7 +135,10 @@ class NamedPartCompositionTest {
             String label,
             UnaryOperator<CombinePart<Map<String, Object>, Integer>> combinator) {
 
-        var dec = combine(field("name", string()), combinator.apply(field("age", int_())))
+        var siblingWithoutScanner = CombinePart.named("name",
+                (Map<String, Object> in, Path fieldPath) -> string().decode(in.get("name"), fieldPath));
+
+        var dec = Decoders.combine(siblingWithoutScanner, combinator.apply(field("age", int_())))
                 .strict((name, age) -> name + age);
 
         switch (dec.decode(Map.of("name", "Taro", "age", 20))) {
