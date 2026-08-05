@@ -25,16 +25,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
- * Every combinator on a named component must report at the field's path.
+ * What survives composing a named component: the failure path, and the schema metadata.
  *
- * <p>This is the regression surface from #109, carried over to the {@code CombinePart} model. The
- * defect then was that composition moved the failure path: a decoder reported a type mismatch at
- * {@code /age} but a refinement failure on the enclosing object, and a level down the failure
- * landed on {@code /user} rather than {@code /user/age}. The mechanism has changed — a named part
- * appends its own name once, and the combinators rebuild the part around a transformed inner
- * decoder — so the same matrix is re-asserted against the new implementation rather than assumed.
+ * <p>The path half is the regression surface from #109. The defect then was that composition moved
+ * the failure path — a decoder reported a type mismatch at {@code /age} but a refinement failure on
+ * the enclosing object, and a level down the failure landed on {@code /user} rather than
+ * {@code /user/age}. The mechanism has changed since, so the matrix is re-asserted against the new
+ * implementation rather than assumed.
+ *
+ * <p>The metadata half is the central claim of the {@code CombinePart} model, and the reason
+ * #114 exists: a component must not lose the field it declares, or the boundary scanner, on the way
+ * through a combinator. Both matrices run over every combinator rather than a sample, because a new
+ * one added without care is exactly how both defects arose.
  */
-class NamedPartPathTest {
+class NamedPartCompositionTest {
 
     private static final Map<String, Object> INPUT = Map.of("age", 20);
 
@@ -83,6 +87,58 @@ class NamedPartPathTest {
         withName.put("name", "Taro");
         assertEquals("/age", firstIssue(combined.decode(Map.copyOf(withName))).path().toJsonPointer(),
                 label + " reported at the wrong path, inside a combiner");
+    }
+
+    /** Each combinator, applied so that it succeeds, for checking what survives it. */
+    static Stream<Arguments> passingCombinators() {
+        return Stream.of(
+                Arguments.of("no combinator",
+                        (UnaryOperator<CombinePart<Map<String, Object>, Integer>>) p -> p),
+                Arguments.of("map",
+                        (UnaryOperator<CombinePart<Map<String, Object>, Integer>>) p -> p.map(n -> n * 2)),
+                Arguments.of("flatMap",
+                        (UnaryOperator<CombinePart<Map<String, Object>, Integer>>) p -> p.flatMap(Result::ok)),
+                Arguments.of("flatMapWithPath",
+                        (UnaryOperator<CombinePart<Map<String, Object>, Integer>>)
+                                p -> p.flatMapWithPath((n, path) -> Result.ok(n))),
+                Arguments.of("pipe",
+                        (UnaryOperator<CombinePart<Map<String, Object>, Integer>>)
+                                p -> p.pipe((n, path) -> Result.ok(n))),
+                Arguments.of("refine",
+                        (UnaryOperator<CombinePart<Map<String, Object>, Integer>>)
+                                p -> p.refine(n -> true, "unused", "unused")),
+                Arguments.of("refine with meta",
+                        (UnaryOperator<CombinePart<Map<String, Object>, Integer>>)
+                                p -> p.refine(n -> true, "unused", "unused", n -> Map.of("actual", n))),
+                Arguments.of("refine with custom failure",
+                        (UnaryOperator<CombinePart<Map<String, Object>, Integer>>)
+                                p -> p.refine(n -> true, (n, path) -> Result.fail(path, "unused", "unused"))));
+    }
+
+    /**
+     * The central claim of the {@code CombinePart} model: composition preserves the field
+     * declaration and the boundary scanner, so {@code strict()} still knows the schema afterwards.
+     * The path matrix above proves the failure location survives each combinator; this proves the
+     * metadata does.
+     */
+    @ParameterizedTest(name = "strict() still works after {0}")
+    @MethodSource("passingCombinators")
+    void everyCombinatorKeepsTheSchemaMetadata(
+            String label,
+            UnaryOperator<CombinePart<Map<String, Object>, Integer>> combinator) {
+
+        var dec = combine(field("name", string()), combinator.apply(field("age", int_())))
+                .strict((name, age) -> name + age);
+
+        switch (dec.decode(Map.of("name", "Taro", "age", 20))) {
+            case Ok(_) -> { }
+            case Err(var issues) -> fail(label + " lost the declaration: " + issues.asList());
+        }
+
+        assertEquals("/extra",
+                firstIssue(dec.decode(Map.of("name", "Taro", "age", 20, "extra", true)))
+                        .path().toJsonPointer(),
+                label + " lost the boundary scanner");
     }
 
     @Test

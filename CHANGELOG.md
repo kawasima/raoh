@@ -34,7 +34,7 @@ detailed from the current development cycle onward.
   representation rather than only on `Map`. `MapDecoders.MAP_FIELDS` and `JsonDecoders.JSON_FIELDS`
   are the built-in ones; implement it to bring `strict` to a boundary the library does not cover,
   and pass it to `Decoders.strict(dec, knownFields, inputFields)` or to
-  `FieldDecoder.named(name, decoder, inputFields)`
+  `CombinePart.named(name, decoder, inputFields)`
   ([#113](https://github.com/kawasima/raoh/issues/113)).
 
 ### Fixed
