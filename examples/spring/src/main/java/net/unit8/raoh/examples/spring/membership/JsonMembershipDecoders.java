@@ -46,8 +46,8 @@ public final class JsonMembershipDecoders {
     public static final JsonDecoder<CreateGroupCommand> CREATE_GROUP = wrapJson(
             combine(
                     field("name", string().trim().nonBlank().maxLength(100)),
-                    Decoders.withDefault(
-                            field("description", string().maxLength(500)), "")
+                    field("description",
+                            Decoders.withDefault(string().maxLength(500), ""))
             ).map(CreateGroupCommand::new));
 
     /**
@@ -60,9 +60,8 @@ public final class JsonMembershipDecoders {
             combine(
                     // long_() parses a JSON number as long; map wraps it in UserId.
                     field("userId", long_().map(UserId::new)),
-                    Decoders.withDefault(
-                            field("role", enumOf(MembershipRole.class)),
-                            MembershipRole.MEMBER)
+                    field("role",
+                            Decoders.withDefault(enumOf(MembershipRole.class), MembershipRole.MEMBER))
             ).map(AddMemberCommand::new));
 
     // ── Command records ─────────────────────────────────────────────
