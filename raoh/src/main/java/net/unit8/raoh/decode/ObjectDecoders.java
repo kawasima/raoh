@@ -26,16 +26,20 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Factory of primitive decoders for raw {@code Object} input.
  *
  * <p>These decoders accept a raw {@code Object} value and perform a runtime type check,
- * returning the value as the expected type or a {@code type_mismatch} error.
+ * returning the value as the expected type or a {@code type_mismatch} error. The temporal
+ * decoders additionally accept the {@code java.sql} counterpart of their type and ISO-8601 text,
+ * so they read both what a JDBC driver hands over and what {@code ObjectEncoders} writes.
  * They are used as building blocks for boundary-specific decoder factories such as
  * {@code MapDecoders} and {@code JooqRecordDecoders}, and can also be used directly
  * in custom decoder classes.
@@ -241,9 +245,11 @@ public final class ObjectDecoders {
     /**
      * Creates a {@link LocalDate} decoder.
      *
-     * <p>Accepts {@link LocalDate} values directly, and converts {@link java.sql.Date}
-     * via {@link java.sql.Date#toLocalDate()}. Returns {@code required} if the value
-     * is {@code null}, and {@code type_mismatch} if the value is neither type.
+     * <p>Accepts {@link LocalDate} values directly, converts {@link java.sql.Date}
+     * via {@link java.sql.Date#toLocalDate()}, and parses a {@link String} as ISO-8601 text —
+     * the representation {@code ObjectEncoders.date()} writes. Returns {@code required} if the
+     * value is {@code null}, {@code invalid_format} if the text does not parse, and
+     * {@code type_mismatch} for any other type.
      *
      * @return a temporal decoder for {@code Object} input producing {@link LocalDate}
      */
@@ -252,6 +258,7 @@ public final class ObjectDecoders {
             case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
             case LocalDate d -> Result.ok(d);
             case java.sql.Date sd -> Result.ok(sd.toLocalDate());
+            case String s -> parseText(path, s, LocalDate::parse, "not a valid date (yyyy-MM-dd)");
             default -> typeMismatch(path, "date", in);
         });
     }
@@ -259,9 +266,11 @@ public final class ObjectDecoders {
     /**
      * Creates a {@link LocalTime} decoder.
      *
-     * <p>Accepts {@link LocalTime} values directly, and converts {@link java.sql.Time}
-     * via {@link java.sql.Time#toLocalTime()}. Returns {@code required} if the value
-     * is {@code null}, and {@code type_mismatch} if the value is neither type.
+     * <p>Accepts {@link LocalTime} values directly, converts {@link java.sql.Time}
+     * via {@link java.sql.Time#toLocalTime()}, and parses a {@link String} as ISO-8601 text —
+     * the representation {@code ObjectEncoders.time()} writes. Returns {@code required} if the
+     * value is {@code null}, {@code invalid_format} if the text does not parse, and
+     * {@code type_mismatch} for any other type.
      *
      * @return a temporal decoder for {@code Object} input producing {@link LocalTime}
      */
@@ -270,6 +279,7 @@ public final class ObjectDecoders {
             case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
             case LocalTime t -> Result.ok(t);
             case java.sql.Time st -> Result.ok(st.toLocalTime());
+            case String s -> parseText(path, s, LocalTime::parse, "not a valid time (HH:mm:ss)");
             default -> typeMismatch(path, "time", in);
         });
     }
@@ -277,21 +287,33 @@ public final class ObjectDecoders {
     /**
      * Creates a {@link LocalDateTime} decoder.
      *
-     * <p>Returns {@code required} if the value is {@code null}, and {@code type_mismatch}
-     * if the value is not a {@link LocalDateTime}.
+     * <p>Accepts {@link LocalDateTime} values directly, converts {@link java.sql.Timestamp}
+     * via {@link java.sql.Timestamp#toLocalDateTime()}, and parses a {@link String} as ISO-8601
+     * text — the representation {@code ObjectEncoders.dateTime()} writes. Returns
+     * {@code required} if the value is {@code null}, {@code invalid_format} if the text does not
+     * parse, and {@code type_mismatch} for any other type.
      *
      * @return a temporal decoder for {@code Object} input producing {@link LocalDateTime}
      */
     public static TemporalDecoder<@Nullable Object, LocalDateTime> dateTime() {
-        return temporalOf(LocalDateTime.class, "date-time");
+        return new TemporalDecoder<>((in, path) -> switch (in) {
+            case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            case LocalDateTime dt -> Result.ok(dt);
+            case java.sql.Timestamp ts -> Result.ok(ts.toLocalDateTime());
+            case String s -> parseText(path, s, LocalDateTime::parse,
+                    "not a valid ISO-8601 local date-time (e.g., 2024-01-15T10:30 or 2024-01-15T10:30:45)");
+            default -> typeMismatch(path, "date-time", in);
+        });
     }
 
     /**
      * Creates an {@link Instant} decoder.
      *
-     * <p>Accepts {@link Instant} values directly, and converts {@link java.sql.Timestamp}
-     * via {@link java.sql.Timestamp#toInstant()}. Returns {@code required} if the value
-     * is {@code null}, and {@code type_mismatch} if the value is neither type.
+     * <p>Accepts {@link Instant} values directly, converts {@link java.sql.Timestamp}
+     * via {@link java.sql.Timestamp#toInstant()}, and parses a {@link String} as ISO-8601 text —
+     * the representation {@code ObjectEncoders.iso8601()} writes. Returns {@code required} if the
+     * value is {@code null}, {@code invalid_format} if the text does not parse, and
+     * {@code type_mismatch} for any other type.
      *
      * @return a temporal decoder for {@code Object} input producing {@link Instant}
      */
@@ -300,6 +322,7 @@ public final class ObjectDecoders {
             case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
             case Instant i -> Result.ok(i);
             case java.sql.Timestamp ts -> Result.ok(ts.toInstant());
+            case String s -> parseText(path, s, Instant::parse, "not a valid ISO 8601 instant");
             default -> typeMismatch(path, "instant", in);
         });
     }
@@ -307,13 +330,26 @@ public final class ObjectDecoders {
     /**
      * Creates an {@link OffsetDateTime} decoder.
      *
-     * <p>Returns {@code required} if the value is {@code null}, and {@code type_mismatch}
-     * if the value is not an {@link OffsetDateTime}.
+     * <p>Accepts {@link OffsetDateTime} values directly and parses a {@link String} as ISO-8601
+     * text — the representation {@code ObjectEncoders.offsetDateTime()} writes. Returns
+     * {@code required} if the value is {@code null}, {@code invalid_format} if the text does not
+     * parse, and {@code type_mismatch} for any other type.
+     *
+     * <p>Unlike the other temporal decoders this one has no {@code java.sql} conversion.
+     * {@link java.sql.Timestamp} carries no offset, so converting one would mean picking a zone
+     * on the caller's behalf; JDBC 4.2 reads {@code TIMESTAMP WITH TIME ZONE} as an
+     * {@link OffsetDateTime} directly.
      *
      * @return a temporal decoder for {@code Object} input producing {@link OffsetDateTime}
      */
     public static TemporalDecoder<@Nullable Object, OffsetDateTime> offsetDateTime() {
-        return temporalOf(OffsetDateTime.class, "offset-date-time");
+        return new TemporalDecoder<>((in, path) -> switch (in) {
+            case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            case OffsetDateTime odt -> Result.ok(odt);
+            case String s -> parseText(path, s, OffsetDateTime::parse,
+                    "not a valid ISO-8601 offset date-time (e.g., 2024-01-15T10:30:00+09:00)");
+            default -> typeMismatch(path, "offset-date-time", in);
+        });
     }
 
     private static <T> Result<T> typeMismatch(Path path, String expected, Object actual) {
@@ -321,18 +357,17 @@ public final class ObjectDecoders {
                 Map.of("expected", expected, "actual", actual.getClass().getSimpleName()));
     }
 
-    private static <T extends Comparable<? super T>> TemporalDecoder<@Nullable Object, T> temporalOf(
-            Class<T> type, String typeName) {
-        return new TemporalDecoder<>((in, path) -> {
-            if (in == null) {
-                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
-            }
-            if (type.isInstance(in)) {
-                return Result.ok(type.cast(in));
-            }
-            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected " + typeName,
-                    Map.of("expected", typeName, "actual", in.getClass().getSimpleName()));
-        });
+    /**
+     * Parses ISO-8601 text with {@code parse}, reporting {@code invalid_format} on failure with
+     * the same message {@code StringDecoder} uses, so the two routes to a temporal value are
+     * indistinguishable from the caller's side.
+     */
+    private static <T> Result<T> parseText(Path path, String text, Function<String, T> parse, String message) {
+        try {
+            return Result.ok(parse.apply(text));
+        } catch (DateTimeParseException e) {
+            return Result.fail(path, ErrorCodes.INVALID_FORMAT, message);
+        }
     }
 
     // --- nullable / list / map ---
