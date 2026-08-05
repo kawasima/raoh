@@ -10,6 +10,7 @@ import net.unit8.raoh.Path;
 import net.unit8.raoh.Presence;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.decode.Decoder;
+import net.unit8.raoh.decode.combinator.CombinePart;
 import net.unit8.raoh.decode.Decoders;
 import org.junit.jupiter.api.Test;
 
@@ -887,7 +888,7 @@ class MapDecoderTest {
     @Test
     void discriminateDispatchesCorrectly() {
         Decoder<Map<String, Object>, Shape> dec = discriminate("type", Map.of(
-                "circle", field("radius", decimal()).map(r -> new Circle(r.doubleValue())),
+                "circle", field("radius", decimal()).map(r -> new Circle(r.doubleValue())).asDecoder(),
                 "rect", combine(field("width", decimal()), field("height", decimal()))
                         .map((w, h) -> new Rect(w.doubleValue(), h.doubleValue()))
         ));
@@ -904,7 +905,7 @@ class MapDecoderTest {
     @Test
     void discriminateUnknownTag() {
         Decoder<Map<String, Object>, Shape> dec = discriminate("type", Map.of(
-                "circle", field("radius", decimal()).map(r -> new Circle(r.doubleValue()))
+                "circle", field("radius", decimal()).map(r -> new Circle(r.doubleValue())).asDecoder()
         ));
 
         var result = dec.decode(Map.of("type", "triangle", "sides", 3));
@@ -921,7 +922,7 @@ class MapDecoderTest {
     @Test
     void discriminateMissingTagField() {
         Decoder<Map<String, Object>, Shape> dec = discriminate("type", Map.of(
-                "circle", field("radius", decimal()).map(r -> new Circle(r.doubleValue()))
+                "circle", field("radius", decimal()).map(r -> new Circle(r.doubleValue())).asDecoder()
         ));
 
         var result = dec.decode(Map.of("radius", 5.0));
@@ -935,11 +936,11 @@ class MapDecoderTest {
     void typedDiscriminateIsCastFreeAndMatchesMapForm() {
         // Cast-free: the variant arms need no (Shape) up-cast; T is pinned by the target type.
         Decoder<Map<String, Object>, Shape> typed = discriminate("type",
-                variant("circle", field("radius", decimal()).map(r -> new Circle(r.doubleValue()))),
+                variant("circle", field("radius", decimal()).map(r -> new Circle(r.doubleValue())).asDecoder()),
                 variant("rect", combine(field("width", decimal()), field("height", decimal()))
                         .map((w, h) -> new Rect(w.doubleValue(), h.doubleValue()))));
         Decoder<Map<String, Object>, Shape> mapForm = discriminate("type", Map.of(
-                "circle", field("radius", decimal()).map(r -> new Circle(r.doubleValue())),
+                "circle", field("radius", decimal()).map(r -> new Circle(r.doubleValue())).asDecoder(),
                 "rect", combine(field("width", decimal()), field("height", decimal()))
                         .map((w, h) -> new Rect(w.doubleValue(), h.doubleValue()))));
 
@@ -953,7 +954,7 @@ class MapDecoderTest {
 
     @Test
     void combineListDecoder() {
-        var dec = combine(List.<Decoder<Map<String, Object>, ?>>of(
+        var dec = combine(List.<CombinePart<Map<String, Object>, ?>>of(
                 field("a", string()),
                 field("b", string()),
                 field("c", string())

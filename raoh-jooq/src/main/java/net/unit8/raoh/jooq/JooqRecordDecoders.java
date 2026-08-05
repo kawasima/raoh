@@ -5,6 +5,7 @@ import net.unit8.raoh.Presence;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.decode.Decoders;
+import net.unit8.raoh.decode.combinator.CombinePart;
 import net.unit8.raoh.decode.ObjectDecoders;
 import net.unit8.raoh.decode.combinator.*;
 
@@ -40,9 +41,8 @@ public final class JooqRecordDecoders {
      * @param dec  decoder for the raw value
      * @return a decoder for the named field
      */
-    public static <T> JooqRecordDecoder<T> field(String name, Decoder<@Nullable Object, T> dec) {
-        return (in, path) -> {
-            var fieldPath = path.append(name);
+    public static <T> CombinePart<org.jooq.Record, T> field(String name, Decoder<@Nullable Object, T> dec) {
+        return CombinePart.named(name, (in, fieldPath) -> {
             if (in == null) {
                 return Result.fail(fieldPath, ErrorCodes.REQUIRED, "is required");
             }
@@ -50,7 +50,7 @@ public final class JooqRecordDecoders {
                 return Result.fail(fieldPath, ErrorCodes.MISSING_FIELD, "field '" + name + "' not found in record");
             }
             return dec.decode(in.get(name), fieldPath);
-        };
+        });
     }
 
     /**
@@ -62,14 +62,13 @@ public final class JooqRecordDecoders {
      * @param dec  decoder for the raw value
      * @return a decoder that produces {@code Optional<T>}
      */
-    public static <T> JooqRecordDecoder<Optional<T>> optionalField(String name, Decoder<@Nullable Object, T> dec) {
-        return (in, path) -> {
-            var fieldPath = path.append(name);
+    public static <T> CombinePart<org.jooq.Record, Optional<T>> optionalField(String name, Decoder<@Nullable Object, T> dec) {
+        return CombinePart.named(name, (in, fieldPath) -> {
             if (in == null || in.field(name) == null) {
                 return Result.ok(Optional.empty());
             }
             return dec.decode(in.get(name), fieldPath).map(Optional::of);
-        };
+        });
     }
 
     /**
@@ -81,9 +80,8 @@ public final class JooqRecordDecoders {
      * @param dec  decoder for the raw value when non-null
      * @return a decoder that produces {@link Presence Presence&lt;T&gt;}
      */
-    public static <T> JooqRecordDecoder<Presence<T>> optionalNullableField(String name, Decoder<@Nullable Object, T> dec) {
-        return (in, path) -> {
-            var fieldPath = path.append(name);
+    public static <T> CombinePart<org.jooq.Record, Presence<T>> optionalNullableField(String name, Decoder<@Nullable Object, T> dec) {
+        return CombinePart.named(name, (in, fieldPath) -> {
             if (in == null || in.field(name) == null) {
                 return Result.ok(new Presence.Absent<>());
             }
@@ -93,7 +91,7 @@ public final class JooqRecordDecoders {
             }
             return dec.decode(value, fieldPath)
                     .map(v -> (Presence<T>) new Presence.Present<>(v));
-        };
+        });
     }
 
     /**
@@ -117,9 +115,8 @@ public final class JooqRecordDecoders {
     // Returns a JooqRecordDecoder<@Nullable T>. NullAway cannot verify the type-parameter nullness of
     // the @Nullable T return, the same honest widening already suppressed in ObjectDecoders.nullable.
     @SuppressWarnings("NullAway")
-    public static <T> JooqRecordDecoder<@Nullable T> nullableField(String name, Decoder<@Nullable Object, T> dec) {
-        return (in, path) -> {
-            var fieldPath = path.append(name);
+    public static <T> CombinePart<org.jooq.Record, @Nullable T> nullableField(String name, Decoder<@Nullable Object, T> dec) {
+        return CombinePart.named(name, (in, fieldPath) -> {
             // A null record or absent column is treated as absent (-> null), consistent with
             // optionalField / optionalNullableField (field alone would reject it as a required error).
             if (in == null || in.field(name) == null) {
@@ -130,11 +127,12 @@ public final class JooqRecordDecoders {
                 return Result.<@Nullable T>ok(null);
             }
             return dec.decode(value, fieldPath);
-        };
+        });
     }
 
     /**
-     * Applies another {@link JooqRecordDecoder} to the same {@link org.jooq.Record}.
+     * Lifts a decoder that reads the same whole {@link org.jooq.Record} into a {@code combine}
+     * component.
      *
      * <p>This is the primary building block for mapping a flat JOIN result into a
      * nested domain type. Each sub-decoder reads its own subset of columns from
@@ -143,17 +141,17 @@ public final class JooqRecordDecoders {
      * <pre>{@code
      * // SELECT u.name, u.email, a.city, a.zip FROM users u JOIN addresses a ...
      * Decoder<Record, UserWithAddress> dec = combine(
-     *     nested(userDecoder),
-     *     nested(addressDecoder)
+     *     flat(userDecoder),
+     *     flat(addressDecoder)
      * ).map(UserWithAddress::new);
      * }</pre>
      *
      * @param <T> the decoded value type
-     * @param dec the decoder to apply to the same record
-     * @return a decoder that delegates to {@code dec}
+     * @param dec the decoder to read the same record with
+     * @return a combine component reading the whole record
      */
-    public static <T> JooqRecordDecoder<T> nested(JooqRecordDecoder<T> dec) {
-        return dec::decode;
+    public static <T> CombinePart<org.jooq.Record, T> flat(Decoder<org.jooq.Record, T> dec) {
+        return CombinePart.flat(dec);
     }
 
     // --- discriminate ---
@@ -172,7 +170,7 @@ public final class JooqRecordDecoders {
     public static <T> JooqRecordDecoder<T> discriminate(
             String fieldName,
             Map<String, Decoder<org.jooq.Record, ? extends T>> variants) {
-        return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.string()), variants)::decode;
+        return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.string()).asDecoder(), variants)::decode;
     }
 
     /**
@@ -202,7 +200,7 @@ public final class JooqRecordDecoders {
     @SafeVarargs
     public static <T> JooqRecordDecoder<T> discriminate(
             String fieldName, Decoders.Variant<org.jooq.Record, ? extends T>... variants) {
-        return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.string()), variants)::decode;
+        return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.string()).asDecoder(), variants)::decode;
     }
 
     // --- combine delegates ---
@@ -220,7 +218,7 @@ public final class JooqRecordDecoders {
      * @return a combiner that can be finished with {@code map}
      */
     public static <A, B> Combiner2<org.jooq.Record, A, B> combine(
-            Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db) {
+            CombinePart<org.jooq.Record, A> da, CombinePart<org.jooq.Record, B> db) {
         return Decoders.combine(da, db);
     }
 
@@ -234,11 +232,11 @@ public final class JooqRecordDecoders {
      * @param db  the second decoder
      * @param dc  the third decoder
      * @return a combiner that can be finished with {@code map}
-     * @see Decoders#combine(Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C> Combiner3<org.jooq.Record, A, B, C> combine(
-            Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db,
-            Decoder<org.jooq.Record, C> dc) {
+            CombinePart<org.jooq.Record, A> da, CombinePart<org.jooq.Record, B> db,
+            CombinePart<org.jooq.Record, C> dc) {
         return Decoders.combine(da, db, dc);
     }
 
@@ -254,11 +252,11 @@ public final class JooqRecordDecoders {
      * @param dc  the third decoder
      * @param dd  the fourth decoder
      * @return a combiner that can be finished with {@code map}
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D> Combiner4<org.jooq.Record, A, B, C, D> combine(
-            Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db,
-            Decoder<org.jooq.Record, C> dc, Decoder<org.jooq.Record, D> dd) {
+            CombinePart<org.jooq.Record, A> da, CombinePart<org.jooq.Record, B> db,
+            CombinePart<org.jooq.Record, C> dc, CombinePart<org.jooq.Record, D> dd) {
         return Decoders.combine(da, db, dc, dd);
     }
 
@@ -276,12 +274,12 @@ public final class JooqRecordDecoders {
      * @param dd  the fourth decoder
      * @param de  the fifth decoder
      * @return a combiner that can be finished with {@code map}
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E> Combiner5<org.jooq.Record, A, B, C, D, E> combine(
-            Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db,
-            Decoder<org.jooq.Record, C> dc, Decoder<org.jooq.Record, D> dd,
-            Decoder<org.jooq.Record, E> de) {
+            CombinePart<org.jooq.Record, A> da, CombinePart<org.jooq.Record, B> db,
+            CombinePart<org.jooq.Record, C> dc, CombinePart<org.jooq.Record, D> dd,
+            CombinePart<org.jooq.Record, E> de) {
         return Decoders.combine(da, db, dc, dd, de);
     }
 
@@ -301,12 +299,12 @@ public final class JooqRecordDecoders {
      * @param de  the fifth decoder
      * @param df  the sixth decoder
      * @return a combiner that can be finished with {@code map}
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F> Combiner6<org.jooq.Record, A, B, C, D, E, F> combine(
-            Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db,
-            Decoder<org.jooq.Record, C> dc, Decoder<org.jooq.Record, D> dd,
-            Decoder<org.jooq.Record, E> de, Decoder<org.jooq.Record, F> df) {
+            CombinePart<org.jooq.Record, A> da, CombinePart<org.jooq.Record, B> db,
+            CombinePart<org.jooq.Record, C> dc, CombinePart<org.jooq.Record, D> dd,
+            CombinePart<org.jooq.Record, E> de, CombinePart<org.jooq.Record, F> df) {
         return Decoders.combine(da, db, dc, dd, de, df);
     }
 
@@ -328,13 +326,13 @@ public final class JooqRecordDecoders {
      * @param df  the sixth decoder
      * @param dg  the seventh decoder
      * @return a combiner that can be finished with {@code map}
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G> Combiner7<org.jooq.Record, A, B, C, D, E, F, G> combine(
-            Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db,
-            Decoder<org.jooq.Record, C> dc, Decoder<org.jooq.Record, D> dd,
-            Decoder<org.jooq.Record, E> de, Decoder<org.jooq.Record, F> df,
-            Decoder<org.jooq.Record, G> dg) {
+            CombinePart<org.jooq.Record, A> da, CombinePart<org.jooq.Record, B> db,
+            CombinePart<org.jooq.Record, C> dc, CombinePart<org.jooq.Record, D> dd,
+            CombinePart<org.jooq.Record, E> de, CombinePart<org.jooq.Record, F> df,
+            CombinePart<org.jooq.Record, G> dg) {
         return Decoders.combine(da, db, dc, dd, de, df, dg);
     }
 
@@ -358,13 +356,13 @@ public final class JooqRecordDecoders {
      * @param dg  the seventh decoder
      * @param dh  the eighth decoder
      * @return a combiner that can be finished with {@code map}
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H> Combiner8<org.jooq.Record, A, B, C, D, E, F, G, H> combine(
-            Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db,
-            Decoder<org.jooq.Record, C> dc, Decoder<org.jooq.Record, D> dd,
-            Decoder<org.jooq.Record, E> de, Decoder<org.jooq.Record, F> df,
-            Decoder<org.jooq.Record, G> dg, Decoder<org.jooq.Record, H> dh) {
+            CombinePart<org.jooq.Record, A> da, CombinePart<org.jooq.Record, B> db,
+            CombinePart<org.jooq.Record, C> dc, CombinePart<org.jooq.Record, D> dd,
+            CombinePart<org.jooq.Record, E> de, CombinePart<org.jooq.Record, F> df,
+            CombinePart<org.jooq.Record, G> dg, CombinePart<org.jooq.Record, H> dh) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh);
     }
 
@@ -390,14 +388,14 @@ public final class JooqRecordDecoders {
      * @param dh  the eighth decoder
      * @param dj  the ninth decoder
      * @return a combiner that can be finished with {@code map}
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J> Combiner9<org.jooq.Record, A, B, C, D, E, F, G, H, J> combine(
-            Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db,
-            Decoder<org.jooq.Record, C> dc, Decoder<org.jooq.Record, D> dd,
-            Decoder<org.jooq.Record, E> de, Decoder<org.jooq.Record, F> df,
-            Decoder<org.jooq.Record, G> dg, Decoder<org.jooq.Record, H> dh,
-            Decoder<org.jooq.Record, J> dj) {
+            CombinePart<org.jooq.Record, A> da, CombinePart<org.jooq.Record, B> db,
+            CombinePart<org.jooq.Record, C> dc, CombinePart<org.jooq.Record, D> dd,
+            CombinePart<org.jooq.Record, E> de, CombinePart<org.jooq.Record, F> df,
+            CombinePart<org.jooq.Record, G> dg, CombinePart<org.jooq.Record, H> dh,
+            CombinePart<org.jooq.Record, J> dj) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj);
     }
 
@@ -425,14 +423,14 @@ public final class JooqRecordDecoders {
      * @param dj  the ninth decoder
      * @param dk  the tenth decoder
      * @return a combiner that can be finished with {@code map}
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J, K> Combiner10<org.jooq.Record, A, B, C, D, E, F, G, H, J, K> combine(
-            Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db,
-            Decoder<org.jooq.Record, C> dc, Decoder<org.jooq.Record, D> dd,
-            Decoder<org.jooq.Record, E> de, Decoder<org.jooq.Record, F> df,
-            Decoder<org.jooq.Record, G> dg, Decoder<org.jooq.Record, H> dh,
-            Decoder<org.jooq.Record, J> dj, Decoder<org.jooq.Record, K> dk) {
+            CombinePart<org.jooq.Record, A> da, CombinePart<org.jooq.Record, B> db,
+            CombinePart<org.jooq.Record, C> dc, CombinePart<org.jooq.Record, D> dd,
+            CombinePart<org.jooq.Record, E> de, CombinePart<org.jooq.Record, F> df,
+            CombinePart<org.jooq.Record, G> dg, CombinePart<org.jooq.Record, H> dh,
+            CombinePart<org.jooq.Record, J> dj, CombinePart<org.jooq.Record, K> dk) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk);
     }
 
@@ -462,15 +460,15 @@ public final class JooqRecordDecoders {
      * @param dk  the tenth decoder
      * @param dl  the eleventh decoder
      * @return a combiner that can be finished with {@code map}
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L> Combiner11<org.jooq.Record, A, B, C, D, E, F, G, H, J, K, L> combine(
-            Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db,
-            Decoder<org.jooq.Record, C> dc, Decoder<org.jooq.Record, D> dd,
-            Decoder<org.jooq.Record, E> de, Decoder<org.jooq.Record, F> df,
-            Decoder<org.jooq.Record, G> dg, Decoder<org.jooq.Record, H> dh,
-            Decoder<org.jooq.Record, J> dj, Decoder<org.jooq.Record, K> dk,
-            Decoder<org.jooq.Record, L> dl) {
+            CombinePart<org.jooq.Record, A> da, CombinePart<org.jooq.Record, B> db,
+            CombinePart<org.jooq.Record, C> dc, CombinePart<org.jooq.Record, D> dd,
+            CombinePart<org.jooq.Record, E> de, CombinePart<org.jooq.Record, F> df,
+            CombinePart<org.jooq.Record, G> dg, CombinePart<org.jooq.Record, H> dh,
+            CombinePart<org.jooq.Record, J> dj, CombinePart<org.jooq.Record, K> dk,
+            CombinePart<org.jooq.Record, L> dl) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl);
     }
 
@@ -502,15 +500,15 @@ public final class JooqRecordDecoders {
      * @param dl  the eleventh decoder
      * @param dm  the twelfth decoder
      * @return a combiner that can be finished with {@code map}
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M> Combiner12<org.jooq.Record, A, B, C, D, E, F, G, H, J, K, L, M> combine(
-            Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db,
-            Decoder<org.jooq.Record, C> dc, Decoder<org.jooq.Record, D> dd,
-            Decoder<org.jooq.Record, E> de, Decoder<org.jooq.Record, F> df,
-            Decoder<org.jooq.Record, G> dg, Decoder<org.jooq.Record, H> dh,
-            Decoder<org.jooq.Record, J> dj, Decoder<org.jooq.Record, K> dk,
-            Decoder<org.jooq.Record, L> dl, Decoder<org.jooq.Record, M> dm) {
+            CombinePart<org.jooq.Record, A> da, CombinePart<org.jooq.Record, B> db,
+            CombinePart<org.jooq.Record, C> dc, CombinePart<org.jooq.Record, D> dd,
+            CombinePart<org.jooq.Record, E> de, CombinePart<org.jooq.Record, F> df,
+            CombinePart<org.jooq.Record, G> dg, CombinePart<org.jooq.Record, H> dh,
+            CombinePart<org.jooq.Record, J> dj, CombinePart<org.jooq.Record, K> dk,
+            CombinePart<org.jooq.Record, L> dl, CombinePart<org.jooq.Record, M> dm) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm);
     }
 
@@ -544,16 +542,16 @@ public final class JooqRecordDecoders {
      * @param dm  the twelfth decoder
      * @param dn  the thirteenth decoder
      * @return a combiner that can be finished with {@code map}
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N> Combiner13<org.jooq.Record, A, B, C, D, E, F, G, H, J, K, L, M, N> combine(
-            Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db,
-            Decoder<org.jooq.Record, C> dc, Decoder<org.jooq.Record, D> dd,
-            Decoder<org.jooq.Record, E> de, Decoder<org.jooq.Record, F> df,
-            Decoder<org.jooq.Record, G> dg, Decoder<org.jooq.Record, H> dh,
-            Decoder<org.jooq.Record, J> dj, Decoder<org.jooq.Record, K> dk,
-            Decoder<org.jooq.Record, L> dl, Decoder<org.jooq.Record, M> dm,
-            Decoder<org.jooq.Record, N> dn) {
+            CombinePart<org.jooq.Record, A> da, CombinePart<org.jooq.Record, B> db,
+            CombinePart<org.jooq.Record, C> dc, CombinePart<org.jooq.Record, D> dd,
+            CombinePart<org.jooq.Record, E> de, CombinePart<org.jooq.Record, F> df,
+            CombinePart<org.jooq.Record, G> dg, CombinePart<org.jooq.Record, H> dh,
+            CombinePart<org.jooq.Record, J> dj, CombinePart<org.jooq.Record, K> dk,
+            CombinePart<org.jooq.Record, L> dl, CombinePart<org.jooq.Record, M> dm,
+            CombinePart<org.jooq.Record, N> dn) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn);
     }
 
@@ -589,16 +587,16 @@ public final class JooqRecordDecoders {
      * @param dn  the thirteenth decoder
      * @param do_ the fourteenth decoder
      * @return a combiner that can be finished with {@code map}
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O> Combiner14<org.jooq.Record, A, B, C, D, E, F, G, H, J, K, L, M, N, O> combine(
-            Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db,
-            Decoder<org.jooq.Record, C> dc, Decoder<org.jooq.Record, D> dd,
-            Decoder<org.jooq.Record, E> de, Decoder<org.jooq.Record, F> df,
-            Decoder<org.jooq.Record, G> dg, Decoder<org.jooq.Record, H> dh,
-            Decoder<org.jooq.Record, J> dj, Decoder<org.jooq.Record, K> dk,
-            Decoder<org.jooq.Record, L> dl, Decoder<org.jooq.Record, M> dm,
-            Decoder<org.jooq.Record, N> dn, Decoder<org.jooq.Record, O> do_) {
+            CombinePart<org.jooq.Record, A> da, CombinePart<org.jooq.Record, B> db,
+            CombinePart<org.jooq.Record, C> dc, CombinePart<org.jooq.Record, D> dd,
+            CombinePart<org.jooq.Record, E> de, CombinePart<org.jooq.Record, F> df,
+            CombinePart<org.jooq.Record, G> dg, CombinePart<org.jooq.Record, H> dh,
+            CombinePart<org.jooq.Record, J> dj, CombinePart<org.jooq.Record, K> dk,
+            CombinePart<org.jooq.Record, L> dl, CombinePart<org.jooq.Record, M> dm,
+            CombinePart<org.jooq.Record, N> dn, CombinePart<org.jooq.Record, O> do_) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_);
     }
 
@@ -636,17 +634,17 @@ public final class JooqRecordDecoders {
      * @param do_ the fourteenth decoder
      * @param dp  the fifteenth decoder
      * @return a combiner that can be finished with {@code map}
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> Combiner15<org.jooq.Record, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> combine(
-            Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db,
-            Decoder<org.jooq.Record, C> dc, Decoder<org.jooq.Record, D> dd,
-            Decoder<org.jooq.Record, E> de, Decoder<org.jooq.Record, F> df,
-            Decoder<org.jooq.Record, G> dg, Decoder<org.jooq.Record, H> dh,
-            Decoder<org.jooq.Record, J> dj, Decoder<org.jooq.Record, K> dk,
-            Decoder<org.jooq.Record, L> dl, Decoder<org.jooq.Record, M> dm,
-            Decoder<org.jooq.Record, N> dn, Decoder<org.jooq.Record, O> do_,
-            Decoder<org.jooq.Record, P> dp) {
+            CombinePart<org.jooq.Record, A> da, CombinePart<org.jooq.Record, B> db,
+            CombinePart<org.jooq.Record, C> dc, CombinePart<org.jooq.Record, D> dd,
+            CombinePart<org.jooq.Record, E> de, CombinePart<org.jooq.Record, F> df,
+            CombinePart<org.jooq.Record, G> dg, CombinePart<org.jooq.Record, H> dh,
+            CombinePart<org.jooq.Record, J> dj, CombinePart<org.jooq.Record, K> dk,
+            CombinePart<org.jooq.Record, L> dl, CombinePart<org.jooq.Record, M> dm,
+            CombinePart<org.jooq.Record, N> dn, CombinePart<org.jooq.Record, O> do_,
+            CombinePart<org.jooq.Record, P> dp) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_, dp);
     }
 
@@ -686,17 +684,17 @@ public final class JooqRecordDecoders {
      * @param dp  the fifteenth decoder
      * @param dq  the sixteenth decoder
      * @return a combiner that can be finished with {@code map}
-     * @see Decoders#combine(Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder, Decoder)
+     * @see Decoders#combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> Combiner16<org.jooq.Record, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> combine(
-            Decoder<org.jooq.Record, A> da, Decoder<org.jooq.Record, B> db,
-            Decoder<org.jooq.Record, C> dc, Decoder<org.jooq.Record, D> dd,
-            Decoder<org.jooq.Record, E> de, Decoder<org.jooq.Record, F> df,
-            Decoder<org.jooq.Record, G> dg, Decoder<org.jooq.Record, H> dh,
-            Decoder<org.jooq.Record, J> dj, Decoder<org.jooq.Record, K> dk,
-            Decoder<org.jooq.Record, L> dl, Decoder<org.jooq.Record, M> dm,
-            Decoder<org.jooq.Record, N> dn, Decoder<org.jooq.Record, O> do_,
-            Decoder<org.jooq.Record, P> dp, Decoder<org.jooq.Record, Q> dq) {
+            CombinePart<org.jooq.Record, A> da, CombinePart<org.jooq.Record, B> db,
+            CombinePart<org.jooq.Record, C> dc, CombinePart<org.jooq.Record, D> dd,
+            CombinePart<org.jooq.Record, E> de, CombinePart<org.jooq.Record, F> df,
+            CombinePart<org.jooq.Record, G> dg, CombinePart<org.jooq.Record, H> dh,
+            CombinePart<org.jooq.Record, J> dj, CombinePart<org.jooq.Record, K> dk,
+            CombinePart<org.jooq.Record, L> dl, CombinePart<org.jooq.Record, M> dm,
+            CombinePart<org.jooq.Record, N> dn, CombinePart<org.jooq.Record, O> do_,
+            CombinePart<org.jooq.Record, P> dp, CombinePart<org.jooq.Record, Q> dq) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_, dp, dq);
     }
 
@@ -704,11 +702,11 @@ public final class JooqRecordDecoders {
      * Returns a {@link CombinerList} for combining more than 16 decoders.
      *
      * @param <T>      the output type
-     * @param decoders the decoders to combine
+     * @param parts the components to combine
      * @return a combiner on which {@code .map(f)} or {@code .flatMap(f)} can be called
      * @see Decoders#combine(List)
      */
-    public static <T> CombinerList<org.jooq.Record> combine(List<Decoder<org.jooq.Record, ?>> decoders) {
-        return Decoders.combine(decoders);
+    public static <T> CombinerList<org.jooq.Record> combine(List<CombinePart<org.jooq.Record, ?>> parts) {
+        return Decoders.combine(parts);
     }
 }

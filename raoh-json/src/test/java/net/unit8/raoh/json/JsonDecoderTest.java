@@ -9,6 +9,7 @@ import net.unit8.raoh.Path;
 import net.unit8.raoh.Presence;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.decode.Decoder;
+import net.unit8.raoh.decode.combinator.CombinePart;
 import net.unit8.raoh.decode.Decoders;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -318,8 +319,8 @@ class JsonDecoderTest {
     @Test
     void discriminateDecoder() {
         var contactDec = discriminate("type", Map.of(
-                "phone", field("number", string()).map(Phone::new),
-                "email", field("address", email()).map(EmailContact::new)
+                "phone", field("number", string()).map(Phone::new).asDecoder(),
+                "email", field("address", email()).map(EmailContact::new).asDecoder()
         ));
 
         var phone = assertOk(contactDec.decode(
@@ -338,8 +339,8 @@ class JsonDecoderTest {
     void typedDiscriminateIsCastFree() {
         // Explicit target type pins T = Contact, so the variant arms need no up-cast.
         Decoder<JsonNode, Contact> contactDec = discriminate("type",
-                variant("phone", field("number", string()).map(Phone::new)),
-                variant("email", field("address", email()).map(EmailContact::new)));
+                variant("phone", field("number", string()).map(Phone::new).asDecoder()),
+                variant("email", field("address", email()).map(EmailContact::new).asDecoder()));
 
         assertInstanceOf(Phone.class, assertOk(contactDec.decode(
                 parse("{\"type\":\"phone\",\"number\":\"090-1234-5678\"}"))));
@@ -440,8 +441,7 @@ class JsonDecoderTest {
         Decoder<JsonNode, Comment>[] holder = new Decoder[1];
         holder[0] = combine(
                 field("body", string()),
-                Decoders.withDefault(
-                        field("replies", list(Decoders.lazy(() -> holder[0]))), List.of())
+                field("replies", Decoders.withDefault(list(Decoders.lazy(() -> holder[0])), List.of()))
         ).map(Comment::new);
 
         var json = parse("""
@@ -664,7 +664,7 @@ class JsonDecoderTest {
 
     @Test
     void combineListDecoder() {
-        var dec = combine(List.<Decoder<JsonNode, ?>>of(
+        var dec = combine(List.<CombinePart<JsonNode, ?>>of(
                 field("a", string()),
                 field("b", string()),
                 field("c", string())

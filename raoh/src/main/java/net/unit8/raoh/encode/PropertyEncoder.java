@@ -9,7 +9,7 @@ import java.util.function.Supplier;
 /**
  * A named property encoder that extracts a field from a domain object and encodes its value.
  *
- * <p>Analogous to {@link net.unit8.raoh.decode.FieldDecoder FieldDecoder} on the decoder side,
+ * <p>Analogous to {@link net.unit8.raoh.decode.combinator.CombinePart CombinePart} on the decoder side,
  * a {@code PropertyEncoder} binds together:
  *
  * <ul>

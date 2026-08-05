@@ -10,7 +10,7 @@
  *       ({@code combine}, {@code oneOf}, {@code withDefault}, etc.)</li>
  *   <li>{@link net.unit8.raoh.decode.ObjectDecoders} — primitive value decoders
  *       ({@code string()}, {@code int_()}, {@code decimal()}, etc.)</li>
- *   <li>{@link net.unit8.raoh.decode.FieldDecoder} — field-level decoder abstraction</li>
+ *   <li>{@link net.unit8.raoh.decode.combinator.CombinePart} — a named or flat component of a combine schema</li>
  * </ul>
  *
  * <p>For built-in typed decoders with constraint APIs, see

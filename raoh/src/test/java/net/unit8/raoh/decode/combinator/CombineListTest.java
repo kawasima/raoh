@@ -4,6 +4,7 @@ import net.unit8.raoh.Err;
 import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.decode.Decoder;
+import net.unit8.raoh.decode.combinator.CombinePart;
 import net.unit8.raoh.decode.Decoders;
 import org.junit.jupiter.api.Test;
 
@@ -41,7 +42,7 @@ class CombineListTest {
         }
     }
 
-    private static final List<Decoder<Map<String, Object>, ?>> DECODERS_17 = List.of(
+    private static final List<CombinePart<Map<String, Object>, ?>> DECODERS_17 = List.of(
             field("f1",  string()), field("f2",  string()), field("f3",  string()),
             field("f4",  string()), field("f5",  string()), field("f6",  string()),
             field("f7",  string()), field("f8",  string()), field("f9",  string()),

@@ -2,8 +2,8 @@ package net.unit8.raoh.decode.map;
 
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.decode.Decoders;
-import net.unit8.raoh.decode.FieldDecoder;
 import net.unit8.raoh.decode.InputFields;
+import net.unit8.raoh.decode.combinator.CombinePart;
 import net.unit8.raoh.decode.ObjectDecoders;
 import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Path;
@@ -36,7 +36,7 @@ public final class MapDecoders {
     /**
      * How to enumerate the keys of a {@code Map} input.
      *
-     * <p>Every field factory here hands this to the {@link FieldDecoder} it builds, so a combiner
+     * <p>Every field factory here hands this to the {@link CombinePart} it builds, so a combiner
      * assembled from them can be made strict. A {@code null} map has no keys.
      */
     public static final InputFields<Map<String, Object>> MAP_FIELDS =
@@ -55,44 +55,31 @@ public final class MapDecoders {
      * @param dec  the decoder for the field value
      * @return a field decoder for {@code Map<String, Object>} input
      */
-    public static <T> FieldDecoder<Map<String, Object>, T> field(String name, Decoder<@Nullable Object, T> dec) {
-        return new FieldDecoder<>() {
-            @Override
-            public String fieldName() { return name; }
-
-            @Override
-            public Optional<InputFields<Map<String, Object>>> inputFields() {
-                return Optional.of(MAP_FIELDS);
+    public static <T> CombinePart<Map<String, Object>, T> field(String name, Decoder<@Nullable Object, T> dec) {
+        return CombinePart.named(name, (in, fieldPath) -> {
+            if (in == null) {
+                return Result.fail(fieldPath, ErrorCodes.REQUIRED, "is required");
             }
-
-            @Override
-            public Result<T> decode(Map<String, Object> in, Path path) {
-                var fieldPath = path.append(name);
-                if (in == null) {
-                    return Result.fail(fieldPath, ErrorCodes.REQUIRED, "is required");
-                }
-                return dec.decode(in.get(name), fieldPath);
-            }
-        };
+            return dec.decode(in.get(name), fieldPath);
+        }, MAP_FIELDS);
     }
 
     /**
      * Creates an optional field decoder. If the field is absent from the map,
      * the result is {@code Optional.empty()} rather than an error.
      *
-     * <p>The returned decoder is a {@link FieldDecoder} at runtime even though it is declared as a
-     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
-     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
-     * overrides through their bridge methods.
+     * <p>The returned {@link CombinePart} keeps its field declaration through {@code map},
+     * {@code refine}, {@code pipe} and the other component combinators, so {@code strict()} still
+     * sees the name after composition. Convert it with {@code asDecoder()} where a plain
+     * {@link Decoder} is required, giving up that declaration deliberately.
      *
      * @param <T>  the decoded value type
      * @param name the field name (map key)
      * @param dec  the decoder for the field value when present
      * @return a decoder that produces {@code Optional<T>}
      */
-    public static <T> Decoder<Map<String, Object>, Optional<T>> optionalField(String name, Decoder<@Nullable Object, T> dec) {
-        return FieldDecoder.named(name, (in, path) -> {
-            var fieldPath = path.append(name);
+    public static <T> CombinePart<Map<String, Object>, Optional<T>> optionalField(String name, Decoder<@Nullable Object, T> dec) {
+        return CombinePart.named(name, (in, fieldPath) -> {
             if (in == null || !in.containsKey(name)) {
                 return Result.ok(Optional.empty());
             }
@@ -167,19 +154,18 @@ public final class MapDecoders {
      * and {@link Presence.Present} with the decoded value otherwise.
      * This is useful for PATCH-style updates where the three states have different semantics.
      *
-     * <p>The returned decoder is a {@link FieldDecoder} at runtime even though it is declared as a
-     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
-     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
-     * overrides through their bridge methods.
+     * <p>The returned {@link CombinePart} keeps its field declaration through {@code map},
+     * {@code refine}, {@code pipe} and the other component combinators, so {@code strict()} still
+     * sees the name after composition. Convert it with {@code asDecoder()} where a plain
+     * {@link Decoder} is required, giving up that declaration deliberately.
      *
      * @param <T>  the decoded value type
      * @param name the field name (map key)
      * @param dec  the decoder for the field value when present and non-null
      * @return a decoder that produces {@link Presence Presence&lt;T&gt;}
      */
-    public static <T> Decoder<Map<String, Object>, Presence<T>> optionalNullableField(String name, Decoder<@Nullable Object, T> dec) {
-        return FieldDecoder.named(name, (in, path) -> {
-            var fieldPath = path.append(name);
+    public static <T> CombinePart<Map<String, Object>, Presence<T>> optionalNullableField(String name, Decoder<@Nullable Object, T> dec) {
+        return CombinePart.named(name, (in, fieldPath) -> {
             if (in == null || !in.containsKey(name)) {
                 return Result.ok(new Presence.Absent<>());
             }
@@ -210,10 +196,10 @@ public final class MapDecoders {
      * instead fails on a present {@code null}, because {@code optionalField} only treats an absent key
      * as empty and then feeds the {@code null} value to a non-null {@code dec}.
      *
-     * <p>The returned decoder is a {@link FieldDecoder} at runtime even though it is declared as a
-     * {@link Decoder}, so {@code strict()} sees the field name — including after {@code map},
-     * {@code refine} and the other combinators, which dispatch to the {@code FieldDecoder}
-     * overrides through their bridge methods.
+     * <p>The returned {@link CombinePart} keeps its field declaration through {@code map},
+     * {@code refine}, {@code pipe} and the other component combinators, so {@code strict()} still
+     * sees the name after composition. Convert it with {@code asDecoder()} where a plain
+     * {@link Decoder} is required, giving up that declaration deliberately.
      *
      * @param <T>  the decoded value type
      * @param name the field name (map key)
@@ -224,13 +210,15 @@ public final class MapDecoders {
     // Returns a Decoder<..., @Nullable T>. NullAway cannot verify the type-parameter nullness of the
     // @Nullable T return, the same honest widening already suppressed in ObjectDecoders.nullable.
     @SuppressWarnings("NullAway")
-    public static <T> Decoder<Map<String, Object>, @Nullable T> nullableField(String name, Decoder<@Nullable Object, T> dec) {
+    public static <T> CombinePart<Map<String, Object>, @Nullable T> nullableField(String name, Decoder<@Nullable Object, T> dec) {
         // A null map is treated as absent (-> null), consistent with optionalField / optionalNullableField;
         // field(...) alone would reject it as a required error. For a non-null map, field handles the rest:
         // an absent key reaches nullable(dec) as a null value, which decodes to null.
-        var inner = field(name, ObjectDecoders.nullable(dec));
-        return FieldDecoder.named(name,
-                (in, path) -> in == null ? Result.<@Nullable T>ok(null) : inner.decode(in, path),
+        var inner = ObjectDecoders.nullable(dec);
+        return CombinePart.named(name,
+                (in, fieldPath) -> in == null
+                        ? Result.<@Nullable T>ok(null)
+                        : inner.decode(in.get(name), fieldPath),
                 MAP_FIELDS);
     }
 
@@ -250,7 +238,7 @@ public final class MapDecoders {
     public static <T> Decoder<Map<String, Object>, T> discriminate(
             String fieldName,
             Map<String, Decoder<Map<String, Object>, ? extends T>> variants) {
-        return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.string()), variants);
+        return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.string()).asDecoder(), variants);
     }
 
     /**
@@ -280,7 +268,7 @@ public final class MapDecoders {
     @SafeVarargs
     public static <T> Decoder<Map<String, Object>, T> discriminate(
             String fieldName, Decoders.Variant<Map<String, Object>, ? extends T>... variants) {
-        return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.string()), variants);
+        return Decoders.discriminate(fieldName, field(fieldName, ObjectDecoders.string()).asDecoder(), variants);
     }
 
     /**
@@ -293,6 +281,33 @@ public final class MapDecoders {
      */
     public static <T> Decoder<Map<String, Object>, T> strict(Decoder<Map<String, Object>, T> dec, java.util.Set<String> knownFields) {
         return Decoders.strict(dec, knownFields, MAP_FIELDS);
+    }
+
+    /**
+     * Lifts a decoder that reads the same whole map into a {@code combine} component, for splitting
+     * a flat row across several decoders.
+     *
+     * <p>This is the top-level counterpart of {@link #nested}: {@code nested} adapts a map decoder
+     * for use as one field's <em>value</em>, while {@code flat} lets several decoders each read
+     * their own fields out of the same flat input — the shape a JOIN query returns.
+     *
+     * <pre>{@code
+     * // SELECT o.order_id, o.customer_name, l.product_id, l.qty FROM orders o JOIN order_lines l ...
+     * var rowDec = combine(
+     *     flat(headerDec),
+     *     flat(lineDec)
+     * ).map(Map::entry);
+     * }</pre>
+     *
+     * <p>The decoder is opaque, so the component declares no fields and the combiner cannot be made
+     * strict. Use {@link #field} for components whose field names are known.
+     *
+     * @param <T> the decoded value type
+     * @param dec the decoder to read the same map with
+     * @return a combine component reading the whole input
+     */
+    public static <T> CombinePart<Map<String, Object>, T> flat(Decoder<Map<String, Object>, T> dec) {
+        return CombinePart.flat(dec);
     }
 
     // --- Delegate combine to Decoders ---
@@ -310,11 +325,11 @@ public final class MapDecoders {
      * @return a combiner that can be finished with {@code map}
      */
     public static <A, B> Combiner2<Map<String, Object>, A, B> combine(
-            Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db) {
+            CombinePart<Map<String, Object>, A> da, CombinePart<Map<String, Object>, B> db) {
         return Decoders.combine(da, db);
     }
 
-    /** 3-arity variant of {@link #combine(Decoder, Decoder)}. See that method for details.
+    /** 3-arity variant of {@link #combine}. See that method for details.
      *
      * @param <A> the first decoded type
      * @param <B> the second decoded type
@@ -325,8 +340,8 @@ public final class MapDecoders {
      * @return a combiner that can be finished with {@code map}
      */
     public static <A, B, C> Combiner3<Map<String, Object>, A, B, C> combine(
-            Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
-            Decoder<Map<String, Object>, C> dc) {
+            CombinePart<Map<String, Object>, A> da, CombinePart<Map<String, Object>, B> db,
+            CombinePart<Map<String, Object>, C> dc) {
         return Decoders.combine(da, db, dc);
     }
 
@@ -342,11 +357,11 @@ public final class MapDecoders {
      * @param dc  the third decoder
      * @param dd  the fourth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <A, B, C, D> Combiner4<Map<String, Object>, A, B, C, D> combine(
-            Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
-            Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd) {
+            CombinePart<Map<String, Object>, A> da, CombinePart<Map<String, Object>, B> db,
+            CombinePart<Map<String, Object>, C> dc, CombinePart<Map<String, Object>, D> dd) {
         return Decoders.combine(da, db, dc, dd);
     }
 
@@ -364,12 +379,12 @@ public final class MapDecoders {
      * @param dd  the fourth decoder
      * @param de  the fifth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <A, B, C, D, E> Combiner5<Map<String, Object>, A, B, C, D, E> combine(
-            Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
-            Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
-            Decoder<Map<String, Object>, E> de) {
+            CombinePart<Map<String, Object>, A> da, CombinePart<Map<String, Object>, B> db,
+            CombinePart<Map<String, Object>, C> dc, CombinePart<Map<String, Object>, D> dd,
+            CombinePart<Map<String, Object>, E> de) {
         return Decoders.combine(da, db, dc, dd, de);
     }
 
@@ -389,12 +404,12 @@ public final class MapDecoders {
      * @param de  the fifth decoder
      * @param df  the sixth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <A, B, C, D, E, F> Combiner6<Map<String, Object>, A, B, C, D, E, F> combine(
-            Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
-            Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
-            Decoder<Map<String, Object>, E> de, Decoder<Map<String, Object>, F> df) {
+            CombinePart<Map<String, Object>, A> da, CombinePart<Map<String, Object>, B> db,
+            CombinePart<Map<String, Object>, C> dc, CombinePart<Map<String, Object>, D> dd,
+            CombinePart<Map<String, Object>, E> de, CombinePart<Map<String, Object>, F> df) {
         return Decoders.combine(da, db, dc, dd, de, df);
     }
 
@@ -416,13 +431,13 @@ public final class MapDecoders {
      * @param df  the sixth decoder
      * @param dg  the seventh decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <A, B, C, D, E, F, G> Combiner7<Map<String, Object>, A, B, C, D, E, F, G> combine(
-            Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
-            Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
-            Decoder<Map<String, Object>, E> de, Decoder<Map<String, Object>, F> df,
-            Decoder<Map<String, Object>, G> dg) {
+            CombinePart<Map<String, Object>, A> da, CombinePart<Map<String, Object>, B> db,
+            CombinePart<Map<String, Object>, C> dc, CombinePart<Map<String, Object>, D> dd,
+            CombinePart<Map<String, Object>, E> de, CombinePart<Map<String, Object>, F> df,
+            CombinePart<Map<String, Object>, G> dg) {
         return Decoders.combine(da, db, dc, dd, de, df, dg);
     }
 
@@ -446,13 +461,13 @@ public final class MapDecoders {
      * @param dg  the seventh decoder
      * @param dh  the eighth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <A, B, C, D, E, F, G, H> Combiner8<Map<String, Object>, A, B, C, D, E, F, G, H> combine(
-            Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
-            Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
-            Decoder<Map<String, Object>, E> de, Decoder<Map<String, Object>, F> df,
-            Decoder<Map<String, Object>, G> dg, Decoder<Map<String, Object>, H> dh) {
+            CombinePart<Map<String, Object>, A> da, CombinePart<Map<String, Object>, B> db,
+            CombinePart<Map<String, Object>, C> dc, CombinePart<Map<String, Object>, D> dd,
+            CombinePart<Map<String, Object>, E> de, CombinePart<Map<String, Object>, F> df,
+            CombinePart<Map<String, Object>, G> dg, CombinePart<Map<String, Object>, H> dh) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh);
     }
 
@@ -478,14 +493,14 @@ public final class MapDecoders {
      * @param dh  the eighth decoder
      * @param dj  the ninth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <A, B, C, D, E, F, G, H, J> Combiner9<Map<String, Object>, A, B, C, D, E, F, G, H, J> combine(
-            Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
-            Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
-            Decoder<Map<String, Object>, E> de, Decoder<Map<String, Object>, F> df,
-            Decoder<Map<String, Object>, G> dg, Decoder<Map<String, Object>, H> dh,
-            Decoder<Map<String, Object>, J> dj) {
+            CombinePart<Map<String, Object>, A> da, CombinePart<Map<String, Object>, B> db,
+            CombinePart<Map<String, Object>, C> dc, CombinePart<Map<String, Object>, D> dd,
+            CombinePart<Map<String, Object>, E> de, CombinePart<Map<String, Object>, F> df,
+            CombinePart<Map<String, Object>, G> dg, CombinePart<Map<String, Object>, H> dh,
+            CombinePart<Map<String, Object>, J> dj) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj);
     }
 
@@ -513,14 +528,14 @@ public final class MapDecoders {
      * @param dj  the ninth decoder
      * @param dk  the tenth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <A, B, C, D, E, F, G, H, J, K> Combiner10<Map<String, Object>, A, B, C, D, E, F, G, H, J, K> combine(
-            Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
-            Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
-            Decoder<Map<String, Object>, E> de, Decoder<Map<String, Object>, F> df,
-            Decoder<Map<String, Object>, G> dg, Decoder<Map<String, Object>, H> dh,
-            Decoder<Map<String, Object>, J> dj, Decoder<Map<String, Object>, K> dk) {
+            CombinePart<Map<String, Object>, A> da, CombinePart<Map<String, Object>, B> db,
+            CombinePart<Map<String, Object>, C> dc, CombinePart<Map<String, Object>, D> dd,
+            CombinePart<Map<String, Object>, E> de, CombinePart<Map<String, Object>, F> df,
+            CombinePart<Map<String, Object>, G> dg, CombinePart<Map<String, Object>, H> dh,
+            CombinePart<Map<String, Object>, J> dj, CombinePart<Map<String, Object>, K> dk) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk);
     }
 
@@ -550,15 +565,15 @@ public final class MapDecoders {
      * @param dk  the tenth decoder
      * @param dl  the eleventh decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L> Combiner11<Map<String, Object>, A, B, C, D, E, F, G, H, J, K, L> combine(
-            Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
-            Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
-            Decoder<Map<String, Object>, E> de, Decoder<Map<String, Object>, F> df,
-            Decoder<Map<String, Object>, G> dg, Decoder<Map<String, Object>, H> dh,
-            Decoder<Map<String, Object>, J> dj, Decoder<Map<String, Object>, K> dk,
-            Decoder<Map<String, Object>, L> dl) {
+            CombinePart<Map<String, Object>, A> da, CombinePart<Map<String, Object>, B> db,
+            CombinePart<Map<String, Object>, C> dc, CombinePart<Map<String, Object>, D> dd,
+            CombinePart<Map<String, Object>, E> de, CombinePart<Map<String, Object>, F> df,
+            CombinePart<Map<String, Object>, G> dg, CombinePart<Map<String, Object>, H> dh,
+            CombinePart<Map<String, Object>, J> dj, CombinePart<Map<String, Object>, K> dk,
+            CombinePart<Map<String, Object>, L> dl) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl);
     }
 
@@ -590,15 +605,15 @@ public final class MapDecoders {
      * @param dl  the eleventh decoder
      * @param dm  the twelfth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M> Combiner12<Map<String, Object>, A, B, C, D, E, F, G, H, J, K, L, M> combine(
-            Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
-            Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
-            Decoder<Map<String, Object>, E> de, Decoder<Map<String, Object>, F> df,
-            Decoder<Map<String, Object>, G> dg, Decoder<Map<String, Object>, H> dh,
-            Decoder<Map<String, Object>, J> dj, Decoder<Map<String, Object>, K> dk,
-            Decoder<Map<String, Object>, L> dl, Decoder<Map<String, Object>, M> dm) {
+            CombinePart<Map<String, Object>, A> da, CombinePart<Map<String, Object>, B> db,
+            CombinePart<Map<String, Object>, C> dc, CombinePart<Map<String, Object>, D> dd,
+            CombinePart<Map<String, Object>, E> de, CombinePart<Map<String, Object>, F> df,
+            CombinePart<Map<String, Object>, G> dg, CombinePart<Map<String, Object>, H> dh,
+            CombinePart<Map<String, Object>, J> dj, CombinePart<Map<String, Object>, K> dk,
+            CombinePart<Map<String, Object>, L> dl, CombinePart<Map<String, Object>, M> dm) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm);
     }
 
@@ -632,16 +647,16 @@ public final class MapDecoders {
      * @param dm  the twelfth decoder
      * @param dn  the thirteenth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N> Combiner13<Map<String, Object>, A, B, C, D, E, F, G, H, J, K, L, M, N> combine(
-            Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
-            Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
-            Decoder<Map<String, Object>, E> de, Decoder<Map<String, Object>, F> df,
-            Decoder<Map<String, Object>, G> dg, Decoder<Map<String, Object>, H> dh,
-            Decoder<Map<String, Object>, J> dj, Decoder<Map<String, Object>, K> dk,
-            Decoder<Map<String, Object>, L> dl, Decoder<Map<String, Object>, M> dm,
-            Decoder<Map<String, Object>, N> dn) {
+            CombinePart<Map<String, Object>, A> da, CombinePart<Map<String, Object>, B> db,
+            CombinePart<Map<String, Object>, C> dc, CombinePart<Map<String, Object>, D> dd,
+            CombinePart<Map<String, Object>, E> de, CombinePart<Map<String, Object>, F> df,
+            CombinePart<Map<String, Object>, G> dg, CombinePart<Map<String, Object>, H> dh,
+            CombinePart<Map<String, Object>, J> dj, CombinePart<Map<String, Object>, K> dk,
+            CombinePart<Map<String, Object>, L> dl, CombinePart<Map<String, Object>, M> dm,
+            CombinePart<Map<String, Object>, N> dn) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn);
     }
 
@@ -677,16 +692,16 @@ public final class MapDecoders {
      * @param dn  the thirteenth decoder
      * @param do_ the fourteenth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O> Combiner14<Map<String, Object>, A, B, C, D, E, F, G, H, J, K, L, M, N, O> combine(
-            Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
-            Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
-            Decoder<Map<String, Object>, E> de, Decoder<Map<String, Object>, F> df,
-            Decoder<Map<String, Object>, G> dg, Decoder<Map<String, Object>, H> dh,
-            Decoder<Map<String, Object>, J> dj, Decoder<Map<String, Object>, K> dk,
-            Decoder<Map<String, Object>, L> dl, Decoder<Map<String, Object>, M> dm,
-            Decoder<Map<String, Object>, N> dn, Decoder<Map<String, Object>, O> do_) {
+            CombinePart<Map<String, Object>, A> da, CombinePart<Map<String, Object>, B> db,
+            CombinePart<Map<String, Object>, C> dc, CombinePart<Map<String, Object>, D> dd,
+            CombinePart<Map<String, Object>, E> de, CombinePart<Map<String, Object>, F> df,
+            CombinePart<Map<String, Object>, G> dg, CombinePart<Map<String, Object>, H> dh,
+            CombinePart<Map<String, Object>, J> dj, CombinePart<Map<String, Object>, K> dk,
+            CombinePart<Map<String, Object>, L> dl, CombinePart<Map<String, Object>, M> dm,
+            CombinePart<Map<String, Object>, N> dn, CombinePart<Map<String, Object>, O> do_) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_);
     }
 
@@ -724,17 +739,17 @@ public final class MapDecoders {
      * @param do_ the fourteenth decoder
      * @param dp  the fifteenth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> Combiner15<Map<String, Object>, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P> combine(
-            Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
-            Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
-            Decoder<Map<String, Object>, E> de, Decoder<Map<String, Object>, F> df,
-            Decoder<Map<String, Object>, G> dg, Decoder<Map<String, Object>, H> dh,
-            Decoder<Map<String, Object>, J> dj, Decoder<Map<String, Object>, K> dk,
-            Decoder<Map<String, Object>, L> dl, Decoder<Map<String, Object>, M> dm,
-            Decoder<Map<String, Object>, N> dn, Decoder<Map<String, Object>, O> do_,
-            Decoder<Map<String, Object>, P> dp) {
+            CombinePart<Map<String, Object>, A> da, CombinePart<Map<String, Object>, B> db,
+            CombinePart<Map<String, Object>, C> dc, CombinePart<Map<String, Object>, D> dd,
+            CombinePart<Map<String, Object>, E> de, CombinePart<Map<String, Object>, F> df,
+            CombinePart<Map<String, Object>, G> dg, CombinePart<Map<String, Object>, H> dh,
+            CombinePart<Map<String, Object>, J> dj, CombinePart<Map<String, Object>, K> dk,
+            CombinePart<Map<String, Object>, L> dl, CombinePart<Map<String, Object>, M> dm,
+            CombinePart<Map<String, Object>, N> dn, CombinePart<Map<String, Object>, O> do_,
+            CombinePart<Map<String, Object>, P> dp) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_, dp);
     }
 
@@ -774,28 +789,28 @@ public final class MapDecoders {
      * @param dp  the fifteenth decoder
      * @param dq  the sixteenth decoder
      * @return a combiner that can be applied with a function
-     * @see #combine(Decoder, Decoder)
+     * @see #combine
      */
     public static <A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> Combiner16<Map<String, Object>, A, B, C, D, E, F, G, H, J, K, L, M, N, O, P, Q> combine(
-            Decoder<Map<String, Object>, A> da, Decoder<Map<String, Object>, B> db,
-            Decoder<Map<String, Object>, C> dc, Decoder<Map<String, Object>, D> dd,
-            Decoder<Map<String, Object>, E> de, Decoder<Map<String, Object>, F> df,
-            Decoder<Map<String, Object>, G> dg, Decoder<Map<String, Object>, H> dh,
-            Decoder<Map<String, Object>, J> dj, Decoder<Map<String, Object>, K> dk,
-            Decoder<Map<String, Object>, L> dl, Decoder<Map<String, Object>, M> dm,
-            Decoder<Map<String, Object>, N> dn, Decoder<Map<String, Object>, O> do_,
-            Decoder<Map<String, Object>, P> dp, Decoder<Map<String, Object>, Q> dq) {
+            CombinePart<Map<String, Object>, A> da, CombinePart<Map<String, Object>, B> db,
+            CombinePart<Map<String, Object>, C> dc, CombinePart<Map<String, Object>, D> dd,
+            CombinePart<Map<String, Object>, E> de, CombinePart<Map<String, Object>, F> df,
+            CombinePart<Map<String, Object>, G> dg, CombinePart<Map<String, Object>, H> dh,
+            CombinePart<Map<String, Object>, J> dj, CombinePart<Map<String, Object>, K> dk,
+            CombinePart<Map<String, Object>, L> dl, CombinePart<Map<String, Object>, M> dm,
+            CombinePart<Map<String, Object>, N> dn, CombinePart<Map<String, Object>, O> do_,
+            CombinePart<Map<String, Object>, P> dp, CombinePart<Map<String, Object>, Q> dq) {
         return Decoders.combine(da, db, dc, dd, de, df, dg, dh, dj, dk, dl, dm, dn, do_, dp, dq);
     }
 
     /**
-     * Returns a {@link CombinerList} for combining more than 16 decoders.
+     * Returns a {@link CombinerList} for combining more than 16 components.
      *
-     * @param decoders the decoders to combine
+     * @param parts the components to combine
      * @return a combiner on which {@code .map(f)} or {@code .flatMap(f)} can be called
      * @see Decoders#combine(List)
      */
-    public static CombinerList<Map<String, Object>> combine(List<Decoder<Map<String, Object>, ?>> decoders) {
-        return Decoders.combine(decoders);
+    public static CombinerList<Map<String, Object>> combine(List<CombinePart<Map<String, Object>, ?>> parts) {
+        return Decoders.combine(parts);
     }
 }

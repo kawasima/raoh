@@ -30,9 +30,9 @@ import java.util.function.Function;
  * }</pre>
  *
  * @param <I>      the input type
- * @param decoders the decoders to combine
+ * @param parts the components to combine
  */
-public record CombinerList<I>(List<Decoder<I, ?>> decoders) {
+public record CombinerList<I>(List<CombinePart<I, ?>> parts) {
 
     /**
      * Applies a constructor function to the decoded values.
@@ -45,9 +45,9 @@ public record CombinerList<I>(List<Decoder<I, ?>> decoders) {
      */
     public <T> Decoder<I, T> map(Function<Object[], T> f) {
         return (in, path) -> {
-            var vals = new Validated<?>[decoders.size()];
-            for (int i = 0; i < decoders.size(); i++) {
-                vals[i] = Validated.fromResult(decoders.get(i).decode(in, path));
+            var vals = new Validated<?>[parts.size()];
+            for (int i = 0; i < parts.size(); i++) {
+                vals[i] = Validated.fromResult(parts.get(i).decode(in, path));
             }
             return Validated.accumulate(vals, f).toResult();
         };
@@ -65,9 +65,9 @@ public record CombinerList<I>(List<Decoder<I, ?>> decoders) {
      */
     public <T> Decoder<I, T> flatMap(Function<Object[], Result<T>> f) {
         return (in, path) -> {
-            var vals = new Validated<?>[decoders.size()];
-            for (int i = 0; i < decoders.size(); i++) {
-                vals[i] = Validated.fromResult(decoders.get(i).decode(in, path));
+            var vals = new Validated<?>[parts.size()];
+            for (int i = 0; i < parts.size(); i++) {
+                vals[i] = Validated.fromResult(parts.get(i).decode(in, path));
             }
             return Validated.accumulate(vals, f).toResult()
                     .flatMap(r -> switch (r) {

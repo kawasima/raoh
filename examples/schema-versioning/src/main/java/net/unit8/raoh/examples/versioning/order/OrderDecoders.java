@@ -61,7 +61,7 @@ public final class OrderDecoders {
     static final Decoder<Map<String, Object>, Money> MONEY =
             combine(
                     field("amount", long_()),
-                    Decoders.withDefault(field("currency", string()), "JPY")
+                    field("currency", Decoders.withDefault(string(), "JPY"))
             ).map((a, c) -> new Money(BigDecimal.valueOf(a), c));
 
     // -- Version-specific decoders --
@@ -79,7 +79,7 @@ public final class OrderDecoders {
                 var parts = name.split(" ", 2);
                 return new CustomerName(parts[0], parts.length > 1 ? parts[1] : "");
             }),
-            MONEY
+            flat(MONEY)
     ).map(Order::new);
 
     /**
@@ -88,8 +88,8 @@ public final class OrderDecoders {
      */
     static final Decoder<Map<String, Object>, Order> ORDER_V2 = combine(
             field("id", long_()).map(OrderId::new),
-            SPLIT_NAME,
-            MONEY
+            flat(SPLIT_NAME),
+            flat(MONEY)
     ).map(Order::new);
 
     /**
@@ -104,8 +104,8 @@ public final class OrderDecoders {
      */
     static final Decoder<Map<String, Object>, Order> ORDER_V3 = combine(
             field("id", long_()).map(OrderId::new),
-            SPLIT_NAME,
-            MONEY
+            flat(SPLIT_NAME),
+            flat(MONEY)
     ).map(Order::new);
 
     /**

@@ -321,11 +321,11 @@ customerDec.decode(Map.of(
 
 ---
 
-## 6. フラットデータの構造化 — nested
+## 6. フラットデータの構造化 — flat
 
-DBのJOIN結果やCSVでは、すべてのカラムが同一階層に並んだフラットな形式で届きます。`nested` を使うと、このフラットデータから構造化されたドメインモデルを組み立てられます。
+DBのJOIN結果やCSVでは、すべてのカラムが同一階層に並んだフラットな形式で届きます。`flat` を使うと、このフラットデータから構造化されたドメインモデルを組み立てられます。
 
-セクション5の `field("address", nested(addressDec))` が入力にネスト構造を要求するのに対し、`nested` をトップレベルで使うと同じフラット入力の中から各デコーダーがそれぞれのフィールドを読み取ります。
+セクション5の `field("address", nested(addressDec))` が入力にネスト構造を要求するのに対し、`flat` を使うと同じフラット入力の中から各デコーダーがそれぞれのフィールドを読み取ります。
 
 ```java
 record UserName(String first, String last) {}
@@ -343,7 +343,7 @@ var deptDec = combine(
 ).map(Department::new);
 
 // combine に直接渡すとフラット入力を共有してデコードする
-var employeeDec = combine(userNameDec, deptDec).map(Employee::new);
+var employeeDec = combine(flat(userNameDec), flat(deptDec)).map(Employee::new);
 ```
 
 JOINの結果をイメージしたフラットなMapを渡します。
@@ -358,7 +358,9 @@ employeeDec.decode(Map.of(
 // ==> Ok[Employee[name=UserName[first=Alice, last=Smith], dept=Department[name=Engineering, code=ENG]]]
 ```
 
-`combine(decA, decB)` では、両デコーダーが同じフラット入力を参照します。一方 `field("address", nested(decA))` は入力から `address` キーの値を取り出してから `decA` に渡します。
+`combine(flat(decA), flat(decB))` では、両デコーダーが同じフラット入力を参照します。一方 `field("address", nested(decA))` は入力から `address` キーの値を取り出してから `decA` に渡します。
+
+`flat` 成分は入力を不透明に読むので、これを含む combiner は `strict` にできません。セクション17を参照してください。
 
 フィールド名が衝突する場合（両テーブルに `name` がある等）は、SQLのエイリアスで区別してからデコードします。
 
@@ -392,7 +394,9 @@ deptPresenceDec.decode(row)
 
 ### 1対多 JOIN — フラット行から親子モデルへの組み上げ
 
-DBの1対多JOINクエリは、親カラムが重複したフラット行のリストを返します。これを `Order { lines: [OrderLine] }` のような親子ドメインモデルに組み上げるには、`nested` で各行をデコードした後、親キーでグルーピングします。
+DBの1対多JOINクエリは、親カラムが重複したフラット行のリストを返します。これを `Order { lines: [OrderLine] }` のような親子ドメインモデルに組み上げるには、`flat` で各行をデコードした後、親キーでグルーピングします。
+
+`flat(dec)` は、**同じ入力全体**を読むデコーダーを combine の成分に持ち上げます。1つの名前付きフィールドを読む `field(name, dec)` との対比です。`flat` 成分は入力を不透明に読むため、これを含む combiner は `strict` にできません。スキーマがどのフィールドを覆うか言えないからです。
 
 ```java
 record OrderHeader(String orderId, String customerName) {}
@@ -411,8 +415,8 @@ var lineDec = combine(
 ).map(OrderLine::new);
 // 1行ごとに親と子を同時にデコード
 var rowDec = combine(
-        nested(headerDec),
-        nested(lineDec)
+        flat(headerDec),
+        flat(lineDec)
 ).map((h, l) -> Map.entry(h, l));
 ```
 

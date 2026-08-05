@@ -132,8 +132,8 @@ class JooqDecoderTest {
         );
 
         Decoder<org.jooq.Record, UserWithAddress> dec = combine(
-                nested(USER_DECODER),
-                nested(ADDRESS_DECODER)
+                flat(USER_DECODER),
+                flat(ADDRESS_DECODER)
         ).map(UserWithAddress::new);
 
         var result = dec.decode(rec);
@@ -156,8 +156,8 @@ class JooqDecoderTest {
         );
 
         Decoder<org.jooq.Record, UserWithAddress> dec = combine(
-                nested(USER_DECODER),
-                nested(ADDRESS_DECODER)
+                flat(USER_DECODER),
+                flat(ADDRESS_DECODER)
         ).map(UserWithAddress::new);
 
         var result = dec.decode(rec);
@@ -206,8 +206,8 @@ class JooqDecoderTest {
         );
 
         Decoder<org.jooq.Record, EmployeeWithDepartment> dec = combine(
-                nested(EMPLOYEE_DECODER),
-                optDeptDecoder()
+                flat(EMPLOYEE_DECODER),
+                flat(optDeptDecoder())
         ).map(EmployeeWithDepartment::new);
 
         var result = dec.decode(rec);
@@ -230,8 +230,8 @@ class JooqDecoderTest {
         );
 
         Decoder<org.jooq.Record, EmployeeWithDepartment> dec = combine(
-                nested(EMPLOYEE_DECODER),
-                optDeptDecoder()
+                flat(EMPLOYEE_DECODER),
+                flat(optDeptDecoder())
         ).map(EmployeeWithDepartment::new);
 
         var result = dec.decode(rec);
@@ -312,7 +312,7 @@ class JooqDecoderTest {
                 field("code",     string()),
                 field("name",     string()),
                 field("quantity", int_()),
-                nested(MONEY_DECODER)
+                flat(MONEY_DECODER)
         ).map(OrderLine::new);
 
         var result = dec.decode(rec);
@@ -375,8 +375,8 @@ class JooqDecoderTest {
     @Test
     void discriminateDispatchesCorrectly() {
         Decoder<org.jooq.Record, Payment> dec = discriminate("type", Map.of(
-                "credit_card", field("card_number", string()).map(CreditCard::new),
-                "bank_transfer", field("bank_code", string()).map(BankTransfer::new)
+                "credit_card", field("card_number", string()).map(CreditCard::new).asDecoder(),
+                "bank_transfer", field("bank_code", string()).map(BankTransfer::new).asDecoder()
         ));
 
         var ccRec = record("type", "credit_card", "card_number", "4111-1111-1111-1111", "bank_code", "");
@@ -395,8 +395,8 @@ class JooqDecoderTest {
     void typedDiscriminateIsCastFree() {
         // Explicit target type pins T = Payment, so the variant arms need no up-cast.
         Decoder<org.jooq.Record, Payment> dec = discriminate("type",
-                variant("credit_card", field("card_number", string()).map(CreditCard::new)),
-                variant("bank_transfer", field("bank_code", string()).map(BankTransfer::new)));
+                variant("credit_card", field("card_number", string()).map(CreditCard::new).asDecoder()),
+                variant("bank_transfer", field("bank_code", string()).map(BankTransfer::new).asDecoder()));
 
         var ccRec = record("type", "credit_card", "card_number", "4111", "bank_code", "");
         assertInstanceOf(CreditCard.class, ((Ok<Payment>) dec.decode(ccRec)).value());
@@ -407,7 +407,7 @@ class JooqDecoderTest {
     @Test
     void discriminateUnknownTag() {
         Decoder<org.jooq.Record, Payment> dec = discriminate("type", Map.of(
-                "credit_card", field("card_number", string()).map(CreditCard::new)
+                "credit_card", field("card_number", string()).map(CreditCard::new).asDecoder()
         ));
 
         var rec = record("type", "crypto", "card_number", "");
@@ -421,7 +421,7 @@ class JooqDecoderTest {
     @Test
     void discriminateMissingTagField() {
         Decoder<org.jooq.Record, Payment> dec = discriminate("type", Map.of(
-                "credit_card", field("card_number", string()).map(CreditCard::new)
+                "credit_card", field("card_number", string()).map(CreditCard::new).asDecoder()
         ));
 
         var rec = record("card_number", "4111");

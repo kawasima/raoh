@@ -188,7 +188,7 @@ class MapEncoderTest {
     void discriminateRoundTripsWithDecoder() {
         Decoder<Map<String, Object>, Shape> dec = MapDecoders.discriminate("type", Map.of(
                 "circle", MapDecoders.field("radius", ObjectDecoders.decimal())
-                        .map(r -> new Circle(r.doubleValue())),
+                        .map(r -> new Circle(r.doubleValue())).asDecoder(),
                 "rect", MapDecoders.combine(
                                 MapDecoders.field("width",  ObjectDecoders.decimal()),
                                 MapDecoders.field("height", ObjectDecoders.decimal()))
@@ -326,7 +326,7 @@ class MapEncoderTest {
         // The boundary-completeness test: decode-in (optionalNullableField -> Presence) and
         // encode-out (presenceProperty) are exact inverses across all three states.
         Decoder<Map<String, Object>, Presence<String>> dec =
-                MapDecoders.optionalNullableField("nickname", ObjectDecoders.string());
+                MapDecoders.optionalNullableField("nickname", ObjectDecoders.string()).asDecoder();
 
         for (Presence<String> original : List.<Presence<String>>of(
                 new Presence.Absent<>(),
@@ -346,7 +346,7 @@ class MapEncoderTest {
         Encoder<Row, Map<String, @Nullable Object>> enc =
                 object(optionalProperty("note", Row::note, string()));
         Decoder<Map<String, Object>, Optional<String>> dec =
-                MapDecoders.optionalField("note", ObjectDecoders.string());
+                MapDecoders.optionalField("note", ObjectDecoders.string()).asDecoder();
 
         @SuppressWarnings("unchecked")
         var present = (Map<String, Object>) (Map<String, ?>) enc.encode(new Row("hi"));
