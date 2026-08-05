@@ -10,7 +10,26 @@ detailed from the current development cycle onward.
 
 ## [Unreleased]
 
+### Fixed
+
+- **`strict()` no longer rejects a valid field as `unknown_field`.** `Combiner#strict()` collects
+  known field names by testing each sub-decoder with `instanceof FieldDecoder`, and two things
+  broke that. Composing a field decoder — `field("age", int_()).refine(...)`, `.map(...)`,
+  `.pipe(...)` — returned a plain `Decoder` and dropped the name. And `optionalField`,
+  `optionalNullableField` and `nullableField` were never `FieldDecoder` to begin with, so any
+  `strict()` schema containing an optional field rejected that field outright. `FieldDecoder` now
+  overrides `map`, `flatMap`, `flatMapWithPath`, `pipe` and all three `refine` overloads with a
+  covariant return type, and the three optional-field factories return a `FieldDecoder` in both
+  `MapDecoders` and `JsonDecoders`. `list()` is deliberately not overridden: it changes the input
+  type to `List<I>`, so a single field name no longer describes it
+  ([#109](https://github.com/kawasima/raoh/issues/109)).
+
 ### Changed
+
+- **`optionalField`, `optionalNullableField` and `nullableField` return `FieldDecoder`** rather
+  than `Decoder`, in both `MapDecoders` and `JsonDecoders`. Source compatible, but **binary
+  incompatible** — the method descriptors change, so code compiled against 0.6.0 must be
+  recompiled ([#109](https://github.com/kawasima/raoh/issues/109)).
 
 - **The `ObjectDecoders` temporal decoders now accept ISO-8601 text**, the representation the
   matching `ObjectEncoders` factory writes, so a codec pair built over the neutral `Object` tree

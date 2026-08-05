@@ -68,16 +68,16 @@ public final class MapDecoders {
      * @param <T>  the decoded value type
      * @param name the field name (map key)
      * @param dec  the decoder for the field value when present
-     * @return a decoder that produces {@code Optional<T>}
+     * @return a field decoder that produces {@code Optional<T>}
      */
-    public static <T> Decoder<Map<String, Object>, Optional<T>> optionalField(String name, Decoder<@Nullable Object, T> dec) {
-        return (in, path) -> {
+    public static <T> FieldDecoder<Map<String, Object>, Optional<T>> optionalField(String name, Decoder<@Nullable Object, T> dec) {
+        return FieldDecoder.named(name, (in, path) -> {
             var fieldPath = path.append(name);
             if (in == null || !in.containsKey(name)) {
                 return Result.ok(Optional.empty());
             }
             return dec.decode(in.get(name), fieldPath).map(Optional::of);
-        };
+        });
     }
 
     /**
@@ -150,10 +150,10 @@ public final class MapDecoders {
      * @param <T>  the decoded value type
      * @param name the field name (map key)
      * @param dec  the decoder for the field value when present and non-null
-     * @return a decoder that produces {@link Presence Presence&lt;T&gt;}
+     * @return a field decoder that produces {@link Presence Presence&lt;T&gt;}
      */
-    public static <T> Decoder<Map<String, Object>, Presence<T>> optionalNullableField(String name, Decoder<@Nullable Object, T> dec) {
-        return (in, path) -> {
+    public static <T> FieldDecoder<Map<String, Object>, Presence<T>> optionalNullableField(String name, Decoder<@Nullable Object, T> dec) {
+        return FieldDecoder.named(name, (in, path) -> {
             var fieldPath = path.append(name);
             if (in == null || !in.containsKey(name)) {
                 return Result.ok(new Presence.Absent<>());
@@ -164,7 +164,7 @@ public final class MapDecoders {
             }
             return dec.decode(value, fieldPath)
                     .map(v -> (Presence<T>) new Presence.Present<>(v));
-        };
+        });
     }
 
     /**
@@ -188,18 +188,19 @@ public final class MapDecoders {
      * @param <T>  the decoded value type
      * @param name the field name (map key)
      * @param dec  the decoder for the field value when present and non-null
-     * @return a decoder that produces the decoded value, or {@code null} when the key is absent or its
-     *         value is {@code null}
+     * @return a field decoder that produces the decoded value, or {@code null} when the key is absent or
+     *         its value is {@code null}
      */
     // Returns a Decoder<..., @Nullable T>. NullAway cannot verify the type-parameter nullness of the
     // @Nullable T return, the same honest widening already suppressed in ObjectDecoders.nullable.
     @SuppressWarnings("NullAway")
-    public static <T> Decoder<Map<String, Object>, @Nullable T> nullableField(String name, Decoder<@Nullable Object, T> dec) {
+    public static <T> FieldDecoder<Map<String, Object>, @Nullable T> nullableField(String name, Decoder<@Nullable Object, T> dec) {
         // A null map is treated as absent (-> null), consistent with optionalField / optionalNullableField;
         // field(...) alone would reject it as a required error. For a non-null map, field handles the rest:
         // an absent key reaches nullable(dec) as a null value, which decodes to null.
         var inner = field(name, ObjectDecoders.nullable(dec));
-        return (in, path) -> in == null ? Result.<@Nullable T>ok(null) : inner.decode(in, path);
+        return FieldDecoder.named(name,
+                (in, path) -> in == null ? Result.<@Nullable T>ok(null) : inner.decode(in, path));
     }
 
     // --- discriminate ---
