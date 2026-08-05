@@ -17,8 +17,20 @@ detailed from the current development cycle onward.
   previously did not, because `refine` is declared on `Decoder` and returned `Decoder<I, T>`. All
   three overloads are overridden on `BoolDecoder`, `DecimalDecoder`, `DoubleDecoder`,
   `FloatDecoder`, `IntDecoder`, `ListDecoder`, `LongDecoder`, `RecordDecoder`, `StringDecoder` and
-  `TemporalDecoder`. Behaviour is unchanged, and a covariant override generates a bridge method, so
-  this is both source and binary compatible ([#110](https://github.com/kawasima/raoh/issues/110)).
+  `TemporalDecoder`. Existing callers stay binary compatible through the compiler-generated bridge
+  methods; a subclass that overrode `refine` would need source changes to recompile, which is moot
+  now that these classes are `final` (see below)
+  ([#110](https://github.com/kawasima/raoh/issues/110)).
+
+- **The builtin decoders are `final`.** `BoolDecoder`, `DecimalDecoder`, `DoubleDecoder`,
+  `FloatDecoder`, `IntDecoder`, `ListDecoder`, `LongDecoder`, `RecordDecoder`, `StringDecoder` and
+  `TemporalDecoder` no longer permit subclassing. They were open by default rather than by design:
+  every constraint runs through a private `chain(...)` helper, so a subclass could neither add a
+  constraint in the same style nor intercept the existing ones — overriding `flatMapWithPath` caught
+  `refine` and nothing else, not `minLength()`, not `email()`. Composition is the supported route,
+  via the public constructor each class already takes an inner decoder through, or
+  `StringDecoder.from(Decoder)`. **Breaks any existing subclass**, at both compile time and link
+  time ([#115](https://github.com/kawasima/raoh/issues/115)).
 
 - **The `ObjectDecoders` temporal decoders now accept ISO-8601 text**, the representation the
   matching `ObjectEncoders` factory writes, so a codec pair built over the neutral `Object` tree

@@ -23,7 +23,7 @@ import java.util.function.Predicate;
  *
  * @param <I> the input type
  */
-public class DoubleDecoder<I extends @Nullable Object> implements Decoder<I, Double> {
+public final class DoubleDecoder<I extends @Nullable Object> implements Decoder<I, Double> {
 
     private final Decoder<I, Double> inner;
 
@@ -216,13 +216,10 @@ public class DoubleDecoder<I extends @Nullable Object> implements Decoder<I, Dou
 
 
     /**
-     * Refines the decoded value with a predicate, narrowing the inherited return type so that this
-     * decoder's own constraints can still be chained after the refinement.
+     * {@inheritDoc}
      *
-     * @param ok      the predicate the decoded value must satisfy
-     * @param code    the error code to report on failure
-     * @param message the error message to report on failure
-     * @return a decoder that fails with the given code and message when {@code ok} rejects the value
+     * <p>The return type is narrowed to {@link DoubleDecoder} so that double constraints can still be chained
+     * after the refinement.
      */
     @Override
     public DoubleDecoder<I> refine(Predicate<? super Double> ok, String code, String message) {
@@ -230,15 +227,10 @@ public class DoubleDecoder<I extends @Nullable Object> implements Decoder<I, Dou
     }
 
     /**
-     * Refines the decoded value with a predicate, attaching metadata derived from the failing value.
-     * Narrows the inherited return type so that this decoder's own constraints can still be chained.
+     * {@inheritDoc}
      *
-     * @param ok      the predicate the decoded value must satisfy
-     * @param code    the error code to report on failure
-     * @param message the error message to report on failure
-     * @param metaFn  a function producing the issue metadata from the failing value
-     * @return a decoder that fails with the given code, message, and metadata when {@code ok}
-     *         rejects the value
+     * <p>The return type is narrowed to {@link DoubleDecoder} so that double constraints can still be chained
+     * after the refinement.
      */
     @Override
     public DoubleDecoder<I> refine(Predicate<? super Double> ok, String code, String message,
@@ -247,12 +239,10 @@ public class DoubleDecoder<I extends @Nullable Object> implements Decoder<I, Dou
     }
 
     /**
-     * Refines the decoded value with a predicate whose failure branch is caller-controlled.
-     * Narrows the inherited return type so that this decoder's own constraints can still be chained.
+     * {@inheritDoc}
      *
-     * @param ok     the predicate the decoded value must satisfy
-     * @param onFail builds the failing result from the rejected value and the current path
-     * @return a decoder that delegates to {@code onFail} when {@code ok} rejects the value
+     * <p>The return type is narrowed to {@link DoubleDecoder} so that double constraints can still be chained
+     * after the refinement.
      */
     @Override
     public DoubleDecoder<I> refine(Predicate<? super Double> ok,

@@ -100,6 +100,14 @@ class CovariantRefineTest {
                 .isTrue();
         assertEquals(true, decodeOk(dec, true));
         assertEquals("must_be_true", decodeErr(dec, false).code());
+
+        // The refinement above rejects false before isTrue() ever runs, so a second decoder with a
+        // predicate that accepts everything is what proves the following constraint still fires.
+        BoolDecoder<@Nullable Object> constraintFires = bool()
+                .refine(b -> true, "never_fails", "never fails")
+                .isTrue();
+        assertEquals(true, decodeOk(constraintFires, true));
+        assertEquals(ErrorCodes.INVALID_VALUE, decodeErr(constraintFires, false).code());
     }
 
     @Test

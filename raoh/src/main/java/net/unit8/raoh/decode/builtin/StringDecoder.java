@@ -37,7 +37,7 @@ import java.util.function.Predicate;
  *
  * @param <I> the input type
  */
-public class StringDecoder<I extends @Nullable Object> implements Decoder<I, String> {
+public final class StringDecoder<I extends @Nullable Object> implements Decoder<I, String> {
 
     private static final int MAX_EMAIL_LENGTH = 254;
     private static final int MAX_URL_LENGTH = 2048;
@@ -967,13 +967,10 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
 
 
     /**
-     * Refines the decoded value with a predicate, narrowing the inherited return type so that this
-     * decoder's own constraints can still be chained after the refinement.
+     * {@inheritDoc}
      *
-     * @param ok      the predicate the decoded value must satisfy
-     * @param code    the error code to report on failure
-     * @param message the error message to report on failure
-     * @return a decoder that fails with the given code and message when {@code ok} rejects the value
+     * <p>The return type is narrowed to {@link StringDecoder} so that string constraints can still be chained
+     * after the refinement.
      */
     @Override
     public StringDecoder<I> refine(Predicate<? super String> ok, String code, String message) {
@@ -981,15 +978,10 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
     }
 
     /**
-     * Refines the decoded value with a predicate, attaching metadata derived from the failing value.
-     * Narrows the inherited return type so that this decoder's own constraints can still be chained.
+     * {@inheritDoc}
      *
-     * @param ok      the predicate the decoded value must satisfy
-     * @param code    the error code to report on failure
-     * @param message the error message to report on failure
-     * @param metaFn  a function producing the issue metadata from the failing value
-     * @return a decoder that fails with the given code, message, and metadata when {@code ok}
-     *         rejects the value
+     * <p>The return type is narrowed to {@link StringDecoder} so that string constraints can still be chained
+     * after the refinement.
      */
     @Override
     public StringDecoder<I> refine(Predicate<? super String> ok, String code, String message,
@@ -998,12 +990,10 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
     }
 
     /**
-     * Refines the decoded value with a predicate whose failure branch is caller-controlled.
-     * Narrows the inherited return type so that this decoder's own constraints can still be chained.
+     * {@inheritDoc}
      *
-     * @param ok     the predicate the decoded value must satisfy
-     * @param onFail builds the failing result from the rejected value and the current path
-     * @return a decoder that delegates to {@code onFail} when {@code ok} rejects the value
+     * <p>The return type is narrowed to {@link StringDecoder} so that string constraints can still be chained
+     * after the refinement.
      */
     @Override
     public StringDecoder<I> refine(Predicate<? super String> ok,
