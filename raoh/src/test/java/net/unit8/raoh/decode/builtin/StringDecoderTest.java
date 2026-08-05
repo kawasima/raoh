@@ -66,6 +66,26 @@ class StringDecoderTest {
         assertEquals("must be exactly 3 characters", issue.message());
     }
 
+    // --- length is counted in code points ---
+
+    /**
+     * A supplementary-plane character occupies two UTF-16 units and is one character. Counting the
+     * units makes a length limit depend on which characters a name happens to contain, which is a
+     * surprise wherever such characters are ordinary: 𠮷田, an emoji in a free-text field.
+     */
+    @Test
+    void lengthConstraintsCountCodePointsNotUtf16Units() {
+        String twoKanji = "\uD842\uDFB7\u7530";   // 𠮷田: two characters, four UTF-16 units
+
+        assertEquals(twoKanji, decodeOk(string().maxLength(2), twoKanji));
+        assertEquals(twoKanji, decodeOk(string().minLength(2), twoKanji));
+        assertEquals(twoKanji, decodeOk(string().fixedLength(2), twoKanji));
+
+        var tooLong = decodeErr(string().maxLength(1), twoKanji);
+        assertEquals(ErrorCodes.TOO_LONG, tooLong.code());
+        assertEquals(2, tooLong.meta().get("actual"), "the reported length is in code points too");
+    }
+
     // --- oneOf ---
 
     @Test
@@ -162,6 +182,21 @@ class StringDecoderTest {
         // Exceeds the 2048-character maximum, exercising the length guard branch of url().
         var tooLong = "https://example.com/" + "a".repeat(2048);
         var issue = decodeErr(string().url(), tooLong);
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals("not a valid URL", issue.message());
+    }
+
+    @Test
+    void urlLengthGuardCountsUtf16UnitsNotCodePoints() {
+        // The 2048 bound in url() limits the URL as transmitted; it is not a user-facing character
+        // count, so it stays in UTF-16 units even though minLength/maxLength count code points.
+        // java.net.URI accepts supplementary characters in a path, so this URL is otherwise valid
+        // and only the guard rejects it — under a code point count it would decode successfully.
+        var url = "https://example.com/" + "𠮷".repeat(1025);   // 𠮷 ×1025
+        assertTrue(url.length() > 2048, "over the guard when counted in UTF-16 units");
+        assertTrue(url.codePointCount(0, url.length()) < 2048, "under it when counted in code points");
+
+        var issue = decodeErr(string().url(), url);
         assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
         assertEquals("not a valid URL", issue.message());
     }
