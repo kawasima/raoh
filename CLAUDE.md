@@ -119,6 +119,11 @@ permanent. Everything before step 5 is reversible; treat step 5 as the point of 
    [X.Y.Z]: https://github.com/kawasima/raoh/compare/v<prev>...vX.Y.Z
    ```
 
+   Cross-check the breaking-change list against the japicmp report — the `japicmp-api-diff`
+   artifact from the last CI run, or `*/target/japicmp/api-diff.md` after a local `mvn verify`.
+   It lists every removed, modified and added type in `raoh`, `raoh-json` and `raoh-jooq`
+   against the baseline, which is what the CHANGELOG is supposed to be describing.
+
 3. Set the release version in all POMs:
 
    ```sh
@@ -165,15 +170,22 @@ permanent. Everything before step 5 is reversible; treat step 5 as the point of 
    Order matters. `--target main` resolves against the *remote* branch, so creating the release
    before pushing tags the previous commit.
 
-7. Back on `develop`, bump to the next SNAPSHOT and push:
+7. Back on `develop`, bump to the next SNAPSHOT, move the API-diff baseline to the release just
+   made, and push:
 
    ```sh
    git checkout develop
    ./scripts/bump-version.sh X.Y.(Z+1)-SNAPSHOT
+   # set <japicmp.baseline> in the root pom.xml to X.Y.Z
    git push origin develop
    ```
 
    Commit: `chore: bump version to X.Y.(Z+1)-SNAPSHOT`
+
+   Set the baseline *after* running the script, never before: `bump-version.sh` replaces the
+   current version string anywhere it appears in a POM, so a baseline already reading `X.Y.Z`
+   would be rewritten to the SNAPSHOT along with everything else. Left behind, the next cycle's
+   diff covers two releases at once.
 
 8. Verify the release landed:
 

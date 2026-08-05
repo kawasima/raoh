@@ -52,6 +52,15 @@ detailed from the current development cycle onward.
   string literals, so a decomposed literal passed to `oneOf` will not match a value normalized to NFC
   ([#106](https://github.com/kawasima/raoh/issues/106)).
 
+- **Published-API diff in the build.** `japicmp` compares `raoh`, `raoh-json` and `raoh-jooq`
+  against the last release during `verify`, and CI puts the per-module report in the job summary
+  and the `japicmp-api-diff` artifact. Nothing used to report a change to the API surface, so the
+  breaks in this release are in this file only because someone noticed them. Reporting only for
+  now: before 1.0 the breaks are deliberate and frequent, and a build that fails on each one turns
+  the exclusion list into the thing you edit to get back to green. At 1.0 the `breakBuild*` flags
+  go to true and an intentional break needs an explicit exclusion
+  ([#117](https://github.com/kawasima/raoh/issues/117)).
+
 ### Fixed
 
 - **A schema can no longer lose a field by being wrapped.** `FieldDecoder` was both a `Decoder` and

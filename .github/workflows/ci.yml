@@ -53,6 +53,40 @@ jobs:
           name: jacoco-coverage
           path: '**/target/site/jacoco/'
           if-no-files-found: warn
+      # japicmp (configured in the parent pom) diffs the published API of raoh, raoh-json
+      # and raoh-jooq against the last release during `verify`, writing a report under
+      # target/japicmp. Show it here so a change to the API surface is visible on the PR
+      # that makes it. Reporting only — before 1.0 the build does not fail on a break; see
+      # the plugin's comment in the parent pom.
+      - name: Public API diff
+        if: always()
+        # Reporting only: never let a summary-formatting hiccup red an otherwise-green build.
+        continue-on-error: true
+        run: |
+          baseline=$(sed -n 's#.*<japicmp.baseline>\(.*\)</japicmp.baseline>.*#\1#p' pom.xml)
+          {
+            echo "## Public API diff (baseline ${baseline})"
+            for f in $(find . -path '*/target/japicmp/api-diff.md' | sort); do
+              mod=$(echo "$f" | sed -E 's#\./([^/]+)/target.*#\1#')
+              size=$(wc -c < "$f")
+              echo "### $mod"
+              # The job summary caps at 1 MiB. A report that big belongs in the artifact.
+              if [ "$size" -le 262144 ]; then
+                # Drop the report's own H1 and demote its headings two levels, so its
+                # sections nest under the module heading instead of outranking it.
+                sed -e '/^# Compatibility Report$/d' -e 's/^#/###/' "$f"
+              else
+                echo "Report is ${size} bytes — see the japicmp-api-diff artifact."
+              fi
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload API diff reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: japicmp-api-diff
+          path: '**/target/japicmp/'
+          if-no-files-found: warn
 
   nullcheck:
     name: NullAway null-analysis gate (JDK 25)

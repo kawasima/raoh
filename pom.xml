@@ -52,9 +52,77 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jackson.version>3.1.0</jackson.version>
         <junit.version>5.11.4</junit.version>
+        <!--
+            The release the published-API diff compares against. It stays on the previous
+            release while a cycle is in flight — that is what makes the diff describe the
+            cycle — and moves forward in step 7 of the release flow, together with the bump
+            to the next SNAPSHOT. A baseline left behind makes the diff grow by a release
+            at a time until it says nothing about the change in front of you.
+        -->
+        <japicmp.baseline>0.6.0</japicmp.baseline>
     </properties>
 
     <build>
+        <pluginManagement>
+            <plugins>
+                <!--
+                    Public API diff against the last release, for the library modules that
+                    declare it (raoh, raoh-json, raoh-jooq). Reporting only: before 1.0 the
+                    breaks are deliberate and frequent, and a build that fails on each one
+                    turns the exclusion list into the thing you edit to get back to green —
+                    which is the opposite of acknowledging a break. The report is what the
+                    CHANGELOG's breaking-change list gets written from.
+
+                    At 1.0, set both breakBuild* flags to true. From then on an intentional
+                    break needs an explicit <exclude>, and that list is the acknowledgement.
+                -->
+                <plugin>
+                    <groupId>com.github.siom79.japicmp</groupId>
+                    <artifactId>japicmp-maven-plugin</artifactId>
+                    <version>0.23.1</version>
+                    <configuration>
+                        <!--
+                            Pinned to a released coordinate rather than LATEST/RELEASE, so the
+                            comparison resolves from Central and does not depend on what happens
+                            to be in the local repository.
+                        -->
+                        <oldVersion>
+                            <dependency>
+                                <groupId>${project.groupId}</groupId>
+                                <artifactId>${project.artifactId}</artifactId>
+                                <version>${japicmp.baseline}</version>
+                                <type>jar</type>
+                            </dependency>
+                        </oldVersion>
+                        <parameter>
+                            <onlyModified>true</onlyModified>
+                            <!--
+                                A dependent module's baseline was compiled against the baseline of
+                                raoh, but the comparison runs with the current raoh on the classpath,
+                                so a type this cycle removed cannot be resolved there. Ignore only
+                                our own types: a break in raoh belongs to raoh's own report, while a
+                                third-party classpath gap still fails loudly.
+                            -->
+                            <ignoreMissingClassesByRegularExpressions>
+                                <ignoreMissingClassesByRegularExpression>net\.unit8\.raoh\..*</ignoreMissingClassesByRegularExpression>
+                            </ignoreMissingClassesByRegularExpressions>
+                            <breakBuildOnBinaryIncompatibleModifications>false</breakBuildOnBinaryIncompatibleModifications>
+                            <breakBuildOnSourceIncompatibleModifications>false</breakBuildOnSourceIncompatibleModifications>
+                        </parameter>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>api-diff</id>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>cmp</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
