@@ -12,6 +12,15 @@ detailed from the current development cycle onward.
 
 ### Changed
 
+- **The `ObjectDecoders` temporal decoders now accept ISO-8601 text**, the representation the
+  matching `ObjectEncoders` factory writes, so a codec pair built over the neutral `Object` tree
+  round-trips. `date()`, `time()`, `dateTime()`, `iso8601()` and `offsetDateTime()` parse a
+  `String` with the same parse and the same failure message as `string().date()` and friends;
+  unparseable text is now `invalid_format` where it used to be `type_mismatch`. `dateTime()` also
+  accepts `java.sql.Timestamp`, closing the gap against `iso8601()`. `offsetDateTime()` gets no
+  `java.sql` conversion on purpose — `Timestamp` carries no offset, so converting one would mean
+  picking a zone for the caller ([#104](https://github.com/kawasima/raoh/issues/104)).
+
 - **`StringDecoder.minLength` / `maxLength` / `fixedLength` now count Unicode code points** instead
   of UTF-16 code units, in both the comparison and the `actual` meta value. A supplementary-plane
   character — a kanji such as `𠮷`, an emoji — used to count as two, contradicting the `characters`

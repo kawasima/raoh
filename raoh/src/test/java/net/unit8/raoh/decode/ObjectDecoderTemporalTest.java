@@ -2,8 +2,11 @@ package net.unit8.raoh.decode;
 
 import net.unit8.raoh.Err;
 import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.Issue;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.Path;
+import net.unit8.raoh.Result;
+import net.unit8.raoh.encode.ObjectEncoders;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -53,9 +56,9 @@ class ObjectDecoderTemporalTest {
     }
 
     @Test
-    void iso8601RejectsString() {
-        switch (iso8601().decode("not a timestamp", Path.ROOT)) {
-            case Ok<Instant> _ -> fail("Expected Err for String");
+    void iso8601RejectsWrongType() {
+        switch (iso8601().decode(42, Path.ROOT)) {
+            case Ok<Instant> _ -> fail("Expected Err for Integer");
             case Err<Instant>(var issues) ->
                     assertEquals(ErrorCodes.TYPE_MISMATCH, issues.asList().getFirst().code());
         }
@@ -132,8 +135,8 @@ class ObjectDecoderTemporalTest {
 
     @Test
     void timeRejectsWrongType() {
-        switch (time().decode("10:30", Path.ROOT)) {
-            case Ok<LocalTime> _ -> fail("Expected Err for String");
+        switch (time().decode(42, Path.ROOT)) {
+            case Ok<LocalTime> _ -> fail("Expected Err for Integer");
             case Err<LocalTime>(var issues) ->
                     assertEquals(ErrorCodes.TYPE_MISMATCH, issues.asList().getFirst().code());
         }
@@ -177,5 +180,106 @@ class ObjectDecoderTemporalTest {
             case Err<OffsetDateTime>(var issues) ->
                     assertEquals(ErrorCodes.REQUIRED, issues.asList().getFirst().code());
         }
+    }
+
+    @Test
+    void dateTimeAcceptsSqlTimestamp() {
+        var dt = LocalDateTime.of(2024, 6, 15, 10, 30);
+        var ts = java.sql.Timestamp.valueOf(dt);
+        switch (dateTime().decode(ts, Path.ROOT)) {
+            case Ok<LocalDateTime>(var v) -> assertEquals(dt, v);
+            case Err<LocalDateTime>(var issues) -> fail("Expected Ok but got: " + issues);
+        }
+    }
+
+    // --- ISO text: the representation ObjectEncoders writes ---
+
+    @Test
+    void iso8601DecodesWhatTheEncoderWrote() {
+        var instant = Instant.parse("2024-06-15T10:30:00Z");
+        assertRoundTrips(instant, ObjectEncoders.iso8601().encode(instant), iso8601());
+    }
+
+    @Test
+    void dateDecodesWhatTheEncoderWrote() {
+        var date = LocalDate.of(2024, 6, 15);
+        assertRoundTrips(date, ObjectEncoders.date().encode(date), date());
+    }
+
+    @Test
+    void timeDecodesWhatTheEncoderWrote() {
+        var time = LocalTime.of(10, 30, 0);
+        assertRoundTrips(time, ObjectEncoders.time().encode(time), time());
+    }
+
+    @Test
+    void dateTimeDecodesWhatTheEncoderWrote() {
+        var dt = LocalDateTime.of(2024, 6, 15, 10, 30);
+        assertRoundTrips(dt, ObjectEncoders.dateTime().encode(dt), dateTime());
+    }
+
+    @Test
+    void offsetDateTimeDecodesWhatTheEncoderWrote() {
+        var odt = OffsetDateTime.of(2024, 6, 15, 10, 30, 0, 0, ZoneOffset.ofHours(9));
+        assertRoundTrips(odt, ObjectEncoders.offsetDateTime().encode(odt), offsetDateTime());
+    }
+
+    // --- unparseable text fails the same way as the string route ---
+
+    @Test
+    void iso8601FailsOnUnparseableTextLikeTheStringRoute() {
+        assertSameFailure(iso8601().decode("nonsense", Path.ROOT),
+                string().iso8601().decode("nonsense", Path.ROOT));
+    }
+
+    @Test
+    void dateFailsOnUnparseableTextLikeTheStringRoute() {
+        assertSameFailure(date().decode("nonsense", Path.ROOT),
+                string().date().decode("nonsense", Path.ROOT));
+    }
+
+    @Test
+    void timeFailsOnUnparseableTextLikeTheStringRoute() {
+        assertSameFailure(time().decode("nonsense", Path.ROOT),
+                string().time().decode("nonsense", Path.ROOT));
+    }
+
+    @Test
+    void dateTimeFailsOnUnparseableTextLikeTheStringRoute() {
+        assertSameFailure(dateTime().decode("nonsense", Path.ROOT),
+                string().dateTime().decode("nonsense", Path.ROOT));
+    }
+
+    @Test
+    void offsetDateTimeFailsOnUnparseableTextLikeTheStringRoute() {
+        assertSameFailure(offsetDateTime().decode("nonsense", Path.ROOT),
+                string().offsetDateTime().decode("nonsense", Path.ROOT));
+    }
+
+    private static <T> void assertRoundTrips(T original, Object encoded, Decoder<Object, T> decoder) {
+        assertInstanceOf(String.class, encoded, "the encoder writes ISO text");
+        switch (decoder.decode(encoded, Path.ROOT)) {
+            case Ok<T>(var v) -> assertEquals(original, v);
+            case Err<T>(var issues) -> fail("Expected Ok but got: " + issues);
+        }
+    }
+
+    /**
+     * Both routes read the same ISO text, so a value they both reject must be rejected with the
+     * same code and the same message.
+     */
+    private static void assertSameFailure(Result<?> viaObject, Result<?> viaString) {
+        Issue expected = firstIssue(viaString);
+        Issue actual = firstIssue(viaObject);
+        assertEquals(ErrorCodes.INVALID_FORMAT, actual.code());
+        assertEquals(expected.code(), actual.code());
+        assertEquals(expected.message(), actual.message());
+    }
+
+    private static Issue firstIssue(Result<?> result) {
+        return switch (result) {
+            case Ok<?> ok -> fail("Expected Err but got: " + ok);
+            case Err<?>(var issues) -> issues.asList().getFirst();
+        };
     }
 }
