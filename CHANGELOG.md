@@ -10,7 +10,26 @@ detailed from the current development cycle onward.
 
 ## [Unreleased]
 
+### Added
+
+- **`InputFields<I>`** — enumerates the field names present in an input, so `strict` works on any
+  representation rather than only on `Map`. `MapDecoders.MAP_FIELDS` and `JsonDecoders.JSON_FIELDS`
+  are the built-in ones; implement it to bring `strict` to a boundary the library does not cover,
+  and pass it to `Decoders.strict(dec, knownFields, inputFields)` or to
+  `FieldDecoder.named(name, decoder, inputFields)`
+  ([#113](https://github.com/kawasima/raoh/issues/113)).
+
 ### Fixed
+
+- **`combine(...).strict(f)` now rejects unknown fields on the JSON boundary.** The explicit
+  `JsonDecoders.strict(dec, knownFields)` always worked, but the ergonomic combiner form hardcoded
+  the generic `Decoders.strict`, which only ever scanned `Map` input — so the two spellings of the
+  same feature disagreed, and the convenient one silently accepted whatever it was given. The scan
+  is now a capability of the field decoder rather than something the combiner assumes: `field()`
+  binds a decoder to a field *on a particular boundary*, so it carries an `InputFields`, and
+  `Combiner#strict()` recovers it from its components. The sixteen `Combiner*` records are
+  untouched — their components, canonical constructors and value semantics are unchanged
+  ([#113](https://github.com/kawasima/raoh/issues/113)).
 
 - **`strict()` no longer rejects a valid field as `unknown_field`.** `Combiner#strict()` collects
   known field names by testing each sub-decoder with `instanceof FieldDecoder`, and two things
@@ -37,6 +56,20 @@ detailed from the current development cycle onward.
   ([#109](https://github.com/kawasima/raoh/issues/109)).
 
 ### Changed
+
+- **`Decoders.strict(Decoder, Set)` is removed.** It was generic in the input type but only scanned
+  `Map`, and that gap between what the signature promised and what the implementation did is what
+  produced the bug above. Core now has only the boundary-agnostic
+  `Decoders.strict(Decoder, Set, InputFields)`. Callers on `Map` input should use
+  `MapDecoders.strict`, which is unchanged and already typed to `Map<String, Object>`
+  ([#113](https://github.com/kawasima/raoh/issues/113)).
+
+- **`Combiner#strict()` and `strictFlatMap()` throw `IllegalStateException`** when no component
+  carries an `InputFields` — a combiner built entirely from bare decoders has no way to tell a
+  known field from an unknown one. Previously that case silently accepted everything on JSON and
+  rejected everything on `Map`, since the known-field set came out empty. This is an assembly error
+  rather than a data error, so it surfaces when the decoder is built rather than when it runs
+  ([#113](https://github.com/kawasima/raoh/issues/113)).
 
 - **`refine()` on a builtin decoder now returns that decoder's own type**, so a refinement no
   longer has to come last in a chain: `string().refine(...).minLength(3)` compiles where it

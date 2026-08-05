@@ -1,14 +1,10 @@
 package net.unit8.raoh.decode.combinator;
 
 import net.unit8.raoh.decode.Decoder;
-import net.unit8.raoh.decode.Decoders;
 import net.unit8.raoh.Err;
-import net.unit8.raoh.decode.FieldDecoder;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.Result;
 
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 /**
  * Combines 9 decoders for applicative-style validation with error accumulation.
@@ -98,7 +94,7 @@ public record Combiner9<I, A, B, C, D, E, F, G, H, J>(Decoder<I, A> da, Decoder<
      * @return a strict decoder that fails on unknown fields
      */
     public <T> Decoder<I, T> strict(Function9<A, B, C, D, E, F, G, H, J, T> f) {
-        return Decoders.strict(map(f), knownFields());
+        return CombinerSupport.strict(map(f), da, db, dc, dd, de, df, dg, dh, dj);
     }
 
     /**
@@ -109,20 +105,7 @@ public record Combiner9<I, A, B, C, D, E, F, G, H, J>(Decoder<I, A> da, Decoder<
      * @return a strict decoder that fails on unknown fields
      */
     public <T> Decoder<I, T> strictFlatMap(Function9<A, B, C, D, E, F, G, H, J, Result<T>> f) {
-        return Decoders.strict(flatMap(f), knownFields());
+        return CombinerSupport.strict(flatMap(f), da, db, dc, dd, de, df, dg, dh, dj);
     }
 
-    private Set<String> knownFields() {
-        var fields = new LinkedHashSet<String>();
-        if (da instanceof FieldDecoder<I, A> fd) fields.add(fd.fieldName());
-        if (db instanceof FieldDecoder<I, B> fd) fields.add(fd.fieldName());
-        if (dc instanceof FieldDecoder<I, C> fd) fields.add(fd.fieldName());
-        if (dd instanceof FieldDecoder<I, D> fd) fields.add(fd.fieldName());
-        if (de instanceof FieldDecoder<I, E> fd) fields.add(fd.fieldName());
-        if (df instanceof FieldDecoder<I, F> fd) fields.add(fd.fieldName());
-        if (dg instanceof FieldDecoder<I, G> fd) fields.add(fd.fieldName());
-        if (dh instanceof FieldDecoder<I, H> fd) fields.add(fd.fieldName());
-        if (dj instanceof FieldDecoder<I, J> fd) fields.add(fd.fieldName());
-        return Set.copyOf(fields);
-    }
 }
