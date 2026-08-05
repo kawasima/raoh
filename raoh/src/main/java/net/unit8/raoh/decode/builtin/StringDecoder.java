@@ -105,7 +105,8 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
 
     /**
      * Restricts the string to be at least {@code n} characters long, counted in Unicode code
-     * points (see {@link #codePointLength}).
+     * points via {@link String#codePointCount(int, int)}, so a supplementary-plane character
+     * counts as one.
      *
      * @param n the minimum length
      * @return a new decoder that fails with {@link ErrorCodes#TOO_SHORT} if shorter
@@ -116,7 +117,8 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
 
     /**
      * Restricts the string to be at least {@code n} characters long, counted in Unicode code
-     * points (see {@link #codePointLength}).
+     * points via {@link String#codePointCount(int, int)}, so a supplementary-plane character
+     * counts as one.
      *
      * @param n       the minimum length
      * @param message custom error message, or {@code null} for the default
@@ -137,7 +139,8 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
 
     /**
      * Restricts the string to be at most {@code n} characters long, counted in Unicode code
-     * points (see {@link #codePointLength}).
+     * points via {@link String#codePointCount(int, int)}, so a supplementary-plane character
+     * counts as one.
      *
      * @param n the maximum length
      * @return a new decoder that fails with {@link ErrorCodes#TOO_LONG} if longer
@@ -148,7 +151,8 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
 
     /**
      * Restricts the string to be at most {@code n} characters long, counted in Unicode code
-     * points (see {@link #codePointLength}).
+     * points via {@link String#codePointCount(int, int)}, so a supplementary-plane character
+     * counts as one.
      *
      * @param n       the maximum length
      * @param message custom error message, or {@code null} for the default
@@ -169,7 +173,8 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
 
     /**
      * Restricts the string to be exactly {@code n} characters long, counted in Unicode code
-     * points (see {@link #codePointLength}).
+     * points via {@link String#codePointCount(int, int)}, so a supplementary-plane character
+     * counts as one.
      *
      * @param n the required length
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_LENGTH} if the length differs
@@ -180,7 +185,8 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
 
     /**
      * Restricts the string to be exactly {@code n} characters long, counted in Unicode code
-     * points (see {@link #codePointLength}).
+     * points via {@link String#codePointCount(int, int)}, so a supplementary-plane character
+     * counts as one.
      *
      * @param n       the required length
      * @param message custom error message, or {@code null} for the default
@@ -378,7 +384,9 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
      * Decodes the string value to a {@link URI}, validating that it is a valid http or https URL.
      *
      * <p>Requires an absolute URL with the {@code http} or {@code https} scheme and a
-     * non-empty host. The maximum accepted length is 2048 characters.
+     * non-empty host. Values longer than 2048 UTF-16 code units are rejected before parsing; this
+     * caps the input handed to {@link URI}, and is neither a character count nor a bound on the
+     * percent-encoded form actually sent.
      * Uses {@link URI} parsing to avoid ReDoS from regex backtracking.
      *
      * <p>This is a terminal method — the returned decoder produces {@link URI},
@@ -395,7 +403,9 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
      * Decodes the string value to a {@link URI}, validating that it is a valid http or https URL.
      *
      * <p>Requires an absolute URL with the {@code http} or {@code https} scheme and a
-     * non-empty host. The maximum accepted length is 2048 characters.
+     * non-empty host. Values longer than 2048 UTF-16 code units are rejected before parsing; this
+     * caps the input handed to {@link URI}, and is neither a character count nor a bound on the
+     * percent-encoded form actually sent.
      * Uses {@link URI} parsing to avoid ReDoS from regex backtracking.
      *
      * @param message custom error message, or {@code null} for the default

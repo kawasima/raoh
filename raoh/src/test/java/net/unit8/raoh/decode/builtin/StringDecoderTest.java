@@ -75,15 +75,30 @@ class StringDecoderTest {
      */
     @Test
     void lengthConstraintsCountCodePointsNotUtf16Units() {
-        String twoKanji = "\uD842\uDFB7\u7530";   // 𠮷田: two characters, four UTF-16 units
+        String twoKanji = "\uD842\uDFB7\u7530";   // 𠮷田: two characters, three UTF-16 units
 
+        // Counting units, both of these reject the value; counting code points, neither does.
         assertEquals(twoKanji, decodeOk(string().maxLength(2), twoKanji));
-        assertEquals(twoKanji, decodeOk(string().minLength(2), twoKanji));
         assertEquals(twoKanji, decodeOk(string().fixedLength(2), twoKanji));
 
         var tooLong = decodeErr(string().maxLength(1), twoKanji);
         assertEquals(ErrorCodes.TOO_LONG, tooLong.code());
         assertEquals(2, tooLong.meta().get("actual"), "the reported length is in code points too");
+    }
+
+    /**
+     * {@code minLength} is the direction the change tightens, so it needs a value that the old
+     * unit count would have let through.
+     */
+    @Test
+    void minLengthCountsCodePointsAndSoBecomesStricter() {
+        String oneKanji = "𠮷";   // 𠮷: one character, two UTF-16 units
+
+        var tooShort = decodeErr(string().minLength(2), oneKanji);
+        assertEquals(ErrorCodes.TOO_SHORT, tooShort.code());
+        assertEquals(1, tooShort.meta().get("actual"));
+
+        assertEquals(oneKanji, decodeOk(string().minLength(1), oneKanji));
     }
 
     // --- oneOf ---
@@ -188,8 +203,10 @@ class StringDecoderTest {
 
     @Test
     void urlLengthGuardCountsUtf16UnitsNotCodePoints() {
-        // The 2048 bound in url() limits the URL as transmitted; it is not a user-facing character
-        // count, so it stays in UTF-16 units even though minLength/maxLength count code points.
+        // The 2048 bound in url() caps the size of the Java string handed to URI.create, so it
+        // stays in UTF-16 units even though minLength/maxLength count code points. It is neither a
+        // character count nor a bound on the URL as sent: the percent-encoded ASCII form of a
+        // supplementary character is 12 characters where the Java string holds two.
         // java.net.URI accepts supplementary characters in a path, so this URL is otherwise valid
         // and only the guard rejects it — under a code point count it would decode successfully.
         var url = "https://example.com/" + "𠮷".repeat(1025);   // 𠮷 ×1025

@@ -17,8 +17,9 @@ detailed from the current development cycle onward.
   character — a kanji such as `𠮷`, an emoji — used to count as two, contradicting the `characters`
   / `文字` wording of the messages. Strings made only of BMP characters are unaffected; for the
   rest, `maxLength` is now more permissive and `minLength` stricter. The length guards inside
-  `email()`, `url()` and `ip()` stay in UTF-16 units — they bound the value as transmitted rather
-  than expressing a character count ([#105](https://github.com/kawasima/raoh/issues/105)).
+  `email()`, `url()` and `ip()` stay in UTF-16 units — they cap the size of the string before it is
+  parsed or matched, and express neither a character count nor the length of the value as sent
+  ([#105](https://github.com/kawasima/raoh/issues/105)).
 
 ## [0.6.0] - 2026-07-15
 
