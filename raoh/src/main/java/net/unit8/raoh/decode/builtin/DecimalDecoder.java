@@ -9,6 +9,9 @@ import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * A decoder for {@link BigDecimal} values with a fluent API for numeric constraints.
@@ -283,6 +286,52 @@ public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, Bi
             }
             return Result.ok(value);
         });
+    }
+
+
+    /**
+     * Refines the decoded value with a predicate, narrowing the inherited return type so that this
+     * decoder's own constraints can still be chained after the refinement.
+     *
+     * @param ok      the predicate the decoded value must satisfy
+     * @param code    the error code to report on failure
+     * @param message the error message to report on failure
+     * @return a decoder that fails with the given code and message when {@code ok} rejects the value
+     */
+    @Override
+    public DecimalDecoder<I> refine(Predicate<? super BigDecimal> ok, String code, String message) {
+        return refine(ok, code, message, v -> Map.of());
+    }
+
+    /**
+     * Refines the decoded value with a predicate, attaching metadata derived from the failing value.
+     * Narrows the inherited return type so that this decoder's own constraints can still be chained.
+     *
+     * @param ok      the predicate the decoded value must satisfy
+     * @param code    the error code to report on failure
+     * @param message the error message to report on failure
+     * @param metaFn  a function producing the issue metadata from the failing value
+     * @return a decoder that fails with the given code, message, and metadata when {@code ok}
+     *         rejects the value
+     */
+    @Override
+    public DecimalDecoder<I> refine(Predicate<? super BigDecimal> ok, String code, String message,
+                                    Function<? super BigDecimal, ? extends Map<String, Object>> metaFn) {
+        return refine(ok, (v, path) -> Result.failCustom(path, code, message, metaFn.apply(v)));
+    }
+
+    /**
+     * Refines the decoded value with a predicate whose failure branch is caller-controlled.
+     * Narrows the inherited return type so that this decoder's own constraints can still be chained.
+     *
+     * @param ok     the predicate the decoded value must satisfy
+     * @param onFail builds the failing result from the rejected value and the current path
+     * @return a decoder that delegates to {@code onFail} when {@code ok} rejects the value
+     */
+    @Override
+    public DecimalDecoder<I> refine(Predicate<? super BigDecimal> ok,
+                                    BiFunction<? super BigDecimal, ? super Path, ? extends Result<BigDecimal>> onFail) {
+        return chain((value, path) -> ok.test(value) ? Result.ok(value) : onFail.apply(value, path));
     }
 
     private DecimalDecoder<I> chain(Decoder<BigDecimal, BigDecimal> constraint) {

@@ -12,6 +12,14 @@ detailed from the current development cycle onward.
 
 ### Changed
 
+- **`refine()` on a builtin decoder now returns that decoder's own type**, so a refinement no
+  longer has to come last in a chain: `string().refine(...).minLength(3)` compiles where it
+  previously did not, because `refine` is declared on `Decoder` and returned `Decoder<I, T>`. All
+  three overloads are overridden on `BoolDecoder`, `DecimalDecoder`, `DoubleDecoder`,
+  `FloatDecoder`, `IntDecoder`, `ListDecoder`, `LongDecoder`, `RecordDecoder`, `StringDecoder` and
+  `TemporalDecoder`. Behaviour is unchanged, and a covariant override generates a bridge method, so
+  this is both source and binary compatible ([#110](https://github.com/kawasima/raoh/issues/110)).
+
 - **The `ObjectDecoders` temporal decoders now accept ISO-8601 text**, the representation the
   matching `ObjectEncoders` factory writes, so a codec pair built over the neutral `Object` tree
   round-trips. `date()`, `time()`, `dateTime()`, `iso8601()` and `offsetDateTime()` parse a
