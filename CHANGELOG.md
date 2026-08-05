@@ -10,6 +10,8 @@ detailed from the current development cycle onward.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-05
+
 > **This is a breaking release, not a patch.** `FieldDecoder` is gone, the combiners take `CombinePart`
 > values instead of `Decoder`s, `Decoders.strict(Decoder, Set)` is removed, and the builtin decoders
 > are `final`.
@@ -420,7 +422,8 @@ detailed from the current development cycle onward.
   `Presence`), `Map<String, Object>` decoders, error model, a Spring Boot example, and a README with
   an Elm-decoder comparison.
 
-[Unreleased]: https://github.com/kawasima/raoh/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/kawasima/raoh/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/kawasima/raoh/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/kawasima/raoh/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/kawasima/raoh/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/kawasima/raoh/compare/v0.4.0...v0.4.1
