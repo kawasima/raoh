@@ -8,6 +8,9 @@ import net.unit8.raoh.Result;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * A decoder for string-keyed map (record/object) values with a fluent API for size constraints.
@@ -15,7 +18,7 @@ import java.util.Map;
  * @param <I> the input type
  * @param <V> the value type
  */
-public class RecordDecoder<I extends @Nullable Object, V> implements Decoder<I, Map<String, V>> {
+public final class RecordDecoder<I extends @Nullable Object, V> implements Decoder<I, Map<String, V>> {
 
     private final Decoder<I, Map<String, V>> inner;
 
@@ -140,6 +143,42 @@ public class RecordDecoder<I extends @Nullable Object, V> implements Decoder<I, 
             }
             return Result.ok(value);
         });
+    }
+
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link RecordDecoder} so that record constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public RecordDecoder<I, V> refine(Predicate<? super Map<String, V>> ok, String code, String message) {
+        return refine(ok, code, message, v -> Map.of());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link RecordDecoder} so that record constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public RecordDecoder<I, V> refine(Predicate<? super Map<String, V>> ok, String code, String message,
+                                      Function<? super Map<String, V>, ? extends Map<String, Object>> metaFn) {
+        return refine(ok, (v, path) -> Result.failCustom(path, code, message, metaFn.apply(v)));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link RecordDecoder} so that record constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public RecordDecoder<I, V> refine(Predicate<? super Map<String, V>> ok,
+                                      BiFunction<? super Map<String, V>, ? super Path, ? extends Result<Map<String, V>>> onFail) {
+        return chain((value, path) -> ok.test(value) ? Result.ok(value) : onFail.apply(value, path));
     }
 
     private RecordDecoder<I, V> chain(Decoder<Map<String, V>, Map<String, V>> constraint) {

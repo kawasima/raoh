@@ -8,6 +8,9 @@ import net.unit8.raoh.Result;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * A decoder for temporal values with a fluent API for range constraints.
@@ -35,7 +38,7 @@ import java.util.Map;
  * @param <I> the input type
  * @param <T> the temporal type (must be {@link Comparable} to itself)
  */
-public class TemporalDecoder<I extends @Nullable Object, T extends Comparable<? super T>> implements Decoder<I, T> {
+public final class TemporalDecoder<I extends @Nullable Object, T extends Comparable<? super T>> implements Decoder<I, T> {
 
     private final Decoder<I, T> inner;
 
@@ -146,6 +149,42 @@ public class TemporalDecoder<I extends @Nullable Object, T extends Comparable<? 
             }
             return Result.ok(value);
         });
+    }
+
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link TemporalDecoder} so that temporal constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public TemporalDecoder<I, T> refine(Predicate<? super T> ok, String code, String message) {
+        return refine(ok, code, message, v -> Map.of());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link TemporalDecoder} so that temporal constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public TemporalDecoder<I, T> refine(Predicate<? super T> ok, String code, String message,
+                                        Function<? super T, ? extends Map<String, Object>> metaFn) {
+        return refine(ok, (v, path) -> Result.failCustom(path, code, message, metaFn.apply(v)));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link TemporalDecoder} so that temporal constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public TemporalDecoder<I, T> refine(Predicate<? super T> ok,
+                                        BiFunction<? super T, ? super Path, ? extends Result<T>> onFail) {
+        return chain((value, path) -> ok.test(value) ? Result.ok(value) : onFail.apply(value, path));
     }
 
     private TemporalDecoder<I, T> chain(Decoder<T, T> constraint) {

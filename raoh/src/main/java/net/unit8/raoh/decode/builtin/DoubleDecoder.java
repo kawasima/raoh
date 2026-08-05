@@ -11,6 +11,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * A decoder for double values with a fluent API for numeric constraints.
@@ -20,7 +23,7 @@ import java.util.TreeSet;
  *
  * @param <I> the input type
  */
-public class DoubleDecoder<I extends @Nullable Object> implements Decoder<I, Double> {
+public final class DoubleDecoder<I extends @Nullable Object> implements Decoder<I, Double> {
 
     private final Decoder<I, Double> inner;
 
@@ -209,6 +212,42 @@ public class DoubleDecoder<I extends @Nullable Object> implements Decoder<I, Dou
             }
             return Result.ok(value);
         });
+    }
+
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link DoubleDecoder} so that double constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public DoubleDecoder<I> refine(Predicate<? super Double> ok, String code, String message) {
+        return refine(ok, code, message, v -> Map.of());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link DoubleDecoder} so that double constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public DoubleDecoder<I> refine(Predicate<? super Double> ok, String code, String message,
+                                   Function<? super Double, ? extends Map<String, Object>> metaFn) {
+        return refine(ok, (v, path) -> Result.failCustom(path, code, message, metaFn.apply(v)));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link DoubleDecoder} so that double constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public DoubleDecoder<I> refine(Predicate<? super Double> ok,
+                                   BiFunction<? super Double, ? super Path, ? extends Result<Double>> onFail) {
+        return chain((value, path) -> ok.test(value) ? Result.ok(value) : onFail.apply(value, path));
     }
 
     private DoubleDecoder<I> chain(Decoder<Double, Double> constraint) {

@@ -8,13 +8,16 @@ import net.unit8.raoh.Result;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * A decoder for boolean values with optional value constraints.
  *
  * @param <I> the input type
  */
-public class BoolDecoder<I extends @Nullable Object> implements Decoder<I, Boolean> {
+public final class BoolDecoder<I extends @Nullable Object> implements Decoder<I, Boolean> {
 
     private final Decoder<I, Boolean> inner;
 
@@ -93,6 +96,42 @@ public class BoolDecoder<I extends @Nullable Object> implements Decoder<I, Boole
             }
             return Result.ok(value);
         });
+    }
+
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link BoolDecoder} so that boolean constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public BoolDecoder<I> refine(Predicate<? super Boolean> ok, String code, String message) {
+        return refine(ok, code, message, v -> Map.of());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link BoolDecoder} so that boolean constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public BoolDecoder<I> refine(Predicate<? super Boolean> ok, String code, String message,
+                                 Function<? super Boolean, ? extends Map<String, Object>> metaFn) {
+        return refine(ok, (v, path) -> Result.failCustom(path, code, message, metaFn.apply(v)));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link BoolDecoder} so that boolean constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public BoolDecoder<I> refine(Predicate<? super Boolean> ok,
+                                 BiFunction<? super Boolean, ? super Path, ? extends Result<Boolean>> onFail) {
+        return chain((value, path) -> ok.test(value) ? Result.ok(value) : onFail.apply(value, path));
     }
 
     private BoolDecoder<I> chain(Decoder<Boolean, Boolean> constraint) {

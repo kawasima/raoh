@@ -11,6 +11,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * A decoder for float values with a fluent API for numeric constraints.
@@ -20,7 +23,7 @@ import java.util.TreeSet;
  *
  * @param <I> the input type
  */
-public class FloatDecoder<I extends @Nullable Object> implements Decoder<I, Float> {
+public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I, Float> {
 
     private final Decoder<I, Float> inner;
 
@@ -209,6 +212,42 @@ public class FloatDecoder<I extends @Nullable Object> implements Decoder<I, Floa
             }
             return Result.ok(value);
         });
+    }
+
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link FloatDecoder} so that float constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public FloatDecoder<I> refine(Predicate<? super Float> ok, String code, String message) {
+        return refine(ok, code, message, v -> Map.of());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link FloatDecoder} so that float constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public FloatDecoder<I> refine(Predicate<? super Float> ok, String code, String message,
+                                  Function<? super Float, ? extends Map<String, Object>> metaFn) {
+        return refine(ok, (v, path) -> Result.failCustom(path, code, message, metaFn.apply(v)));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link FloatDecoder} so that float constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public FloatDecoder<I> refine(Predicate<? super Float> ok,
+                                  BiFunction<? super Float, ? super Path, ? extends Result<Float>> onFail) {
+        return chain((value, path) -> ok.test(value) ? Result.ok(value) : onFail.apply(value, path));
     }
 
     private FloatDecoder<I> chain(Decoder<Float, Float> constraint) {

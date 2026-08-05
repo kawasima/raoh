@@ -15,6 +15,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * A decoder for list (array) values with a fluent API for size constraints.
@@ -22,7 +25,7 @@ import java.util.Set;
  * @param <I> the input type
  * @param <T> the element type
  */
-public class ListDecoder<I extends @Nullable Object, T> implements Decoder<I, List<T>> {
+public final class ListDecoder<I extends @Nullable Object, T> implements Decoder<I, List<T>> {
 
     private final Decoder<I, List<T>> inner;
 
@@ -252,6 +255,42 @@ public class ListDecoder<I extends @Nullable Object, T> implements Decoder<I, Li
     public Decoder<I, Set<T>> toSet() {
         return (in, path) -> this.decode(in, path)
                 .map(list -> Collections.unmodifiableSet(new LinkedHashSet<>(list)));
+    }
+
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link ListDecoder} so that list constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public ListDecoder<I, T> refine(Predicate<? super List<T>> ok, String code, String message) {
+        return refine(ok, code, message, v -> Map.of());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link ListDecoder} so that list constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public ListDecoder<I, T> refine(Predicate<? super List<T>> ok, String code, String message,
+                                    Function<? super List<T>, ? extends Map<String, Object>> metaFn) {
+        return refine(ok, (v, path) -> Result.failCustom(path, code, message, metaFn.apply(v)));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link ListDecoder} so that list constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public ListDecoder<I, T> refine(Predicate<? super List<T>> ok,
+                                    BiFunction<? super List<T>, ? super Path, ? extends Result<List<T>>> onFail) {
+        return chain((value, path) -> ok.test(value) ? Result.ok(value) : onFail.apply(value, path));
     }
 
     private ListDecoder<I, T> chain(Decoder<List<T>, List<T>> constraint) {

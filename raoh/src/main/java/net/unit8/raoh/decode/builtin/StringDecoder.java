@@ -24,6 +24,9 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * A decoder for string values with a fluent API for constraints, transforms, and type conversions.
@@ -34,7 +37,7 @@ import java.util.regex.Pattern;
  *
  * @param <I> the input type
  */
-public class StringDecoder<I extends @Nullable Object> implements Decoder<I, String> {
+public final class StringDecoder<I extends @Nullable Object> implements Decoder<I, String> {
 
     private static final int MAX_EMAIL_LENGTH = 254;
     private static final int MAX_URL_LENGTH = 2048;
@@ -960,6 +963,42 @@ public class StringDecoder<I extends @Nullable Object> implements Decoder<I, Str
      */
     private static int codePointLength(String s) {
         return s.codePointCount(0, s.length());
+    }
+
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link StringDecoder} so that string constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public StringDecoder<I> refine(Predicate<? super String> ok, String code, String message) {
+        return refine(ok, code, message, v -> Map.of());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link StringDecoder} so that string constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public StringDecoder<I> refine(Predicate<? super String> ok, String code, String message,
+                                   Function<? super String, ? extends Map<String, Object>> metaFn) {
+        return refine(ok, (v, path) -> Result.failCustom(path, code, message, metaFn.apply(v)));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link StringDecoder} so that string constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public StringDecoder<I> refine(Predicate<? super String> ok,
+                                   BiFunction<? super String, ? super Path, ? extends Result<String>> onFail) {
+        return chain((value, path) -> ok.test(value) ? Result.ok(value) : onFail.apply(value, path));
     }
 
     private StringDecoder<I> chain(Decoder<String, String> constraint) {

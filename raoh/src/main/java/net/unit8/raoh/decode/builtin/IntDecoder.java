@@ -11,13 +11,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * A decoder for integer values with a fluent API for numeric constraints.
  *
  * @param <I> the input type
  */
-public class IntDecoder<I extends @Nullable Object> implements Decoder<I, Integer> {
+public final class IntDecoder<I extends @Nullable Object> implements Decoder<I, Integer> {
 
     private final Decoder<I, Integer> inner;
 
@@ -276,6 +279,42 @@ public class IntDecoder<I extends @Nullable Object> implements Decoder<I, Intege
             }
             return Result.ok(value);
         });
+    }
+
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link IntDecoder} so that int constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public IntDecoder<I> refine(Predicate<? super Integer> ok, String code, String message) {
+        return refine(ok, code, message, v -> Map.of());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link IntDecoder} so that int constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public IntDecoder<I> refine(Predicate<? super Integer> ok, String code, String message,
+                                Function<? super Integer, ? extends Map<String, Object>> metaFn) {
+        return refine(ok, (v, path) -> Result.failCustom(path, code, message, metaFn.apply(v)));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link IntDecoder} so that int constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public IntDecoder<I> refine(Predicate<? super Integer> ok,
+                                BiFunction<? super Integer, ? super Path, ? extends Result<Integer>> onFail) {
+        return chain((value, path) -> ok.test(value) ? Result.ok(value) : onFail.apply(value, path));
     }
 
     private IntDecoder<I> chain(Decoder<Integer, Integer> constraint) {

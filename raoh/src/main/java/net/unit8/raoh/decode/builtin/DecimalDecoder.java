@@ -9,13 +9,16 @@ import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * A decoder for {@link BigDecimal} values with a fluent API for numeric constraints.
  *
  * @param <I> the input type
  */
-public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, BigDecimal> {
+public final class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, BigDecimal> {
 
     private final Decoder<I, BigDecimal> inner;
 
@@ -283,6 +286,42 @@ public class DecimalDecoder<I extends @Nullable Object> implements Decoder<I, Bi
             }
             return Result.ok(value);
         });
+    }
+
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link DecimalDecoder} so that decimal constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public DecimalDecoder<I> refine(Predicate<? super BigDecimal> ok, String code, String message) {
+        return refine(ok, code, message, v -> Map.of());
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link DecimalDecoder} so that decimal constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public DecimalDecoder<I> refine(Predicate<? super BigDecimal> ok, String code, String message,
+                                    Function<? super BigDecimal, ? extends Map<String, Object>> metaFn) {
+        return refine(ok, (v, path) -> Result.failCustom(path, code, message, metaFn.apply(v)));
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The return type is narrowed to {@link DecimalDecoder} so that decimal constraints can still be chained
+     * after the refinement.
+     */
+    @Override
+    public DecimalDecoder<I> refine(Predicate<? super BigDecimal> ok,
+                                    BiFunction<? super BigDecimal, ? super Path, ? extends Result<BigDecimal>> onFail) {
+        return chain((value, path) -> ok.test(value) ? Result.ok(value) : onFail.apply(value, path));
     }
 
     private DecimalDecoder<I> chain(Decoder<BigDecimal, BigDecimal> constraint) {
