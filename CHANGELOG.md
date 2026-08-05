@@ -10,6 +10,9 @@ detailed from the current development cycle onward.
 
 ## [Unreleased]
 
+> **This release removes published API and closes a public class hierarchy.** `Decoders.strict(Decoder, Set)`
+> is gone and the builtin decoders are `final`, so it is a breaking release rather than a patch.
+
 ### Added
 
 - **`InputFields<I>`** — enumerates the field names present in an input, so `strict` works on any
@@ -61,7 +64,11 @@ detailed from the current development cycle onward.
   `Map`, and that gap between what the signature promised and what the implementation did is what
   produced the bug above. Core now has only the boundary-agnostic
   `Decoders.strict(Decoder, Set, InputFields)`. Callers on `Map` input should use
-  `MapDecoders.strict`, which is unchanged and already typed to `Map<String, Object>`
+  `MapDecoders.strict`, which is unchanged and already typed to `Map<String, Object>`.
+  **Removing a published method breaks both compilation and linkage** — code compiled against
+  0.6.0 that called it will fail with `NoSuchMethodError` until recompiled against
+  `MapDecoders.strict`. Kept as a deliberate break rather than a deprecated bridge, so the
+  misleading signature does not survive a deprecation cycle
   ([#113](https://github.com/kawasima/raoh/issues/113)).
 
 - **`Combiner#strict()` and `strictFlatMap()` throw `IllegalStateException`** when no component
