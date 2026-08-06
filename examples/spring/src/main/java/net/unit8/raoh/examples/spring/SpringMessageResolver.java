@@ -1,5 +1,6 @@
 package net.unit8.raoh.examples.spring;
 
+import net.unit8.raoh.Issue;
 import net.unit8.raoh.MessageResolver;
 import org.springframework.context.MessageSource;
 
@@ -9,10 +10,16 @@ import java.util.Map;
 /**
  * A {@link MessageResolver} adapter for Spring's {@link MessageSource}.
  *
- * <p>Looks up messages using the key {@code raoh.<code>} and replaces
- * named placeholders (e.g., {@code {min}}, {@code {max}}) with values
- * from the issue metadata. Falls back to {@link MessageResolver#DEFAULT}
- * when a key is not found.
+ * <p>Looks up messages using the key {@code raoh.<messageKey>}, then
+ * {@code raoh.<code>}, and replaces named placeholders (e.g., {@code {min}},
+ * {@code {max}}) with values from the issue metadata.
+ *
+ * <p>A template is applied only when the metadata supplies every placeholder it
+ * asks for. Several constraints share one error code — {@code min()} and
+ * {@code range()} are both {@code out_of_range} — so a template written for one
+ * of them can name a bound the other never had. When that happens, or when no key
+ * matches, the message stored at decode time is kept: it already describes the
+ * constraint correctly.
  *
  * <p>This is a reference implementation. Copy and adapt it for your own
  * Spring project.
@@ -49,9 +56,51 @@ public class SpringMessageResolver implements MessageResolver {
 
     @Override
     public String resolve(String code, Map<String, Object> meta, Locale locale) {
-        String defaultMessage = MessageResolver.DEFAULT.resolve(code, meta);
-        String template = messageSource.getMessage(
-                KEY_PREFIX + code, null, defaultMessage, locale);
-        return MessageResolver.interpolate(template, meta);
+        String template = template(code, locale);
+        String filled = template == null ? null : MessageResolver.interpolateFully(template, meta);
+        return filled != null ? filled : MessageResolver.DEFAULT.resolve(code, meta);
+    }
+
+    /**
+     * Resolves using the JVM default locale.
+     *
+     * <p>In a Spring web application, prefer {@link #resolve(Issue, Locale)} and pass
+     * the request locale.
+     *
+     * @param issue the issue to describe
+     * @return the resolved message in the JVM default locale
+     */
+    @Override
+    public String resolve(Issue issue) {
+        return resolve(issue, Locale.getDefault());
+    }
+
+    /**
+     * Resolves an issue, preferring the template written for the specific constraint
+     * that failed and keeping the stored message when no template fits.
+     *
+     * @param issue  the issue to describe
+     * @param locale the target locale for the message
+     * @return the resolved message
+     */
+    @Override
+    public String resolve(Issue issue, Locale locale) {
+        String template = template(issue.messageKey(), locale);
+        if (template == null) {
+            template = template(issue.code(), locale);
+        }
+        String filled = template == null ? null : MessageResolver.interpolateFully(template, issue.meta());
+        return filled != null ? filled : issue.message();
+    }
+
+    /**
+     * Looks up a template by key, returning {@code null} when the message source has none.
+     *
+     * @param key    the key, without the {@link MessageResolver#KEY_PREFIX} prefix
+     * @param locale the target locale
+     * @return the template, or {@code null} if the message source has no entry for the key
+     */
+    private String template(String key, Locale locale) {
+        return messageSource.getMessage(KEY_PREFIX + key, null, null, locale);
     }
 }

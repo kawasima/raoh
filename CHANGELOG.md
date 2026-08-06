@@ -10,6 +10,60 @@ detailed from the current development cycle onward.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A one-sided bound no longer resolves to a message naming a bound it does not have.**
+  `min()`, `max()`, `positive()`, `negative()`, `nonNegative()` and `nonPositive()` all report
+  `out_of_range`, and a `ResourceBundle` holds one template per key, so `raoh.out_of_range=must be
+  between {min} and {max}` was applied to every one of them. `min(0)` resolved to
+  `must be between 0 and {max}` — an upper bound that was never declared, shown to whoever sent the
+  value, with the placeholder still in it. Only `range()` came out right. `TemporalDecoder.before()`,
+  `after()` and `between()` were worse: their metadata carries `before`, `after`, `from` and `to`, so
+  both placeholders survived, and `MessageResolver.DEFAULT` reduced all three to `out of range`
+  ([#123](https://github.com/kawasima/raoh/issues/123)).
+- **`positive()` and `nonNegative()` are described as themselves.** Both bound below and differ only
+  on whether zero passes, which their metadata did not record, so a resolver had no way to tell them
+  apart ([#124](https://github.com/kawasima/raoh/issues/124)).
+- **`nonempty()` keeps saying `must not be empty`.** It and `minSize(1)` emit the same code and
+  byte-identical metadata; resolving through a bundle rewrote the first into
+  `must have at least 1 elements`.
+- **`MessageResolver.interpolate` no longer re-scans values it has substituted.** It iterated over
+  the metadata and ran a replace per entry, so a value containing `{max}` was substituted again by a
+  later entry. It now scans the template once.
+
+### Added
+
+- **`Issue.messageKey()`** — the key naming which constraint failed, alongside `code`, which keeps
+  classifying the failure for programs to branch on. One code covers several constraints that need
+  different wording and carry different metadata; the key is what tells them apart. Constants are in
+  the new **`MessageKeys`** class, and a key is always its error code, a dot, and a qualifier
+  (`out_of_range.positive`). Issues built without one use the code as their key.
+- **`MessageResolver.resolve(Issue)` and `resolve(Issue, Locale)`** — `default` methods that see the
+  message key and the message stored at decode time. `Issue.resolve` now calls these. A resolver
+  written as a two-argument lambda keeps working through the default implementation.
+- **`MessageResolver.interpolateFully(String, Map)`** — fills a template only when the metadata
+  supplies every placeholder it asks for, returning `null` otherwise, so a resolver can decline
+  instead of emitting a half-filled sentence. The check has to run before substitution: afterwards a
+  brace that came from a value cannot be told apart from one the template wrote.
+- **`Result.fail` and `Result.failWith` overloads taking a message key**, for decoders that emit a
+  shared code.
+- **Bundle templates for each constraint** in both shipped locales:
+  `raoh.out_of_range.{minimum,maximum,range,positive,negative,non_negative,non_positive,before,after,between}`
+  and `raoh.too_small.nonempty`. `raoh.out_of_range` and `raoh.too_small` are unchanged.
+
+### Changed
+
+- **`ResourceBundleMessageResolver` declines rather than degrade a message.** It looks up
+  `raoh.<messageKey>` first and `raoh.<code>` second — a bundle defining only code-level keys keeps
+  working — and returns `Issue.message()` when no key matches or the template asks for a placeholder
+  the metadata lacks. The stored message already describes the constraint. Resolving through the
+  code-and-metadata entry point has no stored message to fall back to and still falls back to
+  `MessageResolver.DEFAULT`.
+- **`Issue` gained a record component.** `messageKey` sits between `code` and `message`. The
+  five-argument constructor and every `Issue.of` factory still exist and default the key to the code,
+  but `equals`, `hashCode` and `toString` now include it, and a record deconstruction pattern written
+  against five components no longer compiles.
+
 ## [0.7.1] - 2026-08-06
 
 ### Added

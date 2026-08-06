@@ -2,6 +2,7 @@ package net.unit8.raoh.decode.builtin;
 
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
@@ -54,7 +55,7 @@ public final class RecordDecoder<I extends @Nullable Object, V> implements Decod
     public RecordDecoder<I, V> nonempty(@Nullable String message) {
         return chain((value, path) -> {
             if (value.isEmpty()) {
-                return Result.failWith(path, ErrorCodes.TOO_SMALL, message, "must not be empty",
+                return Result.failWith(path, ErrorCodes.TOO_SMALL, MessageKeys.TOO_SMALL_NONEMPTY, message, "must not be empty",
                         Map.of("min", 1, "actual", 0));
             }
             return Result.ok(value);
