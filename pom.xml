@@ -6,7 +6,7 @@
 
     <groupId>net.unit8.raoh</groupId>
     <artifactId>raoh-parent</artifactId>
-    <version>0.7.1</version>
+    <version>0.7.2-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Raoh Parent</name>
@@ -59,7 +59,7 @@
             to the next SNAPSHOT. A baseline left behind makes the diff grow by a release
             at a time until it says nothing about the change in front of you.
         -->
-        <japicmp.baseline>0.7.0</japicmp.baseline>
+        <japicmp.baseline>0.7.1</japicmp.baseline>
     </properties>
 
     <build>
