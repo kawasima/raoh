@@ -1,5 +1,7 @@
 package net.unit8.raoh;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.Locale;
 import java.util.Map;
 import java.util.MissingResourceException;
@@ -50,6 +52,11 @@ public class ResourceBundleMessageResolver implements MessageResolver {
         return resolve(code, meta, Locale.getDefault());
     }
 
+    @Override
+    public String resolve(Issue issue) {
+        return resolve(issue, Locale.getDefault());
+    }
+
     /**
      * {@link ResourceBundle.Control} that disables default-locale fallback.
      * Without this, a request for {@code Locale.ENGLISH} on a JVM whose default
@@ -62,12 +69,55 @@ public class ResourceBundleMessageResolver implements MessageResolver {
 
     @Override
     public String resolve(String code, Map<String, Object> meta, Locale locale) {
+        String filled = firstFilled(locale, meta, code);
+        return filled != null ? filled : MessageResolver.DEFAULT.resolve(code, meta);
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Tries {@code raoh.<messageKey>} first and {@code raoh.<code>} second, so a bundle
+     * that only defines code-level templates keeps working while a bundle that
+     * distinguishes constraints can.
+     *
+     * <p>A template is used only when the issue's metadata supplies every placeholder it
+     * asks for; one that does not is skipped rather than half-filled, and the next key is
+     * tried. A bundle can therefore define a specific template that suits some constraints
+     * under a code and let the rest fall through to the code's own template. When neither
+     * key yields a usable template, the message stored at decode time is returned
+     * unchanged — it already describes the constraint, whereas a partially filled template
+     * would name a bound that does not exist.
+     *
+     * <p>The check runs before substitution, since afterwards a brace that came from a
+     * metadata value is indistinguishable from one the template wrote.
+     */
+    @Override
+    public String resolve(Issue issue, Locale locale) {
+        String filled = firstFilled(locale, issue.meta(), issue.messageKey(), issue.code());
+        return filled != null ? filled : issue.message();
+    }
+
+    /**
+     * Returns the first of the given keys whose template the metadata can fill completely,
+     * or {@code null} if the bundle is missing, defines none of them, or defines only
+     * templates asking for placeholders {@code meta} does not supply.
+     */
+    private @Nullable String firstFilled(Locale locale, Map<String, Object> meta, String... keys) {
+        ResourceBundle bundle;
         try {
-            ResourceBundle bundle = ResourceBundle.getBundle(baseName, locale, NO_FALLBACK);
-            String template = bundle.getString(KEY_PREFIX + code);
-            return MessageResolver.interpolate(template, meta);
+            bundle = ResourceBundle.getBundle(baseName, locale, NO_FALLBACK);
         } catch (MissingResourceException ignored) {
-            return MessageResolver.DEFAULT.resolve(code, meta);
+            return null;
         }
+        for (String key : keys) {
+            if (!bundle.containsKey(KEY_PREFIX + key)) {
+                continue;
+            }
+            String filled = MessageResolver.interpolateFully(bundle.getString(KEY_PREFIX + key), meta);
+            if (filled != null) {
+                return filled;
+            }
+        }
+        return null;
     }
 }

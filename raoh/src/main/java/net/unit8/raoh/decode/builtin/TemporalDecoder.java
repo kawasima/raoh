@@ -2,6 +2,7 @@ package net.unit8.raoh.decode.builtin;
 
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
@@ -77,9 +78,8 @@ public final class TemporalDecoder<I extends @Nullable Object, T extends Compara
         return chain((value, path) -> {
             if (value.compareTo(bound) >= 0) {
                 var meta = Map.<String, Object>of("before", bound, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be before %s".formatted(bound), meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_BEFORE,
+                        message, "must be before %s".formatted(bound), meta);
             }
             return Result.ok(value);
         });
@@ -106,9 +106,8 @@ public final class TemporalDecoder<I extends @Nullable Object, T extends Compara
         return chain((value, path) -> {
             if (value.compareTo(bound) <= 0) {
                 var meta = Map.<String, Object>of("after", bound, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be after %s".formatted(bound), meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_AFTER,
+                        message, "must be after %s".formatted(bound), meta);
             }
             return Result.ok(value);
         });
@@ -143,9 +142,8 @@ public final class TemporalDecoder<I extends @Nullable Object, T extends Compara
         return chain((value, path) -> {
             if (value.compareTo(from) < 0 || value.compareTo(to) > 0) {
                 var meta = Map.<String, Object>of("from", from, "to", to, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be between %s and %s".formatted(from, to), meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_BETWEEN,
+                        message, "must be between %s and %s".formatted(from, to), meta);
             }
             return Result.ok(value);
         });

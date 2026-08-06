@@ -2,6 +2,7 @@ package net.unit8.raoh.decode.builtin;
 
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
@@ -57,7 +58,7 @@ public final class DecimalDecoder<I extends @Nullable Object> implements Decoder
         return chain((value, path) -> {
             if (value.compareTo(n) < 0) {
                 var meta = Map.<String, Object>of("min", n, "actual", value);
-                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message,
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_MINIMUM, message,
                         "must be at least %s".formatted(n), meta);
             }
             return Result.ok(value);
@@ -85,7 +86,7 @@ public final class DecimalDecoder<I extends @Nullable Object> implements Decoder
         return chain((value, path) -> {
             if (value.compareTo(n) > 0) {
                 var meta = Map.<String, Object>of("max", n, "actual", value);
-                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message,
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_MAXIMUM, message,
                         "must be at most %s".formatted(n), meta);
             }
             return Result.ok(value);
@@ -120,7 +121,7 @@ public final class DecimalDecoder<I extends @Nullable Object> implements Decoder
         return chain((value, path) -> {
             if (value.compareTo(min) < 0 || value.compareTo(max) > 0) {
                 var meta = Map.<String, Object>of("min", min, "max", max, "actual", value);
-                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message,
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_RANGE, message,
                         "must be between %s and %s".formatted(min, max), meta);
             }
             return Result.ok(value);
@@ -146,7 +147,7 @@ public final class DecimalDecoder<I extends @Nullable Object> implements Decoder
         return chain((value, path) -> {
             if (value.compareTo(BigDecimal.ZERO) <= 0) {
                 var meta = Map.<String, Object>of("min", BigDecimal.ZERO, "actual", value);
-                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message, "must be positive", meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_POSITIVE, message, "must be positive", meta);
             }
             return Result.ok(value);
         });
@@ -171,7 +172,7 @@ public final class DecimalDecoder<I extends @Nullable Object> implements Decoder
         return chain((value, path) -> {
             if (value.compareTo(BigDecimal.ZERO) >= 0) {
                 var meta = Map.<String, Object>of("max", BigDecimal.ZERO, "actual", value);
-                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message, "must be negative", meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_NEGATIVE, message, "must be negative", meta);
             }
             return Result.ok(value);
         });
@@ -196,7 +197,7 @@ public final class DecimalDecoder<I extends @Nullable Object> implements Decoder
         return chain((value, path) -> {
             if (value.compareTo(BigDecimal.ZERO) < 0) {
                 var meta = Map.<String, Object>of("min", BigDecimal.ZERO, "actual", value);
-                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message, "must be non-negative", meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_NON_NEGATIVE, message, "must be non-negative", meta);
             }
             return Result.ok(value);
         });
@@ -221,7 +222,7 @@ public final class DecimalDecoder<I extends @Nullable Object> implements Decoder
         return chain((value, path) -> {
             if (value.compareTo(BigDecimal.ZERO) > 0) {
                 var meta = Map.<String, Object>of("max", BigDecimal.ZERO, "actual", value);
-                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, message, "must be non-positive", meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_NON_POSITIVE, message, "must be non-positive", meta);
             }
             return Result.ok(value);
         });

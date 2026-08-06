@@ -169,6 +169,25 @@ public sealed interface Result<T extends @Nullable Object> permits Ok, Err {
     }
 
     /**
+     * Creates a failed result with a single issue that names which constraint failed.
+     *
+     * <p>Use this when several constraints share one {@code code} and need different
+     * wording — see {@link MessageKeys}.
+     *
+     * @param <T>        the value type
+     * @param path       the path where the error occurred
+     * @param code       the error code
+     * @param messageKey the key identifying which message describes this issue
+     * @param message    the error message
+     * @param meta       additional metadata
+     * @return an {@link Err} result
+     */
+    static <T extends @Nullable Object> Result<T> fail(
+            Path path, String code, String messageKey, String message, Map<String, Object> meta) {
+        return new Err<>(Issues.EMPTY.add(Issue.of(path, code, messageKey, message, meta)));
+    }
+
+    /**
      * Creates a failed result with a single issue (no metadata).
      *
      * @param <T>     the value type
@@ -246,9 +265,29 @@ public sealed interface Result<T extends @Nullable Object> permits Ok, Err {
      */
     static <T extends @Nullable Object> Result<T> failWith(
             Path path, String code, @Nullable String message, String defaultMessage, Map<String, Object> meta) {
+        return failWith(path, code, code, message, defaultMessage, meta);
+    }
+
+    /**
+     * Creates a failed result that names which constraint failed, using {@code message}
+     * as a custom (resolve-proof) message when it is non-null and falling back to
+     * {@code defaultMessage} otherwise.
+     *
+     * @param <T>            the value type
+     * @param path           the path where the error occurred
+     * @param code           the error code
+     * @param messageKey     the key identifying which message describes this issue
+     * @param message        the caller-supplied custom message, or {@code null} to use the default
+     * @param defaultMessage the built-in fallback message used when {@code message} is {@code null}
+     * @param meta           additional metadata
+     * @return an {@link Err} result carrying either the custom or the default message
+     */
+    static <T extends @Nullable Object> Result<T> failWith(
+            Path path, String code, String messageKey, @Nullable String message,
+            String defaultMessage, Map<String, Object> meta) {
         return message != null
-                ? failCustom(path, code, message, meta)
-                : fail(path, code, defaultMessage, meta);
+                ? new Err<>(Issues.EMPTY.add(new Issue(path, code, messageKey, message, meta, true)))
+                : fail(path, code, messageKey, defaultMessage, meta);
     }
 
     /**

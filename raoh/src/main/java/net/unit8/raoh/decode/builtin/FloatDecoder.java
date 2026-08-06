@@ -2,6 +2,7 @@ package net.unit8.raoh.decode.builtin;
 
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
@@ -62,9 +63,8 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
         return chain((value, path) -> {
             if (Float.compare(value, n) < 0) {
                 var meta = Map.<String, Object>of("min", n, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be at least %s".formatted(n), meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_MINIMUM,
+                        message, "must be at least %s".formatted(n), meta);
             }
             return Result.ok(value);
         });
@@ -91,9 +91,8 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
         return chain((value, path) -> {
             if (Float.compare(value, n) > 0) {
                 var meta = Map.<String, Object>of("max", n, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be at most %s".formatted(n), meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_MAXIMUM,
+                        message, "must be at most %s".formatted(n), meta);
             }
             return Result.ok(value);
         });
@@ -127,9 +126,8 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
         return chain((value, path) -> {
             if (Float.compare(value, min) < 0 || Float.compare(value, max) > 0) {
                 var meta = Map.<String, Object>of("min", min, "max", max, "actual", value);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.OUT_OF_RANGE, message, meta)
-                        : Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be between %s and %s".formatted(min, max), meta);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_RANGE,
+                        message, "must be between %s and %s".formatted(min, max), meta);
             }
             return Result.ok(value);
         });
@@ -143,7 +141,7 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
     public FloatDecoder<I> positive() {
         return chain((value, path) -> {
             if (Float.compare(value, 0.0f) <= 0) {
-                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be positive",
+                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_POSITIVE, "must be positive",
                         Map.of("min", 0.0f, "actual", value));
             }
             return Result.ok(value);
@@ -158,7 +156,7 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
     public FloatDecoder<I> negative() {
         return chain((value, path) -> {
             if (Float.compare(value, 0.0f) >= 0) {
-                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be negative",
+                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_NEGATIVE, "must be negative",
                         Map.of("max", 0.0f, "actual", value));
             }
             return Result.ok(value);
@@ -173,7 +171,7 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
     public FloatDecoder<I> nonNegative() {
         return chain((value, path) -> {
             if (Float.compare(value, 0.0f) < 0) {
-                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be non-negative",
+                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_NON_NEGATIVE, "must be non-negative",
                         Map.of("min", 0.0f, "actual", value));
             }
             return Result.ok(value);
@@ -188,7 +186,7 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
     public FloatDecoder<I> nonPositive() {
         return chain((value, path) -> {
             if (Float.compare(value, 0.0f) > 0) {
-                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, "must be non-positive",
+                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_NON_POSITIVE, "must be non-positive",
                         Map.of("max", 0.0f, "actual", value));
             }
             return Result.ok(value);
