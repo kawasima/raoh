@@ -10,6 +10,22 @@ detailed from the current development cycle onward.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-08-06
+
+### Added
+
+- **The guides ship inside the `raoh` jar.** `docs/*.md` are unpacked into
+  `META-INF/souther-docs/raoh/` at build time, next to a registry naming the doc set and an index
+  naming its topics, so a toolchain that has raoh on its class path can serve the guides without a
+  checkout of this repository. Six ship: the tutorial in both languages, composition patterns,
+  boundary modules, locale-aware messages, and the comparison with other libraries. Nothing in
+  `docs/` moves and no guide is rewritten — the sources stay where contributors edit them. Keeping
+  the copy here rather than in the consuming toolchain ties the guides to the code version:
+  whichever raoh is on the class path is the raoh whose guides are read, and bumping the dependency
+  brings the matching guides with it. For consumers this is additive — roughly 135 KB under
+  `META-INF`, no API change and no new dependency
+  ([#122](https://github.com/kawasima/raoh/pull/122)).
+
 ## [0.7.0] - 2026-08-05
 
 > **This is a breaking release, not a patch.** `FieldDecoder` is gone, the combiners take `CombinePart`
@@ -422,7 +438,8 @@ detailed from the current development cycle onward.
   `Presence`), `Map<String, Object>` decoders, error model, a Spring Boot example, and a README with
   an Elm-decoder comparison.
 
-[Unreleased]: https://github.com/kawasima/raoh/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/kawasima/raoh/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/kawasima/raoh/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/kawasima/raoh/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/kawasima/raoh/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/kawasima/raoh/compare/v0.4.1...v0.5.0
