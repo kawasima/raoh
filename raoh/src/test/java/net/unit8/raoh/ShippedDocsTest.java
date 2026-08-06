@@ -12,19 +12,26 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The jar ships the documentation under {@code META-INF/souther-docs/raoh/}, so a consumer that
- * bundles raoh — the Souther CLI's {@code souther doc} above all — can serve these docs at the
- * exact version it depends on, without keeping a copy of its own.
+ * The build copies the repo-root docs under {@code META-INF/souther-docs/raoh/}, so a consumer
+ * that bundles raoh — the Souther CLI's {@code souther doc} above all — can serve these docs at
+ * the exact version it depends on, without keeping a copy of its own. This holds the index and
+ * the copied guides to each other; {@link ShippedDocsJarIT} asserts the same of the packaged jar.
  */
 class ShippedDocsTest {
 
     @Test
     void theSetsRegistryNamesTheRaohDocSet() throws IOException {
-        assertTrue(resource("META-INF/souther-docs/sets").contains("raoh"));
+        // Line-oriented, and a consumer reads it line by line: `not-raoh` would satisfy a
+        // substring check while naming a set that does not exist here.
+        assertEquals(List.of("raoh"), resource("META-INF/souther-docs/sets").lines()
+                .map(String::strip)
+                .filter(l -> !l.isEmpty())
+                .toList());
     }
 
     @Test

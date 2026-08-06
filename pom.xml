@@ -66,6 +66,33 @@
         <pluginManagement>
             <plugins>
                 <!--
+                    Pinned because raoh binds an extra copy-resources execution to it, which
+                    decides what lands in the published jar. Left unpinned, the version comes
+                    from whichever Maven distribution runs the build.
+                -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>3.4.0</version>
+                </plugin>
+                <!--
+                    Integration tests run against the packaged jar rather than target/classes,
+                    so a test can assert on what a consumer actually receives.
+                -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>3.5.2</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>integration-test</goal>
+                                <goal>verify</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <!--
                     Public API diff against the last release, for the library modules that
                     declare it (raoh, raoh-json, raoh-jooq). Reporting only: before 1.0 the
                     breaks are deliberate and frequent, and a build that fails on each one

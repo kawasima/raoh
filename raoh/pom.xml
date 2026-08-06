@@ -69,6 +69,16 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- ShippedDocsJarIT opens the packaged jar; it needs to be told where it is. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <raoh.jar>${project.build.directory}/${project.build.finalName}.jar</raoh.jar>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
