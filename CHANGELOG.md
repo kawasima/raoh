@@ -10,6 +10,15 @@ detailed from the current development cycle onward.
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-08-07
+
+> **Read the Changed section before upgrading.** This is a patch release, but `Issue` gained a
+> record component. Binary compatibility holds — code compiled against 0.7.1 keeps running, and
+> japicmp reports the change as additive. Two things do change: `Issue.equals` now compares
+> `messageKey`, so an expected `Issue` built with `Issue.of(...)` no longer matches one a built-in
+> constraint emitted, and a five-component record deconstruction pattern over `Issue` no longer
+> compiles. Tests that compare whole `Issue` values are where this shows up.
+
 ### Fixed
 
 - **A one-sided bound no longer resolves to a message naming a bound it does not have.**
@@ -500,7 +509,8 @@ detailed from the current development cycle onward.
   `Presence`), `Map<String, Object>` decoders, error model, a Spring Boot example, and a README with
   an Elm-decoder comparison.
 
-[Unreleased]: https://github.com/kawasima/raoh/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/kawasima/raoh/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/kawasima/raoh/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/kawasima/raoh/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/kawasima/raoh/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/kawasima/raoh/compare/v0.5.0...v0.6.0
