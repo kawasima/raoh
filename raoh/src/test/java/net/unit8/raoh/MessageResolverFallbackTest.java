@@ -49,6 +49,50 @@ class MessageResolverFallbackTest {
         assertEquals("must be between 0 and 10", issue.resolve(BUNDLE, Locale.ENGLISH).message());
     }
 
+    private static final ResourceBundleMessageResolver FALLBACK_BUNDLE =
+            new ResourceBundleMessageResolver("net.unit8.raoh.fallback_messages");
+
+    /**
+     * A message key whose template the metadata cannot fill does not block the code's
+     * template. Stopping at the first key that merely exists would skip a template that
+     * would have worked.
+     */
+    @Test
+    void unfillableMessageKeyStillFallsBackToCode() {
+        var issue = new Issue(Path.ROOT, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_MINIMUM,
+                "must be at least 0", Map.of("min", 0, "actual", -1), false);
+
+        assertEquals("outside the allowed range", issue.resolve(FALLBACK_BUNDLE, Locale.ENGLISH).message());
+    }
+
+    /** With both bounds present the specific template applies and the code one is not reached. */
+    @Test
+    void fillableMessageKeyWinsOverCode() {
+        var issue = new Issue(Path.ROOT, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_MINIMUM,
+                "stored", Map.of("min", 0, "max", 10), false);
+
+        assertEquals("between 0 and 10", issue.resolve(FALLBACK_BUNDLE, Locale.ENGLISH).message());
+    }
+
+    /**
+     * Braces around prose are literal. Treating every brace pair as a placeholder would
+     * make a template like this permanently unfillable and silently unused.
+     */
+    @Test
+    void literalBracesInATemplateAreNotPlaceholders() {
+        var issue = Issue.of(Path.ROOT, ErrorCodes.INVALID_FORMAT, "invalid format");
+
+        assertEquals("expected an object like {\"id\": 1}",
+                issue.resolve(FALLBACK_BUNDLE, Locale.ENGLISH).message());
+    }
+
+    /** The same rule applied directly: prose in braces is copied, a named placeholder is filled. */
+    @Test
+    void interpolateFullyLeavesLiteralBracesAlone() {
+        assertEquals("an object like {\"id\": 1} with min 3",
+                MessageResolver.interpolateFully("an object like {\"id\": 1} with min {min}", Map.of("min", 3)));
+    }
+
     /** A caller-supplied message is never replaced by a resolver. */
     @Test
     void customMessageIsNotResolved() {

@@ -92,6 +92,10 @@ public interface MessageResolver {
      * inserted verbatim and never treated as a placeholder. A placeholder with no
      * matching key in {@code meta} is left as written.
      *
+     * <p>A placeholder name is a letter or underscore followed by letters, digits,
+     * underscores, dots or hyphens. Braces around anything else are literal text, so a
+     * template may contain prose such as {@code an object like {"id": 1}}.
+     *
      * @param template the message template containing {@code {key}} placeholders
      * @param meta     the metadata map supplying placeholder values
      * @return the template with its placeholders replaced

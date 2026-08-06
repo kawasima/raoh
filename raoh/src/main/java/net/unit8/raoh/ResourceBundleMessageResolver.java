@@ -69,37 +69,40 @@ public class ResourceBundleMessageResolver implements MessageResolver {
 
     @Override
     public String resolve(String code, Map<String, Object> meta, Locale locale) {
-        String template = template(locale, code);
-        String filled = template == null ? null : MessageResolver.interpolateFully(template, meta);
+        String filled = firstFilled(locale, meta, code);
         return filled != null ? filled : MessageResolver.DEFAULT.resolve(code, meta);
     }
 
     /**
      * {@inheritDoc}
      *
-     * <p>Looks up {@code raoh.<messageKey>} first and {@code raoh.<code>} second, so a
-     * bundle that only defines code-level templates keeps working while a bundle that
+     * <p>Tries {@code raoh.<messageKey>} first and {@code raoh.<code>} second, so a bundle
+     * that only defines code-level templates keeps working while a bundle that
      * distinguishes constraints can.
      *
-     * <p>The chosen template is applied only when the issue's metadata supplies every
-     * placeholder it asks for. Otherwise the message stored at decode time is returned
-     * unchanged — it already describes the constraint, whereas a partially filled
-     * template would name a bound that does not exist. The check runs before
-     * substitution, since afterwards a brace that came from a metadata value is
-     * indistinguishable from one the template wrote.
+     * <p>A template is used only when the issue's metadata supplies every placeholder it
+     * asks for; one that does not is skipped rather than half-filled, and the next key is
+     * tried. A bundle can therefore define a specific template that suits some constraints
+     * under a code and let the rest fall through to the code's own template. When neither
+     * key yields a usable template, the message stored at decode time is returned
+     * unchanged — it already describes the constraint, whereas a partially filled template
+     * would name a bound that does not exist.
+     *
+     * <p>The check runs before substitution, since afterwards a brace that came from a
+     * metadata value is indistinguishable from one the template wrote.
      */
     @Override
     public String resolve(Issue issue, Locale locale) {
-        String template = template(locale, issue.messageKey(), issue.code());
-        String filled = template == null ? null : MessageResolver.interpolateFully(template, issue.meta());
+        String filled = firstFilled(locale, issue.meta(), issue.messageKey(), issue.code());
         return filled != null ? filled : issue.message();
     }
 
     /**
-     * Returns the first template found for the given keys, or {@code null} if the bundle
-     * is missing or defines none of them.
+     * Returns the first of the given keys whose template the metadata can fill completely,
+     * or {@code null} if the bundle is missing, defines none of them, or defines only
+     * templates asking for placeholders {@code meta} does not supply.
      */
-    private @Nullable String template(Locale locale, String... keys) {
+    private @Nullable String firstFilled(Locale locale, Map<String, Object> meta, String... keys) {
         ResourceBundle bundle;
         try {
             bundle = ResourceBundle.getBundle(baseName, locale, NO_FALLBACK);
@@ -107,8 +110,12 @@ public class ResourceBundleMessageResolver implements MessageResolver {
             return null;
         }
         for (String key : keys) {
-            if (bundle.containsKey(KEY_PREFIX + key)) {
-                return bundle.getString(KEY_PREFIX + key);
+            if (!bundle.containsKey(KEY_PREFIX + key)) {
+                continue;
+            }
+            String filled = MessageResolver.interpolateFully(bundle.getString(KEY_PREFIX + key), meta);
+            if (filled != null) {
+                return filled;
             }
         }
         return null;

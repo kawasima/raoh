@@ -4,6 +4,7 @@ import net.unit8.raoh.Issue;
 import net.unit8.raoh.MessageResolver;
 import org.springframework.context.MessageSource;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -85,12 +86,17 @@ public class SpringMessageResolver implements MessageResolver {
      */
     @Override
     public String resolve(Issue issue, Locale locale) {
-        String template = template(issue.messageKey(), locale);
-        if (template == null) {
-            template = template(issue.code(), locale);
+        for (String key : List.of(issue.messageKey(), issue.code())) {
+            String template = template(key, locale);
+            if (template == null) {
+                continue;
+            }
+            String filled = MessageResolver.interpolateFully(template, issue.meta());
+            if (filled != null) {
+                return filled;
+            }
         }
-        String filled = template == null ? null : MessageResolver.interpolateFully(template, issue.meta());
-        return filled != null ? filled : issue.message();
+        return issue.message();
     }
 
     /**

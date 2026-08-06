@@ -13,12 +13,18 @@ import java.util.regex.Pattern;
  * metadata is what lets a caller ask whether a template can be filled at all, and it
  * keeps braces that arrive inside a metadata value from being mistaken for placeholders
  * of their own.
+ *
+ * <p>A placeholder name is a letter or underscore followed by letters, digits,
+ * underscores, dots or hyphens — the shape a metadata key has. Anything else between
+ * braces is prose the template author wrote, such as the JSON in
+ * {@code expected an object like {"id": 1}}, and is left alone rather than reported as a
+ * placeholder no metadata can fill.
  */
 final class Placeholders {
 
     private Placeholders() {}
 
-    private static final Pattern PATTERN = Pattern.compile("\\{([^{}]+)}");
+    private static final Pattern PATTERN = Pattern.compile("\\{([A-Za-z_][A-Za-z0-9_.\\-]*)}");
 
     /**
      * Returns the placeholder names the template asks for, in order of appearance.

@@ -62,7 +62,15 @@ detailed from the current development cycle onward.
 - **`Issue` gained a record component.** `messageKey` sits between `code` and `message`. The
   five-argument constructor and every `Issue.of` factory still exist and default the key to the code,
   but `equals`, `hashCode` and `toString` now include it, and a record deconstruction pattern written
-  against five components no longer compiles.
+  against five components no longer compiles. `Issues.toJsonList()` still emits `path`, `code`,
+  `message` and `meta` only, so a wire format built on it is unaffected; serializing the record
+  directly through a reflective mapper picks up the new field.
+- **Placeholder names now have a grammar.** A placeholder is a letter or underscore followed by
+  letters, digits, underscores, dots or hyphens — the shape a metadata key has. Braces around
+  anything else are literal, so a custom template may contain prose such as
+  `expected an object like {"id": 1}`. Previously any characters between braces were read as a
+  placeholder name, which under the completeness check above would have made such a template
+  permanently unusable.
 
 ## [0.7.1] - 2026-08-06
 
