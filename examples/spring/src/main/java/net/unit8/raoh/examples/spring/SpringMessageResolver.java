@@ -22,6 +22,13 @@ import java.util.Map;
  * matches, the message stored at decode time is kept: it already describes the
  * constraint correctly.
  *
+ * <p>Unlike {@link net.unit8.raoh.ResourceBundleMessageResolver}, this adapter tries
+ * the keys in order over the whole locale chain, because a {@link MessageSource} does
+ * not say which file a message came from. If {@code messages.properties} defines
+ * {@code raoh.invalid_format.email} and {@code messages_fr.properties} defines only
+ * {@code raoh.invalid_format}, a French request gets the base file's email template.
+ * Define a refined key in every locale file or in none of them.
+ *
  * <p>This is a reference implementation. Copy and adapt it for your own
  * Spring project.
  */

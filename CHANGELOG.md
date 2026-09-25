@@ -21,6 +21,15 @@ detailed from the current development cycle onward.
   lost the prefix it asked for, although its metadata carries it. This is the gap
   [#125](https://github.com/kawasima/raoh/pull/125) closed for `out_of_range`, left open for
   `invalid_format`.
+- **A partial locale bundle is no longer overridden by the base bundle's refined keys.**
+  `ResourceBundleMessageResolver` searched `raoh.<messageKey>` and then `raoh.<code>` over the
+  bundle `ResourceBundle.getBundle` returns, and that bundle answers for its parents too. With
+  `raoh.out_of_range.minimum` in `messages.properties` and only `raoh.out_of_range` in a user's
+  `messages_fr.properties`, a French request got the English refined template. The resolver now
+  searches each locale's own file, most specific first, and tries both keys in one file before
+  moving to the next. The same change lets a locale template whose placeholders the metadata
+  cannot supply fall through to the base bundle's template for the same key, which it used to
+  hide. Present since [#125](https://github.com/kawasima/raoh/pull/125).
 
 ### Added
 
@@ -29,8 +38,8 @@ detailed from the current development cycle onward.
   `raoh.invalid_format.{email,url,uri,uuid,ip,ipv4,ipv6,ulid,cuid,starts_with,ends_with,includes,enum,literal}`
   and, for the ISO-8601 parsers on `StringDecoder` and `ObjectDecoders`,
   `raoh.invalid_format.{instant,date,time,date_time,offset_date_time}`. Constants are in
-  `MessageKeys`. The key strings are the ones raoh-rust uses, so a catalogue can be shared between
-  the two. `pattern()` keeps the plain `invalid_format` key, since its message is already the
+  `MessageKeys`. The key strings match raoh-rust's message catalogue, so a catalogue can be shared
+  between the two. `pattern()` keeps the plain `invalid_format` key, since its message is already the
   generic one, and `pattern(p, code)` keeps reporting the caller's code.
 
 ### Changed

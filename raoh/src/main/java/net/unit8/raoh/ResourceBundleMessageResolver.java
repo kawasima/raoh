@@ -2,9 +2,12 @@ package net.unit8.raoh;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.MissingResourceException;
+import java.util.PropertyResourceBundle;
 import java.util.ResourceBundle;
 
 /**
@@ -31,7 +34,8 @@ import java.util.ResourceBundle;
  * }</pre>
  *
  * <p>To add locale-specific messages, place additional bundles on the classpath
- * (e.g., {@code net/unit8/raoh/messages_ja.properties}).
+ * (e.g., {@code net/unit8/raoh/messages_ja.properties}). A locale bundle may translate
+ * only some keys; keys it leaves out are looked up in the less specific bundles.
  */
 public class ResourceBundleMessageResolver implements MessageResolver {
 
@@ -80,6 +84,12 @@ public class ResourceBundleMessageResolver implements MessageResolver {
      * that only defines code-level templates keeps working while a bundle that
      * distinguishes constraints can.
      *
+     * <p>The locale takes precedence over the key. Both keys are tried in the bundle for
+     * the requested locale before either is tried in a less specific one, so a locale
+     * bundle that translates only {@code raoh.invalid_format} is used for an
+     * {@code invalid_format.email} issue even when the base bundle defines
+     * {@code raoh.invalid_format.email}.
+     *
      * <p>A template is used only when the issue's metadata supplies every placeholder it
      * asks for; one that does not is skipped rather than half-filled, and the next key is
      * tried. A bundle can therefore define a specific template that suits some constraints
@@ -98,26 +108,53 @@ public class ResourceBundleMessageResolver implements MessageResolver {
     }
 
     /**
-     * Returns the first of the given keys whose template the metadata can fill completely,
-     * or {@code null} if the bundle is missing, defines none of them, or defines only
-     * templates asking for placeholders {@code meta} does not supply.
+     * Returns the first template the metadata can fill completely, or {@code null} if no
+     * bundle layer defines a usable template for any of the keys.
+     *
+     * <p>Layers are searched from the most specific locale to the base bundle, and every
+     * key is tried within a layer before moving to the next one. A bundle returned by
+     * {@link ResourceBundle#getBundle} answers for its parents too, so searching key by
+     * key over it would let a specific key in the base bundle win over a code-level key
+     * a locale bundle translated; a partial translation would then come out in the base
+     * bundle's language. The same flattening would also let a locale template that the
+     * metadata cannot fill hide a usable template for the same key further down.
      */
     private @Nullable String firstFilled(Locale locale, Map<String, Object> meta, String... keys) {
-        ResourceBundle bundle;
-        try {
-            bundle = ResourceBundle.getBundle(baseName, locale, NO_FALLBACK);
-        } catch (MissingResourceException ignored) {
-            return null;
-        }
-        for (String key : keys) {
-            if (!bundle.containsKey(KEY_PREFIX + key)) {
-                continue;
-            }
-            String filled = MessageResolver.interpolateFully(bundle.getString(KEY_PREFIX + key), meta);
-            if (filled != null) {
-                return filled;
+        for (PropertyResourceBundle layer : layers(locale)) {
+            for (String key : keys) {
+                Object template = layer.handleGetObject(KEY_PREFIX + key);
+                if (!(template instanceof String s)) {
+                    continue;
+                }
+                String filled = MessageResolver.interpolateFully(s, meta);
+                if (filled != null) {
+                    return filled;
+                }
             }
         }
         return null;
+    }
+
+    /**
+     * Returns the bundles that exist for the candidate locales of {@code locale}, most
+     * specific first. {@link PropertyResourceBundle#handleGetObject} on each one sees only
+     * the keys its own file defines, not its parents'.
+     */
+    private List<PropertyResourceBundle> layers(Locale locale) {
+        List<PropertyResourceBundle> layers = new ArrayList<>();
+        for (Locale candidate : NO_FALLBACK.getCandidateLocales(baseName, locale)) {
+            ResourceBundle bundle;
+            try {
+                bundle = ResourceBundle.getBundle(baseName, candidate, NO_FALLBACK);
+            } catch (MissingResourceException ignored) {
+                continue;
+            }
+            // getBundle falls back to a less specific bundle when the candidate's own file
+            // is missing; that bundle is picked up under its own candidate instead.
+            if (bundle.getLocale().equals(candidate) && bundle instanceof PropertyResourceBundle layer) {
+                layers.add(layer);
+            }
+        }
+        return layers;
     }
 }

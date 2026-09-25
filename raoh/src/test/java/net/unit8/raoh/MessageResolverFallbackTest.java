@@ -90,6 +90,54 @@ class MessageResolverFallbackTest {
         assertEquals("wrong format", issue.resolve(CODE_ONLY_BUNDLE, Locale.ENGLISH).message());
     }
 
+    // --- Partial locale bundles ---
+
+    private static final ResourceBundleMessageResolver PARTIAL_BUNDLE =
+            new ResourceBundleMessageResolver("net.unit8.raoh.partial_messages");
+
+    private static Issue firstIssue(Result<?> result) {
+        return ((Err<?>) result).issues().asList().get(0);
+    }
+
+    /**
+     * A locale bundle that translates only the code-level key wins over a refined key
+     * the base bundle defines. Searching by key across the flattened bundle chain would
+     * reach the base bundle's {@code raoh.invalid_format.email} first and answer in English.
+     */
+    @Test
+    void localeCodeLevelKeyWinsOverBaseRefinedKey() {
+        var issue = firstIssue(net.unit8.raoh.decode.ObjectDecoders.string().email().decode("nope", Path.ROOT));
+
+        assertEquals("format invalide", issue.resolve(PARTIAL_BUNDLE, Locale.FRENCH).message());
+        assertEquals("not a valid email", issue.resolve(PARTIAL_BUNDLE, Locale.ENGLISH).message());
+    }
+
+    /** A refined key the locale bundle does translate is still preferred over its code-level key. */
+    @Test
+    void localeRefinedKeyWinsOverLocaleCodeLevelKey() {
+        var issue = firstIssue(net.unit8.raoh.decode.ObjectDecoders.string().uuid().decode("nope", Path.ROOT));
+
+        assertEquals("UUID invalide", issue.resolve(PARTIAL_BUNDLE, Locale.FRENCH).message());
+    }
+
+    /** A country-specific request reaches the language bundle when no country bundle exists. */
+    @Test
+    void countryLocaleReachesLanguageBundle() {
+        var issue = firstIssue(net.unit8.raoh.decode.ObjectDecoders.string().email().decode("nope", Path.ROOT));
+
+        assertEquals("format invalide", issue.resolve(PARTIAL_BUNDLE, Locale.CANADA_FRENCH).message());
+    }
+
+    /**
+     * A locale template the metadata cannot fill does not hide the base bundle's template
+     * for the same key; a {@code ResourceBundle} lookup would only ever see the locale's.
+     */
+    @Test
+    void unfillableLocaleTemplateFallsThroughToBaseTemplateOfSameKey() {
+        assertEquals("out of range",
+                PARTIAL_BUNDLE.resolve(ErrorCodes.OUT_OF_RANGE, Map.of("min", 0), Locale.FRENCH));
+    }
+
     /**
      * Braces around prose are literal. Treating every brace pair as a placeholder would
      * make a template like this permanently unfillable and silently unused.
