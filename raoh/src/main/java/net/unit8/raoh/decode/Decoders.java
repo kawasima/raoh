@@ -1,5 +1,6 @@
 package net.unit8.raoh.decode;
 
+import net.unit8.raoh.CodePointOrder;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Issue;
@@ -752,7 +753,9 @@ public final class Decoders {
                 case Ok<String> ok -> {
                     var dec = variants.get(ok.value());
                     if (dec == null) {
-                        var allowed = variants.keySet().stream().sorted().toList();
+                        var allowed = variants.keySet().stream()
+                                .sorted(CodePointOrder.COMPARATOR)
+                                .toList();
                         yield Result.fail(path.append(fieldName),
                                 ErrorCodes.NOT_ALLOWED, "must be one of " + allowed,
                                 Map.of("allowed", allowed));

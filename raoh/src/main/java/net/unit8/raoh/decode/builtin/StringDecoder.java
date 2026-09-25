@@ -1,6 +1,7 @@
 package net.unit8.raoh.decode.builtin;
 
 import net.unit8.raoh.decode.Decoder;
+import net.unit8.raoh.CodePointOrder;
 import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Path;
@@ -214,12 +215,16 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Restricts the decoded value to one of the specified allowed values.
      *
+     * <p>The issue lists the allowed values in {@link CodePointOrder code point order}.
+     *
      * @param allowed the set of allowed string values
      * @return a new decoder that fails with {@link ErrorCodes#NOT_ALLOWED} if the value is not in the set
      */
     public StringDecoder<I> oneOf(String... allowed) {
         var allowedSet = Set.of(allowed);
-        var sortedAllowed = List.copyOf(new TreeSet<>(allowedSet));
+        var sortedSet = new TreeSet<>(CodePointOrder.COMPARATOR);
+        sortedSet.addAll(allowedSet);
+        var sortedAllowed = List.copyOf(sortedSet);
         var message = "must be one of %s".formatted(sortedAllowed);
         return chain((value, path) -> {
             if (!allowedSet.contains(value)) {
