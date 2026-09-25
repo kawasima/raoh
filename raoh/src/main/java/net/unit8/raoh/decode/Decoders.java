@@ -4,6 +4,7 @@ import net.unit8.raoh.Err;
 import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Issue;
 import net.unit8.raoh.Issues;
+import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.Result;
 
@@ -717,7 +718,7 @@ public final class Decoders {
                 case Ok<String> ok -> {
                     var constant = lookup.get(ok.value().toLowerCase());
                     if (constant != null) yield Result.ok(constant);
-                    yield Result.fail(path, ErrorCodes.INVALID_FORMAT,
+                    yield Result.fail(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_ENUM,
                             "invalid value",
                             Map.of("allowed", allowed));
                 }
@@ -854,7 +855,7 @@ public final class Decoders {
                 case Err<String> err -> err.coerce();
                 case Ok<String> ok -> {
                     if (!expected.equals(ok.value())) {
-                        yield Result.fail(path, ErrorCodes.INVALID_FORMAT,
+                        yield Result.fail(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_LITERAL,
                                 "invalid value",
                                 Map.of("expected", expected));
                     }

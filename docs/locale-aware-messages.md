@@ -56,6 +56,18 @@ raoh.out_of_range=must be between {min} and {max}
 
 `Issue.code()` is unchanged and stays the thing to branch on in code. Only the wording is selected by the key.
 
+`invalid_format` works the same way. `email()`, `uuid()`, `startsWith()`, `enumOf()`, the ISO-8601 parsers and the other format checks each report a key of their own, so a catalogue can say which format was expected instead of a bare "invalid format":
+
+```properties
+raoh.invalid_format.email=not a valid email
+raoh.invalid_format.uuid=not a valid UUID
+raoh.invalid_format.starts_with=must start with "{prefix}"
+raoh.invalid_format.date=not a valid date (yyyy-MM-dd)
+raoh.invalid_format=invalid format
+```
+
+The full list is in `MessageKeys`, and the bundled `messages.properties` and `messages_ja.properties` define all of them. `pattern()` reports the plain `invalid_format` key. The key strings match the ones raoh-rust uses, so the same catalogue serves both.
+
 ## Resolvers can decline
 
 A resolver receives the whole `Issue`, not just its code and metadata, and returns `Issue.message()` when it has nothing better — the message stored at decode time already describes the constraint. `ResourceBundleMessageResolver` declines when no key matches and when the template asks for a placeholder the metadata does not supply.

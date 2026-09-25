@@ -74,6 +74,22 @@ class MessageResolverFallbackTest {
         assertEquals("between 0 and 10", issue.resolve(FALLBACK_BUNDLE, Locale.ENGLISH).message());
     }
 
+    private static final ResourceBundleMessageResolver CODE_ONLY_BUNDLE =
+            new ResourceBundleMessageResolver("net.unit8.raoh.code_only_messages");
+
+    /**
+     * A catalogue that only defines {@code raoh.invalid_format} still resolves a format
+     * check that reports a refined key, instead of leaving the stored English sentence.
+     */
+    @Test
+    void refinedInvalidFormatKeyFallsBackToCodeOnlyCatalogue() {
+        var result = net.unit8.raoh.decode.ObjectDecoders.string().email().decode("nope", Path.ROOT);
+        var issue = ((Err<?>) result).issues().asList().get(0);
+
+        assertEquals(MessageKeys.INVALID_FORMAT_EMAIL, issue.messageKey());
+        assertEquals("wrong format", issue.resolve(CODE_ONLY_BUNDLE, Locale.ENGLISH).message());
+    }
+
     /**
      * Braces around prose are literal. Treating every brace pair as a placeholder would
      * make a template like this permanently unfillable and silently unused.

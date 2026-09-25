@@ -156,6 +156,26 @@ public interface MessageResolver {
                 case MessageKeys.OUT_OF_RANGE_BETWEEN ->
                         "must be between %s and %s".formatted(meta.get("from"), meta.get("to"));
                 case MessageKeys.TOO_SMALL_NONEMPTY   -> "must not be empty";
+                case MessageKeys.INVALID_FORMAT_EMAIL -> "not a valid email";
+                case MessageKeys.INVALID_FORMAT_URL   -> "not a valid URL";
+                case MessageKeys.INVALID_FORMAT_URI   -> "not a valid URI";
+                case MessageKeys.INVALID_FORMAT_UUID  -> "not a valid UUID";
+                case MessageKeys.INVALID_FORMAT_IP    -> "not a valid IP address";
+                case MessageKeys.INVALID_FORMAT_IPV4  -> "not a valid IPv4 address";
+                case MessageKeys.INVALID_FORMAT_IPV6  -> "not a valid IPv6 address";
+                case MessageKeys.INVALID_FORMAT_ULID  -> "not a valid ULID";
+                case MessageKeys.INVALID_FORMAT_CUID  -> "not a valid CUID";
+                case MessageKeys.INVALID_FORMAT_STARTS_WITH -> "must start with \"%s\"".formatted(meta.get("prefix"));
+                case MessageKeys.INVALID_FORMAT_ENDS_WITH   -> "must end with \"%s\"".formatted(meta.get("suffix"));
+                case MessageKeys.INVALID_FORMAT_INCLUDES    -> "must include \"%s\"".formatted(meta.get("substring"));
+                case MessageKeys.INVALID_FORMAT_ENUM, MessageKeys.INVALID_FORMAT_LITERAL -> "invalid value";
+                case MessageKeys.INVALID_FORMAT_INSTANT -> "not a valid ISO 8601 instant";
+                case MessageKeys.INVALID_FORMAT_DATE    -> "not a valid date (yyyy-MM-dd)";
+                case MessageKeys.INVALID_FORMAT_TIME    -> "not a valid time (HH:mm:ss)";
+                case MessageKeys.INVALID_FORMAT_DATE_TIME ->
+                        "not a valid ISO-8601 local date-time (e.g., 2024-01-15T10:30 or 2024-01-15T10:30:45)";
+                case MessageKeys.INVALID_FORMAT_OFFSET_DATE_TIME ->
+                        "not a valid ISO-8601 offset date-time (e.g., 2024-01-15T10:30:00+09:00)";
                 default -> resolve(issue.code(), meta);
             };
         }
