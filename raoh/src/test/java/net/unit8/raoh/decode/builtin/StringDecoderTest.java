@@ -267,11 +267,22 @@ class StringDecoderTest {
             "::ffff:192.0.2.1",
             "::FFFF:129.144.52.38",
             "fe80::1%eth0",
-            // No such interface exists on any host: the zone ID must not be looked up.
+            // Intentionally unlikely to name a real interface; the zone ID must not be looked up.
             "fe80::1%this-interface-does-not-exist",
             "fe80::1%3",
+            "febf::1%eth0",       // last /16 of fe80::/10
+            // Every multicast scope below global, including the unassigned ones the JDK has no
+            // classifier for.
+            "ff01::1%eth0",
             "ff02::1%uplink",
-            "fec0::1%site0",
+            "ff04::1%eth0",
+            "ff05::1%eth0",
+            "ff06::1%eth0",
+            "ff07::1%eth0",
+            "ff08::1%eth0",
+            "ff09::1%eth0",
+            "ff0d::1%eth0",
+            "ff32::1%eth0",       // flags set, link-local scope
             // Longer than 45 characters with the zone ID; the address part alone is 45.
             "fe80:0000:0000:0000:0000:ffff:255.255.255.255%long-interface-name"
     })
@@ -283,7 +294,12 @@ class StringDecoderTest {
     @ParameterizedTest
     @ValueSource(strings = {
             "2001:db8::1%eth0",   // global unicast
+            "fec0::1%eth0",       // deprecated site-local, now global unicast
+            "ff00::1%eth0",       // reserved multicast scope 0
+            "ff03::1%eth0",       // reserved multicast scope 3
             "ff0e::1%eth0",       // global multicast
+            "ff0f::1%eth0",       // reserved multicast scope F
+            "ff3e::1%eth0",       // flags set, global scope
             "::1%lo0",            // loopback
             "::%0",               // unspecified
             "::ffff:192.0.2.1%eth0",

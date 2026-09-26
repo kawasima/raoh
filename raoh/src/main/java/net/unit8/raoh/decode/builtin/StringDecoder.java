@@ -478,8 +478,9 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      *
      * <p>The address is the RFC 4291 text form, including the compressed form and the forms that
      * embed an IPv4 address, such as {@code ::ffff:192.0.2.1}. It may be followed by an RFC 4007
-     * zone ID ({@code fe80::1%eth0}) when the address is not of global scope: link-local,
-     * site-local, or a multicast address below global scope. The zone ID is taken as an opaque,
+     * zone ID ({@code fe80::1%eth0}) when the address is of a scope below global: link-local
+     * unicast ({@code fe80::/10}) or multicast whose scope is 1, 2 or 4 to D (RFC 4291 section
+     * 2.7). The zone ID is taken as an opaque,
      * non-empty string that contains neither {@code %} nor NUL. The decoder does not look the zone
      * up among the host's network interfaces, so the result does not depend on the machine it
      * runs on. Brackets ({@code [::1]}) belong to the URI host syntax and are rejected.
@@ -556,11 +557,30 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
         }
     }
 
-    // RFC 4007 section 11: a zone ID is meaningful only for an address of non-global scope.
+    // Whether a zone ID may follow the address, decided from the address bytes as RFC 4291 defines
+    // the scopes rather than by Inet6Address's classifiers: isSiteLocalAddress() still reports the
+    // deprecated fec0::/10 range, which RFC 4291 says to treat as global unicast, and isMCGlobal()
+    // is false for the reserved multicast scopes 0, 3 and F.
     private static boolean canHaveZone(Inet6Address address) {
-        return address.isLinkLocalAddress()
-                || address.isSiteLocalAddress()
-                || (address.isMulticastAddress() && !address.isMCGlobal());
+        byte[] bytes = address.getAddress();
+        int first = bytes[0] & 0xff;
+        int second = bytes[1] & 0xff;
+        // Link-local unicast, fe80::/10 (RFC 4291 section 2.5.6).
+        if (first == 0xfe && (second & 0xc0) == 0x80) {
+            return true;
+        }
+        if (first != 0xff) {
+            return false;
+        }
+        // Multicast scope, the low 4 bits of the second byte (RFC 4291 section 2.7). Everything
+        // below global scope takes a zone: interface-local (1), link-local (2), admin-local (4),
+        // site-local (5), organization-local (8), and the unassigned 6, 7 and 9 to D, which
+        // administrators may define as further regions. 0 and 3 are reserved, E is global, and F
+        // is reserved and handled like global.
+        return switch (second & 0x0f) {
+            case 0x0, 0x3, 0xe, 0xf -> false;
+            default -> true;
+        };
     }
 
     /**
