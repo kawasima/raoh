@@ -41,7 +41,12 @@
                 <groupId>com.github.siom79.japicmp</groupId>
                 <artifactId>japicmp-maven-plugin</artifactId>
             </plugin>
-            <!-- Rejects JDK calls that read the default locale; configured in the parent POM. -->
+            <!-- Checks every external call against effect-audit/; configured in the parent POM. -->
+            <plugin>
+                <groupId>net.unit8.raoh</groupId>
+                <artifactId>raoh-effect-audit-maven-plugin</artifactId>
+            </plugin>
+            <!-- Rejects well-known JDK calls that read ambient state; configured in the parent POM. -->
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
@@ -73,17 +78,6 @@
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
-            <!-- DefaultLocaleApiAuditTest checks forbidden-apis/ against this release of the JDK. -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <systemPropertyVariables>
-                        <raoh.release>${maven.compiler.release}</raoh.release>
-                        <raoh.forbiddenApisDir>${project.basedir}/../forbidden-apis</raoh.forbiddenApisDir>
-                    </systemPropertyVariables>
-                </configuration>
             </plugin>
             <!-- ShippedDocsJarIT opens the packaged jar; it needs to be told where it is. -->
             <plugin>

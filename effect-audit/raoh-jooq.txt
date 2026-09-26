@@ -1,0 +1,12 @@
+# Approved uses of DELEGATED and AMBIENT members in raoh-jooq (#151).
+#
+# Each heading is the reason; the lines under it are the uses it covers, as
+# "caller -> member". The raoh-effect-audit-maven-plugin fails the build on a use missing
+# here and on a line that matches no use. See effect-audit/catalog.txt for the effects.
+
+[observes the input through its own interface]
+net.unit8.raoh.jooq.JooqRecordDecoders#field -> org.jooq.Record#field(java.lang.String)
+net.unit8.raoh.jooq.JooqRecordDecoders#nullableField -> org.jooq.Record#field(java.lang.String)
+net.unit8.raoh.jooq.JooqRecordDecoders#optionalField -> org.jooq.Record#field(java.lang.String)
+net.unit8.raoh.jooq.JooqRecordDecoders#optionalNullableField -> org.jooq.Record#field(java.lang.String)
+net.unit8.raoh.jooq.JooqRecordDecoders#value -> org.jooq.Record#get(java.lang.String)

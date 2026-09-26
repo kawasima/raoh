@@ -37,6 +37,30 @@ When adding a new error code and its associated decoder constraint, verify all o
 - **`messages.properties` templates must reference the same meta keys**: The placeholders in `raoh.<code>=...` must match the keys actually put into the meta map by the decoder. Mismatches silently produce literal `{key}` output.
 - **`MessageResolver.DEFAULT` and `messages.properties` must both be updated**: The `ErrorCodesDefaultCoverageTest` reflection test enforces this automatically — a new `ErrorCodes` constant without coverage in both will fail the build.
 
+## Effect Audit
+
+`raoh-effect-audit-maven-plugin` (built first in the reactor, not published) checks every
+external member that `raoh`, `raoh-json` and `raoh-jooq` use, right after compilation (#151).
+When it fails, the message lists entries ready to paste.
+
+- **Member missing from `effect-audit/catalog.txt`**: file it under the effect its API contract
+  gives it, not what its implementation happens to do. `CLOSED` and `EXPLICIT` are only for members
+  no subclass can override; the audit rejects them otherwise. A method that converts an argument
+  through the argument's own methods (`String.valueOf(Object)`) is `DELEGATED`; one that only
+  observes an argument through its interface (a `CharSequence`'s chars, a key's `equals`) is not.
+  Map and Set iteration order is not part of any contract Raoh relies on.
+- **Use without an approval in `effect-audit/<module>.txt`**: file the `caller -> member` line under
+  the existing `[reason]` it fits. Add a new reason only when none fits, and never approve a
+  delegation that adopts the input's behaviour as the meaning of a conversion; fix the code
+  instead (#152 is the model).
+- **`AMBIENT` in a decoder package**: cannot be approved. Take the value from the input or explicit
+  configuration.
+- **Stale approval**: remove the line.
+- **Unknown bootstrap method**: teach `BytecodeScanner` which members it calls before approving
+  anything.
+
+Build a single module with `-am` (`mvn -pl raoh-json -am verify`) so the plugin is built too.
+
 ## Tutorial Verification with jetshell
 
 Use jetshell to verify code snippets in `docs/tutorial.ja.md`.

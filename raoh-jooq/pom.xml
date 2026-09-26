@@ -58,7 +58,12 @@
                 <groupId>com.github.siom79.japicmp</groupId>
                 <artifactId>japicmp-maven-plugin</artifactId>
             </plugin>
-            <!-- Rejects JDK calls that read the default locale; configured in the parent POM. -->
+            <!-- Checks every external call against effect-audit/; configured in the parent POM. -->
+            <plugin>
+                <groupId>net.unit8.raoh</groupId>
+                <artifactId>raoh-effect-audit-maven-plugin</artifactId>
+            </plugin>
+            <!-- Rejects well-known JDK calls that read ambient state; configured in the parent POM. -->
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>

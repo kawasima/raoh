@@ -57,11 +57,9 @@ detailed from the current development cycle onward.
   `toUpperCase()` are documented to map case by `Locale.ROOT`; for a locale-specific mapping use
   `map(s -> s.toLowerCase(locale))`. `ResourceBundleMessageResolver.resolve(code, meta)` and
   `resolve(issue)` still use the default locale, since choosing the display locale is their job.
-  The build now runs [forbidden-apis](https://github.com/policeman-tools/forbidden-apis) on
-  `raoh`, `raoh-json` and `raoh-jooq` and fails on JDK calls that read the default locale. The
-  list is kept complete by a test that walks the JDK bytecode back from `Locale.getDefault`,
-  because the lists bundled with forbidden-apis and Error Prone both miss readers such as
-  `ListFormat.getInstance()` and `DateTimeFormatter.ofLocalizedPattern(String)`
+  The build now checks every external call in `raoh`, `raoh-json` and `raoh-jooq` against a
+  reviewed catalog of effects, so a new call that reads the default locale, or any other ambient
+  state, fails the build (see the effect audit below)
   ([#136](https://github.com/kawasima/raoh/issues/136)).
 - **`MapDecoders.nested()` checks every key, not only the first.** It cast the map to
   `Map<String, Object>` when its first key was a `String`, so a later `Integer` key reached the inner
@@ -121,6 +119,23 @@ detailed from the current development cycle onward.
   names already published ([#131](https://github.com/kawasima/raoh/issues/131)).
 
 ### Changed
+
+- **The build audits the effect of every external call.** A built-in decoder does not itself
+  acquire ambient capabilities (default locale, default time zone, clock, randomness, class path,
+  filesystem, network) except those passed in its input or explicit configuration. A build
+  plugin internal to this repository, `raoh-effect-audit-maven-plugin`, reads the bytecode of
+  `raoh`, `raoh-json` and `raoh-jooq` after compilation and checks each external member they use
+  against `effect-audit/catalog.txt`, which files every member under `CLOSED`, `EXPLICIT`,
+  `DELEGATED` or `AMBIENT` by its API contract. A member missing from the catalog fails the
+  build. A `DELEGATED` member (an overridable method called virtually, or one that converts an
+  argument through the argument's own methods) and an `AMBIENT` member need an approval for each
+  calling method in `effect-audit/<module>.txt`, filed under the reason it is acceptable there,
+  and an `AMBIENT` member is refused in decoder code outright. Lambdas, method references,
+  record methods and string concatenation are followed to the members they call. This replaces
+  the test that derived default-locale readers from the JDK call graph, which could not be made
+  complete; `forbidden-apis/ambient-state.txt` keeps a short list of well-known ambient readers
+  for a readable failure. The plugin is not published
+  ([#151](https://github.com/kawasima/raoh/issues/151)).
 
 - **Breaking: the `ObjectDecoders` temporal decoders no longer accept `java.sql` values.**
   `date()`, `time()`, `dateTime()` and `iso8601()` accepted `java.sql.Date`, `java.sql.Time` and
