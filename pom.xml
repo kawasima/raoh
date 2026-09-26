@@ -152,16 +152,6 @@
                     </executions>
                 </plugin>
                 <!--
-                    Fails the build on well-known JDK calls that read ambient state, such as
-                    "TITLE".toLowerCase(), which is "tıtle" in tr-TR (#136). The list,
-                    forbidden-apis/ambient-state.txt, is short and not complete: it gives a
-                    readable failure for the common cases. The effect audit above is what checks
-                    every external call.
-
-                    ResourceBundleMessageResolver chooses a display locale, which is its job, and
-                    marks those methods with a package-private @SuppressForbidden.
-                -->
-                <!--
                     The effect audit (#151). A built-in decoder does not itself acquire ambient
                     capabilities (default locale, time zone, clock, randomness, filesystem,
                     network) except those passed in its input or explicit configuration. The audit
@@ -192,30 +182,6 @@
                             <id>effect-audit</id>
                             <goals>
                                 <goal>audit</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-                <plugin>
-                    <groupId>de.thetaphi</groupId>
-                    <artifactId>forbiddenapis</artifactId>
-                    <version>3.11</version>
-                    <configuration>
-                        <signaturesFiles>
-                            <signaturesFile>${project.basedir}/../forbidden-apis/ambient-state.txt</signaturesFile>
-                        </signaturesFiles>
-                        <suppressAnnotations>
-                            <suppressAnnotation>**.SuppressForbidden</suppressAnnotation>
-                        </suppressAnnotations>
-                    </configuration>
-                    <executions>
-                        <execution>
-                            <id>ambient-state</id>
-                            <!-- The plugin defaults to verify; run it right after compile so
-                                 that `mvn test` fails too, not only `mvn verify`. -->
-                            <phase>process-classes</phase>
-                            <goals>
-                                <goal>check</goal>
                             </goals>
                         </execution>
                     </executions>

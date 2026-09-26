@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * every issue's path, code, message key, message, meta and custom flag — must be identical.
  *
  * <p>This checks observable results for the cases listed here, not call sites. The build's
- * forbidden-API check stops known locale-reading calls; guarding every call site is #151.
+ * effect audit (#151) guards every call site.
  */
 @ResourceLock(Resources.LOCALE)
 class DefaultLocaleIndependenceTest {

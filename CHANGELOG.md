@@ -137,8 +137,9 @@ detailed from the current development cycle onward.
   method references, record methods, pattern and enum switches and dynamic constants are
   followed to the members they reach, and an unknown bootstrap method fails the build. This replaces
   the test that derived default-locale readers from the JDK call graph, which could not be made
-  complete; `forbidden-apis/ambient-state.txt` keeps a short list of well-known ambient readers
-  for a readable failure. The plugin is not published
+  complete, and the forbidden-apis check with its `@SuppressForbidden` exemptions: the catalog
+  and the approvals are the one place each classification and each exception is recorded. The
+  plugin is not published
   ([#151](https://github.com/kawasima/raoh/issues/151)).
 
 - **Breaking: the `ObjectDecoders` temporal decoders no longer accept `java.sql` values.**
