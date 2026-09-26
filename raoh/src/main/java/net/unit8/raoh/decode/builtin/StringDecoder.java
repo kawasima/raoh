@@ -10,17 +10,13 @@ import net.unit8.raoh.Result;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
-import java.net.Inet6Address;
 import java.net.URI;
 import java.text.Normalizer;
-import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -45,14 +41,11 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
 
     private static final int MAX_EMAIL_LENGTH = 254;
     private static final int MAX_URL_LENGTH = 2048;
-    private static final int MAX_IPV4_LENGTH = 15;
     // Longest IPv6 text without a zone ID; a zone ID has no standard maximum length (RFC 9844).
     private static final int MAX_IPV6_ADDRESS_LENGTH = 45;
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
             "^[a-zA-Z0-9._%+\\-]{1,64}@[a-zA-Z0-9.\\-]{1,255}\\.[a-zA-Z]{2,}$");
-    private static final Pattern IPV4_PATTERN = Pattern.compile(
-            "^((25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)$");
     private static final Pattern CUID_PATTERN = Pattern.compile(
             "^c[a-z0-9]{24}$");
     private static final Pattern ULID_PATTERN = Pattern.compile(
@@ -457,7 +450,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      */
     public StringDecoder<I> ipv4(@Nullable String message) {
         return chain((value, path) -> {
-            if (!isIPv4(value)) {
+            if (!LexicalRules.isIpv4(value)) {
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_IPV4,
                         message, "not a valid IPv4 address", Map.of());
             }
@@ -518,16 +511,12 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      */
     public StringDecoder<I> ip(@Nullable String message) {
         return chain((value, path) -> {
-            if (!isIPv4(value) && !isIPv6(value)) {
+            if (!LexicalRules.isIpv4(value) && !isIPv6(value)) {
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_IP,
                         message, "not a valid IP address", Map.of());
             }
             return Result.ok(value);
         });
-    }
-
-    private static boolean isIPv4(String value) {
-        return value.length() <= MAX_IPV4_LENGTH && IPV4_PATTERN.matcher(value).matches();
     }
 
     private static boolean isIPv6(String value) {
@@ -538,33 +527,19 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
             return false;
         }
         var address = zoneAt < 0 ? value : value.substring(0, zoneAt);
-        // Brackets frame an address inside a URI; they are not part of the address.
-        // Inet6Address.ofLiteral accepts them, so reject them before parsing.
-        if (address.length() > MAX_IPV6_ADDRESS_LENGTH || address.indexOf(':') < 0
-                || address.indexOf('[') >= 0 || address.indexOf(']') >= 0) {
+        if (address.length() > MAX_IPV6_ADDRESS_LENGTH) {
             return false;
         }
-        try {
-            // The zone is stripped before parsing: passed to the JDK, a zone name is looked up
-            // among the host's network interfaces.
-            var parsed = Inet6Address.ofLiteral(address);
-            if (zoneAt < 0) {
-                // A successful parse decides it. An IPv4-mapped address such as ::ffff:1.2.3.4
-                // comes back as an Inet4Address, but its text is still IPv6.
-                return true;
-            }
-            return parsed instanceof Inet6Address ipv6 && canHaveZone(ipv6);
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
+        // Brackets ([::1]) frame an address inside a URI and are not part of the grammar.
+        var bytes = Ipv6Text.parse(address);
+        return bytes != null && (zoneAt < 0 || canHaveZone(bytes));
     }
 
     // Whether a zone ID may follow the address, decided from the address bytes as RFC 4291 and its
     // updates define the scopes, rather than by Inet6Address's classifiers: isSiteLocalAddress()
     // still reports the deprecated fec0::/10 range, which RFC 4291 says to treat as global unicast,
     // and isMCGlobal() is false for the reserved multicast scopes 0 and F.
-    private static boolean canHaveZone(Inet6Address address) {
-        byte[] bytes = address.getAddress();
+    private static boolean canHaveZone(byte[] bytes) {
         int first = bytes[0] & 0xff;
         int second = bytes[1] & 0xff;
         // Link-local unicast, fe80::/10 (RFC 4291 section 2.5.6).
@@ -801,32 +776,21 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * <p>The accepted text is {@code yyyy-MM-ddTHH:mm:ss}, an optional fraction of 1 to 9 digits,
      * and an offset {@code Z}, {@code ±HH:mm} or {@code ±HH:mm:ss} (e.g.
      * {@code 2024-01-15T10:30:00Z}, {@code 2024-01-15T10:30:00.5+09:00}). Seconds are required. The
-     * {@code T} and {@code Z} are upper case only. A year outside {@code 0000}–{@code 9999} carries
-     * a sign, as {@link Instant#toString()} writes it, and the whole {@link Instant} range is
-     * accepted. The offset is applied, so the result is the moment the text names.
+     * {@code T} and {@code Z} are upper case only. The year is written as in {@link #date(String)},
+     * as {@link Instant#toString()} writes it, and the whole {@link Instant} range is accepted. The offset is applied, so the result is the moment the text names.
      *
      * <p>A clock time of {@code 23:59:60}, at any offset, is rejected with {@code invalid_format}:
-     * the JDK parser reads it as {@code 23:59:59}, so accepting it would return a moment the text
-     * does not name. An end of day {@code 24:00:00} is accepted as the start of the next day, the
-     * same instant.
+     * an {@link Instant} has no leap seconds, so the text names no moment it can hold. An end of
+     * day {@code 24:00:00} is accepted as the start of the next day, the same instant.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link Instant}
      */
     public TemporalDecoder<I, Instant> iso8601(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            if (TemporalFormats.isInstant(value)) {
-                try {
-                    // ISO_INSTANT only builds the value; TemporalFormats decided the grammar.
-                    var parsed = DateTimeFormatter.ISO_INSTANT.parse(value);
-                    // parsedLeapSecond() reports only that the parser replaced second 60 with 59.
-                    if (!parsed.query(DateTimeFormatter.parsedLeapSecond())) {
-                        return Result.ok(Instant.from(parsed));
-                    }
-                } catch (DateTimeException e) {
-                    // A field out of range (month 13, hour 25), or a year the grammar admits but
-                    // an Instant cannot hold (e.g. +1000000001).
-                }
+            var parsed = TemporalText.instant(value);
+            if (parsed != null) {
+                return Result.ok(parsed);
             }
             return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_INSTANT,
                     message, "not a valid ISO 8601 instant", Map.of());
@@ -847,23 +811,24 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as a local date.
      *
-     * <p>The accepted text is {@code yyyy-MM-dd} with ASCII digits. A year outside
-     * {@code 0000}–{@code 9999} carries a sign and may have up to nine digits
-     * ({@code +10000-01-01}, {@code -0001-01-01}), as {@link LocalDate#toString()} writes it; a
-     * year inside that range must not. A date that does not exist, such as {@code 2023-02-29},
-     * is rejected.
+     * <p>The accepted text is {@code yyyy-MM-dd} with ASCII digits, with the year as
+     * {@link LocalDate#toString()} writes it: exactly four digits and no sign for {@code 0000} to
+     * {@code 9999}; otherwise a sign and no leading zeros beyond four digits ({@code +10000},
+     * {@code -0001}, {@code -10000}). So {@code +2024}, {@code +02024}, {@code -00001} and
+     * {@code -0000} are rejected. A date that does not exist, such as {@code 2023-02-29}, is
+     * rejected.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link LocalDate}
      */
     public TemporalDecoder<I, LocalDate> date(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            try {
-                return Result.ok(LocalDate.parse(value, TemporalFormats.DATE));
-            } catch (DateTimeParseException e) {
-                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_DATE,
-                        message, "not a valid ISO-8601 date (e.g., 2024-01-15)", Map.of());
+            var parsed = TemporalText.date(value);
+            if (parsed != null) {
+                return Result.ok(parsed);
             }
+            return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_DATE,
+                    message, "not a valid ISO-8601 date (e.g., 2024-01-15)", Map.of());
         }));
     }
 
@@ -890,12 +855,12 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      */
     public TemporalDecoder<I, LocalTime> time(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            try {
-                return Result.ok(LocalTime.parse(value, TemporalFormats.TIME));
-            } catch (DateTimeParseException e) {
-                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_TIME,
-                        message, "not a valid ISO-8601 local time (e.g., 10:30 or 10:30:45)", Map.of());
+            var parsed = TemporalText.time(value);
+            if (parsed != null) {
+                return Result.ok(parsed);
             }
+            return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_TIME,
+                    message, "not a valid ISO-8601 local time (e.g., 10:30 or 10:30:45)", Map.of());
         }));
     }
 
@@ -922,12 +887,12 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      */
     public TemporalDecoder<I, LocalDateTime> dateTime(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            try {
-                return Result.ok(LocalDateTime.parse(value, TemporalFormats.DATE_TIME));
-            } catch (DateTimeParseException e) {
-                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_DATE_TIME,
-                        message, "not a valid ISO-8601 local date-time (e.g., 2024-01-15T10:30 or 2024-01-15T10:30:45)", Map.of());
+            var parsed = TemporalText.dateTime(value);
+            if (parsed != null) {
+                return Result.ok(parsed);
             }
+            return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_DATE_TIME,
+                    message, "not a valid ISO-8601 local date-time (e.g., 2024-01-15T10:30 or 2024-01-15T10:30:45)", Map.of());
         }));
     }
 
@@ -949,19 +914,20 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * offset: an upper-case {@code Z}, {@code ±HH:mm}, or {@code ±HH:mm:ss} (e.g.
      * {@code 2024-01-15T10:30+09:00}, {@code 2024-01-15T10:30:00Z}). Seconds may be omitted and
      * the offset may carry seconds, as {@link OffsetDateTime#toString()} writes them; an offset of
-     * hours only ({@code +09}) is rejected.
+     * hours only ({@code +09}) is rejected. {@code +00:00} and {@code -00:00} are read as
+     * {@code Z}.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link OffsetDateTime}
      */
     public TemporalDecoder<I, OffsetDateTime> offsetDateTime(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            try {
-                return Result.ok(OffsetDateTime.parse(value, TemporalFormats.OFFSET_DATE_TIME));
-            } catch (DateTimeParseException e) {
-                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_OFFSET_DATE_TIME,
-                        message, "not a valid ISO-8601 offset date-time (e.g., 2024-01-15T10:30:00+09:00)", Map.of());
+            var parsed = TemporalText.offsetDateTime(value);
+            if (parsed != null) {
+                return Result.ok(parsed);
             }
+            return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_OFFSET_DATE_TIME,
+                    message, "not a valid ISO-8601 offset date-time (e.g., 2024-01-15T10:30:00+09:00)", Map.of());
         }));
     }
 
@@ -1097,7 +1063,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as a boolean.
      *
-     * <p>Recognises common form-data representations (case-insensitive):</p>
+     * <p>Recognises common form-data representations, with ASCII letters in any case
+     * ({@code TRUE}, {@code Yes}); no other character is folded:</p>
      * <ul>
      *   <li>true: {@code "true"}, {@code "1"}, {@code "yes"}, {@code "on"}</li>
      *   <li>false: {@code "false"}, {@code "0"}, {@code "no"}, {@code "off"}</li>
@@ -1121,7 +1088,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      */
     public BoolDecoder<I> toBool(@Nullable String message) {
         return new BoolDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            Boolean parsed = switch (value.toLowerCase(Locale.ROOT)) {
+            Boolean parsed = switch (LexicalRules.asciiLowerCase(value)) {
                 case "true", "1", "yes", "on" -> Boolean.TRUE;
                 case "false", "0", "no", "off" -> Boolean.FALSE;
                 default -> null;

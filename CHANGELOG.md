@@ -16,10 +16,9 @@ detailed from the current development cycle onward.
   text to `Instant.parse`, whose `ISO_INSTANT` parser reads a clock time of `23:59:60` as
   `23:59:59` (at any offset, so `2016-12-31T23:59:60+09:00` became `14:59:59Z`) and reports the
   adjustment only through `DateTimeFormatter.parsedLeapSecond()`, which `Instant.parse` drops. The
-  caller got a moment the text did not name. `iso8601()` now checks that report and fails with
-  `invalid_format` / `not a valid ISO 8601 instant`, the same issue as any other second `60`. The
-  report says the parser replaced the second, not that the text is a UTC leap second, so no
-  leap-second message key is added. `24:00:00` is still accepted as the start of the next day,
+  caller got a moment the text did not name. `iso8601()` now fails with `invalid_format` /
+  `not a valid ISO 8601 instant`, the same issue as any other second `60`; no leap-second message
+  key is added. `24:00:00` is still accepted as the start of the next day,
   which is the same instant. Along with it, the `ObjectDecoders` temporal decoders no longer parse
   a `String` themselves: they hand it to the matching `StringDecoder` conversion, so the two routes
   read text by one set of rules and report identical issues
@@ -110,23 +109,37 @@ detailed from the current development cycle onward.
 
 ### Changed
 
-- **String conversions accept a grammar Raoh defines, not whatever the JDK parser accepts.**
+- **String conversions accept a grammar Raoh defines, not whatever the JDK accepts.**
   `uuid()`, `toInt()`, `toLong()`, `toDecimal()`, `date()`, `time()`, `dateTime()`,
-  `offsetDateTime()` and `iso8601()` passed the text to `UUID.fromString`, `Integer.parseInt`,
-  `Long.parseLong`, `new BigDecimal(String)` and the `DateTimeFormatter.ISO_*` parsers, so the
-  accepted language was the JDK's and was written down nowhere. Each conversion now checks its own
-  grammar, documented in its Javadoc, and the JDK only builds the value. Everything
-  `ObjectEncoders` writes is still accepted. The following inputs were accepted before and are now
-  rejected:
+  `offsetDateTime()`, `iso8601()`, `ipv6()`, `ip()`, `toBool()` and `enumOf()` let the JDK decide
+  what text they accept: `UUID.fromString`, `Integer.parseInt`, `Long.parseLong`,
+  `new BigDecimal(String)`, the `DateTimeFormatter.ISO_*` parsers, `Inet6Address.ofLiteral`, and
+  Unicode case mapping through `String.toLowerCase`. That language was written down nowhere and
+  could widen with the JDK. Each conversion now checks its own grammar, documented in its Javadoc.
+  The temporal conversions and `ipv6()` read the text themselves and hand only the numbers to
+  `java.time` factories such as `LocalDate.of`, which check the value's range; no JDK parser reads
+  their text. Everything `ObjectEncoders` writes is still accepted. The following inputs were
+  accepted before and are now rejected:
   - `uuid()`: anything other than 32 hexadecimal digits grouped `8-4-4-4-12` (RFC 9562), such as
     `1-1-1-1-1`, which `UUID.fromString` read as `00000001-0001-0001-0001-000000000001`.
   - `toInt()`, `toLong()`, `toDecimal()`: digits other than ASCII `0`–`9`, such as full-width
     `１２３` or Arabic-Indic `٣`. Signs, leading zeros, and (for `toDecimal()`) `5.`, `.5` and
     exponents such as `1e3` are still accepted.
-  - The temporal conversions: a lower-case `t` or `z`, as in `2016-12-31t23:59:59z`.
+  - The temporal conversions: a lower-case `t` or `z`, as in `2016-12-31t23:59:59z`, and a year
+    written other than as `LocalDate.toString()` and `Instant.toString()` write it: leading zeros
+    on a signed year (`+00001`, `-00001`, `+0999999999`), which the JDK read as the year without
+    them.
   - `offsetDateTime()`: an offset of hours only, such as `2024-01-15T10:30+09`.
   - `time()`, `dateTime()`, `offsetDateTime()`, `iso8601()`: a decimal point with no fraction
     digits after it, such as `10:30:00.`.
+  - `ipv6()`, `ip()`: text outside the RFC 4291 forms as RFC 3986 writes them down (`IPv6address`),
+    such as a group of five digits (`::00001`) or an embedded IPv4 address with a leading zero
+    (`::01.2.3.4`), which `ipv4()` already rejects on its own.
+  - `toBool()`, `enumOf()`: characters that match only through Unicode case mapping. Only ASCII
+    letters are compared case-insensitively, so the KELVIN SIGN (U+212A) no longer matches `k`
+    (`bloc\u212Aed` was decoded as `Thread.State.BLOCKED`), and an enum constant with non-ASCII
+    letters must be written in their declared case. The `allowed` list of `enumOf()` lower-cases
+    only ASCII letters.
 
   The default messages of `date()` and `time()` changed from `not a valid date (yyyy-MM-dd)` and
   `not a valid time (HH:mm:ss)` to `not a valid ISO-8601 date (e.g., 2024-01-15)` and

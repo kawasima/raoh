@@ -16,6 +16,10 @@ final class LexicalRules {
     private static final Pattern UUID = Pattern.compile(
             "[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}");
     private static final Pattern INTEGER = Pattern.compile("[+-]?[0-9]+");
+    // RFC 3986 IPv4address: four dec-octets 0-255, no leading zeros.
+    private static final Pattern IPV4 = Pattern.compile(
+            "((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]|[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]|[0-9])");
+    private static final int MAX_IPV4_LENGTH = 15;
     private static final Pattern DECIMAL = Pattern.compile(
             "[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?");
 
@@ -42,6 +46,36 @@ final class LexicalRules {
      */
     static boolean isInteger(String value) {
         return INTEGER.matcher(value).matches();
+    }
+
+    /**
+     * Returns whether the value is an IPv4 address in dotted-quad form: four decimal numbers from
+     * 0 to 255 without leading zeros, separated by {@code .} (RFC 3986 {@code IPv4address}).
+     *
+     * @param value the text to check
+     * @return {@code true} if the value is accepted
+     */
+    static boolean isIpv4(String value) {
+        return value.length() <= MAX_IPV4_LENGTH && IPV4.matcher(value).matches();
+    }
+
+    /**
+     * Lower-cases the ASCII letters {@code A}–{@code Z} and leaves every other character as it
+     * is. Case-insensitive matching in Raoh folds only these letters: Unicode case mapping would
+     * also turn the KELVIN SIGN (U+212A) into {@code k}, so {@code String#toLowerCase} and
+     * {@code String#equalsIgnoreCase} would accept text outside the documented language.
+     *
+     * @param value the text to fold
+     * @return the value with ASCII upper-case letters lower-cased
+     */
+    static String asciiLowerCase(String value) {
+        var chars = value.toCharArray();
+        for (int i = 0; i < chars.length; i++) {
+            if (chars[i] >= 'A' && chars[i] <= 'Z') {
+                chars[i] = (char) (chars[i] + ('a' - 'A'));
+            }
+        }
+        return new String(chars);
     }
 
     /**

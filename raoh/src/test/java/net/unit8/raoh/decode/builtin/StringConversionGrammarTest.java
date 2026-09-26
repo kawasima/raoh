@@ -15,9 +15,13 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
+import static net.unit8.raoh.decode.ObjectDecoders.enumOf;
 import static net.unit8.raoh.decode.ObjectDecoders.string;
 import static net.unit8.raoh.decode.builtin.BuiltinTestSupport.decodeErr;
 import static net.unit8.raoh.decode.builtin.BuiltinTestSupport.decodeOk;
@@ -153,6 +157,11 @@ class StringConversionGrammarTest {
     @ValueSource(strings = {
             "+2024-01-15",       // a four-digit year takes no sign
             "12016-01-01",       // a longer year needs one
+            "+00001-01-01",      // a signed year has no leading zeros beyond four digits
+            "+09999-01-01",
+            "-00001-01-01",
+            "+0999999999-12-31",
+            "-0000-01-01",       // year 0 is written 0000
             "+1000000000-01-01", // beyond LocalDate.MAX
             "2024-1-15", "2024-01-5", "24-01-15", "2024/01/15", "20240115",
             "2023-02-29", "2024-13-01", "2024-00-10",
@@ -268,6 +277,13 @@ class StringConversionGrammarTest {
             "2016-12-31T23:59:59+09",
             "2016-12-31T23:59:59",
             "+2016-12-31T23:59:59Z",
+            "+00000-01-01T00:00:00Z",
+            "+00001-01-01T00:00:00Z",
+            "-00001-01-01T00:00:00Z",
+            "-0000-01-01T00:00:00Z",
+            "2016-12-31T24:00:01Z",       // only 24:00:00 is an end of day
+            "2016-12-31T24:00:00.5Z",
+            "2016-12-31T23:59:59+18:01",  // beyond the offset range
             "2016-13-01T00:00:00Z",
             "２０１６-12-31T23:59:59Z"
     })
@@ -276,6 +292,124 @@ class StringConversionGrammarTest {
         assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
         assertEquals(MessageKeys.INVALID_FORMAT_INSTANT, issue.messageKey());
         assertEquals("not a valid ISO 8601 instant", issue.message());
+    }
+
+    // --- year production, checked against the text java.time writes ---
+
+    /**
+     * Every sign and digit string up to seven digits from {@code 0}, {@code 1} and {@code 9}, as
+     * the year of a date. A text is accepted exactly when {@link LocalDate#toString()} writes it,
+     * which is what the year production is defined to be.
+     */
+    @Test
+    void dateAcceptsAYearExactlyWhenLocalDateWritesIt() {
+        for (var year : yearCandidates()) {
+            var text = year + "-01-01";
+            var value = new java.math.BigInteger(year);
+            var written = value.abs().compareTo(java.math.BigInteger.valueOf(999_999_999)) <= 0
+                    ? LocalDate.of(value.intValueExact(), 1, 1).toString() : null;
+            var result = string().date().decode(text, net.unit8.raoh.Path.ROOT);
+            assertEquals(text.equals(written), result instanceof net.unit8.raoh.Ok<?>, text);
+        }
+    }
+
+    /** The same candidates as the year of an instant, against {@link Instant#toString()}. */
+    @Test
+    void iso8601AcceptsAYearExactlyWhenInstantWritesIt() {
+        for (var year : yearCandidates()) {
+            var text = year + "-01-01T00:00:00Z";
+            var value = new java.math.BigInteger(year);
+            String written = null;
+            if (value.abs().compareTo(java.math.BigInteger.valueOf(999_999_999)) <= 0) {
+                written = LocalDate.of(value.intValueExact(), 1, 1).atStartOfDay(ZoneOffset.UTC).toInstant().toString();
+            }
+            var result = string().iso8601().decode(text, net.unit8.raoh.Path.ROOT);
+            assertEquals(text.equals(written), result instanceof net.unit8.raoh.Ok<?>, text);
+        }
+    }
+
+    private static List<String> yearCandidates() {
+        var digits = new ArrayList<String>();
+        digits.add("");
+        var all = new ArrayList<String>();
+        for (int length = 1; length <= 7; length++) {
+            var next = new ArrayList<String>();
+            for (var prefix : digits) {
+                for (var d : new String[]{"0", "1", "9"}) {
+                    next.add(prefix + d);
+                }
+            }
+            digits = next;
+            for (var d : digits) {
+                all.add(d);
+                all.add("+" + d);
+                all.add("-" + d);
+            }
+        }
+        return all;
+    }
+
+    // --- ipv6, checked against the RFC 3986 IPv6address ABNF ---
+
+    // A literal transcription of RFC 3986 section 3.2.2, independent of the decoder's parser.
+    private static final String H16 = "[0-9A-Fa-f]{1,4}";
+    private static final String DEC_OCTET = "(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]|[0-9])";
+    private static final String IPV4 = DEC_OCTET + "\\." + DEC_OCTET + "\\." + DEC_OCTET + "\\." + DEC_OCTET;
+    private static final String LS32 = "(?:" + H16 + ":" + H16 + "|" + IPV4 + ")";
+    private static final Pattern RFC3986_IPV6 = Pattern.compile(String.join("|",
+            "(?:" + H16 + ":){6}" + LS32,
+            "::(?:" + H16 + ":){5}" + LS32,
+            "(?:" + H16 + ")?::(?:" + H16 + ":){4}" + LS32,
+            "(?:(?:" + H16 + ":){0,1}" + H16 + ")?::(?:" + H16 + ":){3}" + LS32,
+            "(?:(?:" + H16 + ":){0,2}" + H16 + ")?::(?:" + H16 + ":){2}" + LS32,
+            "(?:(?:" + H16 + ":){0,3}" + H16 + ")?::" + H16 + ":" + LS32,
+            "(?:(?:" + H16 + ":){0,4}" + H16 + ")?::" + LS32,
+            "(?:(?:" + H16 + ":){0,5}" + H16 + ")?::" + H16,
+            "(?:(?:" + H16 + ":){0,6}" + H16 + ")?::"));
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "::", "::1", "1::", "1:2:3:4:5:6:7:8", "1:2:3:4:5:6:7::", "::2:3:4:5:6:7:8",
+            "FFFF::abcd", "::ffff:192.0.2.1", "1::1.2.3.4", "1:2:3:4:5:6:1.2.3.4", "::0.0.0.0",
+            "::00001", "::01.2.3.4", "::1.2.3.04", "1.2.3.4::", "::1.2.3.4:1", "1::2::3", ":::",
+            ":1::", "1:", "1:2:3:4:5:6:7:8::", "1:2:3:4:5:6:7:8:9", "1:2:3:4:5:6:7:1.2.3.4",
+            "::１", "::g", "[::1]", "::1.2.3", "::256.1.1.1", "1:2:3:4:5:6:7", ""
+    })
+    void ipv6AcceptsExactlyTheRfc3986Grammar(String text) {
+        var result = string().ipv6().decode(text, net.unit8.raoh.Path.ROOT);
+        assertEquals(RFC3986_IPV6.matcher(text).matches(), result instanceof net.unit8.raoh.Ok<?>, text);
+    }
+
+    @Test
+    void ipv6AgreesWithTheRfc3986GrammarOnGeneratedText() {
+        var tokens = new String[]{"1", "ab", "FFFF", "00000", ":", "::", "1.2.3.4", "01.2.3.4", "g"};
+        var random = new Random(137);
+        for (int i = 0; i < 20_000; i++) {
+            var text = new StringBuilder();
+            for (int n = 1 + random.nextInt(12); n > 0; n--) {
+                text.append(tokens[random.nextInt(tokens.length)]);
+            }
+            var candidate = text.toString();
+            var result = string().ipv6().decode(candidate, net.unit8.raoh.Path.ROOT);
+            assertEquals(RFC3986_IPV6.matcher(candidate).matches(), result instanceof net.unit8.raoh.Ok<?>, candidate);
+        }
+    }
+
+    // --- case folding: ASCII letters only ---
+
+    @Test
+    void toBoolFoldsOnlyAsciiLetters() {
+        assertEquals(true, decodeOk(string().toBool(), "YES"));
+        assertEquals(false, decodeOk(string().toBool(), "Off"));
+        assertEquals(ErrorCodes.TYPE_MISMATCH, decodeErr(string().toBool(), "ＹＥＳ").code());
+    }
+
+    @Test
+    void enumOfFoldsOnlyAsciiLetters() {
+        assertEquals(Thread.State.BLOCKED, decodeOk(enumOf(Thread.State.class), "Blocked"));
+        // U+212A KELVIN SIGN lower-cases to 'k' under Unicode case mapping.
+        var issue = decodeErr(enumOf(Thread.State.class), "bloc\u212Aed");
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
     }
 
     // --- round trip with ObjectEncoders ---
