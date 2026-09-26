@@ -170,8 +170,8 @@ public interface MessageResolver {
                 case MessageKeys.INVALID_FORMAT_INCLUDES    -> String.format(Locale.ROOT, "must include \"%s\"", meta.get("substring"));
                 case MessageKeys.INVALID_FORMAT_ENUM, MessageKeys.INVALID_FORMAT_LITERAL -> "invalid value";
                 case MessageKeys.INVALID_FORMAT_INSTANT -> "not a valid ISO 8601 instant";
-                case MessageKeys.INVALID_FORMAT_DATE    -> "not a valid date (yyyy-MM-dd)";
-                case MessageKeys.INVALID_FORMAT_TIME    -> "not a valid time (HH:mm:ss)";
+                case MessageKeys.INVALID_FORMAT_DATE    -> "not a valid ISO-8601 date (e.g., 2024-01-15)";
+                case MessageKeys.INVALID_FORMAT_TIME    -> "not a valid ISO-8601 local time (e.g., 10:30 or 10:30:45)";
                 case MessageKeys.INVALID_FORMAT_DATE_TIME ->
                         "not a valid ISO-8601 local date-time (e.g., 2024-01-15T10:30 or 2024-01-15T10:30:45)";
                 case MessageKeys.INVALID_FORMAT_OFFSET_DATE_TIME ->

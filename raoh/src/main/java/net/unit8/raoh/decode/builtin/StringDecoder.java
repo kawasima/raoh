@@ -727,6 +727,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as a {@link UUID}.
      *
+     * <p>See {@link #uuid(String)} for the accepted text.
+     *
      * @return a decoder producing {@link UUID} from validated UUID strings
      */
     public Decoder<I, UUID> uuid() {
@@ -736,17 +738,21 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as a {@link UUID}.
      *
+     * <p>The accepted text is the RFC 9562 form: 32 hexadecimal digits grouped
+     * {@code 8-4-4-4-12} by hyphens, in upper, lower or mixed case (e.g.
+     * {@code 550e8400-e29b-41d4-a716-446655440000}). Shortened groups such as {@code 1-1-1-1-1},
+     * braces and a {@code urn:uuid:} prefix are rejected with {@code invalid_format}.
+     *
      * @param message custom error message, or {@code null} for the default
      * @return a decoder producing {@link UUID} from validated UUID strings
      */
     public Decoder<I, UUID> uuid(@Nullable String message) {
         return (in, path) -> this.decode(in, path).flatMap(value -> {
-            try {
-                return Result.ok(UUID.fromString(value));
-            } catch (IllegalArgumentException e) {
+            if (!LexicalRules.isUuid(value)) {
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_UUID,
                         message, "not a valid UUID", Map.of());
             }
+            return Result.ok(UUID.fromString(value));
         });
     }
 
@@ -792,26 +798,35 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as an ISO 8601 instant.
      *
-     * <p>The text is read with {@link DateTimeFormatter#ISO_INSTANT}. A clock time of
-     * {@code 23:59:60}, at any offset, is rejected with {@code invalid_format}: that parser reads
-     * it as {@code 23:59:59}, so accepting it would return a moment the text does not name. An end
-     * of day {@code 24:00:00} is accepted as the start of the next day, the same instant.
+     * <p>The accepted text is {@code yyyy-MM-ddTHH:mm:ss}, an optional fraction of 1 to 9 digits,
+     * and an offset {@code Z}, {@code ±HH:mm} or {@code ±HH:mm:ss} (e.g.
+     * {@code 2024-01-15T10:30:00Z}, {@code 2024-01-15T10:30:00.5+09:00}). Seconds are required. The
+     * {@code T} and {@code Z} are upper case only. A year outside {@code 0000}–{@code 9999} carries
+     * a sign, as {@link Instant#toString()} writes it, and the whole {@link Instant} range is
+     * accepted. The offset is applied, so the result is the moment the text names.
+     *
+     * <p>A clock time of {@code 23:59:60}, at any offset, is rejected with {@code invalid_format}:
+     * the JDK parser reads it as {@code 23:59:59}, so accepting it would return a moment the text
+     * does not name. An end of day {@code 24:00:00} is accepted as the start of the next day, the
+     * same instant.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link Instant}
      */
     public TemporalDecoder<I, Instant> iso8601(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            try {
-                var parsed = DateTimeFormatter.ISO_INSTANT.parse(value);
-                // parsedLeapSecond() reports only that the parser replaced second 60 with 59.
-                if (!parsed.query(DateTimeFormatter.parsedLeapSecond())) {
-                    return Result.ok(Instant.from(parsed));
+            if (TemporalFormats.isInstant(value)) {
+                try {
+                    // ISO_INSTANT only builds the value; TemporalFormats decided the grammar.
+                    var parsed = DateTimeFormatter.ISO_INSTANT.parse(value);
+                    // parsedLeapSecond() reports only that the parser replaced second 60 with 59.
+                    if (!parsed.query(DateTimeFormatter.parsedLeapSecond())) {
+                        return Result.ok(Instant.from(parsed));
+                    }
+                } catch (DateTimeException e) {
+                    // A field out of range (month 13, hour 25), or a year the grammar admits but
+                    // an Instant cannot hold (e.g. +1000000001).
                 }
-            } catch (DateTimeException e) {
-                // DateTimeParseException for text outside the grammar, and a plain
-                // DateTimeException from Instant.from for a year the grammar admits but an
-                // Instant cannot hold (e.g. +1000000001).
             }
             return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_INSTANT,
                     message, "not a valid ISO 8601 instant", Map.of());
@@ -820,6 +835,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
 
     /**
      * Parses the string as a local date (e.g., {@code 2024-01-15}).
+     *
+     * <p>See {@link #date(String)} for the accepted text.
      *
      * @return a temporal decoder producing {@link LocalDate}
      */
@@ -830,22 +847,30 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as a local date.
      *
+     * <p>The accepted text is {@code yyyy-MM-dd} with ASCII digits. A year outside
+     * {@code 0000}–{@code 9999} carries a sign and may have up to nine digits
+     * ({@code +10000-01-01}, {@code -0001-01-01}), as {@link LocalDate#toString()} writes it; a
+     * year inside that range must not. A date that does not exist, such as {@code 2023-02-29},
+     * is rejected.
+     *
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link LocalDate}
      */
     public TemporalDecoder<I, LocalDate> date(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
-                return Result.ok(LocalDate.parse(value));
+                return Result.ok(LocalDate.parse(value, TemporalFormats.DATE));
             } catch (DateTimeParseException e) {
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_DATE,
-                        message, "not a valid date (yyyy-MM-dd)", Map.of());
+                        message, "not a valid ISO-8601 date (e.g., 2024-01-15)", Map.of());
             }
         }));
     }
 
     /**
      * Parses the string as a local time (e.g., {@code 10:30:00}).
+     *
+     * <p>See {@link #time(String)} for the accepted text.
      *
      * @return a temporal decoder producing {@link LocalTime}
      */
@@ -856,22 +881,28 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as a local time.
      *
+     * <p>The accepted text is {@code HH:mm}, {@code HH:mm:ss}, or {@code HH:mm:ss} followed by
+     * {@code .} and 1 to 9 fraction digits, as {@link LocalTime#toString()} writes it. Hours run
+     * from {@code 00} to {@code 23}; {@code 24:00} and second {@code 60} are rejected.
+     *
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link LocalTime}
      */
     public TemporalDecoder<I, LocalTime> time(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
-                return Result.ok(LocalTime.parse(value));
+                return Result.ok(LocalTime.parse(value, TemporalFormats.TIME));
             } catch (DateTimeParseException e) {
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_TIME,
-                        message, "not a valid time (HH:mm:ss)", Map.of());
+                        message, "not a valid ISO-8601 local time (e.g., 10:30 or 10:30:45)", Map.of());
             }
         }));
     }
 
     /**
      * Parses the string as a local date-time (e.g., {@code 2024-01-15T10:30:00}).
+     *
+     * <p>See {@link #dateTime(String)} for the accepted text.
      *
      * @return a temporal decoder producing {@link LocalDateTime}
      */
@@ -882,13 +913,17 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as a local date-time.
      *
+     * <p>The accepted text is a date as in {@link #date(String)}, an upper-case {@code T}, and a
+     * time as in {@link #time(String)} (e.g. {@code 2024-01-15T10:30},
+     * {@code 2024-01-15T10:30:45.123}).
+     *
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link LocalDateTime}
      */
     public TemporalDecoder<I, LocalDateTime> dateTime(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
-                return Result.ok(LocalDateTime.parse(value));
+                return Result.ok(LocalDateTime.parse(value, TemporalFormats.DATE_TIME));
             } catch (DateTimeParseException e) {
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_DATE_TIME,
                         message, "not a valid ISO-8601 local date-time (e.g., 2024-01-15T10:30 or 2024-01-15T10:30:45)", Map.of());
@@ -899,6 +934,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as an offset date-time (e.g., {@code 2024-01-15T10:30:00+09:00}).
      *
+     * <p>See {@link #offsetDateTime(String)} for the accepted text.
+     *
      * @return a temporal decoder producing {@link OffsetDateTime}
      */
     public TemporalDecoder<I, OffsetDateTime> offsetDateTime() {
@@ -908,13 +945,19 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as an offset date-time.
      *
+     * <p>The accepted text is a local date-time as in {@link #dateTime(String)} followed by an
+     * offset: an upper-case {@code Z}, {@code ±HH:mm}, or {@code ±HH:mm:ss} (e.g.
+     * {@code 2024-01-15T10:30+09:00}, {@code 2024-01-15T10:30:00Z}). Seconds may be omitted and
+     * the offset may carry seconds, as {@link OffsetDateTime#toString()} writes them; an offset of
+     * hours only ({@code +09}) is rejected.
+     *
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link OffsetDateTime}
      */
     public TemporalDecoder<I, OffsetDateTime> offsetDateTime(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
-                return Result.ok(OffsetDateTime.parse(value));
+                return Result.ok(OffsetDateTime.parse(value, TemporalFormats.OFFSET_DATE_TIME));
             } catch (DateTimeParseException e) {
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_OFFSET_DATE_TIME,
                         message, "not a valid ISO-8601 offset date-time (e.g., 2024-01-15T10:30:00+09:00)", Map.of());
@@ -940,20 +983,28 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as an integer.
      *
+     * <p>The accepted text is an optional {@code +} or {@code -} followed by one or more ASCII
+     * digits {@code 0}–{@code 9}; leading zeros are allowed ({@code +5}, {@code -0}, {@code 007}).
+     * Other Unicode digits such as full-width {@code １２３}, spaces, and a value outside the
+     * {@code int} range produce {@code type_mismatch}.
+     *
      * @param message custom error message, or {@code null} for the default
      * @return an integer decoder with the parsed value
      */
     public IntDecoder<I> toInt(@Nullable String message) {
         return new IntDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            try {
-                return Result.ok(Integer.parseInt(value));
-            } catch (NumberFormatException e) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.TYPE_MISMATCH, message,
-                                Map.of("expected", "integer"))
-                        : Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected integer",
-                                Map.of("expected", "integer"));
+            if (LexicalRules.isInteger(value)) {
+                try {
+                    return Result.ok(Integer.parseInt(value));
+                } catch (NumberFormatException e) {
+                    // The text is well-formed but outside the int range.
+                }
             }
+            return message != null
+                    ? Result.failCustom(path, ErrorCodes.TYPE_MISMATCH, message,
+                            Map.of("expected", "integer"))
+                    : Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected integer",
+                            Map.of("expected", "integer"));
         }));
     }
 
@@ -973,20 +1024,28 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as a long integer.
      *
+     * <p>The accepted text is an optional {@code +} or {@code -} followed by one or more ASCII
+     * digits {@code 0}–{@code 9}; leading zeros are allowed ({@code +5}, {@code -0}, {@code 007}).
+     * Other Unicode digits such as full-width {@code １２３}, spaces, and a value outside the
+     * {@code long} range produce {@code type_mismatch}.
+     *
      * @param message custom error message, or {@code null} for the default
      * @return a long decoder with the parsed value
      */
     public LongDecoder<I> toLong(@Nullable String message) {
         return new LongDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            try {
-                return Result.ok(Long.parseLong(value));
-            } catch (NumberFormatException e) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.TYPE_MISMATCH, message,
-                                Map.of("expected", "long"))
-                        : Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected long",
-                                Map.of("expected", "long"));
+            if (LexicalRules.isInteger(value)) {
+                try {
+                    return Result.ok(Long.parseLong(value));
+                } catch (NumberFormatException e) {
+                    // The text is well-formed but outside the long range.
+                }
             }
+            return message != null
+                    ? Result.failCustom(path, ErrorCodes.TYPE_MISMATCH, message,
+                            Map.of("expected", "long"))
+                    : Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected long",
+                            Map.of("expected", "long"));
         }));
     }
 
@@ -1006,20 +1065,32 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as a {@link BigDecimal}.
      *
+     * <p>The accepted text is an optional {@code +} or {@code -}, ASCII digits with an optional
+     * decimal point that has a digit on at least one side ({@code 12}, {@code 12.5}, {@code 5.},
+     * {@code .5}), and an optional exponent: {@code e} or {@code E} followed by an optionally
+     * signed integer ({@code 1e3}, {@code 2.5E-4}). Other Unicode digits such as full-width
+     * {@code １２}, spaces, {@code NaN} and {@code Infinity} produce {@code type_mismatch}, as does
+     * an exponent that {@link BigDecimal} cannot represent. To restrict the form further, for
+     * example to amounts without an exponent, apply {@link #pattern(Pattern)} before this
+     * conversion.
+     *
      * @param message custom error message, or {@code null} for the default
      * @return a decimal decoder with the parsed value
      */
     public DecimalDecoder<I> toDecimal(@Nullable String message) {
         return new DecimalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            try {
-                return Result.ok(new BigDecimal(value));
-            } catch (NumberFormatException e) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.TYPE_MISMATCH, message,
-                                Map.of("expected", "decimal"))
-                        : Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected decimal",
-                                Map.of("expected", "decimal"));
+            if (LexicalRules.isDecimal(value)) {
+                try {
+                    return Result.ok(new BigDecimal(value));
+                } catch (NumberFormatException e) {
+                    // The text is well-formed but an exponent outside the int range, which BigDecimal cannot scale.
+                }
             }
+            return message != null
+                    ? Result.failCustom(path, ErrorCodes.TYPE_MISMATCH, message,
+                            Map.of("expected", "decimal"))
+                    : Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected decimal",
+                            Map.of("expected", "decimal"));
         }));
     }
 
