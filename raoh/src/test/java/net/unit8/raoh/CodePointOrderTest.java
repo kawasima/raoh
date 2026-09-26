@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -32,5 +33,10 @@ class CodePointOrderTest {
         assertTrue(CodePointOrder.compare("😀", "😀a") < 0);
         assertTrue(CodePointOrder.compare("ab", "a") > 0);
         assertEquals(0, CodePointOrder.compare("😀x", "😀x"));
+    }
+
+    @Test
+    void sortedListsInCodePointOrder() {
+        assertEquals(List.of("a", "Ａ", "😀"), CodePointOrder.sorted(Set.of("😀", "Ａ", "a")));
     }
 }

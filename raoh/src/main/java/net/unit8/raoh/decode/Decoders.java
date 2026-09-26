@@ -699,6 +699,9 @@ public final class Decoders {
     /**
      * Decodes a string into an enum constant (case-insensitive).
      *
+     * <p>On a miss, the issue lists the lower-cased constant names as {@code allowed}, in
+     * {@link CodePointOrder code point order}.
+     *
      * @param <I>       the input type
      * @param <E>       the enum type
      * @param cls       the enum class
@@ -711,7 +714,7 @@ public final class Decoders {
         for (var c : cls.getEnumConstants()) {
             lookup.put(c.name().toLowerCase(), c);
         }
-        var allowed = List.copyOf(lookup.keySet());
+        var allowed = CodePointOrder.sorted(lookup.keySet());
         return (in, path) -> {
             var r = stringDec.decode(in, path);
             return switch (r) {
@@ -753,9 +756,7 @@ public final class Decoders {
                 case Ok<String> ok -> {
                     var dec = variants.get(ok.value());
                     if (dec == null) {
-                        var allowed = variants.keySet().stream()
-                                .sorted(CodePointOrder.COMPARATOR)
-                                .toList();
+                        var allowed = CodePointOrder.sorted(variants.keySet());
                         yield Result.fail(path.append(fieldName),
                                 ErrorCodes.NOT_ALLOWED, "must be one of " + allowed,
                                 Map.of("allowed", allowed));

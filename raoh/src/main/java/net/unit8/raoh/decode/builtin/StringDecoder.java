@@ -25,7 +25,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.function.BiFunction;
@@ -222,9 +221,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      */
     public StringDecoder<I> oneOf(String... allowed) {
         var allowedSet = Set.of(allowed);
-        var sortedSet = new TreeSet<>(CodePointOrder.COMPARATOR);
-        sortedSet.addAll(allowedSet);
-        var sortedAllowed = List.copyOf(sortedSet);
+        var sortedAllowed = CodePointOrder.sorted(allowedSet);
         var message = "must be one of %s".formatted(sortedAllowed);
         return chain((value, path) -> {
             if (!allowedSet.contains(value)) {
