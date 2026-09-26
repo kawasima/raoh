@@ -743,8 +743,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as a {@link URI}.
      *
-     * <p>The text is a {@code URI} by RFC 3986 section 3: a scheme, a colon and the rest, with
-     * every character outside the grammar percent-encoded. A relative reference such as
+     * <p>The text is a {@code URI} by RFC 3986 section 3 that {@link URI} can hold: a scheme, a
+     * colon and the rest, with every character outside the grammar percent-encoded. A relative reference such as
      * {@code foo/bar} or {@code #top} has no scheme and is rejected, as are raw non-ASCII
      * characters. An IPv6 host follows the rules of {@link #ipv6(String)} without a zone ID, which
      * RFC 9844 removed from URIs, so {@code http://[fe80::1%25eth0]/} is rejected.

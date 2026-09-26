@@ -7,7 +7,7 @@ package net.unit8.raoh.decode.builtin;
  * <p>The rules are those of RFC 3986 section 3.2.2, {@code IPv4address} and {@code IPv6address},
  * which write down the RFC 4291 section 2.2 text forms. They cover the address only: a zone ID is
  * not part of either rule (RFC 9844), so {@code ipv6()} handles it on its own and a URI host never
- * has one. Each check reads the text once, left to right, without backtracking, and builds nothing.
+ * has one. Each check runs in time linear in the length of the text, without backtracking, and builds nothing.
  */
 final class IpSyntax {
 

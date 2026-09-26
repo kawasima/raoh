@@ -5,8 +5,8 @@ import org.jspecify.annotations.Nullable;
 /**
  * The RFC 3986 {@code URI} rule, read by {@code uri()} and {@code url()}.
  *
- * <p>{@link #parse(String)} reads the text once, left to right, without backtracking, and decides
- * acceptance on its own. It accepts the {@code URI} rule of RFC 3986 section 3, which requires a
+ * <p>{@link #parse(String)} runs in time linear in the length of the text, without backtracking,
+ * and decides acceptance on its own. It accepts the {@code URI} rule of RFC 3986 section 3, which requires a
  * scheme, so a relative reference ({@code foo/bar}, {@code #top}) is not a URI. The host is read by
  * the section 3.2.2 {@code host} rule, whose {@code IPv6address} is the one in {@link IpSyntax}; the
  * zone ID that RFC 6874 added to it was removed again by RFC 9844.

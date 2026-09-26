@@ -229,10 +229,10 @@ detailed from the current development cycle onward.
   expanded year and a time may omit its seconds. The `messages.properties` and
   `messages_ja.properties` entries changed with them
   ([#137](https://github.com/kawasima/raoh/issues/137)).
-- **`uri()` and `url()` accept the RFC 3986 `URI` grammar, not whatever `java.net.URI` parses.**
+- **`uri()` and `url()` accept the RFC 3986 `URI` grammar that `java.net.URI` can hold, not whatever it parses.**
   Both passed the text to `URI.create`, which follows RFC 2396 and RFC 2732, and `url()` then
   required `URI.getHost()` to be non-null, which is RFC 2396's hostname rule rather than the RFC
-  3986 `host`. Raoh now reads the text by the RFC 3986 `URI` rule itself, in one pass without
+  3986 `host`. Raoh now reads the text by the RFC 3986 `URI` rule itself, in linear time without
   backtracking, and `java.net.URI` only builds the value. The result type is still
   `java.net.URI`, so the RFC 3986 URIs it cannot hold are rejected and listed in the Javadoc: an
   empty scheme-specific part (`a:`, `a:#f`), an empty authority followed by nothing (`a://`), an

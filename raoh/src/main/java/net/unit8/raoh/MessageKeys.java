@@ -76,7 +76,7 @@ public final class MessageKeys {
     /** Absolute http or https URL from {@code url()}. */
     public static final String INVALID_FORMAT_URL = "invalid_format.url";
 
-    /** URI of any scheme from {@code uri()}. */
+    /** URI of any scheme from {@code uri()}; the accepted text is described on {@code StringDecoder#uri(String)}. */
     public static final String INVALID_FORMAT_URI = "invalid_format.uri";
 
     /** UUID from {@code uuid()}. */
