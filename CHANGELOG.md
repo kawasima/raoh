@@ -17,7 +17,7 @@ detailed from the current development cycle onward.
   so `fe80::1%en0` was accepted on macOS and rejected on Linux, and `fe80::1%eth0` the other way
   round. The zone ID after `%` is now taken as an opaque string (RFC 4007, RFC 9844): any non-empty
   string without `%` or NUL is accepted, and only for an address whose scope is below global
-  (link-local unicast `fe80::/10`, or multicast of scope 1, 2 or 4 to D per RFC 4291), so
+  (link-local unicast `fe80::/10`, or multicast of scope 1 to D per RFC 4291 and RFC 7346), so
   `2001:db8::1%eth0`, `::1%lo0` and the deprecated site-local `fec0::1%eth0` are rejected.
   The same change fixes two neighbours. An IPv4-mapped address such as `::ffff:192.0.2.1` was
   rejected, because the JDK returns an `Inet4Address` for it, although RFC 4291 defines it as IPv6

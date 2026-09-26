@@ -275,6 +275,7 @@ class StringDecoderTest {
             // classifier for.
             "ff01::1%eth0",
             "ff02::1%uplink",
+            "ff03::1%eth0",       // realm-local (RFC 7346)
             "ff04::1%eth0",
             "ff05::1%eth0",
             "ff06::1%eth0",
@@ -283,6 +284,7 @@ class StringDecoderTest {
             "ff09::1%eth0",
             "ff0d::1%eth0",
             "ff32::1%eth0",       // flags set, link-local scope
+            "ff33::1%eth0",       // flags set, realm-local scope
             // Longer than 45 characters with the zone ID; the address part alone is 45.
             "fe80:0000:0000:0000:0000:ffff:255.255.255.255%long-interface-name"
     })
@@ -296,7 +298,6 @@ class StringDecoderTest {
             "2001:db8::1%eth0",   // global unicast
             "fec0::1%eth0",       // deprecated site-local, now global unicast
             "ff00::1%eth0",       // reserved multicast scope 0
-            "ff03::1%eth0",       // reserved multicast scope 3
             "ff0e::1%eth0",       // global multicast
             "ff0f::1%eth0",       // reserved multicast scope F
             "ff3e::1%eth0",       // flags set, global scope
