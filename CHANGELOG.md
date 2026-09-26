@@ -48,7 +48,7 @@ detailed from the current development cycle onward.
   text. And the 45-character guard applied to the whole string, zone ID included, so a full-form
   link-local address with an interface name failed; it now applies to the address part only
   ([#127](https://github.com/kawasima/raoh/issues/127)).
-- **Decoders no longer depend on the JVM default locale.** Case mapping and fallback-message
+- **Decoders no longer read the JVM default locale.** Case mapping and fallback-message
   formatting used the default locale, so under `tr-TR` `enumOf` looked `TITLE` up as `tıtle` and
   rejected the input `title`, `StringDecoder.toUpperCase()` turned `title` into `TİTLE`, and the
   JSON decoders reported a string node as `actual: "strıng"`; under `th-TH-u-nu-thai` or `ar-EG`,

@@ -18,9 +18,9 @@ import static net.unit8.raoh.decode.ObjectDecoders.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * A decoder's result is a function of its input and configuration, never of the JVM default
- * time zone (#141). Each case is run under UTC to get a baseline, then under zones whose offset
- * differs from it; the whole {@link Result} must be identical.
+ * The temporal decoding paths covered here do not themselves read the JVM default time zone
+ * (#141). Each case decodes one input object, created once, under UTC to get a baseline and then
+ * under zones whose offset differs from it; the whole {@link Result} must be identical.
  *
  * <p>The {@code java.sql} cases are the ones #141 was about: converted with {@code toLocalDate()}
  * and its siblings, the same object gave a different value under each zone. The temporal decoders
@@ -58,14 +58,17 @@ class DefaultTimeZoneIndependenceTest {
         for (var instant : INSTANTS) {
             long millis = instant.toEpochMilli();
             var utc = LocalDateTime.ofInstant(instant, ZoneOffset.UTC);
-            cases.put("date from java.sql.Date " + instant, () -> date().decode(new java.sql.Date(millis), Path.ROOT));
-            cases.put("time from java.sql.Time " + instant, () -> time().decode(new java.sql.Time(millis), Path.ROOT));
-            cases.put("dateTime from java.sql.Timestamp " + instant,
-                    () -> dateTime().decode(new java.sql.Timestamp(millis), Path.ROOT));
-            cases.put("iso8601 from java.sql.Timestamp " + instant,
-                    () -> iso8601().decode(new java.sql.Timestamp(millis), Path.ROOT));
+            // One object per case, decoded under every zone: #141 was the same object giving
+            // different results.
+            var sqlDate = new java.sql.Date(millis);
+            var sqlTime = new java.sql.Time(millis);
+            var sqlTimestamp = new java.sql.Timestamp(millis);
+            cases.put("date from java.sql.Date " + instant, () -> date().decode(sqlDate, Path.ROOT));
+            cases.put("time from java.sql.Time " + instant, () -> time().decode(sqlTime, Path.ROOT));
+            cases.put("dateTime from java.sql.Timestamp " + instant, () -> dateTime().decode(sqlTimestamp, Path.ROOT));
+            cases.put("iso8601 from java.sql.Timestamp " + instant, () -> iso8601().decode(sqlTimestamp, Path.ROOT));
             cases.put("offsetDateTime from java.sql.Timestamp " + instant,
-                    () -> offsetDateTime().decode(new java.sql.Timestamp(millis), Path.ROOT));
+                    () -> offsetDateTime().decode(sqlTimestamp, Path.ROOT));
             // Text is the other representation the decoders read; none of it names a zone except
             // through an explicit offset, so parsing must not fall back to the default.
             cases.put("date from text " + instant, () -> date().decode(utc.toLocalDate().toString(), Path.ROOT));
@@ -96,6 +99,7 @@ class DefaultTimeZoneIndependenceTest {
 
     @Test
     void decoderResultsDoNotDependOnTheDefaultTimeZone() {
+        // cases() is built once, so each case's input object is shared by every zone.
         // assertAll reports every case that differs, not only the first.
         assertAll(cases().entrySet().stream().flatMap(c -> {
             var baseline = withDefaultTimeZone(UTC, c.getValue());

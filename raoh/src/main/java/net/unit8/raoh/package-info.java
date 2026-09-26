@@ -16,9 +16,10 @@
  *   <li>{@link net.unit8.raoh.decode.map.MapDecoders} — for {@code Map<String, Object>} structure (field extraction, combine)</li>
  * </ul>
  *
- * <p>Built-in decoders do not depend on the JVM default locale or the JVM default time zone:
- * the decoded value and the generated issues are the same under any default. Locale enters only
- * at message resolution, through
+ * <p>Built-in decoders do not themselves read the JVM default locale or the JVM default time
+ * zone. Such context enters only through a decoder's input or its explicit configuration. What a
+ * caller-provided input does in its own methods, such as a {@code List} implementation's
+ * {@code get}, is outside this guarantee. Locale enters Raoh's own message resolution through
  * {@link net.unit8.raoh.MessageResolver#resolve(net.unit8.raoh.Issue, java.util.Locale)}.
  */
 @NullMarked

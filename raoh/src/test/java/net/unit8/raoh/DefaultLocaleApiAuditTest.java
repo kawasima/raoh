@@ -39,8 +39,8 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Keeps the forbidden-API list complete against the JDK itself.
  *
- * <p>The build bans JDK calls that read the JVM default locale, because a decoder's result must
- * not depend on it (#136). A hand-written list of such calls always has gaps, and so do the lists
+ * <p>The build bans JDK calls that read the JVM default locale, because a built-in decoder does
+ * not itself read it (#136). A hand-written list of such calls always has gaps, and so do the lists
  * of forbidden-apis ({@code jdk-unsafe}) and Error Prone ({@code DefaultLocale}): neither knows
  * {@code ListFormat.getInstance()}, {@code DateTimeFormatter.ofLocalizedPattern(String)},
  * {@code DecimalStyle.ofDefaultLocale()} or {@code Scanner(String)}. This test derives the set

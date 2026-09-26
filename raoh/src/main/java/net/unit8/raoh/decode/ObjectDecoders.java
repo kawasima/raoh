@@ -40,8 +40,8 @@ import java.util.Map;
  * returning the value as the expected type or a {@code type_mismatch} error. The temporal
  * decoders additionally accept ISO-8601 text, so they read what {@code ObjectEncoders} writes.
  * They do not accept {@code java.sql.Date}, {@code java.sql.Time} or {@code java.sql.Timestamp}:
- * converting those reads the JVM default time zone, which a decoder's result must not depend
- * on. Convert JDBC values to {@code java.time} types where they are read, for example with
+ * converting those reads the JVM default time zone, which would make the decoder itself read
+ * ambient state. Convert JDBC values to {@code java.time} types where they are read, for example with
  * {@code ResultSet.getObject(column, LocalDate.class)}.
  * They are used as building blocks for boundary-specific decoder factories such as
  * {@code MapDecoders} and {@code JooqRecordDecoders}, and can also be used directly
