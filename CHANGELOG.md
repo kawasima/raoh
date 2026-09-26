@@ -85,6 +85,13 @@ detailed from the current development cycle onward.
   `MessageKeys`. The key strings match raoh-rust's message catalogue, so a catalogue can be shared
   between the two. `pattern()` keeps the plain `invalid_format` key, since its message is already the
   generic one, and `pattern(p, code)` keeps reporting the caller's code.
+- **Named sections in the shipped tutorial.** Every section of `tutorial.md` and `tutorial.ja.md`
+  now declares a `<!-- souther-section: name -->`, so Souther's `souther doc` and `doc_read` hand
+  out one part as `raoh/tutorial/flat` or `raoh/tutorial.ja/flat` instead of the whole file, and
+  `doc_search` answers with the section that holds a term. The two languages use the same names.
+  The names are part of what raoh publishes and are not renamed from here on; `ShippedDocsTest`
+  checks them against the rules Souther applies when it reads the jar and against the list of
+  names already published ([#131](https://github.com/kawasima/raoh/issues/131)).
 
 ### Changed
 

@@ -4,6 +4,7 @@ This guide walks you through Raoh's decoders interactively using jetshell, from 
 
 ---
 
+<!-- souther-section: why-decoders -->
 ## Why decoders?
 
 In web applications and batch processing, data arriving from the outside world cannot be trusted. HTTP request bodies, CSV files, external API responses, database column values — none of these are guaranteed to satisfy the types and constraints your application expects.
@@ -30,6 +31,7 @@ This guide progresses from validating primitive values to nested objects, lists,
 
 ---
 
+<!-- souther-section: setup -->
 ## 0. Setup
 
 Start [jetshell](https://github.com/kawasima/jetshell) and load Raoh:
@@ -51,6 +53,7 @@ All subsequent examples assume these imports are in place.
 
 ---
 
+<!-- souther-section: primitive-values -->
 ## 1. Decoding primitive values
 
 The smallest unit in Raoh is a decoder that reads a single value. `ObjectDecoders` provides `string()`, `int_()`, `decimal()`, and `bool()` for the corresponding types.
@@ -89,10 +92,12 @@ Boundary modules like `JsonDecoders`, `MapDecoders`, and `JooqRecordDecoders` ar
 
 ---
 
+<!-- souther-section: constraints -->
 ## 2. Adding constraints
 
 Constraints can be chained onto decoders. A violated constraint causes decoding to fail.
 
+<!-- souther-section: string-constraints -->
 ### String constraints
 
 ```java
@@ -112,6 +117,7 @@ string().uuid().decode("550e8400-e29b-41d4-a716-446655440000")
 // ==> Ok[550e8400-e29b-41d4-a716-446655440000]
 ```
 
+<!-- souther-section: normalization -->
 ### Normalization
 
 `minLength` / `maxLength` / `fixedLength` count code points, but the same が is one code point composed (U+304C) and two decomposed (U+304B U+3099). Decomposed text is not exotic: filenames originating from HFS+, and some macOS, IME and clipboard paths, deliver it in that form. Chaining `normalize()` first makes the count the same whichever form arrives.
@@ -134,6 +140,7 @@ How much a form unifies differs: NFC and NFD unify canonically equivalent string
 
 The value is normalized; the arguments of later constraints are not. Java does not normalize string literals, so `oneOf("か\u3099")` keeps its decomposed argument and will not match a value normalized to NFC. Write the literal in the same form, or normalize it explicitly.
 
+<!-- souther-section: uri-url -->
 ### URI / URL validation
 
 ```java
@@ -149,6 +156,7 @@ string().url().decode("ftp://example.com")
 
 `uri()` accepts any scheme and returns a `java.net.URI`. `url()` is stricter: it requires `http` or `https`, a non-empty host, and a maximum length of 2048. Both are terminal methods — they produce `URI`, not `String`.
 
+<!-- souther-section: numeric-constraints -->
 ### Numeric constraints
 
 ```java
@@ -165,6 +173,7 @@ decimal().scale(4).decode(new BigDecimal("0.1234"))
 // ==> Ok[0.1234]
 ```
 
+<!-- souther-section: temporal-constraints -->
 ### Temporal constraints
 
 ```java
@@ -190,6 +199,7 @@ iso8601().future().decode(Instant.now().minusSeconds(3600))
 // ==> Err[/: must be in the future]
 ```
 
+<!-- souther-section: coerce -->
 ### String-to-type conversions (coerce)
 
 In form data and query parameters, numbers and booleans arrive as strings. `toInt()`, `toLong()`, `toDecimal()`, and `toBool()` parse the string and return a typed decoder. Constraints can be chained directly after the conversion.
@@ -248,6 +258,7 @@ string().trim().toInt().decode("  42  ")
 
 ---
 
+<!-- souther-section: domain-primitives -->
 ## 3. Mapping to domain primitives
 
 `map` converts a raw value into a domain-specific type. This is the core of Raoh. By promoting values to domain types at the boundary, only "already validated and converted values" flow inside the application.
@@ -275,6 +286,7 @@ These decoders can be passed directly to `field()` in boundary modules. `map` on
 
 ---
 
+<!-- souther-section: objects -->
 ## 4. Decoding objects — combine + field
 
 From here we switch to `MapDecoders`. Fields are extracted from a `Map<String, Object>` using `field()` and assembled into objects with `combine()`.
@@ -307,6 +319,7 @@ userDec.decode(Map.of("id", "not-uuid", "email", "invalid", "age", 300))
 
 ---
 
+<!-- souther-section: nested-objects -->
 ## 5. Nested objects
 
 Nesting is expressed by passing an object decoder inside `field`. Error paths are automatically composed as `/address/city`.
@@ -340,6 +353,7 @@ customerDec.decode(Map.of(
 
 ---
 
+<!-- souther-section: flat -->
 ## 6. Structuring flat data — flat
 
 DB JOIN results and CSV files often arrive as flat data with all columns at the same level. Using `flat`, you can assemble a structured domain model from this flat input.
@@ -411,6 +425,7 @@ deptPresenceDec.decode(row)
 // ==> Ok[PresentNull[]]  — indicates the row was not joined
 ```
 
+<!-- souther-section: one-to-many-join -->
 ### One-to-many JOIN — assembling a parent-child model from flat rows
 
 A one-to-many JOIN query returns a list of flat rows with repeated parent columns. To assemble them into a parent-child domain model like `Order { lines: [OrderLine] }`, decode each row with `flat` and then group by the parent key.
@@ -482,6 +497,7 @@ Key points:
 
 ---
 
+<!-- souther-section: lists -->
 ## 7. Decoding lists
 
 All elements in a list are checked, and which element failed is reported in an index-tagged path.
@@ -525,6 +541,7 @@ field("tags", list(string()).minSize(1, "select at least one tag")).decode(Map.o
 
 ---
 
+<!-- souther-section: maps -->
 ## 8. Decoding maps
 
 For dictionary structures with dynamic keys, use `map(decoder)`.
@@ -536,6 +553,7 @@ pricesDec.decode(Map.of("prices", Map.of("apple", 120, "banana", 80)))
 // ==> Ok[{apple=120, banana=80}]
 ```
 
+<!-- souther-section: json-in-string -->
 ### Decoding JSON stored in a string
 
 JSON is often kept as a string — a `VARCHAR` column holding JSON, or a JSON body field whose value is itself a JSON string (double-encoded). The naive approach hand-parses with Jackson and swallows the exception:
@@ -586,6 +604,7 @@ A parse failure surfaces at the `params` path; a missing inner field surfaces at
 
 ---
 
+<!-- souther-section: optional-nullable -->
 ## 9. Optional / Nullable / Three-state fields
 
 The three states — "field absent", "null explicitly sent", "value present" — can be separated at the type level.
@@ -638,6 +657,7 @@ profilePatchDec.decode(Map.of("nickname", "alice"))
 
 ---
 
+<!-- souther-section: enums -->
 ## 10. Decoding enum values
 
 Java enums can be decoded case-insensitively.
@@ -657,6 +677,7 @@ field("role", withDefault(enumOf(Role.class), Role.MEMBER)).decode(Map.of())
 
 ---
 
+<!-- souther-section: one-of -->
 ## 11. Union types — discrimination with oneOf
 
 A pattern for discriminating by a `kind` field and decoding different structures accordingly.
@@ -689,6 +710,7 @@ contactDec.decode(Map.of("kind", "fax", "value", "123"))
 
 When no candidate matches, a `no variant matched` error is returned.
 
+<!-- souther-section: discriminate -->
 ### discriminate — dispatch by field value
 
 When the discriminator field name is fixed, `discriminate()` provides a cleaner alternative to `oneOf()`. List the arms as `variant(tag, decoder)`; each arm can return its own subtype directly. The result type `Decoder<..., Shape>` pins `T = Shape`, so no `(Shape)` up-cast is needed:
@@ -721,6 +743,7 @@ To assemble the variant set at run time, the `Map`-taking form `discriminate("ty
 
 ---
 
+<!-- souther-section: cross-field-validation -->
 ## 12. Cross-field validation — flatMap
 
 Use `flatMap` for consistency checks across multiple fields. Fields are read with `combine`, then domain rules are applied.
@@ -753,6 +776,7 @@ The path of a `Result.fail` returned inside `flatMap` is automatically rebased t
 
 ---
 
+<!-- souther-section: conditional-decoding -->
 ## 13. Conditional decoding — branching on a method field
 
 A case where the decoding method for subsequent fields changes based on the value of one field. Written as a `Decoder<I, T>` lambda, the `method` field is read first and then the remaining fields are switched accordingly.
@@ -787,6 +811,7 @@ paymentDec.decode(Map.of("method", "bank_transfer", "bankCode", "0001", "account
 
 ---
 
+<!-- souther-section: result-map2 -->
 ## 14. Composing results from different sources — Result.map2
 
 `combine` composes by extracting fields from the same input. To compose two `Result` values obtained from different data sources (different tables, different API responses, etc.), use `Result.map2`.
@@ -817,6 +842,7 @@ When both fail, errors from both sides are merged. `combine` is "pre-decode" com
 
 ---
 
+<!-- souther-section: result-traverse -->
 ## 15. Bulk decoding of list elements — Result.traverse
 
 When converting multiple rows to a list of domain objects, `Result.traverse` checks all rows and accumulates errors.
@@ -843,8 +869,10 @@ Index-tagged paths (like `/orders/1/order_id`) tell you exactly which row failed
 
 ---
 
+<!-- souther-section: defaults-and-recovery -->
 ## 16. Default values and recovery
 
+<!-- souther-section: with-default -->
 ### withDefault — fallback when missing
 
 Applies a default value only when the field is absent or `null`. When the field is present but invalid, an error is returned.
@@ -860,6 +888,7 @@ field("role", withDefault(enumOf(Role.class), Role.MEMBER)).decode(Map.of("role"
 // ==> Err[/role: ...]
 ```
 
+<!-- souther-section: recover -->
 ### recover — fallback from any failure
 
 Absorbs any decoding failure, including invalid values, with a fallback value.
@@ -876,6 +905,7 @@ Use `withDefault` for "conceptually optional" fields, and `recover` for "must no
 
 ---
 
+<!-- souther-section: strict-mode -->
 ## 17. Strict mode — rejecting unknown fields
 
 Reject any fields not defined in the schema.
@@ -897,6 +927,7 @@ apiRequestDec.decode(Map.of("action", "transfer", "amount", 100, "extra", true))
 
 ---
 
+<!-- souther-section: lazy -->
 ## 18. Recursive structures — lazy
 
 When a type references itself, use `lazy` to resolve the circular reference.
@@ -925,6 +956,7 @@ commentDec.decode(Map.of(
 
 ---
 
+<!-- souther-section: error-handling -->
 ## 19. Error handling patterns in practice
 
 Raoh errors are structured and can be extracted in multiple representations depending on the use case.
@@ -938,6 +970,7 @@ var checkDec = combine(
 var result = checkDec.decode(Map.of("email", "bad", "age", 300));
 ```
 
+<!-- souther-section: flatten -->
 ### For forms — flatten
 
 A flat map with path as key and a list of messages as value. Maps directly to front-end form validation display.
@@ -950,6 +983,7 @@ switch (result) {
 // ==> {/email=[not a valid email], /age=[must be between 0 and 150]}
 ```
 
+<!-- souther-section: to-json-list -->
 ### For APIs — toJsonList
 
 Returns each error as a list of objects containing `path`, `code`, `message`, and `meta`. Maps directly to REST API error responses.
@@ -962,6 +996,7 @@ switch (result) {
 // ==> [{path=/email, code=invalid_format, message=not a valid email, meta={}}, ...]
 ```
 
+<!-- souther-section: locale-aware-messages -->
 ### Locale-aware messages
 
 Combined with `ResourceBundleMessageResolver`, you can generate locale-appropriate messages without changing the decoders.
@@ -976,6 +1011,7 @@ switch (result) {
 
 ---
 
+<!-- souther-section: user-registration -->
 ## 20. Business scenario: User registration API
 
 A real-world example combining the patterns covered so far.
@@ -1045,6 +1081,7 @@ For Spring MVC controllers receiving JSON input, swap in `JsonDecoders` (referen
 
 ---
 
+<!-- souther-section: list-to-map -->
 ## 21. Converting a list to a Map
 
 **Scenario:** When a product master API returns data as `[{"id": "APPLE", "price": 120}, ...]`, you may want to hold it internally as `Map<String, BigDecimal>`. If you repeatedly look up by ID, a list requires linear search each time, so converting to a Map at decode time is natural.
@@ -1097,6 +1134,7 @@ strictPriceMapDec.decode(Map.of("products", List.of(
 
 ---
 
+<!-- souther-section: remaining-fields -->
 ## 22. Known fields + collecting remaining fields into a Map
 
 **Scenario:** When handling entities with "fixed attributes + free extension attributes" like products or events, fixed schema fields and dynamic additional attributes coexist in the same Map. For example, in `{"name": "T-shirt", "color": "red", "size": "L"}`, `name` is a required field, while `color` and `size` are extension attributes that vary by category.
@@ -1136,6 +1174,7 @@ Using `Result.map2` ensures that fixed field validation errors and remaining fie
 
 ---
 
+<!-- souther-section: password-confirmation -->
 ## 23. Password confirmation — a classic cross-field validation
 
 **Scenario:** A password change form has two cross-field rules: "new password and confirmation password must match" and "new password must differ from the current password". Neither is a constraint on an individual field; both apply to a combination of multiple field values.
@@ -1175,6 +1214,7 @@ passwordChangeDec.decode(Map.of(
 
 ---
 
+<!-- souther-section: pagination -->
 ## 24. Pagination / query parameters
 
 **Scenario:** A search API receives query parameters like `page`, `size`, and `sort`. These have two dimensions: "default value when omitted" and "policy for malformed values". Typically, `page` should explicitly error on negative numbers, while `size` and `sort` should fall back to a safe default and continue operating even with slightly wrong values.
@@ -1215,6 +1255,7 @@ pageRequestDec.decode(Map.of("page", -1))
 
 ---
 
+<!-- souther-section: amount-currency -->
 ## 25. Amount and currency cross-field validation
 
 **Scenario:** Payment systems and accounting often receive amount and currency code pairs. Amount validity differs by currency: JPY allows no decimal places, USD/EUR allow up to 2. This rule cannot be determined from individual fields alone — it requires both fields together, making it a cross-field rule.
@@ -1252,6 +1293,7 @@ moneyDec.decode(Map.of("amount", new BigDecimal("9.99"), "currency", "usd"))
 
 ---
 
+<!-- souther-section: csv-import -->
 ## 26. CSV import — accumulating errors with row numbers
 
 **Scenario:** Bulk member registration or data migration often involves uploading a CSV file. Rather than stopping at the first error, checking all rows and reporting "email on row 2 is invalid, age on row 4 is out of range" all at once is friendlier to users. `Result.traverse` fits this pattern.
@@ -1290,6 +1332,7 @@ Row numbers are included in the paths, so you can return directly to users which
 
 ---
 
+<!-- souther-section: configuration-files -->
 ## 27. Decoding configuration files — nested structure + withDefault
 
 **Scenario:** When loading application configuration files (YAML/TOML parsed into a Map), required and optional sections coexist: "DB connection is required, but cache settings should use defaults if absent", "log level defaults to INFO if omitted". Decoding with type safety lets you detect configuration errors at application startup.
@@ -1337,6 +1380,7 @@ appConfigDec.decode(Map.of(
 
 Running the configuration decoder at application startup lets you catch missing environment variables and type mismatches before they reach production code.
 
+<!-- souther-section: tuples -->
 ## 28. Tuple types — lightweight result containers
 
 When you use `combine(...).map(...)`, you normally define a dedicated record for the result.
@@ -1383,6 +1427,7 @@ Tuple elements are accessed as `_1`, `_2`, ... `_8` when not using pattern match
 
 ---
 
+<!-- souther-section: encoding -->
 ## 29. Encoding — domain objects to Map
 
 Raoh also provides encoders that perform the reverse operation: converting domain objects into `Map<String, Object>` for JDBC binding, JSON serialization, or other boundary output.
@@ -1415,6 +1460,7 @@ The encoder API mirrors the decoder side:
 | `nullable(dec)` | `nullableProperty("x", T::x, enc)` |
 | `withDefault(dec, v)` | `propertyWithDefault("x", T::x, enc, v)` |
 
+<!-- souther-section: encoding-nullable -->
 ## 30. Encoding — nullableProperty and propertyWithDefault
 
 Null handling lives in the property layer, not inside the encoder. Value encoders (such as
@@ -1435,6 +1481,7 @@ propertyWithDefault("tags", Article::tags, list(nested(TAG_ENCODER)), List.of())
 // getter null → [] in output
 ```
 
+<!-- souther-section: null-analysis -->
 ### One line for consumers running null analysis
 
 If your own code is `@NullMarked` and you run strict null analysis (Eclipse JDT / ecj,
@@ -1450,6 +1497,7 @@ org.eclipse.jdt.core.compiler.problem.nullUncheckedConversion=ignore
 For a batch ecj build, pass this key via `-properties`. Genuine null-contract violations
 (`nullSpecViolation`) stay enabled.
 
+<!-- souther-section: encoding-nested -->
 ## 31. Encoding — nested objects
 
 Use `nested()` to embed structured encoders inside a parent, and `list()` to encode collections:
@@ -1462,6 +1510,7 @@ Encoder<Order, Map<String, Object>> ORDER_ENCODER = object(
 );
 ```
 
+<!-- souther-section: encoding-discriminate -->
 ## 32. Encoding — discriminate (tagged unions)
 
 Encode a sealed interface (tagged union) with `discriminate()`, which selects a variant by the value's runtime type and writes the discriminator tag into the output. It mirrors the decoder-side `discriminate()` (section 11): the decoder reads the tag from the input data, while the encoder chooses the tag from the value's type.

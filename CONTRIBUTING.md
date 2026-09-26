@@ -75,6 +75,20 @@ over every constant and fails the build unless it is covered, so:
 - Never put a `null` into a meta map: `Map.of` / `List.copyOf` reject it at runtime. When a decoded
   value may be `null`, build the payload with `new ArrayList<>(collection)` instead.
 
+### Guide section names
+
+The guides under `docs/` ship inside the jar, and the Souther toolchain serves them through
+`souther doc` and its MCP tools. A line `<!-- souther-section: name -->` directly above a heading
+publishes that part as `raoh/<topic>/<name>`, so `raoh/tutorial/flat` hands out section 6 of the
+tutorial and nothing else. Every heading below the title of `tutorial.md` and `tutorial.ja.md`
+carries one, and both files use the same name above the corresponding heading.
+
+A published name is part of the API. Reword, renumber or translate the heading freely, but do not
+rename or remove the name once a release has carried it, for the same reason a method is not
+renamed. `ShippedDocsTest` holds the names that have shipped and fails when a guide stops declaring
+one. When you add a section, add a marker to both tutorials and the name to that list in the same
+change. Names are lower-case words joined by hyphens, without the section number.
+
 ### Tests
 
 Assert the documented contract, not the current implementation shape. Error **codes**, paths, and
