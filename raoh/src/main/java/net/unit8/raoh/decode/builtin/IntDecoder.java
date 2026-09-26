@@ -9,6 +9,7 @@ import net.unit8.raoh.Result;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -61,7 +62,7 @@ public final class IntDecoder<I extends @Nullable Object> implements Decoder<I, 
             if (value < n) {
                 var meta = Map.<String, Object>of("min", n, "actual", value);
                 return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_MINIMUM, message,
-                        "must be at least %d".formatted(n), meta);
+                        String.format(Locale.ROOT, "must be at least %d", n), meta);
             }
             return Result.ok(value);
         });
@@ -89,7 +90,7 @@ public final class IntDecoder<I extends @Nullable Object> implements Decoder<I, 
             if (value > n) {
                 var meta = Map.<String, Object>of("max", n, "actual", value);
                 return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_MAXIMUM, message,
-                        "must be at most %d".formatted(n), meta);
+                        String.format(Locale.ROOT, "must be at most %d", n), meta);
             }
             return Result.ok(value);
         });
@@ -118,13 +119,13 @@ public final class IntDecoder<I extends @Nullable Object> implements Decoder<I, 
      */
     public IntDecoder<I> range(int min, int max, @Nullable String message) {
         if (min > max) {
-            throw new IllegalArgumentException("min (%d) must not be greater than max (%d)".formatted(min, max));
+            throw new IllegalArgumentException(String.format(Locale.ROOT, "min (%d) must not be greater than max (%d)", min, max));
         }
         return chain((value, path) -> {
             if (value < min || value > max) {
                 var meta = Map.<String, Object>of("min", min, "max", max, "actual", value);
                 return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_RANGE, message,
-                        "must be between %d and %d".formatted(min, max), meta);
+                        String.format(Locale.ROOT, "must be between %d and %d", min, max), meta);
             }
             return Result.ok(value);
         });
@@ -239,7 +240,7 @@ public final class IntDecoder<I extends @Nullable Object> implements Decoder<I, 
     public IntDecoder<I> oneOf(Integer... allowed) {
         var allowedSet = Set.of(allowed);
         var sortedAllowed = List.copyOf(new TreeSet<>(allowedSet));
-        var message = "must be one of %s".formatted(sortedAllowed);
+        var message = String.format(Locale.ROOT, "must be one of %s", sortedAllowed);
         return chain((value, path) -> {
             if (!allowedSet.contains(value)) {
                 var meta = Map.<String, Object>of("allowed", sortedAllowed, "actual", value);
@@ -276,7 +277,7 @@ public final class IntDecoder<I extends @Nullable Object> implements Decoder<I, 
             if (value % n != 0) {
                 var meta = Map.<String, Object>of("divisor", n, "actual", value);
                 return Result.failWith(path, ErrorCodes.NOT_MULTIPLE_OF, message,
-                        "must be a multiple of %d".formatted(n), meta);
+                        String.format(Locale.ROOT, "must be a multiple of %d", n), meta);
             }
             return Result.ok(value);
         });

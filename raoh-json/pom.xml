@@ -60,6 +60,11 @@
                 <groupId>com.github.siom79.japicmp</groupId>
                 <artifactId>japicmp-maven-plugin</artifactId>
             </plugin>
+            <!-- Rejects JDK calls that read the default locale; configured in the parent POM. -->
+            <plugin>
+                <groupId>de.thetaphi</groupId>
+                <artifactId>forbiddenapis</artifactId>
+            </plugin>
         </plugins>
     </build>
 

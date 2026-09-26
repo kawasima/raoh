@@ -8,6 +8,7 @@ import net.unit8.raoh.Result;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -83,7 +84,7 @@ public final class RecordDecoder<I extends @Nullable Object, V> implements Decod
         return chain((value, path) -> {
             if (value.size() < n) {
                 return Result.failWith(path, ErrorCodes.TOO_SMALL, message,
-                        "must have at least %d entries".formatted(n),
+                        String.format(Locale.ROOT, "must have at least %d entries", n),
                         Map.of("min", n, "actual", value.size()));
             }
             return Result.ok(value);
@@ -111,7 +112,7 @@ public final class RecordDecoder<I extends @Nullable Object, V> implements Decod
         return chain((value, path) -> {
             if (value.size() > n) {
                 return Result.failWith(path, ErrorCodes.TOO_BIG, message,
-                        "must have at most %d entries".formatted(n),
+                        String.format(Locale.ROOT, "must have at most %d entries", n),
                         Map.of("max", n, "actual", value.size()));
             }
             return Result.ok(value);
@@ -139,7 +140,7 @@ public final class RecordDecoder<I extends @Nullable Object, V> implements Decod
         return chain((value, path) -> {
             if (value.size() != n) {
                 return Result.failWith(path, ErrorCodes.INVALID_SIZE, message,
-                        "must have exactly %d entries".formatted(n),
+                        String.format(Locale.ROOT, "must have exactly %d entries", n),
                         Map.of("expected", n, "actual", value.size()));
             }
             return Result.ok(value);

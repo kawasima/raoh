@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -90,7 +91,7 @@ public final class ListDecoder<I extends @Nullable Object, T> implements Decoder
         return chain((value, path) -> {
             if (value.size() < n) {
                 return Result.failWith(path, ErrorCodes.TOO_SMALL, message,
-                        "must have at least %d elements".formatted(n),
+                        String.format(Locale.ROOT, "must have at least %d elements", n),
                         Map.of("min", n, "actual", value.size()));
             }
             return Result.ok(value);
@@ -118,7 +119,7 @@ public final class ListDecoder<I extends @Nullable Object, T> implements Decoder
         return chain((value, path) -> {
             if (value.size() > n) {
                 return Result.failWith(path, ErrorCodes.TOO_BIG, message,
-                        "must have at most %d elements".formatted(n),
+                        String.format(Locale.ROOT, "must have at most %d elements", n),
                         Map.of("max", n, "actual", value.size()));
             }
             return Result.ok(value);
@@ -146,7 +147,7 @@ public final class ListDecoder<I extends @Nullable Object, T> implements Decoder
         return chain((value, path) -> {
             if (value.size() != n) {
                 return Result.failWith(path, ErrorCodes.INVALID_SIZE, message,
-                        "must have exactly %d elements".formatted(n),
+                        String.format(Locale.ROOT, "must have exactly %d elements", n),
                         Map.of("expected", n, "actual", value.size()));
             }
             return Result.ok(value);
@@ -176,7 +177,7 @@ public final class ListDecoder<I extends @Nullable Object, T> implements Decoder
             if (!value.contains(element)) {
                 var meta = Map.<String, Object>of("expected", element);
                 return Result.failWith(path, ErrorCodes.MISSING_ELEMENT, message,
-                        "must contain %s".formatted(element), meta);
+                        String.format(Locale.ROOT, "must contain %s", element), meta);
             }
             return Result.ok(value);
         });
@@ -204,7 +205,7 @@ public final class ListDecoder<I extends @Nullable Object, T> implements Decoder
             if (!missing.isEmpty()) {
                 var missingList = List.copyOf(missing);
                 var meta = Map.<String, Object>of("expected", required, "missing", missingList);
-                var message = "must contain all of %s (missing: %s)".formatted(required, missingList);
+                var message = String.format(Locale.ROOT, "must contain all of %s (missing: %s)", required, missingList);
                 return Result.fail(path, ErrorCodes.MISSING_ELEMENTS, message, meta);
             }
             return Result.ok(value);
@@ -242,7 +243,7 @@ public final class ListDecoder<I extends @Nullable Object, T> implements Decoder
                 var duplicatesList = Collections.unmodifiableList(new ArrayList<>(duplicates));
                 var meta = Map.<String, Object>of("duplicates", duplicatesList);
                 return Result.failWith(path, ErrorCodes.DUPLICATE_ELEMENT, message,
-                        "must not contain duplicates: %s".formatted(duplicatesList), meta);
+                        String.format(Locale.ROOT, "must not contain duplicates: %s", duplicatesList), meta);
             }
             return Result.ok(value);
         });

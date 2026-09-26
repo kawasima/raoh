@@ -7,6 +7,7 @@ import net.unit8.raoh.Result;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -92,7 +93,7 @@ public final class BoolDecoder<I extends @Nullable Object> implements Decoder<I,
                 return message != null
                         ? Result.failCustom(path, ErrorCodes.INVALID_VALUE, message, meta)
                         : Result.fail(path, ErrorCodes.INVALID_VALUE,
-                                "must be %s".formatted(expected), meta);
+                                String.format(Locale.ROOT, "must be %s", expected), meta);
             }
             return Result.ok(value);
         });

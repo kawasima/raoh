@@ -140,7 +140,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
                 var meta = Map.<String, Object>of("min", n, "actual", length);
                 return message != null
                         ? Result.failCustom(path, ErrorCodes.TOO_SHORT, message, meta)
-                        : Result.fail(path, ErrorCodes.TOO_SHORT, "must be at least %d characters".formatted(n), meta);
+                        : Result.fail(path, ErrorCodes.TOO_SHORT, String.format(Locale.ROOT, "must be at least %d characters", n), meta);
             }
             return Result.ok(value);
         });
@@ -174,7 +174,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
                 var meta = Map.<String, Object>of("max", n, "actual", length);
                 return message != null
                         ? Result.failCustom(path, ErrorCodes.TOO_LONG, message, meta)
-                        : Result.fail(path, ErrorCodes.TOO_LONG, "must be at most %d characters".formatted(n), meta);
+                        : Result.fail(path, ErrorCodes.TOO_LONG, String.format(Locale.ROOT, "must be at most %d characters", n), meta);
             }
             return Result.ok(value);
         });
@@ -208,7 +208,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
                 var meta = Map.<String, Object>of("expected", n, "actual", length);
                 return message != null
                         ? Result.failCustom(path, ErrorCodes.INVALID_LENGTH, message, meta)
-                        : Result.fail(path, ErrorCodes.INVALID_LENGTH, "must be exactly %d characters".formatted(n), meta);
+                        : Result.fail(path, ErrorCodes.INVALID_LENGTH, String.format(Locale.ROOT, "must be exactly %d characters", n), meta);
             }
             return Result.ok(value);
         });
@@ -225,7 +225,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     public StringDecoder<I> oneOf(String... allowed) {
         var allowedSet = Set.of(allowed);
         var sortedAllowed = CodePointOrder.sorted(allowedSet);
-        var message = "must be one of %s".formatted(sortedAllowed);
+        var message = String.format(Locale.ROOT, "must be one of %s", sortedAllowed);
         return chain((value, path) -> {
             if (!allowedSet.contains(value)) {
                 var meta = Map.<String, Object>of("allowed", sortedAllowed, "actual", value);
@@ -298,7 +298,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
             if (!value.startsWith(prefix)) {
                 var meta = Map.<String, Object>of("prefix", prefix);
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_STARTS_WITH,
-                        message, "must start with \"%s\"".formatted(prefix), meta);
+                        message, String.format(Locale.ROOT, "must start with \"%s\"", prefix), meta);
             }
             return Result.ok(value);
         });
@@ -326,7 +326,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
             if (!value.endsWith(suffix)) {
                 var meta = Map.<String, Object>of("suffix", suffix);
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_ENDS_WITH,
-                        message, "must end with \"%s\"".formatted(suffix), meta);
+                        message, String.format(Locale.ROOT, "must end with \"%s\"", suffix), meta);
             }
             return Result.ok(value);
         });
@@ -354,7 +354,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
             if (!value.contains(substring)) {
                 var meta = Map.<String, Object>of("substring", substring);
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_INCLUDES,
-                        message, "must include \"%s\"".formatted(substring), meta);
+                        message, String.format(Locale.ROOT, "must include \"%s\"", substring), meta);
             }
             return Result.ok(value);
         });
@@ -648,21 +648,31 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     }
 
     /**
-     * Converts the decoded string to lower case.
+     * Converts the decoded string to lower case using the rules of {@link Locale#ROOT}.
      *
-     * @return a new decoder that applies {@link String#toLowerCase()} to the value
+     * <p>The JVM default locale is never consulted, so {@code "TITLE"} becomes {@code "title"}
+     * even when the default locale is Turkish. For a locale-specific case mapping, use
+     * {@code map(s -> s.toLowerCase(locale))} instead.
+     *
+     * @return a new decoder that applies {@link String#toLowerCase(Locale)} with
+     *         {@link Locale#ROOT} to the value
      */
     public StringDecoder<I> toLowerCase() {
-        return new StringDecoder<>((in, path) -> this.decode(in, path).map(String::toLowerCase));
+        return new StringDecoder<>((in, path) -> this.decode(in, path).map(s -> s.toLowerCase(Locale.ROOT)));
     }
 
     /**
-     * Converts the decoded string to upper case.
+     * Converts the decoded string to upper case using the rules of {@link Locale#ROOT}.
      *
-     * @return a new decoder that applies {@link String#toUpperCase()} to the value
+     * <p>The JVM default locale is never consulted, so {@code "title"} becomes {@code "TITLE"}
+     * even when the default locale is Turkish. For a locale-specific case mapping, use
+     * {@code map(s -> s.toUpperCase(locale))} instead.
+     *
+     * @return a new decoder that applies {@link String#toUpperCase(Locale)} with
+     *         {@link Locale#ROOT} to the value
      */
     public StringDecoder<I> toUpperCase() {
-        return new StringDecoder<>((in, path) -> this.decode(in, path).map(String::toUpperCase));
+        return new StringDecoder<>((in, path) -> this.decode(in, path).map(s -> s.toUpperCase(Locale.ROOT)));
     }
 
     /**

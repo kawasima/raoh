@@ -147,6 +147,46 @@
                         </execution>
                     </executions>
                 </plugin>
+                <!--
+                    A decoder's result must not depend on the JVM default locale: in tr-TR,
+                    "TITLE".toLowerCase() is "tıtle", and in th-TH-u-nu-thai "%d".formatted(1000)
+                    is "๑๐๐๐" (#136). This check fails the build on JDK calls that read the default
+                    locale, so a new call site cannot bring it back. Pass Locale.ROOT instead.
+
+                    The list is forbidden-apis/default-locale.txt. It is not the bundled
+                    jdk-unsafe list, which misses locale readers and also bans default time zone
+                    and charset calls that this contract does not cover. DefaultLocaleApiAuditTest
+                    walks the JDK bytecode back from Locale.getDefault and fails when the list
+                    lacks a reader, so the list is complete against the JDK rather than against
+                    what someone thought of.
+
+                    ResourceBundleMessageResolver chooses a display locale, which is its job, and
+                    marks those methods with a package-private @SuppressForbidden.
+                -->
+                <plugin>
+                    <groupId>de.thetaphi</groupId>
+                    <artifactId>forbiddenapis</artifactId>
+                    <version>3.11</version>
+                    <configuration>
+                        <signaturesFiles>
+                            <signaturesFile>${project.basedir}/../forbidden-apis/default-locale.txt</signaturesFile>
+                        </signaturesFiles>
+                        <suppressAnnotations>
+                            <suppressAnnotation>**.SuppressForbidden</suppressAnnotation>
+                        </suppressAnnotations>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>default-locale</id>
+                            <!-- The plugin defaults to verify; run it right after compile so
+                                 that `mvn test` fails too, not only `mvn verify`. -->
+                            <phase>process-classes</phase>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
             </plugins>
         </pluginManagement>
 

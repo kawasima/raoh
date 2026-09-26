@@ -36,6 +36,21 @@ detailed from the current development cycle onward.
   text. And the 45-character guard applied to the whole string, zone ID included, so a full-form
   link-local address with an interface name failed; it now applies to the address part only
   ([#127](https://github.com/kawasima/raoh/issues/127)).
+- **Decoders no longer depend on the JVM default locale.** Case mapping and fallback-message
+  formatting used the default locale, so under `tr-TR` `enumOf` looked `TITLE` up as `tıtle` and
+  rejected the input `title`, `StringDecoder.toUpperCase()` turned `title` into `TİTLE`, and the
+  JSON decoders reported a string node as `actual: "strıng"`; under `th-TH-u-nu-thai` or `ar-EG`,
+  `Issue.message()` read `must be at least ๑๐๐๐` or `must be at least ١٠٠٠`. They all use
+  `Locale.ROOT` now, and so does `MessageResolver.DEFAULT`. `StringDecoder.toLowerCase()` and
+  `toUpperCase()` are documented to map case by `Locale.ROOT`; for a locale-specific mapping use
+  `map(s -> s.toLowerCase(locale))`. `ResourceBundleMessageResolver.resolve(code, meta)` and
+  `resolve(issue)` still use the default locale, since choosing the display locale is their job.
+  The build now runs [forbidden-apis](https://github.com/policeman-tools/forbidden-apis) on
+  `raoh`, `raoh-json` and `raoh-jooq` and fails on JDK calls that read the default locale. The
+  list is kept complete by a test that walks the JDK bytecode back from `Locale.getDefault`,
+  because the lists bundled with forbidden-apis and Error Prone both miss readers such as
+  `ListFormat.getInstance()` and `DateTimeFormatter.ofLocalizedPattern(String)`
+  ([#136](https://github.com/kawasima/raoh/issues/136)).
 - **`MapDecoders.nested()` checks every key, not only the first.** It cast the map to
   `Map<String, Object>` when its first key was a `String`, so a later `Integer` key reached the inner
   decoder and surfaced as a `ClassCastException` (under `strict(...)`, for one) instead of an issue,

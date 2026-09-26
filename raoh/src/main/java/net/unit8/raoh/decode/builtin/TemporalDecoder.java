@@ -8,6 +8,7 @@ import net.unit8.raoh.Result;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -79,7 +80,7 @@ public final class TemporalDecoder<I extends @Nullable Object, T extends Compara
             if (value.compareTo(bound) >= 0) {
                 var meta = Map.<String, Object>of("before", bound, "actual", value);
                 return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_BEFORE,
-                        message, "must be before %s".formatted(bound), meta);
+                        message, String.format(Locale.ROOT, "must be before %s", bound), meta);
             }
             return Result.ok(value);
         });
@@ -107,7 +108,7 @@ public final class TemporalDecoder<I extends @Nullable Object, T extends Compara
             if (value.compareTo(bound) <= 0) {
                 var meta = Map.<String, Object>of("after", bound, "actual", value);
                 return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_AFTER,
-                        message, "must be after %s".formatted(bound), meta);
+                        message, String.format(Locale.ROOT, "must be after %s", bound), meta);
             }
             return Result.ok(value);
         });
@@ -137,13 +138,13 @@ public final class TemporalDecoder<I extends @Nullable Object, T extends Compara
     public TemporalDecoder<I, T> between(T from, T to, @Nullable String message) {
         if (from.compareTo(to) > 0) {
             throw new IllegalArgumentException(
-                    "from (%s) must not be greater than to (%s)".formatted(from, to));
+                    String.format(Locale.ROOT, "from (%s) must not be greater than to (%s)", from, to));
         }
         return chain((value, path) -> {
             if (value.compareTo(from) < 0 || value.compareTo(to) > 0) {
                 var meta = Map.<String, Object>of("from", from, "to", to, "actual", value);
                 return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_BETWEEN,
-                        message, "must be between %s and %s".formatted(from, to), meta);
+                        message, String.format(Locale.ROOT, "must be between %s and %s", from, to), meta);
             }
             return Result.ok(value);
         });

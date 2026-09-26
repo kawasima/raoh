@@ -41,6 +41,11 @@
                 <groupId>com.github.siom79.japicmp</groupId>
                 <artifactId>japicmp-maven-plugin</artifactId>
             </plugin>
+            <!-- Rejects JDK calls that read the default locale; configured in the parent POM. -->
+            <plugin>
+                <groupId>de.thetaphi</groupId>
+                <artifactId>forbiddenapis</artifactId>
+            </plugin>
             <!-- The repo-root docs ride inside the jar under META-INF/souther-docs/raoh/, so a
                  consumer that bundles raoh (the Souther CLI's `souther doc`) serves the docs of
                  the exact raoh it depends on. The topic list lives in
@@ -68,6 +73,17 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <!-- DefaultLocaleApiAuditTest checks forbidden-apis/ against this release of the JDK. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <raoh.release>${maven.compiler.release}</raoh.release>
+                        <raoh.forbiddenApisDir>${project.basedir}/../forbidden-apis</raoh.forbiddenApisDir>
+                    </systemPropertyVariables>
+                </configuration>
             </plugin>
             <!-- ShippedDocsJarIT opens the packaged jar; it needs to be told where it is. -->
             <plugin>

@@ -9,6 +9,7 @@ import net.unit8.raoh.Result;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -59,7 +60,7 @@ public final class DecimalDecoder<I extends @Nullable Object> implements Decoder
             if (value.compareTo(n) < 0) {
                 var meta = Map.<String, Object>of("min", n, "actual", value);
                 return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_MINIMUM, message,
-                        "must be at least %s".formatted(n), meta);
+                        String.format(Locale.ROOT, "must be at least %s", n), meta);
             }
             return Result.ok(value);
         });
@@ -87,7 +88,7 @@ public final class DecimalDecoder<I extends @Nullable Object> implements Decoder
             if (value.compareTo(n) > 0) {
                 var meta = Map.<String, Object>of("max", n, "actual", value);
                 return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_MAXIMUM, message,
-                        "must be at most %s".formatted(n), meta);
+                        String.format(Locale.ROOT, "must be at most %s", n), meta);
             }
             return Result.ok(value);
         });
@@ -116,13 +117,13 @@ public final class DecimalDecoder<I extends @Nullable Object> implements Decoder
      */
     public DecimalDecoder<I> range(BigDecimal min, BigDecimal max, @Nullable String message) {
         if (min.compareTo(max) > 0) {
-            throw new IllegalArgumentException("min (%s) must not be greater than max (%s)".formatted(min, max));
+            throw new IllegalArgumentException(String.format(Locale.ROOT, "min (%s) must not be greater than max (%s)", min, max));
         }
         return chain((value, path) -> {
             if (value.compareTo(min) < 0 || value.compareTo(max) > 0) {
                 var meta = Map.<String, Object>of("min", min, "max", max, "actual", value);
                 return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_RANGE, message,
-                        "must be between %s and %s".formatted(min, max), meta);
+                        String.format(Locale.ROOT, "must be between %s and %s", min, max), meta);
             }
             return Result.ok(value);
         });
@@ -255,7 +256,7 @@ public final class DecimalDecoder<I extends @Nullable Object> implements Decoder
             if (value.remainder(n).compareTo(BigDecimal.ZERO) != 0) {
                 var meta = Map.<String, Object>of("divisor", n, "actual", value);
                 return Result.failWith(path, ErrorCodes.NOT_MULTIPLE_OF, message,
-                        "must be a multiple of %s".formatted(n), meta);
+                        String.format(Locale.ROOT, "must be a multiple of %s", n), meta);
             }
             return Result.ok(value);
         });
@@ -283,7 +284,7 @@ public final class DecimalDecoder<I extends @Nullable Object> implements Decoder
             if (value.scale() > s) {
                 var meta = Map.<String, Object>of("maxScale", s, "actualScale", value.scale());
                 return Result.failWith(path, ErrorCodes.INVALID_SCALE, message,
-                        "too many decimal places (max %d)".formatted(s), meta);
+                        String.format(Locale.ROOT, "too many decimal places (max %d)", s), meta);
             }
             return Result.ok(value);
         });
