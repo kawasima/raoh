@@ -87,6 +87,10 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Requires the string value to contain at least one non-whitespace character.
      *
+     * <p>Whitespace is the Unicode {@code White_Space} property, pinned to Unicode 18.0.0 (for
+     * example U+0020, U+00A0, U+2003 and U+3000; not U+200B or U+0000). {@link #trim()} strips
+     * the same characters, so a value is blank exactly when {@code trim()} leaves it empty.
+     *
      * <p>Fails with {@link ErrorCodes#BLANK} when the decoded string is empty or consists
      * entirely of whitespace. Use this after {@link #trim()} to reject strings that become
      * empty after trimming, or stand-alone to reject blank-only input.
@@ -95,7 +99,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      */
     public StringDecoder<I> nonBlank() {
         return chain((value, path) -> {
-            if (value.isBlank()) {
+            if (Whitespace.isBlank(value)) {
                 return Result.fail(path, ErrorCodes.BLANK, "must not be blank");
             }
             return Result.ok(value);
@@ -608,10 +612,14 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Trims leading and trailing whitespace from the decoded string.
      *
-     * @return a new decoder that applies {@link String#trim()} to the value
+     * <p>Whitespace is the same set {@link #nonBlank()} uses: the Unicode {@code White_Space}
+     * property, pinned to Unicode 18.0.0. This differs from {@link String#trim()}, which strips
+     * every character up to U+0020 and keeps U+00A0 and U+3000.
+     *
+     * @return a new decoder that removes leading and trailing whitespace from the value
      */
     public StringDecoder<I> trim() {
-        return new StringDecoder<>((in, path) -> this.decode(in, path).map(String::trim));
+        return new StringDecoder<>((in, path) -> this.decode(in, path).map(Whitespace::trim));
     }
 
     /**

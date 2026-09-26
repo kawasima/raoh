@@ -12,6 +12,14 @@ detailed from the current development cycle onward.
 
 ### Changed
 
+- **`nonBlank()` and `trim()` share one whitespace definition.** `nonBlank()` used
+  `String.isBlank()` and `trim()` used `String.trim()`, two different JDK sets: NO-BREAK SPACE
+  (U+00A0) and U+2007 were not blank, U+001C to U+001F were, and `trim()` stripped every code point
+  up to U+0020 (including NUL) but kept U+00A0 and U+3000. Both now use the Unicode `White_Space`
+  property (25 code points), written out in Raoh and pinned to Unicode 18.0.0, so a value is blank
+  exactly when `trim()` leaves it empty. U+0085, U+00A0, U+2007 and U+202F are now whitespace;
+  U+0000 and U+001C to U+001F are not. U+200B stays non-whitespace
+  ([#158](https://github.com/kawasima/raoh/issues/158)).
 - **`enumOf()` and `toBool()` match ASCII case-insensitively.** They compared with
   `String.toLowerCase(Locale.ROOT)`, so the JDK's Unicode case mapping decided what was accepted;
   on Java 25 `blocKed` (with U+212A KELVIN SIGN as the fifth letter) decoded to `Thread.State.BLOCKED`. Case-insensitive now
