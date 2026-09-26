@@ -42,10 +42,21 @@
 
     <build>
         <plugins>
+            <!-- The raoh modules use this plugin from the same reactor, and Maven reads its
+                 descriptor to plan their builds. The descriptor is normally written at
+                 process-classes, so a build that stops at compile (mvn compile, the CI
+                 nullcheck job) would plan them without one and fail. Write it right after the
+                 classes are compiled instead. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-plugin-plugin</artifactId>
                 <version>3.15.2</version>
+                <executions>
+                    <execution>
+                        <id>default-descriptor</id>
+                        <phase>compile</phase>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
