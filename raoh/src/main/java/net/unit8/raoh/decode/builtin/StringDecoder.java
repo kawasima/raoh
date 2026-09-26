@@ -10,9 +10,8 @@ import net.unit8.raoh.Result;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
-import java.net.InetAddress;
+import java.net.Inet6Address;
 import java.net.URI;
-import java.net.UnknownHostException;
 import java.text.Normalizer;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -44,7 +43,9 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
 
     private static final int MAX_EMAIL_LENGTH = 254;
     private static final int MAX_URL_LENGTH = 2048;
-    private static final int MAX_IP_LENGTH = 45; // max IPv6 with zone id
+    private static final int MAX_IPV4_LENGTH = 15;
+    // Longest IPv6 text without a zone ID; a zone ID has no standard maximum length (RFC 9844).
+    private static final int MAX_IPV6_ADDRESS_LENGTH = 45;
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
             "^[a-zA-Z0-9._%+\\-]{1,64}@[a-zA-Z0-9.\\-]{1,255}\\.[a-zA-Z]{2,}$");
@@ -454,7 +455,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      */
     public StringDecoder<I> ipv4(@Nullable String message) {
         return chain((value, path) -> {
-            if (value.length() > MAX_IP_LENGTH || !IPV4_PATTERN.matcher(value).matches()) {
+            if (!isIPv4(value)) {
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_IPV4,
                         message, "not a valid IPv4 address", Map.of());
             }
@@ -464,6 +465,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
 
     /**
      * Validates that the string is a valid IPv6 address.
+     * See {@link #ipv6(String)} for the accepted syntax.
      *
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid IPv6 address
      */
@@ -473,14 +475,21 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
 
     /**
      * Validates that the string is a valid IPv6 address.
-     * Uses {@link InetAddress#getByName} to avoid ReDoS from complex regex backtracking.
+     *
+     * <p>The address is the RFC 4291 text form, including the compressed form and the forms that
+     * embed an IPv4 address, such as {@code ::ffff:192.0.2.1}. It may be followed by an RFC 4007
+     * zone ID ({@code fe80::1%eth0}) when the address is not of global scope: link-local,
+     * site-local, or a multicast address below global scope. The zone ID is taken as an opaque,
+     * non-empty string that contains neither {@code %} nor NUL. The decoder does not look the zone
+     * up among the host's network interfaces, so the result does not depend on the machine it
+     * runs on. Brackets ({@code [::1]}) belong to the URI host syntax and are rejected.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid IPv6 address
      */
     public StringDecoder<I> ipv6(@Nullable String message) {
         return chain((value, path) -> {
-            if (value.length() > MAX_IP_LENGTH || !isIPv6(value)) {
+            if (!isIPv6(value)) {
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_IPV6,
                         message, "not a valid IPv6 address", Map.of());
             }
@@ -499,14 +508,14 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
 
     /**
      * Validates that the string is a valid IP address (IPv4 or IPv6).
+     * An IPv4 address is a dotted quad; an IPv6 address follows the rules of {@link #ipv6(String)}.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid IP address
      */
     public StringDecoder<I> ip(@Nullable String message) {
         return chain((value, path) -> {
-            if (value.length() > MAX_IP_LENGTH
-                    || (!IPV4_PATTERN.matcher(value).matches() && !isIPv6(value))) {
+            if (!isIPv4(value) && !isIPv6(value)) {
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_IP,
                         message, "not a valid IP address", Map.of());
             }
@@ -514,17 +523,44 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
         });
     }
 
+    private static boolean isIPv4(String value) {
+        return value.length() <= MAX_IPV4_LENGTH && IPV4_PATTERN.matcher(value).matches();
+    }
+
     private static boolean isIPv6(String value) {
-        if (!value.contains(":")) return false;
-        try {
-            // InetAddress.getByName accepts IPv6 literals; strip brackets if present
-            var addr = value.startsWith("[") && value.endsWith("]")
-                    ? value.substring(1, value.length() - 1) : value;
-            var parsed = InetAddress.getByName(addr);
-            return parsed instanceof java.net.Inet6Address;
-        } catch (UnknownHostException e) {
+        int zoneAt = value.indexOf('%');
+        if (zoneAt >= 0 && (zoneAt == value.length() - 1
+                || value.indexOf('%', zoneAt + 1) >= 0
+                || value.indexOf('\0', zoneAt + 1) >= 0)) {
             return false;
         }
+        var address = zoneAt < 0 ? value : value.substring(0, zoneAt);
+        // Brackets frame an address inside a URI; they are not part of the address.
+        // Inet6Address.ofLiteral accepts them, so reject them before parsing.
+        if (address.length() > MAX_IPV6_ADDRESS_LENGTH || address.indexOf(':') < 0
+                || address.indexOf('[') >= 0 || address.indexOf(']') >= 0) {
+            return false;
+        }
+        try {
+            // The zone is stripped before parsing: passed to the JDK, a zone name is looked up
+            // among the host's network interfaces.
+            var parsed = Inet6Address.ofLiteral(address);
+            if (zoneAt < 0) {
+                // A successful parse decides it. An IPv4-mapped address such as ::ffff:1.2.3.4
+                // comes back as an Inet4Address, but its text is still IPv6.
+                return true;
+            }
+            return parsed instanceof Inet6Address ipv6 && canHaveZone(ipv6);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    // RFC 4007 section 11: a zone ID is meaningful only for an address of non-global scope.
+    private static boolean canHaveZone(Inet6Address address) {
+        return address.isLinkLocalAddress()
+                || address.isSiteLocalAddress()
+                || (address.isMulticastAddress() && !address.isMCGlobal());
     }
 
     /**
