@@ -13,15 +13,16 @@ import java.math.BigDecimal;
 import java.net.Inet6Address;
 import java.net.URI;
 import java.text.Normalizer;
-import java.time.DateTimeException;
+import java.text.ParsePosition;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
-import java.time.temporal.TemporalAccessor;
+import java.time.temporal.ChronoField;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -58,6 +59,23 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
             "^c[a-z0-9]{24}$");
     private static final Pattern ULID_PATTERN = Pattern.compile(
             "^[0-9A-HJKMNP-TV-Z]{26}$");
+
+    // The grammar DateTimeFormatter.ISO_INSTANT parses, used only to read the clock fields of the
+    // text before Instant.parse converts it. ISO_INSTANT reads 23:59:60 as 23:59:59 and 24:00:00 as
+    // the next midnight; checking the fields first holds iso8601() to the hour and second ranges
+    // time(), dateTime() and offsetDateTime() apply.
+    private static final DateTimeFormatter INSTANT_FIELDS = new DateTimeFormatterBuilder()
+            .parseCaseInsensitive()
+            .append(DateTimeFormatter.ISO_LOCAL_DATE)
+            .appendLiteral('T')
+            .appendValue(ChronoField.HOUR_OF_DAY, 2)
+            .appendLiteral(':')
+            .appendValue(ChronoField.MINUTE_OF_HOUR, 2)
+            .appendLiteral(':')
+            .appendValue(ChronoField.SECOND_OF_MINUTE, 2)
+            .appendFraction(ChronoField.NANO_OF_SECOND, 0, 9, true)
+            .appendOffsetId()
+            .toFormatter(Locale.ROOT);
 
     private final Decoder<I, String> inner;
 
@@ -772,8 +790,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as an ISO 8601 instant (e.g., {@code 2024-01-15T10:30:00Z}).
      *
-     * <p>A leap second ({@code 23:59:60Z}) is rejected with {@code invalid_format}; see
-     * {@link #iso8601(String)}.
+     * <p>See {@link #iso8601(String)} for the accepted text.
      *
      * @return a temporal decoder producing {@link Instant}
      */
@@ -784,30 +801,42 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as an ISO 8601 instant.
      *
-     * <p>A leap second ({@code 23:59:60Z}) is rejected with {@code invalid_format} and the message
-     * key {@link MessageKeys#INVALID_FORMAT_INSTANT_LEAP_SECOND}. The JDK parser reads it as the
-     * second before, but an {@link Instant} has no value for that second, so accepting it would
-     * return a moment the text did not name.
+     * <p>The text is a date, {@code T}, a time with seconds and an optional fraction of up to nine
+     * digits, and an offset ({@code Z} or {@code +HH:MM}), e.g. {@code 2024-01-15T10:30:00.5+09:00}.
+     * The hour is {@code 00}–{@code 23} and the second {@code 00}–{@code 59}, as in {@link #time()},
+     * {@link #dateTime()} and {@link #offsetDateTime()}. A leap second ({@code 23:59:60}) and the
+     * end-of-day {@code 24:00:00} are therefore rejected with {@code invalid_format}; an
+     * {@link Instant} has no value for the former, and the JDK's {@code Instant.parse} would
+     * silently return a different moment for it.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link Instant}
      */
     public TemporalDecoder<I, Instant> iso8601(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            try {
-                TemporalAccessor parsed = DateTimeFormatter.ISO_INSTANT.parse(value);
-                if (parsed.query(DateTimeFormatter.parsedLeapSecond())) {
-                    return Result.failWith(path, ErrorCodes.INVALID_FORMAT,
-                            MessageKeys.INVALID_FORMAT_INSTANT_LEAP_SECOND, message,
-                            "not a valid ISO 8601 instant: " + value + " is a leap second",
-                            Map.of("value", value));
+            if (!hasClockReadingOutOfRange(value)) {
+                try {
+                    return Result.ok(Instant.parse(value));
+                } catch (DateTimeParseException e) {
+                    // reported below
                 }
-                return Result.ok(Instant.from(parsed));
-            } catch (DateTimeException e) {
-                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_INSTANT,
-                        message, "not a valid ISO 8601 instant", Map.of());
             }
+            return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_INSTANT,
+                    message, "not a valid ISO 8601 instant", Map.of());
         }));
+    }
+
+    /**
+     * Reports whether {@code text} has an hour above 23 or a second above 59. Text that does not
+     * match the grammar at all is left for {@link Instant#parse} to reject.
+     */
+    private static boolean hasClockReadingOutOfRange(String text) {
+        var position = new ParsePosition(0);
+        var fields = INSTANT_FIELDS.parseUnresolved(text, position);
+        if (fields == null || position.getErrorIndex() >= 0 || position.getIndex() != text.length()) {
+            return false;
+        }
+        return fields.getLong(ChronoField.HOUR_OF_DAY) > 23 || fields.getLong(ChronoField.SECOND_OF_MINUTE) > 59;
     }
 
     /**

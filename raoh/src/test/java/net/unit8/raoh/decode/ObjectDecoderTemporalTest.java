@@ -257,20 +257,12 @@ class ObjectDecoderTemporalTest {
                 string().offsetDateTime().decode("nonsense", Path.ROOT));
     }
 
-    // --- leap seconds ---
+    // --- clock readings outside the hour and second ranges ---
 
     @Test
-    void iso8601RejectsALeapSecondLikeTheStringRoute() {
-        var leap = "2016-12-31T23:59:60Z";
-        assertSameFailure(iso8601().decode(leap, Path.ROOT), string().iso8601().decode(leap, Path.ROOT));
-        assertEquals(MessageKeys.INVALID_FORMAT_INSTANT_LEAP_SECOND,
-                firstIssue(iso8601().decode(leap, Path.ROOT)).messageKey());
-    }
-
-    @Test
-    void iso8601TreatsSecondSixtyOutsideAUtcDayEndAsMalformed() {
-        // The JDK only reads 60 as a leap second at 23:59 UTC; anywhere else it is plain bad text.
-        for (var text : new String[] {"2016-12-31T12:34:60Z", "2017-01-01T08:59:60+09:00"}) {
+    void iso8601RejectsSecondSixtyAndHourTwentyFourLikeTheStringRoute() {
+        for (var text : new String[] {"2016-12-31T23:59:60Z", "2016-12-31T23:59:60+09:00",
+                "2017-01-01T08:59:60+09:00", "2016-12-31T24:00:00Z"}) {
             assertSameFailure(iso8601().decode(text, Path.ROOT), string().iso8601().decode(text, Path.ROOT));
             assertEquals(MessageKeys.INVALID_FORMAT_INSTANT,
                     firstIssue(iso8601().decode(text, Path.ROOT)).messageKey(), text);
@@ -284,6 +276,12 @@ class ObjectDecoderTemporalTest {
                 string().dateTime().decode("2016-12-31T23:59:60", Path.ROOT));
         assertSameFailure(offsetDateTime().decode("2016-12-31T23:59:60Z", Path.ROOT),
                 string().offsetDateTime().decode("2016-12-31T23:59:60Z", Path.ROOT));
+    }
+
+    @Test
+    void iso8601DecodesWhatTheEncoderWroteAtTheEndsOfTheInstantRange() {
+        assertRoundTrips(Instant.MAX, ObjectEncoders.iso8601().encode(Instant.MAX), iso8601());
+        assertRoundTrips(Instant.MIN, ObjectEncoders.iso8601().encode(Instant.MIN), iso8601());
     }
 
     private static <T> void assertRoundTrips(T original, Object encoded, Decoder<Object, T> decoder) {

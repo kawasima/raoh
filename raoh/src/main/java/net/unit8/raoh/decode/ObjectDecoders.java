@@ -315,9 +315,9 @@ public final class ObjectDecoders {
      * <p>Accepts {@link Instant} values directly, converts {@link java.sql.Timestamp}
      * via {@link java.sql.Timestamp#toInstant()}, and parses a {@link String} as ISO-8601 text —
      * the representation {@code ObjectEncoders.iso8601()} writes. Returns {@code required} if the
-     * value is {@code null}, {@code invalid_format} if the text does not parse or names a leap
-     * second (see {@link StringDecoder#iso8601(String)}), and {@code type_mismatch} for any other
-     * type.
+     * value is {@code null}, {@code invalid_format} if the text does not parse (see
+     * {@link StringDecoder#iso8601(String)} for the accepted text), and {@code type_mismatch} for
+     * any other type.
      *
      * @return a temporal decoder for {@code Object} input producing {@link Instant}
      */

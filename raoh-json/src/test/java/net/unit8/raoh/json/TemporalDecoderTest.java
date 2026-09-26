@@ -244,7 +244,7 @@ class TemporalDecoderTest {
             case Err(var issues) -> {
                 var issue = issues.asList().getFirst();
                 assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
-                assertEquals(MessageKeys.INVALID_FORMAT_INSTANT_LEAP_SECOND, issue.messageKey());
+                assertEquals(MessageKeys.INVALID_FORMAT_INSTANT, issue.messageKey());
             }
         }
     }

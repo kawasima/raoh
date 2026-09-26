@@ -10,7 +10,6 @@ import java.math.BigDecimal;
 import java.net.URI;
 import java.text.Normalizer;
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -460,22 +459,33 @@ class StringDecoderTest {
         assertEquals("not a valid ISO 8601 instant", issue.message());
     }
 
-    @Test
-    void iso8601RejectsALeapSecondInsteadOfReturningTheSecondBefore() {
-        var issue = decodeErr(string().iso8601(), "2016-12-31T23:59:60Z");
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "2016-12-31T23:59:60Z",       // leap second; Instant.parse would answer 23:59:59Z
+            "2016-12-31T23:59:60.5Z",
+            "2016-12-31T23:59:60+09:00",  // Instant.parse would answer 14:59:59Z
+            "2017-01-01T08:59:60+09:00",  // the UTC leap second, written in +09:00
+            "2016-12-31T12:34:60Z",
+            "2016-12-31T24:00:00Z"        // Instant.parse would answer the next midnight
+    })
+    void iso8601RejectsAClockReadingOutsideTheHourAndSecondRanges(String text) {
+        var issue = decodeErr(string().iso8601(), text);
         assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
-        assertEquals(MessageKeys.INVALID_FORMAT_INSTANT_LEAP_SECOND, issue.messageKey());
-        assertEquals("not a valid ISO 8601 instant: 2016-12-31T23:59:60Z is a leap second", issue.message());
-        assertEquals(Map.of("value", "2016-12-31T23:59:60Z"), issue.meta());
+        assertEquals(MessageKeys.INVALID_FORMAT_INSTANT, issue.messageKey());
+        assertEquals("not a valid ISO 8601 instant", issue.message());
     }
 
     @Test
-    void iso8601LeapSecondKeepsItsKeyUnderACustomMessage() {
-        var issue = decodeErr(string().iso8601("bad timestamp"), "2016-12-31T23:59:60Z");
-        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
-        assertEquals(MessageKeys.INVALID_FORMAT_INSTANT_LEAP_SECOND, issue.messageKey());
-        assertEquals("bad timestamp", issue.message());
-        assertTrue(issue.customMessage());
+    void iso8601AcceptsTheWholeInstantRange() {
+        assertEquals(Instant.ofEpochSecond(31556889864403199L, 999_999_999),
+                decodeOk(string().iso8601(), "+1000000000-12-31T23:59:59.999999999Z"));
+        assertEquals(Instant.ofEpochSecond(-31557014167219200L),
+                decodeOk(string().iso8601(), "-1000000000-01-01T00:00:00Z"));
+    }
+
+    @Test
+    void iso8601AppliesTheOffset() {
+        assertEquals(Instant.ofEpochSecond(1483228799), decodeOk(string().iso8601(), "2017-01-01T00:59:59+01:00"));
     }
 
     @Test

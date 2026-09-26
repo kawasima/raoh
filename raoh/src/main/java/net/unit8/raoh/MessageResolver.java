@@ -170,8 +170,6 @@ public interface MessageResolver {
                 case MessageKeys.INVALID_FORMAT_INCLUDES    -> "must include \"%s\"".formatted(meta.get("substring"));
                 case MessageKeys.INVALID_FORMAT_ENUM, MessageKeys.INVALID_FORMAT_LITERAL -> "invalid value";
                 case MessageKeys.INVALID_FORMAT_INSTANT -> "not a valid ISO 8601 instant";
-                case MessageKeys.INVALID_FORMAT_INSTANT_LEAP_SECOND ->
-                        "not a valid ISO 8601 instant: %s is a leap second".formatted(meta.get("value"));
                 case MessageKeys.INVALID_FORMAT_DATE    -> "not a valid date (yyyy-MM-dd)";
                 case MessageKeys.INVALID_FORMAT_TIME    -> "not a valid time (HH:mm:ss)";
                 case MessageKeys.INVALID_FORMAT_DATE_TIME ->
