@@ -29,8 +29,8 @@ import java.util.Optional;
  * import static net.unit8.raoh.decode.ObjectDecoders.*;
  * }</pre>
  *
- * <p>For primitive decoders ({@code string()}, {@code int_()}, etc.) that work on raw
- * {@code Object} values extracted from a jOOQ record, see {@link net.unit8.raoh.decode.ObjectDecoders}.
+ * <p>For primitive decoders ({@code string()}, {@code int_()}, etc.) that work on the
+ * {@code Object} column values extracted from a jOOQ record, see {@link net.unit8.raoh.decode.ObjectDecoders}.
  *
  * <p>jOOQ's unsigned types ({@link UByte}, {@link UShort}, {@link UInteger}, {@link ULong}, used
  * for MySQL / MariaDB {@code UNSIGNED} columns) are handed to the value decoder as the
@@ -70,7 +70,8 @@ public final class JooqRecordDecoders {
      *
      * @param <T>  the decoded value type
      * @param name the column name (case-insensitive per jOOQ convention)
-     * @param dec  decoder for the raw value
+     * @param dec  decoder for the column value, with a jOOQ unsigned number as a
+     *             {@code BigInteger} (see the class description)
      * @return a decoder for the named field
      */
     public static <T> CombinePart<org.jooq.Record, T> field(String name, Decoder<@Nullable Object, T> dec) {
@@ -91,7 +92,8 @@ public final class JooqRecordDecoders {
      *
      * @param <T>  the decoded value type
      * @param name the column name
-     * @param dec  decoder for the raw value
+     * @param dec  decoder for the column value, with a jOOQ unsigned number as a
+     *             {@code BigInteger} (see the class description)
      * @return a decoder that produces {@code Optional<T>}
      */
     public static <T> CombinePart<org.jooq.Record, Optional<T>> optionalField(String name, Decoder<@Nullable Object, T> dec) {
@@ -109,7 +111,8 @@ public final class JooqRecordDecoders {
      *
      * @param <T>  the decoded value type
      * @param name the column name
-     * @param dec  decoder for the raw value when non-null
+     * @param dec  decoder for the column value, with a jOOQ unsigned number as a
+     *             {@code BigInteger} (see the class description), applied when non-null
      * @return a decoder that produces {@link Presence Presence&lt;T&gt;}
      */
     public static <T> CombinePart<org.jooq.Record, Presence<T>> optionalNullableField(String name, Decoder<@Nullable Object, T> dec) {
@@ -140,7 +143,8 @@ public final class JooqRecordDecoders {
      *
      * @param <T>  the decoded value type
      * @param name the column name
-     * @param dec  decoder for the raw value when present and non-null
+     * @param dec  decoder for the column value, with a jOOQ unsigned number as a
+     *             {@code BigInteger} (see the class description), applied when present and non-null
      * @return a decoder that produces the decoded value, or {@code null} when the column is absent or
      *         its value is {@code null}
      */
