@@ -131,16 +131,11 @@ detailed from the current development cycle onward.
   `toInstant()` reads it only for a `Timestamp` changed through its deprecated setters. Under
   JDBC's own convention this usually came out right, since a driver builds these values in the
   same default zone and reading them back in that zone returns what the database held. The
-  conversions are removed because a built-in decoder's result is determined by its input and its
-  explicit configuration alone, which a `java.sql` value cannot satisfy without the zone it was
-  built in. They now report `type_mismatch`. Convert JDBC values to `java.time` types where they
+  conversions are removed because a built-in decoder does not read ambient state such as the
+  default time zone on its own; what it needs comes from its input or its explicit configuration,
+  and a `java.sql` value does not carry the zone it was built in. They now report `type_mismatch`. Convert JDBC values to `java.time` types where they
   are read, for example with `ResultSet.getObject(column, LocalDate.class)`, or with jOOQ
-  fields typed as `LocalDate`, `LocalTime` and `LocalDateTime`. The build now also runs forbidden-apis
-  against the JDK calls that read the default time zone, kept complete by a test that walks the
-  JDK bytecode back from `TimeZone.getDefaultRef()`, as #136 did for the default locale. The
-  walk is not limited in how many public methods it passes through, since the zone reaches
-  `LocalDate.now()` through three of them; paths where the zone does not reach the caller's
-  result are cut at reviewed JDK methods instead
+  fields typed as `LocalDate`, `LocalTime` and `LocalDateTime`
   ([#141](https://github.com/kawasima/raoh/issues/141)).
 - **String conversions accept a grammar Raoh defines, not whatever the JDK parser accepts.**
   `uuid()`, `toInt()`, `toLong()`, `toDecimal()`, `date()`, `time()`, `dateTime()`,

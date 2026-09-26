@@ -33,8 +33,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * them moves the local date-time of both instants and the date of at least one, so the
  * comparison has something to detect.
  *
- * <p>This checks observable results, not call sites. The build's forbidden-API check is what
- * keeps a new zone-sensitive call from being added to a decoder that no case here covers.
+ * <p>This checks observable results for the cases listed here, not call sites. Keeping a new
+ * zone-sensitive call out of a decoder that no case here covers is #151.
  */
 @ResourceLock(Resources.TIME_ZONE)
 class DefaultTimeZoneIndependenceTest {

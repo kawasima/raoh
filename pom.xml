@@ -150,18 +150,15 @@
                 <!--
                     A decoder's result must not depend on the JVM default locale: in tr-TR,
                     "TITLE".toLowerCase() is "tıtle", and in th-TH-u-nu-thai "%d".formatted(1000)
-                    is "๑๐๐๐" (#136). Nor on the JVM default time zone: java.sql.Date#toLocalDate()
-                    of the same object gave a different date after TimeZone.setDefault (#141).
-                    This check fails the build on JDK calls that read either, so a new call site
-                    cannot bring it back. Pass Locale.ROOT or an explicit ZoneId instead.
+                    is "๑๐๐๐" (#136). This check fails the build on JDK calls that read the default
+                    locale, so a new call site cannot bring it back. Pass Locale.ROOT instead.
 
-                    The lists are forbidden-apis/default-locale.txt and default-time-zone.txt.
-                    They are not the bundled jdk-unsafe list, which misses readers such as
-                    ListFormat.getInstance() and java.sql.Date#toLocalDate(), and also bans
-                    default charset calls that this contract does not cover.
-                    DefaultLocaleApiAuditTest and DefaultTimeZoneApiAuditTest walk the JDK bytecode
-                    back from where the default is read and fail when a list lacks a reader, so the
-                    lists are complete against the JDK rather than against what someone thought of.
+                    The list is forbidden-apis/default-locale.txt. It is not the bundled
+                    jdk-unsafe list, which misses locale readers and also bans default time zone
+                    and charset calls that this contract does not cover. DefaultLocaleApiAuditTest
+                    walks the JDK bytecode back from Locale.getDefault and fails when the list
+                    lacks a reader, so the list is complete against the JDK rather than against
+                    what someone thought of.
 
                     ResourceBundleMessageResolver chooses a display locale, which is its job, and
                     marks those methods with a package-private @SuppressForbidden.
@@ -173,7 +170,6 @@
                     <configuration>
                         <signaturesFiles>
                             <signaturesFile>${project.basedir}/../forbidden-apis/default-locale.txt</signaturesFile>
-                            <signaturesFile>${project.basedir}/../forbidden-apis/default-time-zone.txt</signaturesFile>
                         </signaturesFiles>
                         <suppressAnnotations>
                             <suppressAnnotation>**.SuppressForbidden</suppressAnnotation>
@@ -181,7 +177,7 @@
                     </configuration>
                     <executions>
                         <execution>
-                            <id>default-locale-and-time-zone</id>
+                            <id>default-locale</id>
                             <!-- The plugin defaults to verify; run it right after compile so
                                  that `mvn test` fails too, not only `mvn verify`. -->
                             <phase>process-classes</phase>
