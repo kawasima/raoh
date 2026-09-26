@@ -22,6 +22,7 @@ import net.unit8.raoh.decode.builtin.TemporalDecoder;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -88,116 +89,6 @@ public final class ObjectDecoders {
     }
 
     /**
-     * Creates an integer decoder.
-     *
-     * <p>Accepts {@link Integer} values directly, and narrows other {@link Number} subtypes
-     * via {@link Number#intValue()}. Returns {@code required} if the value is {@code null},
-     * and {@code type_mismatch} if the value is not a number.
-     *
-     * @return an integer decoder for {@code Object} input
-     */
-    public static IntDecoder<@Nullable Object> int_() {
-        return new IntDecoder<>((in, path) -> {
-            if (in == null) {
-                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
-            }
-            if (in instanceof Integer i) {
-                return Result.ok(i);
-            }
-            if (in instanceof Number n) {
-                return Result.ok(n.intValue());
-            }
-            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected integer",
-                    Map.of("expected", "integer", "actual", in.getClass().getSimpleName()));
-        });
-    }
-
-    /**
-     * Creates a long decoder.
-     *
-     * <p>Accepts {@link Long} values directly, and narrows other {@link Number} subtypes
-     * via {@link Number#longValue()}. Returns {@code required} if the value is {@code null},
-     * and {@code type_mismatch} if the value is not a number.
-     *
-     * @return a long decoder for {@code Object} input
-     */
-    public static LongDecoder<@Nullable Object> long_() {
-        return new LongDecoder<>((in, path) -> {
-            if (in == null) {
-                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
-            }
-            if (in instanceof Long l) {
-                return Result.ok(l);
-            }
-            if (in instanceof Number n) {
-                return Result.ok(n.longValue());
-            }
-            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected long",
-                    Map.of("expected", "long", "actual", in.getClass().getSimpleName()));
-        });
-    }
-
-    /**
-     * Creates a double decoder.
-     *
-     * <p>Accepts any {@link Number} via {@link Number#doubleValue()}. Returns {@code required} if
-     * the value is {@code null}, and {@code type_mismatch} if the value is not a number or its
-     * magnitude is beyond the {@code double} range (i.e. narrows to an infinity).
-     *
-     * @return a double decoder for {@code Object} input
-     */
-    public static DoubleDecoder<@Nullable Object> double_() {
-        return new DoubleDecoder<>((in, path) -> {
-            if (in == null) {
-                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
-            }
-            if (in instanceof Number n) {
-                double d = n.doubleValue();
-                // A magnitude beyond the double range (e.g. a huge BigInteger, or Double.INFINITY)
-                // is a representation failure, not a valid value — reject it rather than silently
-                // yielding Infinity. NaN is left to flow through so range constraints can reject it
-                // as out_of_range (see DoubleDecoderTest#rangeRejectsNaN).
-                if (Double.isInfinite(d)) {
-                    return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
-                            Map.of("expected", "double"));
-                }
-                return Result.ok(d);
-            }
-            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
-                    Map.of("expected", "double", "actual", in.getClass().getSimpleName()));
-        });
-    }
-
-    /**
-     * Creates a float decoder.
-     *
-     * <p>Accepts any {@link Number} via {@link Number#floatValue()}. Returns {@code required} if
-     * the value is {@code null}, and {@code type_mismatch} if the value is not a number or its
-     * magnitude is beyond the {@code float} range (i.e. narrows to an infinity).
-     *
-     * @return a float decoder for {@code Object} input
-     */
-    public static FloatDecoder<@Nullable Object> float_() {
-        return new FloatDecoder<>((in, path) -> {
-            if (in == null) {
-                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
-            }
-            if (in instanceof Number n) {
-                float f = n.floatValue();
-                // See double_(): a value beyond the float range narrows to Infinity — reject it as a
-                // representation failure. NaN flows through for range constraints to catch.
-                if (Float.isInfinite(f)) {
-                    return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
-                            Map.of("expected", "float"));
-                }
-                return Result.ok(f);
-            }
-            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
-                    Map.of("expected", "float", "actual", in.getClass().getSimpleName()));
-        });
-    }
-
-    /**
      * Creates a boolean decoder.
      *
      * <p>Returns {@code required} if the value is {@code null},
@@ -218,12 +109,186 @@ public final class ObjectDecoders {
         });
     }
 
+    // --- Numeric decoders ---
+    // Raoh decides how each accepted source type converts to each target. The decoders accept a
+    // closed set of JDK representations and never call a conversion method on an arbitrary
+    // Number (intValue(), toString(), ...), whose result depends on how the input implements it.
+    // BigInteger and BigDecimal are not final, so they are matched by exact class: a subclass
+    // could override the very methods used below. JsonDecoders hands its number nodes to these
+    // decoders, so the JSON route converts by the same rules.
+
+    /**
+     * Creates an integer decoder.
+     *
+     * <p>Accepts {@link Integer}, {@link Short}, {@link Byte}, {@link Long}, {@link BigInteger}
+     * and {@link BigDecimal} when the value is an integer that fits {@code int}; a
+     * {@code BigDecimal} such as {@code 5.00} is accepted as {@code 5}. Returns {@code required}
+     * if the value is {@code null}, and {@code type_mismatch} for an integer outside the
+     * {@code int} range, a {@code BigDecimal} with a fractional part, a {@link Double} or
+     * {@link Float} (even when it holds an integral value), and any other type, other
+     * {@link Number} subtypes included.
+     *
+     * @return an integer decoder for {@code Object} input
+     */
+    public static IntDecoder<@Nullable Object> int_() {
+        return new IntDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            return switch (in) {
+                case Integer i -> Result.ok(i);
+                case Short s -> Result.ok((int) s);
+                case Byte b -> Result.ok((int) b);
+                case Long l when l == (int) (long) l -> Result.ok((int) (long) l);
+                case Long l -> outsideRange(path, "integer");
+                case BigInteger bi when bi.getClass() == BigInteger.class ->
+                        bi.bitLength() < Integer.SIZE ? Result.ok(bi.intValue()) : outsideRange(path, "integer");
+                case BigDecimal bd when bd.getClass() == BigDecimal.class && isIntegral(bd) -> {
+                    try {
+                        yield Result.ok(bd.intValueExact());
+                    } catch (ArithmeticException e) {
+                        // isIntegral() ruled out a fractional part, so this is an overflow.
+                        yield outsideRange(path, "integer");
+                    }
+                }
+                default -> Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected integer",
+                        Map.of("expected", "integer", "actual", in.getClass().getSimpleName()));
+            };
+        });
+    }
+
+    /**
+     * Creates a long decoder.
+     *
+     * <p>Accepts {@link Long}, {@link Integer}, {@link Short}, {@link Byte}, {@link BigInteger}
+     * and {@link BigDecimal} when the value is an integer that fits {@code long}; a
+     * {@code BigDecimal} such as {@code 5.00} is accepted as {@code 5}. Returns {@code required}
+     * if the value is {@code null}, and {@code type_mismatch} for an integer outside the
+     * {@code long} range, a {@code BigDecimal} with a fractional part, a {@link Double} or
+     * {@link Float} (even when it holds an integral value), and any other type, other
+     * {@link Number} subtypes included.
+     *
+     * @return a long decoder for {@code Object} input
+     */
+    public static LongDecoder<@Nullable Object> long_() {
+        return new LongDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            return switch (in) {
+                case Long l -> Result.ok(l);
+                case Integer i -> Result.ok((long) i);
+                case Short s -> Result.ok((long) s);
+                case Byte b -> Result.ok((long) b);
+                case BigInteger bi when bi.getClass() == BigInteger.class ->
+                        bi.bitLength() < Long.SIZE ? Result.ok(bi.longValue()) : outsideRange(path, "long");
+                case BigDecimal bd when bd.getClass() == BigDecimal.class && isIntegral(bd) -> {
+                    try {
+                        yield Result.ok(bd.longValueExact());
+                    } catch (ArithmeticException e) {
+                        // isIntegral() ruled out a fractional part, so this is an overflow.
+                        yield outsideRange(path, "long");
+                    }
+                }
+                default -> Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected long",
+                        Map.of("expected", "long", "actual", in.getClass().getSimpleName()));
+            };
+        });
+    }
+
+    /**
+     * Creates a double decoder.
+     *
+     * <p>Accepts {@link Double}, {@link Float}, {@link Long}, {@link Integer}, {@link Short},
+     * {@link Byte}, {@link BigInteger} and {@link BigDecimal}. A value {@code double} cannot hold
+     * exactly is rounded to the nearest {@code double} (IEEE 754 round-to-nearest), so
+     * {@code 9007199254740993L} decodes to {@code 9007199254740992.0} and
+     * {@code new BigDecimal("0.1")} to {@code 0.1}. Returns {@code required} if the value is
+     * {@code null}, and {@code type_mismatch} for an infinity, a value whose magnitude is beyond
+     * the {@code double} range, and any other type, other {@link Number} subtypes included.
+     * {@code NaN} is accepted, so that range constraints can reject it.
+     *
+     * @return a double decoder for {@code Object} input
+     */
+    public static DoubleDecoder<@Nullable Object> double_() {
+        return new DoubleDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            Double d = switch (in) {
+                case Double v -> v;
+                case Float f -> (double) f;
+                case Long l -> (double) l;
+                case Integer i -> (double) i;
+                case Short s -> (double) s;
+                case Byte b -> (double) b;
+                case BigInteger bi when bi.getClass() == BigInteger.class -> bi.doubleValue();
+                case BigDecimal bd when bd.getClass() == BigDecimal.class -> bd.doubleValue();
+                default -> null;
+            };
+            if (d == null) {
+                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
+                        Map.of("expected", "double", "actual", in.getClass().getSimpleName()));
+            }
+            // NaN is left to flow through so range constraints can reject it as out_of_range
+            // (see DoubleDecoderTest#rangeRejectsNaN).
+            if (d.isInfinite()) {
+                return outsideRange(path, "double");
+            }
+            return Result.ok(d);
+        });
+    }
+
+    /**
+     * Creates a float decoder.
+     *
+     * <p>Accepts the same types as {@link #double_()} and rounds to the nearest {@code float}
+     * (IEEE 754 round-to-nearest), so {@code 16777217} decodes to {@code 16777216.0f}. Returns
+     * {@code required} if the value is {@code null}, and {@code type_mismatch} for an infinity, a
+     * value whose magnitude is beyond the {@code float} range, and any other type, other
+     * {@link Number} subtypes included. {@code NaN} is accepted, so that range constraints can
+     * reject it.
+     *
+     * @return a float decoder for {@code Object} input
+     */
+    public static FloatDecoder<@Nullable Object> float_() {
+        return new FloatDecoder<>((in, path) -> {
+            if (in == null) {
+                return Result.fail(path, ErrorCodes.REQUIRED, "is required");
+            }
+            Float f = switch (in) {
+                case Float v -> v;
+                case Double d -> (float) (double) d;
+                case Long l -> (float) l;
+                case Integer i -> (float) i;
+                case Short s -> (float) s;
+                case Byte b -> (float) b;
+                case BigInteger bi when bi.getClass() == BigInteger.class -> bi.floatValue();
+                case BigDecimal bd when bd.getClass() == BigDecimal.class -> bd.floatValue();
+                default -> null;
+            };
+            if (f == null) {
+                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
+                        Map.of("expected", "float", "actual", in.getClass().getSimpleName()));
+            }
+            // See double_(): NaN flows through for range constraints to catch.
+            if (f.isInfinite()) {
+                return outsideRange(path, "float");
+            }
+            return Result.ok(f);
+        });
+    }
+
     /**
      * Creates a {@link BigDecimal} decoder.
      *
-     * <p>Accepts {@link BigDecimal} values directly, and converts other {@link Number}
-     * subtypes via their string representation. Returns {@code required} if the value is
-     * {@code null}, and {@code type_mismatch} if the value is not a number.
+     * <p>Accepts {@link BigDecimal} values directly, and converts {@link BigInteger},
+     * {@link Long}, {@link Integer}, {@link Short} and {@link Byte} exactly with scale 0.
+     * A finite {@link Double} or {@link Float} is converted to the decimal its
+     * {@code toString()} prints, the shortest decimal that reads back as the same value, so
+     * {@code 0.1d} decodes to {@code 0.1} rather than to the binary value's full expansion.
+     * Returns {@code required} if the value is {@code null}, and {@code type_mismatch} for
+     * {@code NaN}, an infinity, and any other type, other {@link Number} subtypes included.
      *
      * @return a decimal decoder for {@code Object} input
      */
@@ -232,15 +297,41 @@ public final class ObjectDecoders {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
-            if (in instanceof BigDecimal bd) {
-                return Result.ok(bd);
+            BigDecimal bd = switch (in) {
+                case BigDecimal v when v.getClass() == BigDecimal.class -> v;
+                case BigInteger bi when bi.getClass() == BigInteger.class -> new BigDecimal(bi);
+                case Long l -> BigDecimal.valueOf(l);
+                case Integer i -> BigDecimal.valueOf(i);
+                case Short s -> BigDecimal.valueOf(s);
+                case Byte b -> BigDecimal.valueOf(b);
+                // BigDecimal.valueOf(double) goes through Double.toString(double).
+                case Double d when Double.isFinite(d) -> BigDecimal.valueOf(d);
+                case Float f when Float.isFinite(f) -> new BigDecimal(Float.toString(f));
+                default -> null;
+            };
+            if (bd == null) {
+                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected number",
+                        Map.of("expected", "number", "actual", in.getClass().getSimpleName()));
             }
-            if (in instanceof Number n) {
-                return Result.ok(new BigDecimal(n.toString()));
-            }
-            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected number",
-                    Map.of("expected", "number", "actual", in.getClass().getSimpleName()));
+            return Result.ok(bd);
         });
+    }
+
+    /**
+     * Whether {@code bd} has no fractional part. Checking this before {@code intValueExact()} /
+     * {@code longValueExact()} tells a fraction apart from an overflow, which both methods report
+     * with the same exception.
+     *
+     * @param bd the value to check
+     * @return {@code true} if {@code bd} is an integer
+     */
+    private static boolean isIntegral(BigDecimal bd) {
+        return bd.signum() == 0 || bd.scale() <= 0 || bd.stripTrailingZeros().scale() <= 0;
+    }
+
+    private static <T> Result<T> outsideRange(Path path, String expected) {
+        return Result.fail(path, ErrorCodes.TYPE_MISMATCH, MessageKeys.TYPE_MISMATCH_NUMERIC_RANGE,
+                "value is outside the " + expected + " range", Map.of("expected", expected));
     }
 
     // --- Temporal decoders ---

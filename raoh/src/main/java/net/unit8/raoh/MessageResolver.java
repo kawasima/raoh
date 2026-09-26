@@ -178,6 +178,8 @@ public interface MessageResolver {
                         "not a valid ISO-8601 offset date-time (e.g., 2024-01-15T10:30:00+09:00)";
                 case MessageKeys.TYPE_MISMATCH_STRING_KEYS ->
                         String.format(Locale.ROOT, "expected object with string keys, found %s key", meta.get("actual"));
+                case MessageKeys.TYPE_MISMATCH_NUMERIC_RANGE ->
+                        String.format(Locale.ROOT, "value is outside the %s range", meta.get("expected"));
                 default -> resolve(issue.code(), meta);
             };
         }

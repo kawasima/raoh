@@ -570,6 +570,54 @@ class JsonDecoderTest {
     }
 
     @Test
+    void intRejectsLongNodeOutsideRangeInsteadOfThrowing() {
+        // Jackson 3's intValue() throws JsonNodeException for this node; it must come back as an Err.
+        var issue = assertSingleIssue(field("v", int_()).decode(parse("{\"v\":5000000000}")));
+        assertEquals("type_mismatch", issue.code());
+        assertEquals("type_mismatch.numeric_range", issue.messageKey());
+        assertEquals("/v", issue.path().toString());
+    }
+
+    @Test
+    void longRejectsBigIntegerNodeOutsideRange() {
+        var issue = assertSingleIssue(field("v", long_()).decode(parse("{\"v\":99999999999999999999}")));
+        assertEquals("type_mismatch.numeric_range", issue.messageKey());
+    }
+
+    @Test
+    void intAcceptsBigIntegerNodeThatFits() {
+        var node = mapper.getNodeFactory().numberNode(java.math.BigInteger.valueOf(42));
+        assertEquals(42, assertOk(int_().decode(node, Path.ROOT)));
+        assertEquals(42L, assertOk(long_().decode(node, Path.ROOT)));
+    }
+
+    @Test
+    void intRejectsFractionalLiteralWhateverTheMapperConfiguration() {
+        // With USE_BIG_DECIMAL_FOR_FLOATS, 1.0 arrives as a BigDecimal, which ObjectDecoders.int_()
+        // would accept; the JSON route must still reject it as it does for the default Double.
+        var bigDecimalMapper = tools.jackson.databind.json.JsonMapper.builder()
+                .enable(tools.jackson.databind.DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+                .build();
+        var node = bigDecimalMapper.readTree("{\"v\":1.0}");
+        assertEquals("type_mismatch", assertSingleIssue(field("v", int_()).decode(node)).messageKey());
+        assertEquals("type_mismatch", assertSingleIssue(field("v", int_()).decode(parse("{\"v\":1.0}"))).messageKey());
+        assertEquals("type_mismatch", assertSingleIssue(field("v", long_()).decode(node)).messageKey());
+    }
+
+    @Test
+    void doubleRoundsLargeIntegerToNearest() {
+        // 2^53 + 1 has no double; double_() rounds by design rather than rejecting it.
+        assertEquals(9007199254740992d, assertOk(field("v", double_()).decode(parse("{\"v\":9007199254740993}"))));
+    }
+
+    @Test
+    void decimalFollowsObjectDecoderConversion() {
+        assertEquals(new BigDecimal("0.1"), assertOk(field("v", decimal()).decode(parse("{\"v\":0.1}"))));
+        assertEquals(new BigDecimal("99999999999999999999"),
+                assertOk(field("v", decimal()).decode(parse("{\"v\":99999999999999999999}"))));
+    }
+
+    @Test
     void pipeDecoder() {
         // pipe string decoder to another decoder that parses the string further
         Decoder<String, Integer> parseInt = (in, path) -> {
@@ -729,6 +777,16 @@ class JsonDecoderTest {
         if (result instanceof Ok<?>) {
             fail("Expected Err, got Ok: " + result);
         }
+    }
+
+    static Issue assertSingleIssue(Result<?> result) {
+        return switch (result) {
+            case Ok<?> ok -> fail("Expected Err, got Ok: " + ok);
+            case Err<?>(var issues) -> {
+                assertEquals(1, issues.asList().size());
+                yield issues.asList().getFirst();
+            }
+        };
     }
 
     private JsonNode parse(String json) {
