@@ -1,8 +1,10 @@
 # Approved uses of DELEGATED and AMBIENT members in raoh-jooq (#151).
 #
-# Each heading is the reason; the lines under it are the uses it covers, as
-# "caller -> member". The raoh-effect-audit-maven-plugin fails the build on a use missing
-# here and on a line that matches no use. See effect-audit/catalog.txt for the effects.
+# Each heading is the reason; the lines under it are the uses it covers, as "caller -> member".
+# The caller of a DELEGATED use is Class#method, so overloads share it; the caller of an AMBIENT
+# use is the exact method, descriptor included, so the approval covers that method alone.
+# raoh-effect-audit-maven-plugin fails the build on a use missing here and on a line that matches
+# no use. See effect-audit/catalog.txt for the effects.
 
 [observes the input through its own interface]
 net.unit8.raoh.jooq.JooqRecordDecoders#field -> org.jooq.Record#field(java.lang.String):org.jooq.Field

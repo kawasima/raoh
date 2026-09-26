@@ -10,9 +10,7 @@ import org.apache.maven.plugins.annotations.ResolutionScope;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
@@ -58,6 +56,14 @@ public class AuditMojo extends AbstractMojo {
     @Parameter(required = true)
     private List<String> decoderPackages;
 
+    /**
+     * The Java release the module compiles for. JDK classes are read from that release's API,
+     * the data {@code javac --release} uses, so the audit gives the same answer on any JDK that
+     * can build the release.
+     */
+    @Parameter(defaultValue = "${maven.compiler.release}", required = true)
+    private int release;
+
     /** Skips the audit. */
     @Parameter(property = "raoh.effectAudit.skip", defaultValue = "false")
     private boolean skip;
@@ -72,16 +78,15 @@ public class AuditMojo extends AbstractMojo {
             getLog().info("No classes to audit");
             return;
         }
-        try (var loader = new URLClassLoader(urls(), ClassLoader.getPlatformClassLoader())) {
-            var hierarchy = new Hierarchy(loader);
+        var classpath = classpathElements.stream().map(Path::of).toList();
+        try (var hierarchy = Hierarchy.open(classpath, release)) {
             // The internal classes of other modules (raoh, for raoh-json) join the call graph, so a
             // decoder here that reaches an ambient read through them is caught.
-            var dependencies = classpathElements.stream()
-                    .map(java.nio.file.Path::of)
+            var dependencies = classpath.stream()
                     .filter(p -> !p.toAbsolutePath().equals(classesDirectory.toPath().toAbsolutePath()))
                     .toList();
             Predicate<String> isInternal = inPackages(internalPackages);
-            var scan = new BytecodeScanner(isInternal, hierarchy).scan(classesDirectory.toPath(), dependencies);
+            var scan = new BytecodeScanner(internalPackages, hierarchy).scan(classesDirectory.toPath(), dependencies);
             var approved = Approvals.read(approvals.toPath());
             var report = EffectAudit.check(scan, EffectCatalog.read(catalog.toPath()), approved, hierarchy,
                     isInternal, inPackages(decoderPackages));
@@ -92,21 +97,11 @@ public class AuditMojo extends AbstractMojo {
             }
             getLog().info("Effect audit passed: " + scan.edges().size() + " external uses, "
                     + approved.uses().size() + " approved");
-        } catch (IOException | IllegalArgumentException e) {
-            throw new MojoExecutionException("Effect audit could not run: " + e.getMessage(), e);
+        } catch (IOException | RuntimeException | LinkageError e) {
+            // Anything the scan throws, a class that cannot be loaded included, is a failed audit,
+            // not an internal error of Maven.
+            throw new MojoExecutionException("Effect audit could not run: " + e, e);
         }
-    }
-
-    private URL[] urls() throws MojoExecutionException {
-        var urls = new ArrayList<URL>();
-        for (var element : classpathElements) {
-            try {
-                urls.add(new File(element).toURI().toURL());
-            } catch (MalformedURLException e) {
-                throw new MojoExecutionException("bad classpath element " + element, e);
-            }
-        }
-        return urls.toArray(URL[]::new);
     }
 
     /** Whether a class, by binary name, is in one of the packages or their subpackages. */

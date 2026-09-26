@@ -174,6 +174,19 @@ class BytecodeScannerTest {
     }
 
     @Test
+    void reportsAVarHandleForInternalStaticState() throws IOException {
+        var handle = DynamicConstantDesc.ofNamed(ConstantDescs.BSM_VARHANDLE_STATIC_FIELD, "current",
+                ConstantDescs.CD_VarHandle, ClassDesc.of("fixture.Settings"), ConstantDescs.CD_Object);
+        writeClass(ClassFile.of().build(ClassDesc.of("fixture.Settings"), cb -> cb
+                .withField("current", ConstantDescs.CD_Object, ClassFile.ACC_STATIC)
+                .withMethodBody("handle", MethodTypeDesc.of(ConstantDescs.CD_Object), ClassFile.ACC_STATIC,
+                        code -> code.ldc(handle).areturn())));
+        var result = scanWritten();
+        assertTrue(result.problems().stream().anyMatch(p -> p.contains("VarHandle for the static field fixture.Settings.current")),
+                result.problems()::toString);
+    }
+
+    @Test
     void reportsABootstrapMethodItDoesNotKnow() throws IOException {
         var bootstrap = MethodHandleDesc.ofMethod(DirectMethodHandleDesc.Kind.STATIC, ClassDesc.of("fixture.Boot"),
                 "bsm", MethodTypeDesc.of(ConstantDescs.CD_CallSite, ConstantDescs.CD_MethodHandles_Lookup,
@@ -209,7 +222,7 @@ class BytecodeScannerTest {
     }
 
     private BytecodeScanner.Result scanWritten() throws IOException {
-        return new BytecodeScanner(name -> name.startsWith("fixture."),
-                new Hierarchy(ClassLoader.getPlatformClassLoader())).scan(dir.resolve("classes"));
+        return new BytecodeScanner(List.of("fixture"), Hierarchy.open(List.of(dir.resolve("classes")), Fixtures.RELEASE))
+                .scan(dir.resolve("classes"));
     }
 }

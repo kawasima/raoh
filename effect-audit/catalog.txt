@@ -34,7 +34,7 @@ java.lang.Boolean#compare(boolean,boolean):int
 java.lang.Boolean#valueOf(boolean):java.lang.Boolean
 java.lang.Byte#byteValue():byte
 java.lang.Character#charCount(int):int
-java.lang.Class#equals(java.lang.Object):boolean
+java.lang.Class#equals(java.lang.Object):boolean  -- compares identity; calls nothing on the argument
 java.lang.Class#getName():java.lang.String
 java.lang.Class#getSimpleName():java.lang.String
 java.lang.Class#hashCode():int
@@ -60,7 +60,7 @@ java.lang.Integer#valueOf(int):java.lang.Integer
 java.lang.Long#longValue():long
 java.lang.Long#parseLong(java.lang.String):long
 java.lang.Long#valueOf(long):java.lang.Long
-java.lang.MatchException#<init>(java.lang.String,java.lang.Throwable)
+java.lang.MatchException#<init>(java.lang.String,java.lang.Throwable)  -- stores the cause; calls nothing on it
 java.lang.Object#<init>()
 java.lang.Object#getClass():java.lang.Class
 java.lang.Record#<init>()
@@ -68,7 +68,7 @@ java.lang.Short#shortValue():short
 java.lang.String#codePointAt(int):int
 java.lang.String#codePointCount(int,int):int
 java.lang.String#endsWith(java.lang.String):boolean
-java.lang.String#equals(java.lang.Object):boolean
+java.lang.String#equals(java.lang.Object):boolean  -- checks instanceof String before reading the argument
 java.lang.String#hashCode():int
 java.lang.String#indexOf(int):int
 java.lang.String#indexOf(int,int):int
@@ -85,10 +85,10 @@ java.lang.StringBuilder#append(char):java.lang.StringBuilder
 java.lang.StringBuilder#append(java.lang.String):java.lang.StringBuilder
 java.lang.StringBuilder#toString():java.lang.String
 java.lang.invoke.ConstantBootstraps#nullConstant(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.Class):java.lang.Object
-java.lang.invoke.LambdaMetafactory#metafactory(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.MethodType,java.lang.invoke.MethodType,java.lang.invoke.MethodHandle,java.lang.invoke.MethodType):java.lang.invoke.CallSite
-java.lang.invoke.StringConcatFactory#makeConcatWithConstants(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.MethodType,java.lang.String,java.lang.Object[]):java.lang.invoke.CallSite
-java.lang.runtime.ObjectMethods#bootstrap(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.TypeDescriptor,java.lang.Class,java.lang.String,java.lang.invoke.MethodHandle[]):java.lang.Object
-java.lang.runtime.SwitchBootstraps#typeSwitch(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.MethodType,java.lang.Object[]):java.lang.invoke.CallSite
+java.lang.invoke.LambdaMetafactory#metafactory(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.MethodType,java.lang.invoke.MethodType,java.lang.invoke.MethodHandle,java.lang.invoke.MethodType):java.lang.invoke.CallSite  -- bootstrap; its arguments are class file constants, and the scanner records the handle it links
+java.lang.invoke.StringConcatFactory#makeConcatWithConstants(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.MethodType,java.lang.String,java.lang.Object[]):java.lang.invoke.CallSite  -- bootstrap; its arguments are class file constants, and the scanner records the operand conversions
+java.lang.runtime.ObjectMethods#bootstrap(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.TypeDescriptor,java.lang.Class,java.lang.String,java.lang.invoke.MethodHandle[]):java.lang.Object  -- bootstrap; its arguments are class file constants, and the scanner records the component calls
+java.lang.runtime.SwitchBootstraps#typeSwitch(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.MethodType,java.lang.Object[]):java.lang.invoke.CallSite  -- bootstrap; its labels are class file constants, and the scanner records the selector calls
 java.math.BigDecimal#<init>(java.lang.String)
 java.math.BigDecimal#ZERO:java.math.BigDecimal
 java.math.BigDecimal#valueOf(double):java.math.BigDecimal
@@ -116,9 +116,9 @@ java.time.format.DateTimeFormatter#ISO_INSTANT:java.time.format.DateTimeFormatte
 java.time.format.DateTimeFormatter#parsedLeapSecond():java.time.temporal.TemporalQuery
 java.util.ArrayList#<init>()
 java.util.ArrayList#<init>(int)
-java.util.Collections#unmodifiableList(java.util.List):java.util.List
-java.util.Collections#unmodifiableMap(java.util.Map):java.util.Map
-java.util.Collections#unmodifiableSet(java.util.Set):java.util.Set
+java.util.Collections#unmodifiableList(java.util.List):java.util.List  -- wraps the list; checks its class and calls none of its methods
+java.util.Collections#unmodifiableMap(java.util.Map):java.util.Map  -- wraps the map; checks its class and calls none of its methods
+java.util.Collections#unmodifiableSet(java.util.Set):java.util.Set  -- wraps the set; checks its class and calls none of its methods
 java.util.HashMap#<init>()
 java.util.HashMap#newHashMap(int):java.util.HashMap
 java.util.HashSet#<init>()
@@ -128,15 +128,15 @@ java.util.LinkedHashMap#<init>(int)
 java.util.LinkedHashMap#newLinkedHashMap(int):java.util.LinkedHashMap
 java.util.LinkedHashSet#<init>()
 java.util.List#of():java.util.List
-java.util.List#of(java.lang.Object[]):java.util.List
+java.util.List#of(java.lang.Object[]):java.util.List  -- copies the array and null-checks the elements; calls none of their methods
 java.util.Locale#ROOT:java.util.Locale
-java.util.Locale#equals(java.lang.Object):boolean
+java.util.Locale#equals(java.lang.Object):boolean  -- checks instanceof Locale before reading the argument
 java.util.Map#of():java.util.Map
-java.util.Objects#requireNonNull(java.lang.Object):java.lang.Object
-java.util.Objects#requireNonNull(java.lang.Object,java.lang.String):java.lang.Object
+java.util.Objects#requireNonNull(java.lang.Object):java.lang.Object  -- null-checks; calls nothing on the argument
+java.util.Objects#requireNonNull(java.lang.Object,java.lang.String):java.lang.Object  -- null-checks; calls nothing on the argument
 java.util.Optional#empty():java.util.Optional
-java.util.Optional#of(java.lang.Object):java.util.Optional
-java.util.Optional#orElse(java.lang.Object):java.lang.Object
+java.util.Optional#of(java.lang.Object):java.util.Optional  -- stores the value; calls nothing on it
+java.util.Optional#orElse(java.lang.Object):java.lang.Object  -- returns the value or the argument; calls nothing on either
 java.util.ResourceBundle$Control#FORMAT_PROPERTIES:java.util.List
 java.util.Set#of():java.util.Set
 java.util.UUID#fromString(java.lang.String):java.util.UUID
@@ -144,9 +144,6 @@ java.util.UUID#toString():java.lang.String
 java.util.regex.Matcher#quoteReplacement(java.lang.String):java.lang.String
 java.util.regex.Pattern#compile(java.lang.String):java.util.regex.Pattern
 java.util.regex.Pattern#pattern():java.lang.String
-java.util.stream.Collectors#groupingBy(java.util.function.Function,java.util.function.Supplier,java.util.stream.Collector):java.util.stream.Collector
-java.util.stream.Collectors#joining(java.lang.CharSequence,java.lang.CharSequence,java.lang.CharSequence):java.util.stream.Collector
-java.util.stream.Collectors#mapping(java.util.function.Function,java.util.stream.Collector):java.util.stream.Collector
 java.util.stream.Collectors#toList():java.util.stream.Collector
 org.jooq.types.UByte#toBigInteger():java.math.BigInteger
 org.jooq.types.UInteger#toBigInteger():java.math.BigInteger
@@ -270,6 +267,9 @@ java.util.regex.Matcher#group(int):java.lang.String  -- reads the CharSequence t
 java.util.regex.Matcher#group(java.lang.String):java.lang.String  -- reads the CharSequence the matcher was made for
 java.util.regex.Matcher#matches():boolean  -- reads the CharSequence the matcher was made for
 java.util.regex.Pattern#matcher(java.lang.CharSequence):java.util.regex.Matcher  -- reads the CharSequence argument
+java.util.stream.Collectors#groupingBy(java.util.function.Function,java.util.function.Supplier,java.util.stream.Collector):java.util.stream.Collector  -- calls the downstream Collector's supplier() and accumulator() when it is built
+java.util.stream.Collectors#joining(java.lang.CharSequence,java.lang.CharSequence,java.lang.CharSequence):java.util.stream.Collector  -- calls the delimiter's, prefix's and suffix's toString()
+java.util.stream.Collectors#mapping(java.util.function.Function,java.util.stream.Collector):java.util.stream.Collector  -- calls the downstream Collector's methods when it is built
 java.util.stream.Stream#allMatch(java.util.function.Predicate):boolean
 java.util.stream.Stream#collect(java.util.stream.Collector):java.lang.Object
 java.util.stream.Stream#map(java.util.function.Function):java.util.stream.Stream

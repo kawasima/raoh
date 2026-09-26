@@ -133,7 +133,8 @@ detailed from the current development cycle onward.
   and decoder code must not reach an `AMBIENT` member at all, directly or through Raoh's own
   methods, including the overrides external code calls back on a Raoh object a decoder creates:
   the audit walks Raoh's call graph, across modules, and prints the path. Writing Raoh's own
-  static state after class initialization is refused. Lambdas,
+  static state after class initialization is refused. JDK classes are read from the `--release`
+  API, so the audit gives the same result on any JDK that builds the release. Lambdas,
   method references, record methods, pattern and enum switches and dynamic constants are
   followed to the members they reach, and an unknown bootstrap method fails the build. This replaces
   the test that derived default-locale readers from the JDK call graph, which could not be made

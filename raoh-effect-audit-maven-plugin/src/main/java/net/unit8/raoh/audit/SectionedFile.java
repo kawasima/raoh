@@ -12,7 +12,7 @@ import java.util.List;
  *
  * <p>A line {@code [heading]} starts a section; every other non-blank line is an entry of the
  * section above it. A line starting with {@code #} is a comment. An entry may end with a note
- * after {@code "  -- "}, which the audit ignores.
+ * after {@code "  -- "}.
  */
 final class SectionedFile {
 
@@ -21,9 +21,10 @@ final class SectionedFile {
      *
      * @param heading the heading of its section
      * @param text the entry without its note
+     * @param note the note after {@code "  -- "}, empty if there is none
      * @param line the 1-based line number, for messages
      */
-    record Entry(String heading, String text, int line) {}
+    record Entry(String heading, String text, String note, int line) {}
 
     private SectionedFile() {}
 
@@ -45,7 +46,8 @@ final class SectionedFile {
                 throw new IllegalArgumentException(file + ":" + number + ": entry before any [heading]");
             }
             int note = line.indexOf("  -- ");
-            entries.add(new Entry(heading, (note < 0 ? line : line.substring(0, note)).strip(), number));
+            entries.add(new Entry(heading, (note < 0 ? line : line.substring(0, note)).strip(),
+                    note < 0 ? "" : line.substring(note + 5).strip(), number));
         }
         return entries;
     }

@@ -51,10 +51,14 @@ paste.
   implement (a `CharSequence`, a `Collection`, an `Object`'s `hashCode`), not through a class it
   initializes. Anything that may is `DELEGATED`, observing or converting alike; the approval's
   reason is where observing (allowed) and adopting a caller's behaviour (not allowed) are told
-  apart. The audit also rejects `CLOSED` / `EXPLICIT` for an overridable method called virtually.
-  Map and Set iteration order is not part of any contract Raoh relies on.
+  apart. The audit also rejects `CLOSED` / `EXPLICIT` for an overridable method called virtually,
+  and requires a note (`  -- why`) on a `CLOSED` / `EXPLICIT` member that takes an argument of a
+  type a caller can implement, saying why none of its code runs. Map and Set iteration order is
+  not part of any contract Raoh relies on. JDK classes are read from the `--release` API
+  (`ct.sym`), so the result does not depend on the JDK running Maven.
 - **Use without an approval in `effect-audit/<module>.txt`**: file the `caller -> member` line under
-  the existing `[reason]` it fits. Add a new reason only when none fits, and never approve a
+  the existing `[reason]` it fits. An `AMBIENT` use names its caller exactly, descriptor included,
+  so one method's approval never covers an overload. Add a new reason only when none fits, and never approve a
   delegation that adopts the input's behaviour as the meaning of a conversion; fix the code
   instead (#152 is the model).
 - **`AMBIENT` reached from a decoder package**: cannot be approved, whether the decoder reads it
@@ -62,8 +66,10 @@ paste.
   the path). The walk includes callbacks: once decoder code constructs a Raoh class, that class's
   overrides of external methods (`hashCode`, `compare`, `apply`) count as reached. Take the value
   from the input or explicit configuration.
-- **Write to an internal static field outside its class initializer**: not allowed; mutable static
-  state is ambient configuration the audit cannot follow.
+- **Write to an internal static field outside its class initializer** (directly or through a
+  `VarHandle`): not allowed; mutable static state is ambient configuration the audit cannot follow.
+  The audit cannot see mutation through a `static final` reference (a cache map, a registry), so do
+  not keep mutable objects in static fields either.
 - **Stale approval**: remove the line.
 - **Unknown bootstrap method**: teach `BytecodeScanner` which members it reaches before approving
   anything; do not add it to the known set without the expansion.

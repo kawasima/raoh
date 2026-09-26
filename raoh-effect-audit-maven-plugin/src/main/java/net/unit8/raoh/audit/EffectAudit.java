@@ -20,6 +20,8 @@ import java.util.stream.Collectors;
  *   <li>a used member is not in the catalog;</li>
  *   <li>a member the catalog calls {@code CLOSED} or {@code EXPLICIT} is called virtually and a
  *       subclass can override it, so the implementation that runs is chosen by the receiver;</li>
+ *   <li>a member the catalog calls {@code CLOSED} or {@code EXPLICIT} takes an argument whose type
+ *       a caller can implement, and its entry gives no note saying why no caller code runs;</li>
  *   <li>a use of a {@code DELEGATED} or {@code AMBIENT} member has no approval;</li>
  *   <li>decoder code reaches an {@code AMBIENT} use, directly or through the audited code base's
  *       own methods ({@link AmbientReach}), approved or not;</li>
@@ -41,6 +43,8 @@ public final class EffectAudit {
      * @param unknown members not in the catalog, each with one of its callers
      * @param overridable {@code CLOSED} or {@code EXPLICIT} members called virtually where a
      *                    subclass can override them, each with one of its callers
+     * @param unexplained {@code CLOSED} or {@code EXPLICIT} members with an argument a caller can
+     *                    implement and no note saying why no caller code runs, each with one of its callers
      * @param unapproved uses that need an approval and have none, with the member's effect and
      *                   how the bytecode reaches it
      * @param ambientInDecoder {@code AMBIENT} uses decoder code reaches, each with the chain of
@@ -52,6 +56,7 @@ public final class EffectAudit {
     public record Report(
             Map<Member, String> unknown,
             Map<Member, String> overridable,
+            Map<Member, String> unexplained,
             Map<Approvals.Use, String> unapproved,
             Map<Approvals.Use, String> ambientInDecoder,
             Set<Approvals.Use> stale,
@@ -64,7 +69,7 @@ public final class EffectAudit {
          * @return {@code true} if every list is empty
          */
         public boolean passed() {
-            return unknown.isEmpty() && overridable.isEmpty() && unapproved.isEmpty()
+            return unknown.isEmpty() && overridable.isEmpty() && unexplained.isEmpty() && unapproved.isEmpty()
                     && ambientInDecoder.isEmpty() && stale.isEmpty() && needless.isEmpty() && problems.isEmpty();
         }
 
@@ -82,6 +87,9 @@ public final class EffectAudit {
             section(out, "These are CLOSED or EXPLICIT in " + catalogName + ", but a subclass can override them"
                     + " and they are called virtually, so the receiver chooses what runs. Move them to [DELEGATED]:",
                     entries(overridable, "called by"));
+            section(out, "These are CLOSED or EXPLICIT in " + catalogName + " but take an argument whose type a"
+                    + " caller can implement. Add a note saying why they run none of its code, or move them"
+                    + " to [DELEGATED]:", entries(unexplained, "used by"));
             section(out, "Decoder code must not read ambient state itself, nor through Raoh's own methods;"
                     + " these cannot be approved:", ambientInDecoder.entrySet().stream()
                     .map(e -> e.getKey() + "\n      reached by " + e.getValue()).toList());
@@ -124,15 +132,16 @@ public final class EffectAudit {
                                Hierarchy hierarchy, Predicate<String> isInternal, Predicate<String> isDecoderClass) {
         var unknown = new TreeMap<Member, String>(BY_TEXT);
         var overridable = new TreeMap<Member, String>(BY_TEXT);
+        var unexplained = new TreeMap<Member, String>(BY_TEXT);
         var unapproved = new TreeMap<Approvals.Use, String>(USE_ORDER);
         var needless = new TreeSet<Approvals.Use>(USE_ORDER);
         var used = new LinkedHashSet<Approvals.Use>();
         var problems = new ArrayList<>(scan.problems());
 
         for (var edge : scan.edges()) {
-            var use = new Approvals.Use(edge.caller(), edge.callee());
-            used.add(use);
             var effect = catalog.effectOf(edge.callee());
+            var use = useOf(edge, effect.orElse(null));
+            used.add(use);
             if (effect.isEmpty()) {
                 unknown.putIfAbsent(edge.callee(), edge.caller());
                 continue;
@@ -141,6 +150,9 @@ public final class EffectAudit {
                 case CLOSED, EXPLICIT -> {
                     if (edge.virtual() && isOverridable(hierarchy, edge.callee(), problems)) {
                         overridable.putIfAbsent(edge.callee(), edge.caller());
+                    }
+                    if (!catalog.hasNote(edge.callee()) && hasOpenParameter(hierarchy, edge.callee(), problems)) {
+                        unexplained.putIfAbsent(edge.callee(), edge.caller());
                     }
                     if (approvals.contains(use)) {
                         needless.add(use);
@@ -163,12 +175,12 @@ public final class EffectAudit {
         var found = reach.reach(starts, catalog::effectOf);
         var ambientInDecoder = new TreeMap<Approvals.Use, String>(USE_ORDER);
         found.ambient().forEach((edge, path) -> ambientInDecoder.putIfAbsent(
-                new Approvals.Use(edge.caller(), edge.callee()),
+                useOf(edge, Effect.AMBIENT),
                 path.stream().map(Member::toString).collect(Collectors.joining(" -> "))));
         // An ambient use no approval may cover is reported once, as reached from a decoder.
         ambientInDecoder.keySet().forEach(unapproved::remove);
         for (var edge : found.unknown()) {
-            if (!used.contains(new Approvals.Use(edge.caller(), edge.callee()))) {
+            if (!used.contains(useOf(edge, null))) {
                 // The audited module reports its own; this one is in a dependency its decoders reach.
                 problems.add("decoder code reaches " + edge.caller() + " -> " + edge.callee()
                         + ", which the catalog does not list");
@@ -182,7 +194,24 @@ public final class EffectAudit {
                 stale.add(use);
             }
         }
-        return new Report(unknown, overridable, unapproved, ambientInDecoder, stale, needless, problems);
+        return new Report(unknown, overridable, unexplained, unapproved, ambientInDecoder, stale, needless, problems);
+    }
+
+    /**
+     * The approval key of an edge: the exact method for an {@code AMBIENT} member, so one method's
+     * approval does not cover its overloads, and the attributed caller for everything else.
+     */
+    private static Approvals.Use useOf(Edge edge, Effect effect) {
+        return new Approvals.Use(effect == Effect.AMBIENT ? edge.method().toString() : edge.caller(), edge.callee());
+    }
+
+    private static boolean hasOpenParameter(Hierarchy hierarchy, Member member, List<String> problems) {
+        try {
+            return hierarchy.hasOpenParameter(member);
+        } catch (IllegalStateException e) {
+            problems.add(e.getMessage());
+            return false;
+        }
     }
 
     private static boolean isOverridable(Hierarchy hierarchy, Member member, List<String> problems) {

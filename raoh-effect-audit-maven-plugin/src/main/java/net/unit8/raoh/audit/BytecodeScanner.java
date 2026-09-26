@@ -92,17 +92,20 @@ public final class BytecodeScanner {
 
     private static final String STATIC_INITIALIZER = "<clinit>";
 
+    private final List<String> internalPackages;
     private final Predicate<String> internal;
     private final Hierarchy hierarchy;
 
     /**
      * Creates a scanner.
      *
-     * @param internal whether a class, by binary name, belongs to the audited code base
+     * @param internalPackages the packages of the audited code base; their subpackages belong to it too
      * @param hierarchy resolves methods an internal class inherits from an external one
      */
-    public BytecodeScanner(Predicate<String> internal, Hierarchy hierarchy) {
-        this.internal = internal;
+    public BytecodeScanner(List<String> internalPackages, Hierarchy hierarchy) {
+        this.internalPackages = List.copyOf(internalPackages);
+        var prefixes = internalPackages.stream().map(p -> p + ".").toList();
+        this.internal = name -> prefixes.stream().anyMatch(name::startsWith);
         this.hierarchy = hierarchy;
     }
 
@@ -142,11 +145,11 @@ public final class BytecodeScanner {
         var context = new ArrayList<ClassModel>();
         for (var dependency : dependencies) {
             if (Files.isDirectory(dependency)) {
-                context.addAll(read(dependency, internal));
+                context.addAll(readInternal(dependency));
             } else if (Files.isRegularFile(dependency) && dependency.toString().endsWith(".jar")) {
                 try (var jar = FileSystems.newFileSystem(dependency)) {
                     for (var root : jar.getRootDirectories()) {
-                        context.addAll(read(root, internal));
+                        context.addAll(readInternal(root));
                     }
                 }
             }
@@ -174,10 +177,29 @@ public final class BytecodeScanner {
         return new Result(sorted, graph, Set.copyOf(audited), List.copyOf(problems));
     }
 
-    /** Parses the class files under {@code root} whose binary name, taken from the path, is wanted. */
-    private static List<ClassModel> read(Path root, Predicate<String> wanted) throws IOException {
+    /**
+     * Parses the internal classes of a dependency: only the directories of the internal packages
+     * are walked, so a library jar such as jOOQ's is not listed entry by entry.
+     */
+    private List<ClassModel> readInternal(Path root) throws IOException {
         var models = new ArrayList<ClassModel>();
-        try (var files = Files.walk(root)) {
+        for (var pkg : internalPackages) {
+            var dir = root.resolve(pkg.replace(".", root.getFileSystem().getSeparator()));
+            if (Files.isDirectory(dir)) {
+                models.addAll(read(root, dir, internal));
+            }
+        }
+        return models;
+    }
+
+    private static List<ClassModel> read(Path root, Predicate<String> wanted) throws IOException {
+        return read(root, root, wanted);
+    }
+
+    /** Parses the class files under {@code dir} whose binary name, taken from the path below {@code root}, is wanted. */
+    private static List<ClassModel> read(Path root, Path dir, Predicate<String> wanted) throws IOException {
+        var models = new ArrayList<ClassModel>();
+        try (var files = Files.walk(dir)) {
             for (var file : files.filter(f -> f.toString().endsWith(".class")).sorted().toList()) {
                 var relative = root.relativize(file).toString();
                 var name = relative.substring(0, relative.length() - ".class".length())
@@ -311,15 +333,20 @@ public final class BytecodeScanner {
                 if (member.isField()) {
                     return;
                 }
-                var declaring = member.isConstructor() ? java.util.Optional.<String>empty()
-                        : hierarchy.declaringClass(member);
+                java.util.Optional<String> declaring;
+                try {
+                    declaring = member.isConstructor() ? java.util.Optional.empty() : hierarchy.declaringClass(member);
+                } catch (IllegalStateException e) {
+                    problem("cannot resolve " + member + ": " + e.getMessage());
+                    return;
+                }
                 if (declaring.isEmpty() || internal.test(declaring.get())) {
                     graph.addCall(self, new CallGraph.Call(member, virtual));
                     return;
                 }
                 member = new Member(declaring.get(), member.name(), member.parameters(), member.type());
             }
-            var edge = new Edge(caller, member, virtual, via);
+            var edge = new Edge(caller, self, member, virtual, via);
             if (audited) {
                 edges.add(edge);
             }
@@ -421,6 +448,10 @@ public final class BytecodeScanner {
                         case FIELD_VAR_HANDLE, STATIC_FIELD_VAR_HANDLE -> {
                             if (args.size() == 2 && args.get(0) instanceof ClassDesc declaring
                                     && args.get(1) instanceof ClassDesc fieldType) {
+                                if (bootstrap.equals(STATIC_FIELD_VAR_HANDLE) && internal.test(Member.typeName(declaring))) {
+                                    problem("takes a VarHandle for the static field " + Member.typeName(declaring) + "."
+                                            + dynamic.constantName() + "; mutable static state is ambient");
+                                }
                                 add(Member.field(declaring, dynamic.constantName(), fieldType),
                                         false, Edge.Via.NAMED_BY_BOOTSTRAP);
                             } else {

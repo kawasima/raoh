@@ -12,11 +12,13 @@ import java.util.Map;
  * their context.
  *
  * <p>Each section heading states the reason, and the section lists the uses it covers as
- * {@code caller -> member}, the caller in the form {@link BytecodeScanner} gives it:
+ * {@code caller -> member}. For a {@code DELEGATED} member the caller is {@code Class#method} as
+ * {@link BytecodeScanner} attributes it, so overloads share an approval; for an {@code AMBIENT}
+ * member it is the exact method, descriptor included, so an approval covers that one method:
  *
  * <pre>
  * [observes the input through its own interface]
- * net.unit8.raoh.decode.ObjectDecoders#list -> java.util.List#get(int)
+ * net.unit8.raoh.decode.ObjectDecoders#list -> java.util.List#get(int):java.lang.Object
  * </pre>
  *
  * <p>A reviewer reads the few reasons and checks that each use fits the one it is filed under.

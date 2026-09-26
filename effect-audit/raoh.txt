@@ -1,8 +1,10 @@
 # Approved uses of DELEGATED and AMBIENT members in raoh (#151).
 #
-# Each heading is the reason; the lines under it are the uses it covers, as
-# "caller -> member". The raoh-effect-audit-maven-plugin fails the build on a use missing
-# here and on a line that matches no use. See effect-audit/catalog.txt for the effects.
+# Each heading is the reason; the lines under it are the uses it covers, as "caller -> member".
+# The caller of a DELEGATED use is Class#method, so overloads share it; the caller of an AMBIENT
+# use is the exact method, descriptor included, so the approval covers that method alone.
+# raoh-effect-audit-maven-plugin fails the build on a use missing here and on a line that matches
+# no use. See effect-audit/catalog.txt for the effects.
 
 [observes the input through its own interface]
 net.unit8.raoh.Result#traverse -> java.util.List#get(int):java.lang.Object
@@ -66,6 +68,8 @@ net.unit8.raoh.Issues#add -> java.util.ArrayList#addAll(java.util.Collection):bo
 net.unit8.raoh.Issues#add -> java.util.List#copyOf(java.util.Collection):java.util.List
 net.unit8.raoh.Issues#add -> java.util.List#size():int
 net.unit8.raoh.Issues#flatten -> java.util.List#stream():java.util.stream.Stream
+net.unit8.raoh.Issues#flatten -> java.util.stream.Collectors#groupingBy(java.util.function.Function,java.util.function.Supplier,java.util.stream.Collector):java.util.stream.Collector
+net.unit8.raoh.Issues#flatten -> java.util.stream.Collectors#mapping(java.util.function.Function,java.util.stream.Collector):java.util.stream.Collector
 net.unit8.raoh.Issues#flatten -> java.util.stream.Stream#collect(java.util.stream.Collector):java.lang.Object
 net.unit8.raoh.Issues#format -> java.util.Iterator#hasNext():boolean
 net.unit8.raoh.Issues#format -> java.util.Iterator#next():java.lang.Object
@@ -74,6 +78,7 @@ net.unit8.raoh.Issues#format -> java.util.List#iterator():java.util.Iterator
 net.unit8.raoh.Issues#format -> java.util.Map#get(java.lang.Object):java.lang.Object
 net.unit8.raoh.Issues#format -> java.util.Map#put(java.lang.Object,java.lang.Object):java.lang.Object
 net.unit8.raoh.Issues#groupByPath -> java.util.List#stream():java.util.stream.Stream
+net.unit8.raoh.Issues#groupByPath -> java.util.stream.Collectors#groupingBy(java.util.function.Function,java.util.function.Supplier,java.util.stream.Collector):java.util.stream.Collector
 net.unit8.raoh.Issues#groupByPath -> java.util.stream.Stream#collect(java.util.stream.Collector):java.lang.Object
 net.unit8.raoh.Issues#isEmpty -> java.util.List#isEmpty():boolean
 net.unit8.raoh.Issues#merge -> java.util.ArrayList#addAll(java.util.Collection):boolean
@@ -404,6 +409,7 @@ net.unit8.raoh.decode.builtin.TemporalDecoder#between -> java.util.Map#of(java.l
 net.unit8.raoh.decode.map.MapDecoders#nested -> java.util.Map#of(java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object):java.util.Map
 
 [reads text that is a String: the decoded value, a template, or a constant]
+net.unit8.raoh.Err#toString -> java.util.stream.Collectors#joining(java.lang.CharSequence,java.lang.CharSequence,java.lang.CharSequence):java.util.stream.Collector
 net.unit8.raoh.Path#escapeReferenceToken -> java.lang.String#replace(java.lang.CharSequence,java.lang.CharSequence):java.lang.String
 net.unit8.raoh.Placeholders#fill -> java.util.regex.Matcher#appendReplacement(java.lang.StringBuilder,java.lang.String):java.util.regex.Matcher
 net.unit8.raoh.Placeholders#fill -> java.util.regex.Matcher#appendTail(java.lang.StringBuilder):java.lang.StringBuilder
@@ -569,10 +575,11 @@ net.unit8.raoh.ResourceBundleMessageResolver#layers -> java.util.Iterator#hasNex
 net.unit8.raoh.ResourceBundleMessageResolver#layers -> java.util.Iterator#next():java.lang.Object
 net.unit8.raoh.ResourceBundleMessageResolver#layers -> java.util.List#add(java.lang.Object):boolean
 net.unit8.raoh.ResourceBundleMessageResolver#layers -> java.util.List#iterator():java.util.Iterator
-net.unit8.raoh.ResourceBundleMessageResolver#layers -> java.util.ResourceBundle#getBundle(java.lang.String,java.util.Locale,java.util.ResourceBundle$Control):java.util.ResourceBundle
+net.unit8.raoh.ResourceBundleMessageResolver#layers(java.util.Locale):java.util.List -> java.util.ResourceBundle#getBundle(java.lang.String,java.util.Locale,java.util.ResourceBundle$Control):java.util.ResourceBundle
 net.unit8.raoh.ResourceBundleMessageResolver#layers -> java.util.ResourceBundle#getLocale():java.util.Locale
 net.unit8.raoh.ResourceBundleMessageResolver#layers -> java.util.ResourceBundle$Control#getCandidateLocales(java.lang.String,java.util.Locale):java.util.List
-net.unit8.raoh.ResourceBundleMessageResolver#resolve -> java.util.Locale#getDefault():java.util.Locale
+net.unit8.raoh.ResourceBundleMessageResolver#resolve(java.lang.String,java.util.Map):java.lang.String -> java.util.Locale#getDefault():java.util.Locale
+net.unit8.raoh.ResourceBundleMessageResolver#resolve(net.unit8.raoh.Issue):java.lang.String -> java.util.Locale#getDefault():java.util.Locale
 
 [javac's MatchException wraps an exception a record accessor threw during pattern matching]
 net.unit8.raoh.decode.combinator.CombinerSupport#strict -> java.lang.Throwable#toString():java.lang.String

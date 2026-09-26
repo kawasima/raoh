@@ -2,8 +2,6 @@ package net.unit8.raoh.audit;
 
 import javax.tools.ToolProvider;
 import java.io.IOException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,6 +11,9 @@ import java.util.Map;
 
 /** Compiles small Java sources in package {@code fixture} (or a subpackage) and scans them. */
 final class Fixtures {
+
+    /** The release fixtures compile for, and whose JDK API the hierarchy reads. */
+    static final int RELEASE = 25;
 
     private Fixtures() {}
 
@@ -25,7 +26,7 @@ final class Fixtures {
      */
     record Compiled(Path classes, List<Path> dependencies, Hierarchy hierarchy) {
         BytecodeScanner.Result scan() throws IOException {
-            return new BytecodeScanner(name -> name.startsWith("fixture."), hierarchy).scan(classes, dependencies);
+            return new BytecodeScanner(List.of("fixture"), hierarchy).scan(classes, dependencies);
         }
     }
 
@@ -75,13 +76,10 @@ final class Fixtures {
         if (status != 0) {
             throw new IllegalStateException("fixture does not compile");
         }
-        var urls = new ArrayList<URL>();
-        urls.add(out.toUri().toURL());
-        for (var dep : deps) {
-            urls.add(dep.toUri().toURL());
-        }
-        var loader = new URLClassLoader(urls.toArray(URL[]::new), ClassLoader.getPlatformClassLoader());
-        return new Compiled(out, List.copyOf(deps), new Hierarchy(loader));
+        var classpath = new ArrayList<Path>();
+        classpath.add(out);
+        classpath.addAll(deps);
+        return new Compiled(out, List.copyOf(deps), Hierarchy.open(classpath, RELEASE));
     }
 
     /**

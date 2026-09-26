@@ -66,7 +66,7 @@ class EffectAuditTest {
     @Test
     void approvesAnAmbientUseOutsideDecoderCode() throws IOException {
         var report = audit(Map.of("R", "class R { Object l() { return java.util.Locale.getDefault(); } }"), BASE_CATALOG,
-                "[chooses a display locale]\nfixture.R#l -> java.util.Locale#getDefault():java.util.Locale\n");
+                "[chooses a display locale]\nfixture.R#l():java.lang.Object -> java.util.Locale#getDefault():java.util.Locale\n");
         assertTrue(report.passed(), () -> report.describe("catalog", "approvals"));
     }
 
@@ -74,8 +74,8 @@ class EffectAuditTest {
     void neverAllowsADecoderToReadAmbientStateItself() throws IOException {
         var report = audit(Map.of("decode/D",
                 "package fixture.decode; public class D { Object l() { return java.util.Locale.getDefault(); } }"),
-                BASE_CATALOG, "[approved anyway]\nfixture.decode.D#l -> java.util.Locale#getDefault():java.util.Locale\n");
-        assertEquals(Set.of(new Approvals.Use("fixture.decode.D#l", GET_DEFAULT)), report.ambientInDecoder().keySet());
+                BASE_CATALOG, "[approved anyway]\nfixture.decode.D#l():java.lang.Object -> java.util.Locale#getDefault():java.util.Locale\n");
+        assertEquals(Set.of(new Approvals.Use("fixture.decode.D#l():java.lang.Object", GET_DEFAULT)), report.ambientInDecoder().keySet());
     }
 
     @Test
@@ -84,8 +84,8 @@ class EffectAuditTest {
         var report = audit(Map.of(
                 "Environment", "public final class Environment { public static Object locale() { return java.util.Locale.getDefault(); } }",
                 "decode/D", "package fixture.decode; public class D { Object l() { return fixture.Environment.locale(); } }"),
-                BASE_CATALOG, "[chooses a display locale]\nfixture.Environment#locale -> java.util.Locale#getDefault():java.util.Locale\n");
-        var use = new Approvals.Use("fixture.Environment#locale", GET_DEFAULT);
+                BASE_CATALOG, "[chooses a display locale]\nfixture.Environment#locale():java.lang.Object -> java.util.Locale#getDefault():java.util.Locale\n");
+        var use = new Approvals.Use("fixture.Environment#locale():java.lang.Object", GET_DEFAULT);
         assertEquals(Set.of(use), report.ambientInDecoder().keySet());
         assertEquals("fixture.decode.D#l():java.lang.Object -> fixture.Environment#locale():java.lang.Object",
                 report.ambientInDecoder().get(use));
@@ -98,8 +98,8 @@ class EffectAuditTest {
                 "Plain", "public final class Plain implements Resolver { public Object resolve() { return \"x\"; } }",
                 "Localized", "public final class Localized implements Resolver { public Object resolve() { return java.util.Locale.getDefault(); } }",
                 "decode/D", "package fixture.decode; public class D { Object l(fixture.Resolver r) { return r.resolve(); } }"),
-                BASE_CATALOG, "[chooses a display locale]\nfixture.Localized#resolve -> java.util.Locale#getDefault():java.util.Locale\n");
-        assertEquals(Set.of(new Approvals.Use("fixture.Localized#resolve", GET_DEFAULT)), report.ambientInDecoder().keySet());
+                BASE_CATALOG, "[chooses a display locale]\nfixture.Localized#resolve():java.lang.Object -> java.util.Locale#getDefault():java.util.Locale\n");
+        assertEquals(Set.of(new Approvals.Use("fixture.Localized#resolve():java.lang.Object", GET_DEFAULT)), report.ambientInDecoder().keySet());
     }
 
     @Test
@@ -110,8 +110,8 @@ class EffectAuditTest {
                 "Base", "public class Base { public Object resolve() { return java.util.Locale.getDefault(); } }",
                 "Impl", "public final class Impl extends Base implements Resolver {}",
                 "decode/D", "package fixture.decode; public class D { Object l(fixture.Resolver r) { return r.resolve(); } }"),
-                BASE_CATALOG, "[chooses a display locale]\nfixture.Base#resolve -> java.util.Locale#getDefault():java.util.Locale\n");
-        assertEquals(Set.of(new Approvals.Use("fixture.Base#resolve", GET_DEFAULT)), report.ambientInDecoder().keySet());
+                BASE_CATALOG, "[chooses a display locale]\nfixture.Base#resolve():java.lang.Object -> java.util.Locale#getDefault():java.util.Locale\n");
+        assertEquals(Set.of(new Approvals.Use("fixture.Base#resolve():java.lang.Object", GET_DEFAULT)), report.ambientInDecoder().keySet());
     }
 
     @Test
@@ -131,8 +131,8 @@ class EffectAuditTest {
         var report = audit(Map.of(
                 "Lazy", "public final class Lazy { public static java.util.function.Supplier<Object> locale() { return () -> java.util.Locale.getDefault(); } }",
                 "decode/D", "package fixture.decode; public class D { Object l() { return fixture.Lazy.locale(); } }"),
-                BASE_CATALOG, "[chooses a display locale]\nfixture.Lazy#locale -> java.util.Locale#getDefault():java.util.Locale\n");
-        assertEquals(Set.of(new Approvals.Use("fixture.Lazy#locale", GET_DEFAULT)), report.ambientInDecoder().keySet());
+                BASE_CATALOG, "[chooses a display locale]\nfixture.Lazy#lambda$locale$0():java.lang.Object -> java.util.Locale#getDefault():java.util.Locale\n");
+        assertEquals(Set.of(new Approvals.Use("fixture.Lazy#lambda$locale$0():java.lang.Object", GET_DEFAULT)), report.ambientInDecoder().keySet());
     }
 
     @Test
@@ -140,8 +140,42 @@ class EffectAuditTest {
         var report = audit(Map.of(
                 "Constants", "public final class Constants { public static final Object LOCALE = java.util.Locale.getDefault(); }",
                 "decode/D", "package fixture.decode; public class D { Object l() { return fixture.Constants.LOCALE; } }"),
-                BASE_CATALOG, "[chooses a display locale]\nfixture.Constants#<clinit> -> java.util.Locale#getDefault():java.util.Locale\n");
-        assertEquals(Set.of(new Approvals.Use("fixture.Constants#<clinit>", GET_DEFAULT)), report.ambientInDecoder().keySet());
+                BASE_CATALOG, "[chooses a display locale]\nfixture.Constants#<clinit>():void -> java.util.Locale#getDefault():java.util.Locale\n");
+        assertEquals(Set.of(new Approvals.Use("fixture.Constants#<clinit>():void", GET_DEFAULT)), report.ambientInDecoder().keySet());
+    }
+
+    @Test
+    void followsInitializationIntoTheSuperclassThatDeclaresAStaticMember() throws IOException {
+        // Sub.LOCALE is declared in Base: the JVM initializes Base, whose initializer reads the locale.
+        var report = audit(Map.of(
+                "Base", "public class Base { public static final Object LOCALE = java.util.Locale.getDefault(); }",
+                "Sub", "public class Sub extends Base {}",
+                "decode/D", "package fixture.decode; public class D { Object l() { return fixture.Sub.LOCALE; } }"),
+                BASE_CATALOG, "[chooses a display locale]\nfixture.Base#<clinit>():void -> java.util.Locale#getDefault():java.util.Locale\n");
+        assertEquals(Set.of(new Approvals.Use("fixture.Base#<clinit>():void", GET_DEFAULT)), report.ambientInDecoder().keySet());
+    }
+
+    @Test
+    void approvesAnAmbientUseForTheExactMethodOnly() throws IOException {
+        // The approval names resolve(); the overload resolve(Locale) reading the default is a new use.
+        var report = audit(Map.of("R", """
+                class R {
+                    Object resolve() { return java.util.Locale.getDefault(); }
+                    Object resolve(java.util.Locale l) { return l == null ? java.util.Locale.getDefault() : l; }
+                }
+                """), BASE_CATALOG, "[chooses a display locale]\nfixture.R#resolve():java.lang.Object -> java.util.Locale#getDefault():java.util.Locale\n");
+        assertEquals(Set.of(new Approvals.Use("fixture.R#resolve(java.util.Locale):java.lang.Object", GET_DEFAULT)),
+                report.unapproved().keySet());
+    }
+
+    @Test
+    void requiresANoteForAClosedMemberThatTakesAnOpenArgument() throws IOException {
+        var source = Map.of("A", "class A { Object n(Object o) { return java.util.Objects.requireNonNull(o); } }");
+        var member = "java.util.Objects#requireNonNull(java.lang.Object):java.lang.Object";
+        var bare = audit(source, BASE_CATALOG.replace("[AMBIENT]", member + "\n[AMBIENT]"), "");
+        assertEquals(Set.of(Member.parse(member)), bare.unexplained().keySet());
+        var noted = audit(source, BASE_CATALOG.replace("[AMBIENT]", member + "  -- null-checks only\n[AMBIENT]"), "");
+        assertTrue(noted.passed(), () -> noted.describe("catalog", "approvals"));
     }
 
     @Test
@@ -152,7 +186,7 @@ class EffectAuditTest {
         var json = Fixtures.compile(dir, "json", Map.of(
                 "decode/J", "package fixture.decode; public class J { Object l() { return fixture.Environment.locale(); } }"), core);
         var report = Fixtures.audit(json, dir, BASE_CATALOG, "");
-        assertEquals(Set.of(new Approvals.Use("fixture.Environment#locale", GET_DEFAULT)), report.ambientInDecoder().keySet());
+        assertEquals(Set.of(new Approvals.Use("fixture.Environment#locale():java.lang.Object", GET_DEFAULT)), report.ambientInDecoder().keySet());
         assertTrue(report.unapproved().isEmpty(), "the dependency's own uses are audited in its own module");
     }
 
@@ -162,8 +196,8 @@ class EffectAuditTest {
         var report = audit(Map.of(
                 "Key", "public final class Key { @Override public int hashCode() { return java.util.Locale.getDefault().hashCode(); } }",
                 "decode/D", "package fixture.decode; public class D { Object l() { var m = new java.util.HashMap<Object, Object>(); m.put(new fixture.Key(), 1); return m; } }"),
-                BASE_CATALOG, "[hashes a key]\nfixture.Key#hashCode -> java.util.Locale#getDefault():java.util.Locale\n");
-        assertEquals(Set.of(new Approvals.Use("fixture.Key#hashCode", GET_DEFAULT)), report.ambientInDecoder().keySet());
+                BASE_CATALOG, "[hashes a key]\nfixture.Key#hashCode():int -> java.util.Locale#getDefault():java.util.Locale\n");
+        assertEquals(Set.of(new Approvals.Use("fixture.Key#hashCode():int", GET_DEFAULT)), report.ambientInDecoder().keySet());
         assertTrue(report.ambientInDecoder().values().iterator().next().endsWith("fixture.Key#hashCode():int"));
     }
 
@@ -195,7 +229,7 @@ class EffectAuditTest {
         var report = audit(Map.of(
                 "Environment", "public final class Environment { public static Object locale() { return java.util.Locale.getDefault(); } }",
                 "decode/D", "package fixture.decode; public class D { String t(String s) { return s.trim(); } }"),
-                BASE_CATALOG, "[chooses a display locale]\nfixture.Environment#locale -> java.util.Locale#getDefault():java.util.Locale\n");
+                BASE_CATALOG, "[chooses a display locale]\nfixture.Environment#locale():java.lang.Object -> java.util.Locale#getDefault():java.util.Locale\n");
         assertTrue(report.passed(), () -> report.describe("catalog", "approvals"));
     }
 

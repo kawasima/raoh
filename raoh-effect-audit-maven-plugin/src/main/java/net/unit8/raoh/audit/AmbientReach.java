@@ -25,8 +25,10 @@ import java.util.function.Predicate;
  *   <li>a virtual call on an internal type to the method each internal subtype of it runs for
  *       that call, found the way the JVM finds it, so an implementation a subtype inherits from
  *       a superclass that is not itself a subtype of the called type is included;</li>
- *   <li>a lambda's body from the place the lambda is created, and a class's static initializer
- *       from any reference to the class;</li>
+ *   <li>a lambda's body from the place the lambda is created;</li>
+ *   <li>from any reference to a class, the static initializers the JVM runs to initialize it:
+ *       its own and those of its internal superclasses and superinterfaces, so a static member
+ *       reached through a subclass still reaches the initializer of the class declaring it;</li>
  *   <li>once a reached method constructs an internal class, every method of that class (or of an
  *       internal superclass) that overrides one an external supertype declares, since the object
  *       may be handed to external code that calls it back: a {@code HashMap} calls a key's
@@ -50,6 +52,7 @@ final class AmbientReach {
     private final Hierarchy hierarchy;
     private final Predicate<String> internal;
     private final Map<Member, List<Member>> implementations = new HashMap<>();
+    private final Map<String, List<Member>> callbacks = new HashMap<>();
     private final List<String> problems = new ArrayList<>();
 
     AmbientReach(CallGraph graph, Hierarchy hierarchy, Predicate<String> internal) {
@@ -126,6 +129,9 @@ final class AmbientReach {
 
     /** The internal methods a call can run. */
     private List<Member> resolve(CallGraph.Call call) {
+        if (call.target().name().equals("<clinit>")) {
+            return initializers(call.target().owner());
+        }
         var targets = new ArrayList<Member>();
         declaredOrInherited(call).ifPresent(targets::add);
         if (call.virtual()) {
@@ -147,8 +153,8 @@ final class AmbientReach {
             problems.add("calls " + target + ", but " + target.owner() + " is not among the classes scanned");
             return Optional.empty();
         }
-        if (methods.contains(target) || target.name().equals("<clinit>")) {
-            return methods.contains(target) ? Optional.of(target) : Optional.empty();
+        if (methods.contains(target)) {
+            return Optional.of(target);
         }
         Optional<String> declaring;
         try {
@@ -214,10 +220,36 @@ final class AmbientReach {
     }
 
     /**
+     * The static initializers that initializing {@code type} can run: its own, and those of every
+     * internal class or interface it is a subtype of. The JVM initializes a class's superclasses
+     * first and some of its superinterfaces; taking all of them keeps the walk on the safe side.
+     */
+    private List<Member> initializers(String type) {
+        if (!graph.classes().containsKey(type)) {
+            problems.add("initializes " + type + ", which is not among the classes scanned");
+            return List.of();
+        }
+        var result = new ArrayList<Member>();
+        for (var entry : graph.classes().entrySet()) {
+            if (isSubtype(type, entry.getKey())) {
+                var initializer = new Member(entry.getKey(), "<clinit>", List.of(), "void");
+                if (entry.getValue().contains(initializer)) {
+                    result.add(initializer);
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
      * The methods external code can call on an instance of a constructed internal class: those
      * it or an internal superclass declares that override a method of an external supertype.
      */
     private List<Member> callbacks(String type) {
+        return callbacks.computeIfAbsent(type, this::findCallbacks);
+    }
+
+    private List<Member> findCallbacks(String type) {
         var result = new ArrayList<Member>();
         for (var entry : graph.classes().entrySet()) {
             if (!isSubtype(type, entry.getKey())) {
