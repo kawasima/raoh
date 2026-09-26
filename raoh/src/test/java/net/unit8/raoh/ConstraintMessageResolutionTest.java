@@ -6,20 +6,29 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 import static net.unit8.raoh.decode.ObjectDecoders.date;
+import static net.unit8.raoh.decode.ObjectDecoders.dateTime;
 import static net.unit8.raoh.decode.ObjectDecoders.decimal;
 import static net.unit8.raoh.decode.ObjectDecoders.double_;
+import static net.unit8.raoh.decode.ObjectDecoders.enumOf;
 import static net.unit8.raoh.decode.ObjectDecoders.float_;
 import static net.unit8.raoh.decode.ObjectDecoders.int_;
+import static net.unit8.raoh.decode.ObjectDecoders.iso8601;
+import static net.unit8.raoh.decode.ObjectDecoders.literal;
 import static net.unit8.raoh.decode.ObjectDecoders.long_;
+import static net.unit8.raoh.decode.ObjectDecoders.offsetDateTime;
 import static net.unit8.raoh.decode.ObjectDecoders.string;
+import static net.unit8.raoh.decode.ObjectDecoders.time;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * End-to-end checks that each built-in constraint resolves to a message describing
@@ -262,6 +271,166 @@ class ConstraintMessageResolutionTest {
         var empty = ObjectDecoders.map(string()).nonempty().decode(java.util.Map.of(), Path.ROOT);
         assertEquals("must not be empty", en(empty));
         assertEquals("空にはできません", ja(empty));
+    }
+
+    // --- invalid_format: one key per format check ---
+
+    /**
+     * A format check, the key naming it, and the wording expected in each locale.
+     *
+     * @param label       what emitted the issue, for test names
+     * @param result      the failing decode result
+     * @param expectedKey the key that check must report
+     * @param expectedEn  the English wording, identical to the message stored at decode time
+     * @param expectedJa  the Japanese wording
+     */
+    record FormatCase(String label, Result<?> result, String expectedKey, String expectedEn, String expectedJa) {
+        @Override
+        public String toString() {
+            return label;
+        }
+    }
+
+    private static FormatCase f(String label, Result<?> result, String expectedKey, String expectedEn, String expectedJa) {
+        return new FormatCase(label, result, expectedKey, expectedEn, expectedJa);
+    }
+
+    /**
+     * Every check that reports {@code invalid_format} with a sentence of its own.
+     *
+     * <p>The temporal checks are listed twice: {@code StringDecoder} and
+     * {@code ObjectDecoders} parse text on separate code paths and must report the same
+     * key.
+     *
+     * @return one case per check and emitting decoder
+     */
+    static List<FormatCase> everyFormatCheck() {
+        var dateTimeEn = "not a valid ISO-8601 local date-time (e.g., 2024-01-15T10:30 or 2024-01-15T10:30:45)";
+        var dateTimeJa = "日時の形式が不正です（例: 2024-01-15T10:30 または 2024-01-15T10:30:45）";
+        var offsetEn = "not a valid ISO-8601 offset date-time (e.g., 2024-01-15T10:30:00+09:00)";
+        var offsetJa = "オフセット付き日時の形式が不正です（例: 2024-01-15T10:30:00+09:00）";
+        var instantJa = "日時の形式が不正です（例: 2024-01-15T01:30:00Z）";
+        return List.of(
+                f("email", string().email().decode("nope", Path.ROOT), MessageKeys.INVALID_FORMAT_EMAIL,
+                        "not a valid email", "メールアドレスの形式が不正です"),
+                f("url", string().url().decode("ftp://example.com", Path.ROOT), MessageKeys.INVALID_FORMAT_URL,
+                        "not a valid URL", "URLの形式が不正です"),
+                f("uri", string().uri().decode("not a uri", Path.ROOT), MessageKeys.INVALID_FORMAT_URI,
+                        "not a valid URI", "URIの形式が不正です"),
+                f("uuid", string().uuid().decode("nope", Path.ROOT), MessageKeys.INVALID_FORMAT_UUID,
+                        "not a valid UUID", "UUIDの形式が不正です"),
+                f("ip", string().ip().decode("nope", Path.ROOT), MessageKeys.INVALID_FORMAT_IP,
+                        "not a valid IP address", "IPアドレスの形式が不正です"),
+                f("ipv4", string().ipv4().decode("nope", Path.ROOT), MessageKeys.INVALID_FORMAT_IPV4,
+                        "not a valid IPv4 address", "IPv4アドレスの形式が不正です"),
+                f("ipv6", string().ipv6().decode("nope", Path.ROOT), MessageKeys.INVALID_FORMAT_IPV6,
+                        "not a valid IPv6 address", "IPv6アドレスの形式が不正です"),
+                f("ulid", string().ulid().decode("nope", Path.ROOT), MessageKeys.INVALID_FORMAT_ULID,
+                        "not a valid ULID", "ULIDの形式が不正です"),
+                f("cuid", string().cuid().decode("!!", Path.ROOT), MessageKeys.INVALID_FORMAT_CUID,
+                        "not a valid CUID", "CUIDの形式が不正です"),
+                f("startsWith", string().startsWith("ab").decode("xy", Path.ROOT), MessageKeys.INVALID_FORMAT_STARTS_WITH,
+                        "must start with \"ab\"", "「ab」で始まる必要があります"),
+                f("endsWith", string().endsWith("yz").decode("xy", Path.ROOT), MessageKeys.INVALID_FORMAT_ENDS_WITH,
+                        "must end with \"yz\"", "「yz」で終わる必要があります"),
+                f("includes", string().includes("mid").decode("xy", Path.ROOT), MessageKeys.INVALID_FORMAT_INCLUDES,
+                        "must include \"mid\"", "「mid」を含む必要があります"),
+                f("enumOf", enumOf(DayOfWeek.class).decode("someday", Path.ROOT), MessageKeys.INVALID_FORMAT_ENUM,
+                        "invalid value", "値が不正です"),
+                f("literal", literal("yes").decode("no", Path.ROOT), MessageKeys.INVALID_FORMAT_LITERAL,
+                        "invalid value", "値が不正です"),
+
+                f("string.iso8601", string().iso8601().decode("x", Path.ROOT), MessageKeys.INVALID_FORMAT_INSTANT,
+                        "not a valid ISO 8601 instant", instantJa),
+                f("string.date", string().date().decode("x", Path.ROOT), MessageKeys.INVALID_FORMAT_DATE,
+                        "not a valid date (yyyy-MM-dd)", "日付の形式が不正です（yyyy-MM-dd）"),
+                f("string.time", string().time().decode("x", Path.ROOT), MessageKeys.INVALID_FORMAT_TIME,
+                        "not a valid time (HH:mm:ss)", "時刻の形式が不正です（HH:mm:ss）"),
+                f("string.dateTime", string().dateTime().decode("x", Path.ROOT), MessageKeys.INVALID_FORMAT_DATE_TIME,
+                        dateTimeEn, dateTimeJa),
+                f("string.offsetDateTime", string().offsetDateTime().decode("x", Path.ROOT),
+                        MessageKeys.INVALID_FORMAT_OFFSET_DATE_TIME, offsetEn, offsetJa),
+
+                f("object.iso8601", iso8601().decode("x", Path.ROOT), MessageKeys.INVALID_FORMAT_INSTANT,
+                        "not a valid ISO 8601 instant", instantJa),
+                f("object.date", date().decode("x", Path.ROOT), MessageKeys.INVALID_FORMAT_DATE,
+                        "not a valid date (yyyy-MM-dd)", "日付の形式が不正です（yyyy-MM-dd）"),
+                f("object.time", time().decode("x", Path.ROOT), MessageKeys.INVALID_FORMAT_TIME,
+                        "not a valid time (HH:mm:ss)", "時刻の形式が不正です（HH:mm:ss）"),
+                f("object.dateTime", dateTime().decode("x", Path.ROOT), MessageKeys.INVALID_FORMAT_DATE_TIME,
+                        dateTimeEn, dateTimeJa),
+                f("object.offsetDateTime", offsetDateTime().decode("x", Path.ROOT),
+                        MessageKeys.INVALID_FORMAT_OFFSET_DATE_TIME, offsetEn, offsetJa)
+        );
+    }
+
+    /**
+     * Asserts that each format check reports the key that names it, under the
+     * unchanged {@code invalid_format} code.
+     *
+     * @param testCase the check and the key it must emit
+     */
+    @ParameterizedTest
+    @MethodSource("everyFormatCheck")
+    void formatCheckEmitsItsOwnMessageKey(FormatCase testCase) {
+        var issue = firstIssue(testCase.result());
+        assertEquals(testCase.expectedKey(), issue.messageKey());
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+    }
+
+    /**
+     * Asserts that a bundle resolves each format check to its own sentence rather than
+     * the generic {@code raoh.invalid_format} one.
+     *
+     * @param testCase the check and its expected wording
+     */
+    @ParameterizedTest
+    @MethodSource("everyFormatCheck")
+    void formatCheckResolvesToItsOwnWording(FormatCase testCase) {
+        assertEquals(testCase.expectedEn(), en(testCase.result()));
+        assertEquals(testCase.expectedJa(), ja(testCase.result()));
+    }
+
+    /**
+     * Asserts that the key changes nothing for a caller who never resolves: the stored
+     * message, the English bundle and {@link MessageResolver#DEFAULT} all give the
+     * sentence the decoder has always written.
+     *
+     * @param testCase the check and its expected wording
+     */
+    @ParameterizedTest
+    @MethodSource("everyFormatCheck")
+    void englishWordingIsUnchanged(FormatCase testCase) {
+        var issue = firstIssue(testCase.result());
+        assertEquals(testCase.expectedEn(), issue.message());
+        assertEquals(testCase.expectedEn(), issue.resolve(MessageResolver.DEFAULT).message());
+    }
+
+    /** {@code pattern()} keeps the plain key; its stored message is already the generic one. */
+    @Test
+    void patternKeepsThePlainInvalidFormatKey() {
+        var issue = firstIssue(string().pattern(Pattern.compile("[a-z]+")).decode("123", Path.ROOT));
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.messageKey());
+        assertEquals("invalid format", en(string().pattern(Pattern.compile("[a-z]+")).decode("123", Path.ROOT)));
+        assertEquals("形式が不正です", ja(string().pattern(Pattern.compile("[a-z]+")).decode("123", Path.ROOT)));
+    }
+
+    /** A pattern with a caller-supplied code reports that code as its key, as before. */
+    @Test
+    void patternWithCustomCodeKeepsThatCode() {
+        var issue = firstIssue(string().pattern(Pattern.compile("[a-z]+"), "lowercase_only").decode("123", Path.ROOT));
+        assertEquals("lowercase_only", issue.code());
+        assertEquals("lowercase_only", issue.messageKey());
+    }
+
+    /** A caller-supplied message still wins over the bundle; the key is recorded regardless. */
+    @Test
+    void customMessageOnAFormatCheckIsNotResolved() {
+        var result = string().email("メールアドレスを確認してください").decode("nope", Path.ROOT);
+        var issue = firstIssue(result);
+        assertEquals(MessageKeys.INVALID_FORMAT_EMAIL, issue.messageKey());
+        assertTrue(issue.customMessage());
+        assertEquals("メールアドレスを確認してください", en(result));
     }
 
     // --- No placeholder reaches a reader, for any built-in constraint ---

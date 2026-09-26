@@ -3,6 +3,7 @@ package net.unit8.raoh.decode;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Issues;
+import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
@@ -258,7 +259,8 @@ public final class ObjectDecoders {
             case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
             case LocalDate d -> Result.ok(d);
             case java.sql.Date sd -> Result.ok(sd.toLocalDate());
-            case String s -> parseText(path, s, LocalDate::parse, "not a valid date (yyyy-MM-dd)");
+            case String s -> parseText(path, s, LocalDate::parse, MessageKeys.INVALID_FORMAT_DATE,
+                    "not a valid date (yyyy-MM-dd)");
             default -> typeMismatch(path, "date", in);
         });
     }
@@ -279,7 +281,8 @@ public final class ObjectDecoders {
             case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
             case LocalTime t -> Result.ok(t);
             case java.sql.Time st -> Result.ok(st.toLocalTime());
-            case String s -> parseText(path, s, LocalTime::parse, "not a valid time (HH:mm:ss)");
+            case String s -> parseText(path, s, LocalTime::parse, MessageKeys.INVALID_FORMAT_TIME,
+                    "not a valid time (HH:mm:ss)");
             default -> typeMismatch(path, "time", in);
         });
     }
@@ -300,7 +303,7 @@ public final class ObjectDecoders {
             case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
             case LocalDateTime dt -> Result.ok(dt);
             case java.sql.Timestamp ts -> Result.ok(ts.toLocalDateTime());
-            case String s -> parseText(path, s, LocalDateTime::parse,
+            case String s -> parseText(path, s, LocalDateTime::parse, MessageKeys.INVALID_FORMAT_DATE_TIME,
                     "not a valid ISO-8601 local date-time (e.g., 2024-01-15T10:30 or 2024-01-15T10:30:45)");
             default -> typeMismatch(path, "date-time", in);
         });
@@ -322,7 +325,8 @@ public final class ObjectDecoders {
             case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
             case Instant i -> Result.ok(i);
             case java.sql.Timestamp ts -> Result.ok(ts.toInstant());
-            case String s -> parseText(path, s, Instant::parse, "not a valid ISO 8601 instant");
+            case String s -> parseText(path, s, Instant::parse, MessageKeys.INVALID_FORMAT_INSTANT,
+                    "not a valid ISO 8601 instant");
             default -> typeMismatch(path, "instant", in);
         });
     }
@@ -346,7 +350,7 @@ public final class ObjectDecoders {
         return new TemporalDecoder<>((in, path) -> switch (in) {
             case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
             case OffsetDateTime odt -> Result.ok(odt);
-            case String s -> parseText(path, s, OffsetDateTime::parse,
+            case String s -> parseText(path, s, OffsetDateTime::parse, MessageKeys.INVALID_FORMAT_OFFSET_DATE_TIME,
                     "not a valid ISO-8601 offset date-time (e.g., 2024-01-15T10:30:00+09:00)");
             default -> typeMismatch(path, "offset-date-time", in);
         });
@@ -359,14 +363,15 @@ public final class ObjectDecoders {
 
     /**
      * Parses ISO-8601 text with {@code parse}, reporting {@code invalid_format} on failure with
-     * the same message {@code StringDecoder} uses, so the two routes to a temporal value are
-     * indistinguishable from the caller's side.
+     * the same message key and message {@code StringDecoder} uses, so the two routes to a
+     * temporal value are indistinguishable from the caller's side.
      */
-    private static <T> Result<T> parseText(Path path, String text, Function<String, T> parse, String message) {
+    private static <T> Result<T> parseText(
+            Path path, String text, Function<String, T> parse, String messageKey, String message) {
         try {
             return Result.ok(parse.apply(text));
         } catch (DateTimeParseException e) {
-            return Result.fail(path, ErrorCodes.INVALID_FORMAT, message);
+            return Result.fail(path, ErrorCodes.INVALID_FORMAT, messageKey, message, Map.of());
         }
     }
 

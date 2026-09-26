@@ -52,9 +52,21 @@ raoh.out_of_range.before=must be before {before}
 raoh.out_of_range=must be between {min} and {max}
 ```
 
-`ResourceBundleMessageResolver` looks up `raoh.<messageKey>` first and `raoh.<code>` second, so a bundle that only defines code-level keys keeps working. The constants are in `MessageKeys`; a key is always its error code, a dot, and a qualifier.
+`ResourceBundleMessageResolver` looks up `raoh.<messageKey>` first and `raoh.<code>` second, so a bundle that only defines code-level keys keeps working. The locale comes before the key: both keys are tried in the requested locale's file before either is tried in a less specific one. A `messages_fr.properties` that translates only `raoh.invalid_format` is therefore used for an `email()` failure even when `messages.properties` defines `raoh.invalid_format.email`. The constants are in `MessageKeys`; a key is always its error code, a dot, and a qualifier.
 
 `Issue.code()` is unchanged and stays the thing to branch on in code. Only the wording is selected by the key.
+
+`invalid_format` works the same way. `email()`, `uuid()`, `startsWith()`, `enumOf()`, the ISO-8601 parsers and the other format checks each report a key of their own, so a catalogue can say which format was expected instead of a bare "invalid format":
+
+```properties
+raoh.invalid_format.email=not a valid email
+raoh.invalid_format.uuid=not a valid UUID
+raoh.invalid_format.starts_with=must start with "{prefix}"
+raoh.invalid_format.date=not a valid date (yyyy-MM-dd)
+raoh.invalid_format=invalid format
+```
+
+The full list is in `MessageKeys`, and the bundled `messages.properties` and `messages_ja.properties` define all of them. `pattern()` reports the plain `invalid_format` key. The key strings match raoh-rust's message catalogue, so the same catalogue serves both.
 
 ## Resolvers can decline
 

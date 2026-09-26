@@ -10,6 +10,47 @@ detailed from the current development cycle onward.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A format check no longer resolves to the generic `invalid format`.** `email()`, `url()`,
+  `uuid()`, `startsWith()`, `enumOf()`, the ISO-8601 parsers and the other format checks all
+  report `invalid_format`, and until now they also shared `invalid_format` as their message key.
+  What told `not a valid email` apart from `not a valid UUID` was only the English sentence written
+  into the issue, so a `ResourceBundle` applied `raoh.invalid_format` to every one of them: an email
+  failure resolved to `invalid format` in English and `形式が不正です` in Japanese. `startsWith("ab")`
+  lost the prefix it asked for, although its metadata carries it. This is the gap
+  [#125](https://github.com/kawasima/raoh/pull/125) closed for `out_of_range`, left open for
+  `invalid_format`.
+- **A partial locale bundle is no longer overridden by the base bundle's refined keys.**
+  `ResourceBundleMessageResolver` searched `raoh.<messageKey>` and then `raoh.<code>` over the
+  bundle `ResourceBundle.getBundle` returns, and that bundle answers for its parents too. With
+  `raoh.out_of_range.minimum` in `messages.properties` and only `raoh.out_of_range` in a user's
+  `messages_fr.properties`, a French request got the English refined template. The resolver now
+  searches each locale's own file, most specific first, and tries both keys in one file before
+  moving to the next. The same change lets a locale template whose placeholders the metadata
+  cannot supply fall through to the base bundle's template for the same key, which it used to
+  hide. Present since [#125](https://github.com/kawasima/raoh/pull/125).
+
+### Added
+
+- **A message key for each format check**, under the unchanged `invalid_format` code, with templates
+  in both shipped locales:
+  `raoh.invalid_format.{email,url,uri,uuid,ip,ipv4,ipv6,ulid,cuid,starts_with,ends_with,includes,enum,literal}`
+  and, for the ISO-8601 parsers on `StringDecoder` and `ObjectDecoders`,
+  `raoh.invalid_format.{instant,date,time,date_time,offset_date_time}`. Constants are in
+  `MessageKeys`. The key strings match raoh-rust's message catalogue, so a catalogue can be shared
+  between the two. `pattern()` keeps the plain `invalid_format` key, since its message is already the
+  generic one, and `pattern(p, code)` keeps reporting the caller's code.
+
+### Changed
+
+- **Format checks carry a refined `messageKey`.** The English message stored on each issue is
+  byte-identical to before, and `MessageResolver.DEFAULT` resolves each key to that same sentence. A
+  bundle that defines only `raoh.invalid_format` still resolves these issues, because
+  `ResourceBundleMessageResolver` falls back from the message key to the code. Since
+  `Issue.equals` compares `messageKey`, an expected `Issue` built with
+  `Issue.of(path, "invalid_format", "not a valid email")` no longer equals the one `email()` emits.
+
 ## [0.7.2] - 2026-08-07
 
 > **Read the Changed section before upgrading.** This is a patch release, but `Issue` gained a

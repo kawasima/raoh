@@ -64,4 +64,66 @@ public final class MessageKeys {
      * {@code minSize(1)} reports with the same code and the same metadata.
      */
     public static final String TOO_SMALL_NONEMPTY = "too_small.nonempty";
+
+    // --- String formats and parsed values (ErrorCodes.INVALID_FORMAT) ---
+    //
+    // pattern() keeps the plain ErrorCodes.INVALID_FORMAT key: its message is already the
+    // generic "invalid format", and the pattern it carries is not something a reader can act on.
+
+    /** Email address from {@code email()}. */
+    public static final String INVALID_FORMAT_EMAIL = "invalid_format.email";
+
+    /** Absolute http or https URL from {@code url()}. */
+    public static final String INVALID_FORMAT_URL = "invalid_format.url";
+
+    /** URI of any scheme from {@code uri()}. */
+    public static final String INVALID_FORMAT_URI = "invalid_format.uri";
+
+    /** UUID from {@code uuid()}. */
+    public static final String INVALID_FORMAT_UUID = "invalid_format.uuid";
+
+    /** IPv4 or IPv6 address from {@code ip()}. */
+    public static final String INVALID_FORMAT_IP = "invalid_format.ip";
+
+    /** IPv4 address from {@code ipv4()}. */
+    public static final String INVALID_FORMAT_IPV4 = "invalid_format.ipv4";
+
+    /** IPv6 address from {@code ipv6()}. */
+    public static final String INVALID_FORMAT_IPV6 = "invalid_format.ipv6";
+
+    /** ULID from {@code ulid()}. */
+    public static final String INVALID_FORMAT_ULID = "invalid_format.ulid";
+
+    /** CUID from {@code cuid()}. */
+    public static final String INVALID_FORMAT_CUID = "invalid_format.cuid";
+
+    /** Required prefix from {@code startsWith(prefix)}. Supplies {@code prefix}. */
+    public static final String INVALID_FORMAT_STARTS_WITH = "invalid_format.starts_with";
+
+    /** Required suffix from {@code endsWith(suffix)}. Supplies {@code suffix}. */
+    public static final String INVALID_FORMAT_ENDS_WITH = "invalid_format.ends_with";
+
+    /** Required substring from {@code includes(substring)}. Supplies {@code substring}. */
+    public static final String INVALID_FORMAT_INCLUDES = "invalid_format.includes";
+
+    /** Enum constant name from {@code enumOf(cls)}. Supplies {@code allowed}. */
+    public static final String INVALID_FORMAT_ENUM = "invalid_format.enum";
+
+    /** Exact string from {@code literal(expected)}. Supplies {@code expected}. */
+    public static final String INVALID_FORMAT_LITERAL = "invalid_format.literal";
+
+    /** ISO-8601 instant from {@code iso8601()}. */
+    public static final String INVALID_FORMAT_INSTANT = "invalid_format.instant";
+
+    /** ISO-8601 local date from {@code date()}. */
+    public static final String INVALID_FORMAT_DATE = "invalid_format.date";
+
+    /** ISO-8601 local time from {@code time()}. */
+    public static final String INVALID_FORMAT_TIME = "invalid_format.time";
+
+    /** ISO-8601 local date-time from {@code dateTime()}. */
+    public static final String INVALID_FORMAT_DATE_TIME = "invalid_format.date_time";
+
+    /** ISO-8601 offset date-time from {@code offsetDateTime()}. */
+    public static final String INVALID_FORMAT_OFFSET_DATE_TIME = "invalid_format.offset_date_time";
 }

@@ -2,6 +2,7 @@ package net.unit8.raoh.decode.builtin;
 
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
@@ -291,9 +292,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
         return chain((value, path) -> {
             if (!value.startsWith(prefix)) {
                 var meta = Map.<String, Object>of("prefix", prefix);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, meta)
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "must start with \"%s\"".formatted(prefix), meta);
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_STARTS_WITH,
+                        message, "must start with \"%s\"".formatted(prefix), meta);
             }
             return Result.ok(value);
         });
@@ -320,9 +320,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
         return chain((value, path) -> {
             if (!value.endsWith(suffix)) {
                 var meta = Map.<String, Object>of("suffix", suffix);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, meta)
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "must end with \"%s\"".formatted(suffix), meta);
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_ENDS_WITH,
+                        message, "must end with \"%s\"".formatted(suffix), meta);
             }
             return Result.ok(value);
         });
@@ -349,9 +348,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
         return chain((value, path) -> {
             if (!value.contains(substring)) {
                 var meta = Map.<String, Object>of("substring", substring);
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, meta)
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "must include \"%s\"".formatted(substring), meta);
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_INCLUDES,
+                        message, "must include \"%s\"".formatted(substring), meta);
             }
             return Result.ok(value);
         });
@@ -377,9 +375,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     public StringDecoder<I> email(@Nullable String message) {
         return chain((value, path) -> {
             if (value.length() > MAX_EMAIL_LENGTH || !EMAIL_PATTERN.matcher(value).matches()) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid email");
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_EMAIL,
+                        message, "not a valid email", Map.of());
             }
             return Result.ok(value);
         });
@@ -419,24 +416,21 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     public Decoder<I, URI> url(@Nullable String message) {
         return (in, path) -> this.decode(in, path).flatMap(value -> {
             if (value.length() > MAX_URL_LENGTH) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid URL");
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_URL,
+                        message, "not a valid URL", Map.of());
             }
             try {
                 var uri = URI.create(value);
                 var scheme = uri.getScheme();
                 if ((!"http".equals(scheme) && !"https".equals(scheme))
                         || uri.getHost() == null || uri.getHost().isEmpty()) {
-                    return message != null
-                            ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                            : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid URL");
+                    return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_URL,
+                            message, "not a valid URL", Map.of());
                 }
                 return Result.ok(uri);
             } catch (IllegalArgumentException e) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid URL");
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_URL,
+                        message, "not a valid URL", Map.of());
             }
         });
     }
@@ -459,9 +453,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     public StringDecoder<I> ipv4(@Nullable String message) {
         return chain((value, path) -> {
             if (value.length() > MAX_IP_LENGTH || !IPV4_PATTERN.matcher(value).matches()) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid IPv4 address");
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_IPV4,
+                        message, "not a valid IPv4 address", Map.of());
             }
             return Result.ok(value);
         });
@@ -486,9 +479,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     public StringDecoder<I> ipv6(@Nullable String message) {
         return chain((value, path) -> {
             if (value.length() > MAX_IP_LENGTH || !isIPv6(value)) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid IPv6 address");
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_IPV6,
+                        message, "not a valid IPv6 address", Map.of());
             }
             return Result.ok(value);
         });
@@ -513,9 +505,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
         return chain((value, path) -> {
             if (value.length() > MAX_IP_LENGTH
                     || (!IPV4_PATTERN.matcher(value).matches() && !isIPv6(value))) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid IP address");
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_IP,
+                        message, "not a valid IP address", Map.of());
             }
             return Result.ok(value);
         });
@@ -552,9 +543,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     public StringDecoder<I> cuid(@Nullable String message) {
         return chain((value, path) -> {
             if (!CUID_PATTERN.matcher(value).matches()) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid CUID");
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_CUID,
+                        message, "not a valid CUID", Map.of());
             }
             return Result.ok(value);
         });
@@ -578,9 +568,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     public StringDecoder<I> ulid(@Nullable String message) {
         return chain((value, path) -> {
             if (!ULID_PATTERN.matcher(value).matches()) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid ULID");
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_ULID,
+                        message, "not a valid ULID", Map.of());
             }
             return Result.ok(value);
         });
@@ -684,9 +673,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
             try {
                 return Result.ok(UUID.fromString(value));
             } catch (IllegalArgumentException e) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid UUID");
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_UUID,
+                        message, "not a valid UUID", Map.of());
             }
         });
     }
@@ -713,9 +701,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
             try {
                 return Result.ok(URI.create(value));
             } catch (IllegalArgumentException e) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid URI");
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_URI,
+                        message, "not a valid URI", Map.of());
             }
         });
     }
@@ -740,9 +727,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
             try {
                 return Result.ok(Instant.parse(value));
             } catch (DateTimeParseException e) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid ISO 8601 instant");
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_INSTANT,
+                        message, "not a valid ISO 8601 instant", Map.of());
             }
         }));
     }
@@ -767,9 +753,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
             try {
                 return Result.ok(LocalDate.parse(value));
             } catch (DateTimeParseException e) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid date (yyyy-MM-dd)");
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_DATE,
+                        message, "not a valid date (yyyy-MM-dd)", Map.of());
             }
         }));
     }
@@ -794,9 +779,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
             try {
                 return Result.ok(LocalTime.parse(value));
             } catch (DateTimeParseException e) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid time (HH:mm:ss)");
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_TIME,
+                        message, "not a valid time (HH:mm:ss)", Map.of());
             }
         }));
     }
@@ -821,9 +805,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
             try {
                 return Result.ok(LocalDateTime.parse(value));
             } catch (DateTimeParseException e) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid ISO-8601 local date-time (e.g., 2024-01-15T10:30 or 2024-01-15T10:30:45)");
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_DATE_TIME,
+                        message, "not a valid ISO-8601 local date-time (e.g., 2024-01-15T10:30 or 2024-01-15T10:30:45)", Map.of());
             }
         }));
     }
@@ -848,9 +831,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
             try {
                 return Result.ok(OffsetDateTime.parse(value));
             } catch (DateTimeParseException e) {
-                return message != null
-                        ? Result.failCustom(path, ErrorCodes.INVALID_FORMAT, message, Map.of())
-                        : Result.fail(path, ErrorCodes.INVALID_FORMAT, "not a valid ISO-8601 offset date-time (e.g., 2024-01-15T10:30:00+09:00)");
+                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_OFFSET_DATE_TIME,
+                        message, "not a valid ISO-8601 offset date-time (e.g., 2024-01-15T10:30:00+09:00)", Map.of());
             }
         }));
     }
