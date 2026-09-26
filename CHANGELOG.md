@@ -12,6 +12,12 @@ detailed from the current development cycle onward.
 
 ### Fixed
 
+- **`MapDecoders.nested()` checks every key, not only the first.** It cast the map to
+  `Map<String, Object>` when its first key was a `String`, so a later `Integer` key reached the inner
+  decoder and surfaced as a `ClassCastException` (under `strict(...)`, for one) instead of an issue,
+  and whether a mixed map was rejected at all depended on iteration order. It now reports
+  `type_mismatch` at the map's path, before the inner decoder runs
+  ([#133](https://github.com/kawasima/raoh/issues/133)).
 - **A format check no longer resolves to the generic `invalid format`.** `email()`, `url()`,
   `uuid()`, `startsWith()`, `enumOf()`, the ISO-8601 parsers and the other format checks all
   report `invalid_format`, and until now they also shared `invalid_format` as their message key.
@@ -44,6 +50,13 @@ detailed from the current development cycle onward.
 
 ### Changed
 
+- **`ObjectDecoders.map()` requires `String` keys.** It converted each key with `String.valueOf`
+  and used the result as the output key, so `1` and `"1"`, or `null` and `"null"`, became one key and
+  one of the two values was dropped with no issue. A map with any key that is not a non-null `String`
+  now fails with `type_mismatch` at the map's own path (`actual` is e.g. `Integer key`), checked before
+  any value is decoded. A caller that relied on the conversion must turn its keys into strings itself,
+  where it can decide what a collision means
+  ([#133](https://github.com/kawasima/raoh/issues/133)).
 - **Format checks carry a refined `messageKey`.** The English message stored on each issue is
   byte-identical to before, and `MessageResolver.DEFAULT` resolves each key to that same sentence. A
   bundle that defines only `raoh.invalid_format` still resolves these issues, because

@@ -437,11 +437,12 @@ public final class ObjectDecoders {
 
     /**
      * Creates a map decoder that decodes each value of a {@code Map<String, ?>} with the given
-     * decoder, accumulating all errors. Non-{@link String} keys are converted via
-     * {@link String#valueOf(Object)}; {@link String} keys are used directly.
+     * decoder, accumulating all errors.
      *
-     * <p>Returns {@code required} if the value is {@code null},
-     * and {@code type_mismatch} if the value is not a {@link Map}.
+     * <p>Returns {@code required} if the value is {@code null}, and {@code type_mismatch} if the
+     * value is not a {@link Map} or any of its keys is not a non-null {@link String}. Keys are
+     * checked before any value is decoded, and a bad key is reported at the map's own path: it is
+     * never converted to a string, since {@code 1} and {@code "1"} would then be the same key.
      *
      * @param <V>    the decoded value type
      * @param valDec the decoder for each map value
@@ -456,13 +457,17 @@ public final class ObjectDecoders {
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected object",
                         Map.of("expected", "object", "actual", in.getClass().getSimpleName()));
             }
+            var badKey = nonStringKey(rawMap);
+            if (badKey != null) {
+                return nonStringKeyFailure(path, badKey);
+            }
             var issues = Issues.EMPTY;
             var results = new LinkedHashMap<String, V>();
             for (var entry : rawMap.entrySet()) {
-                var keyPath = path.append(String.valueOf(entry.getKey()));
-                var r = valDec.decode(entry.getValue(), keyPath);
+                var key = (String) entry.getKey();
+                var r = valDec.decode(entry.getValue(), path.append(key));
                 switch (r) {
-                    case Ok<V> ok -> results.put(String.valueOf(entry.getKey()), ok.value());
+                    case Ok<V> ok -> results.put(key, ok.value());
                     case Err<V> err -> issues = issues.merge(err.issues());
                 }
             }
@@ -471,6 +476,28 @@ public final class ObjectDecoders {
             }
             return Result.ok(Map.copyOf(results));
         });
+    }
+
+    /**
+     * Describes the first key of {@code map} that is not a {@link String}, or returns {@code null}
+     * if every key is one. Every key is checked: a map is a {@code Map<String, ?>} only if all of
+     * them are, and the first key says nothing about the rest.
+     *
+     * <p>{@code MapDecoders.nested()} applies the same check at the same boundary.
+     */
+    private static @Nullable String nonStringKey(Map<?, ?> map) {
+        for (var key : map.keySet()) {
+            if (!(key instanceof String)) {
+                return key == null ? "null" : key.getClass().getSimpleName();
+            }
+        }
+        return null;
+    }
+
+    private static <T> Result<T> nonStringKeyFailure(Path path, String badKey) {
+        return Result.fail(path, ErrorCodes.TYPE_MISMATCH,
+                "expected object with string keys, got a " + badKey + " key",
+                Map.of("expected", "object", "actual", badKey + " key"));
     }
 
     // --- bytes ---

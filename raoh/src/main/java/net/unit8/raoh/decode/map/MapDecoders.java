@@ -97,6 +97,10 @@ public final class MapDecoders {
      * {@code Decoder<Map<String, Object>, T>} — there is a type gap between {@code Object}
      * and {@code Map<String, Object>} that {@code nested()} bridges.
      *
+     * <p>Returns {@code required} if the value is {@code null}, and {@code type_mismatch} at the
+     * value's path if it is not a {@link Map} or any of its keys is not a non-null {@link String}.
+     * All keys are checked before {@code dec} runs.
+     *
      * <p><strong>Usage example</strong></p>
      * <pre>{@code
      * // Address decoder expects Map<String, Object> as its input
@@ -130,19 +134,35 @@ public final class MapDecoders {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
-            // Use Map<String, ?> pattern to ensure keys are Strings before casting.
-            if (!(in instanceof Map<?, ?> rawMap) || !isStringKeyedMap(rawMap)) {
+            if (!(in instanceof Map<?, ?> rawMap)) {
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected object",
                         Map.of("expected", "object", "actual", in.getClass().getSimpleName()));
+            }
+            // Every key must be a String before the cast; the inner decoder never sees a bad key.
+            var badKey = nonStringKey(rawMap);
+            if (badKey != null) {
+                return Result.fail(path, ErrorCodes.TYPE_MISMATCH,
+                        "expected object with string keys, got a " + badKey + " key",
+                        Map.of("expected", "object", "actual", badKey + " key"));
             }
             return dec.decode((Map<String, Object>) rawMap, path);
         };
     }
 
-    private static boolean isStringKeyedMap(Map<?, ?> map) {
-        if (map.isEmpty()) return true;
-        // Check only the first key; a heterogeneous map would be a programming error upstream.
-        return map.keySet().iterator().next() instanceof String;
+    /**
+     * Describes the first key of {@code map} that is not a {@link String}, or returns {@code null}
+     * if every key is one. Every key is checked: a map is a {@code Map<String, ?>} only if all of
+     * them are, and the first key says nothing about the rest.
+     *
+     * <p>{@code ObjectDecoders.map()} applies the same check at the same boundary.
+     */
+    private static @Nullable String nonStringKey(Map<?, ?> map) {
+        for (var key : map.keySet()) {
+            if (!(key instanceof String)) {
+                return key == null ? "null" : key.getClass().getSimpleName();
+            }
+        }
+        return null;
     }
 
     /**
