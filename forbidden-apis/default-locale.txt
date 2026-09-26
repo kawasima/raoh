@@ -1,4 +1,4 @@
-# JDK calls that read the JVM default locale. A decoder's result must not depend on it (#136),
+# JDK calls that read the JVM default locale. A built-in decoder does not itself read it (#136),
 # so the forbiddenapis plugin (configured in the parent POM) fails the build on any of them.
 # Pass Locale.ROOT, or the locale the caller chose, instead.
 #

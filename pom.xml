@@ -148,7 +148,7 @@
                     </executions>
                 </plugin>
                 <!--
-                    A decoder's result must not depend on the JVM default locale: in tr-TR,
+                    A built-in decoder does not itself read the JVM default locale: in tr-TR,
                     "TITLE".toLowerCase() is "tıtle", and in th-TH-u-nu-thai "%d".formatted(1000)
                     is "๑๐๐๐" (#136). This check fails the build on JDK calls that read the default
                     locale, so a new call site cannot bring it back. Pass Locale.ROOT instead.

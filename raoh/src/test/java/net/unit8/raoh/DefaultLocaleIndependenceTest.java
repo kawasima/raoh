@@ -15,13 +15,12 @@ import static net.unit8.raoh.decode.ObjectDecoders.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * A decoder's result is a function of its input and configuration, never of the JVM default
- * locale (#136). Each case is run under {@link Locale#ROOT} to get a baseline, then under
+ * The decoding paths covered here do not themselves read the JVM default locale (#136). Each case is run under {@link Locale#ROOT} to get a baseline, then under
  * locales whose case mapping or digits differ from it; the whole {@link Result} — value, or
  * every issue's path, code, message key, message, meta and custom flag — must be identical.
  *
- * <p>This checks observable results, not call sites. The build's forbidden-API check is what
- * keeps a new locale-sensitive call from being added to a decoder that no case here covers.
+ * <p>This checks observable results for the cases listed here, not call sites. The build's
+ * forbidden-API check stops known locale-reading calls; guarding every call site is #151.
  */
 @ResourceLock(Resources.LOCALE)
 class DefaultLocaleIndependenceTest {

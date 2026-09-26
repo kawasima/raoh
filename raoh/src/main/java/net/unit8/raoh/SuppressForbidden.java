@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
  *
  * <p>The check (the {@code forbiddenapis} plugin, configured in the parent POM, with the list in
  * {@code forbidden-apis/default-locale.txt}) rejects JDK calls that read the JVM default locale,
- * because a decoder's result must not depend on it. Use this only where depending on the default
+ * because a built-in decoder does not itself read ambient state. Use this only where depending on the default
  * locale is the method's documented job, and say why in {@link #value()}. The plugin matches any
  * annotation named {@code SuppressForbidden}, so the library needs no dependency on it.
  */
