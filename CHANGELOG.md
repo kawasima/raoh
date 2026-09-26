@@ -10,6 +10,16 @@ detailed from the current development cycle onward.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-27
+
+> **Read the two Breaking entries under Changed before upgrading.** The `java.sql` temporal inputs
+> and non-JDK `Number` subclasses that `ObjectDecoders` used to accept now report
+> `type_mismatch`. Several other decoders also accept a different set of inputs than in 0.7.2
+> (`nonBlank()`, `trim()`, `enumOf()`, `toBool()`, `ipv6()`, `iso8601()`), and
+> `Path.toJsonPointer()` escapes `~` and `/`. The japicmp report against 0.7.2 lists only
+> additions (`CodePointOrder`, new `MessageKeys` constants): these are changes of behaviour, not
+> of signatures.
+
 ### Changed
 
 - **`nonBlank()` and `trim()` share one whitespace definition.** `nonBlank()` used
@@ -803,7 +813,8 @@ detailed from the current development cycle onward.
   `Presence`), `Map<String, Object>` decoders, error model, a Spring Boot example, and a README with
   an Elm-decoder comparison.
 
-[Unreleased]: https://github.com/kawasima/raoh/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/kawasima/raoh/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/kawasima/raoh/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/kawasima/raoh/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/kawasima/raoh/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/kawasima/raoh/compare/v0.6.0...v0.7.0
