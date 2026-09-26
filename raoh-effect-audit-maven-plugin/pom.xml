@@ -11,19 +11,15 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>raoh-gsh-maven-plugin</artifactId>
+    <artifactId>raoh-effect-audit-maven-plugin</artifactId>
     <packaging>maven-plugin</packaging>
 
-    <name>Raoh GSH Maven Plugin</name>
-    <description>Maven plugin for weaving domain construction guards into compiled classes</description>
+    <name>Raoh Effect Audit Maven Plugin</name>
+    <description>Build-internal check that every external call in Raoh's bytecode has a reviewed effect.
+        Used by the raoh, raoh-json and raoh-jooq builds; not published.</description>
     <url>https://github.com/kawasima/raoh</url>
 
     <dependencies>
-        <dependency>
-            <groupId>net.unit8.raoh</groupId>
-            <artifactId>raoh-gsh-weaver</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-plugin-api</artifactId>
@@ -46,10 +42,21 @@
 
     <build>
         <plugins>
+            <!-- The raoh modules use this plugin from the same reactor, and Maven reads its
+                 descriptor to plan their builds. The descriptor is normally written at
+                 process-classes, so a build that stops at compile (mvn compile, the CI
+                 nullcheck job) would plan them without one and fail. Write it right after the
+                 classes are compiled instead. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-plugin-plugin</artifactId>
                 <version>${maven-plugin-tools.version}</version>
+                <executions>
+                    <execution>
+                        <id>default-descriptor</id>
+                        <phase>compile</phase>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

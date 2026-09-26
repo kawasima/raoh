@@ -1,0 +1,75 @@
+# Approved uses of DELEGATED and AMBIENT members in raoh-json (#151).
+#
+# Each heading is the reason; the lines under it are the uses it covers, as "caller -> member".
+# The caller of a DELEGATED use is Class#method, so overloads share it; the caller of an AMBIENT
+# use is the exact method, descriptor included, so the approval covers that method alone.
+# raoh-effect-audit-maven-plugin fails the build on a use missing here and on a line that matches
+# no use. See effect-audit/catalog.txt for the effects.
+
+[observes the input through its own interface]
+net.unit8.raoh.json.JsonDecoders#<clinit> -> tools.jackson.databind.JsonNode#isObject():boolean
+net.unit8.raoh.json.JsonDecoders#<clinit> -> tools.jackson.databind.JsonNode#propertyNames():java.util.Collection
+net.unit8.raoh.json.JsonDecoders#allowBlankBase -> tools.jackson.databind.JsonNode#asString():java.lang.String
+net.unit8.raoh.json.JsonDecoders#allowBlankBase -> tools.jackson.databind.JsonNode#isMissingNode():boolean
+net.unit8.raoh.json.JsonDecoders#allowBlankBase -> tools.jackson.databind.JsonNode#isNull():boolean
+net.unit8.raoh.json.JsonDecoders#allowBlankBase -> tools.jackson.databind.JsonNode#isString():boolean
+net.unit8.raoh.json.JsonDecoders#bool -> tools.jackson.databind.JsonNode#booleanValue():boolean
+net.unit8.raoh.json.JsonDecoders#bool -> tools.jackson.databind.JsonNode#isBoolean():boolean
+net.unit8.raoh.json.JsonDecoders#bool -> tools.jackson.databind.JsonNode#isMissingNode():boolean
+net.unit8.raoh.json.JsonDecoders#bool -> tools.jackson.databind.JsonNode#isNull():boolean
+net.unit8.raoh.json.JsonDecoders#decimal -> tools.jackson.databind.JsonNode#isMissingNode():boolean
+net.unit8.raoh.json.JsonDecoders#decimal -> tools.jackson.databind.JsonNode#isNull():boolean
+net.unit8.raoh.json.JsonDecoders#decimal -> tools.jackson.databind.JsonNode#isNumber():boolean
+net.unit8.raoh.json.JsonDecoders#decimal -> tools.jackson.databind.JsonNode#numberValue():java.lang.Number
+net.unit8.raoh.json.JsonDecoders#double_ -> tools.jackson.databind.JsonNode#isMissingNode():boolean
+net.unit8.raoh.json.JsonDecoders#double_ -> tools.jackson.databind.JsonNode#isNull():boolean
+net.unit8.raoh.json.JsonDecoders#double_ -> tools.jackson.databind.JsonNode#isNumber():boolean
+net.unit8.raoh.json.JsonDecoders#double_ -> tools.jackson.databind.JsonNode#numberValue():java.lang.Number
+net.unit8.raoh.json.JsonDecoders#field -> tools.jackson.databind.JsonNode#get(java.lang.String):tools.jackson.databind.JsonNode
+net.unit8.raoh.json.JsonDecoders#field -> tools.jackson.databind.JsonNode#isObject():boolean
+net.unit8.raoh.json.JsonDecoders#float_ -> tools.jackson.databind.JsonNode#isMissingNode():boolean
+net.unit8.raoh.json.JsonDecoders#float_ -> tools.jackson.databind.JsonNode#isNull():boolean
+net.unit8.raoh.json.JsonDecoders#float_ -> tools.jackson.databind.JsonNode#isNumber():boolean
+net.unit8.raoh.json.JsonDecoders#float_ -> tools.jackson.databind.JsonNode#numberValue():java.lang.Number
+net.unit8.raoh.json.JsonDecoders#int_ -> tools.jackson.databind.JsonNode#isIntegralNumber():boolean
+net.unit8.raoh.json.JsonDecoders#int_ -> tools.jackson.databind.JsonNode#isMissingNode():boolean
+net.unit8.raoh.json.JsonDecoders#int_ -> tools.jackson.databind.JsonNode#isNull():boolean
+net.unit8.raoh.json.JsonDecoders#int_ -> tools.jackson.databind.JsonNode#numberValue():java.lang.Number
+net.unit8.raoh.json.JsonDecoders#list -> tools.jackson.databind.JsonNode#get(int):tools.jackson.databind.JsonNode
+net.unit8.raoh.json.JsonDecoders#list -> tools.jackson.databind.JsonNode#isArray():boolean
+net.unit8.raoh.json.JsonDecoders#list -> tools.jackson.databind.JsonNode#isMissingNode():boolean
+net.unit8.raoh.json.JsonDecoders#list -> tools.jackson.databind.JsonNode#isNull():boolean
+net.unit8.raoh.json.JsonDecoders#list -> tools.jackson.databind.JsonNode#size():int
+net.unit8.raoh.json.JsonDecoders#long_ -> tools.jackson.databind.JsonNode#isIntegralNumber():boolean
+net.unit8.raoh.json.JsonDecoders#long_ -> tools.jackson.databind.JsonNode#isMissingNode():boolean
+net.unit8.raoh.json.JsonDecoders#long_ -> tools.jackson.databind.JsonNode#isNull():boolean
+net.unit8.raoh.json.JsonDecoders#long_ -> tools.jackson.databind.JsonNode#numberValue():java.lang.Number
+net.unit8.raoh.json.JsonDecoders#map -> java.util.Iterator#hasNext():boolean
+net.unit8.raoh.json.JsonDecoders#map -> java.util.Iterator#next():java.lang.Object
+net.unit8.raoh.json.JsonDecoders#map -> java.util.Map$Entry#getKey():java.lang.Object
+net.unit8.raoh.json.JsonDecoders#map -> java.util.Map$Entry#getValue():java.lang.Object
+net.unit8.raoh.json.JsonDecoders#map -> java.util.Set#iterator():java.util.Iterator
+net.unit8.raoh.json.JsonDecoders#map -> tools.jackson.databind.JsonNode#isMissingNode():boolean
+net.unit8.raoh.json.JsonDecoders#map -> tools.jackson.databind.JsonNode#isNull():boolean
+net.unit8.raoh.json.JsonDecoders#map -> tools.jackson.databind.JsonNode#isObject():boolean
+net.unit8.raoh.json.JsonDecoders#map -> tools.jackson.databind.JsonNode#properties():java.util.Set
+net.unit8.raoh.json.JsonDecoders#nullable -> tools.jackson.databind.JsonNode#isNull():boolean
+net.unit8.raoh.json.JsonDecoders#nullableField -> tools.jackson.databind.JsonNode#get(java.lang.String):tools.jackson.databind.JsonNode
+net.unit8.raoh.json.JsonDecoders#nullableField -> tools.jackson.databind.JsonNode#isMissingNode():boolean
+net.unit8.raoh.json.JsonDecoders#nullableField -> tools.jackson.databind.JsonNode#isNull():boolean
+net.unit8.raoh.json.JsonDecoders#nullableField -> tools.jackson.databind.JsonNode#isObject():boolean
+net.unit8.raoh.json.JsonDecoders#optionalField -> tools.jackson.databind.JsonNode#get(java.lang.String):tools.jackson.databind.JsonNode
+net.unit8.raoh.json.JsonDecoders#optionalField -> tools.jackson.databind.JsonNode#isMissingNode():boolean
+net.unit8.raoh.json.JsonDecoders#optionalField -> tools.jackson.databind.JsonNode#isObject():boolean
+net.unit8.raoh.json.JsonDecoders#optionalNullableField -> tools.jackson.databind.JsonNode#get(java.lang.String):tools.jackson.databind.JsonNode
+net.unit8.raoh.json.JsonDecoders#optionalNullableField -> tools.jackson.databind.JsonNode#isMissingNode():boolean
+net.unit8.raoh.json.JsonDecoders#optionalNullableField -> tools.jackson.databind.JsonNode#isNull():boolean
+net.unit8.raoh.json.JsonDecoders#optionalNullableField -> tools.jackson.databind.JsonNode#isObject():boolean
+net.unit8.raoh.json.JsonDecoders#typeMismatch -> tools.jackson.databind.JsonNode#getNodeType():tools.jackson.databind.node.JsonNodeType
+
+[the receiver is an object Raoh created: a collection, map, iterator or stream it built, or the result of a JDK parser it called]
+net.unit8.raoh.json.JsonDecoders#list -> java.util.ArrayList#add(java.lang.Object):boolean
+net.unit8.raoh.json.JsonDecoders#map -> java.util.LinkedHashMap#put(java.lang.Object,java.lang.Object):java.lang.Object
+
+[builds a map whose keys are String constants]
+net.unit8.raoh.json.JsonDecoders#typeMismatch -> java.util.Map#of(java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object):java.util.Map

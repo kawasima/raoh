@@ -37,6 +37,7 @@
     </developers>
 
     <modules>
+        <module>raoh-effect-audit-maven-plugin</module>
         <module>raoh</module>
         <module>raoh-json</module>
         <module>raoh-jooq</module>
@@ -52,6 +53,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jackson.version>3.1.0</jackson.version>
         <junit.version>5.11.4</junit.version>
+        <!-- The Maven plugin toolchain of raoh-gsh-maven-plugin and raoh-effect-audit-maven-plugin. -->
+        <maven-plugin-api.version>3.9.9</maven-plugin-api.version>
+        <maven-plugin-tools.version>3.15.2</maven-plugin-tools.version>
         <!--
             The release the published-API diff compares against. It stays on the previous
             release while a cycle is in flight — that is what makes the diff describe the
@@ -148,41 +152,36 @@
                     </executions>
                 </plugin>
                 <!--
-                    A built-in decoder does not itself read the JVM default locale: in tr-TR,
-                    "TITLE".toLowerCase() is "tıtle", and in th-TH-u-nu-thai "%d".formatted(1000)
-                    is "๑๐๐๐" (#136). This check fails the build on JDK calls that read the default
-                    locale, so a new call site cannot bring it back. Pass Locale.ROOT instead.
-
-                    The list is forbidden-apis/default-locale.txt. It is not the bundled
-                    jdk-unsafe list, which misses locale readers and also bans default time zone
-                    and charset calls that this contract does not cover. DefaultLocaleApiAuditTest
-                    walks the JDK bytecode back from Locale.getDefault and fails when the list
-                    lacks a reader, so the list is complete against the JDK rather than against
-                    what someone thought of.
-
-                    ResourceBundleMessageResolver chooses a display locale, which is its job, and
-                    marks those methods with a package-private @SuppressForbidden.
+                    The effect audit (#151). A built-in decoder does not itself acquire ambient
+                    capabilities (default locale, time zone, clock, randomness, filesystem,
+                    network) except those passed in its input or explicit configuration. The audit
+                    reads each module's bytecode and fails on an external member whose effect
+                    effect-audit/catalog.txt does not record, and on a DELEGATED or AMBIENT use
+                    that the module's effect-audit/<artifactId>.txt does not approve. The plugin
+                    is built first in this reactor and is not published.
                 -->
                 <plugin>
-                    <groupId>de.thetaphi</groupId>
-                    <artifactId>forbiddenapis</artifactId>
-                    <version>3.11</version>
+                    <groupId>net.unit8.raoh</groupId>
+                    <artifactId>raoh-effect-audit-maven-plugin</artifactId>
+                    <version>${project.version}</version>
                     <configuration>
-                        <signaturesFiles>
-                            <signaturesFile>${project.basedir}/../forbidden-apis/default-locale.txt</signaturesFile>
-                        </signaturesFiles>
-                        <suppressAnnotations>
-                            <suppressAnnotation>**.SuppressForbidden</suppressAnnotation>
-                        </suppressAnnotations>
+                        <catalog>${project.basedir}/../effect-audit/catalog.txt</catalog>
+                        <approvals>${project.basedir}/../effect-audit/${project.artifactId}.txt</approvals>
+                        <internalPackages>
+                            <internalPackage>net.unit8.raoh</internalPackage>
+                        </internalPackages>
+                        <decoderPackages>
+                            <decoderPackage>net.unit8.raoh.decode</decoderPackage>
+                            <decoderPackage>net.unit8.raoh.encode</decoderPackage>
+                            <decoderPackage>net.unit8.raoh.json</decoderPackage>
+                            <decoderPackage>net.unit8.raoh.jooq</decoderPackage>
+                        </decoderPackages>
                     </configuration>
                     <executions>
                         <execution>
-                            <id>default-locale</id>
-                            <!-- The plugin defaults to verify; run it right after compile so
-                                 that `mvn test` fails too, not only `mvn verify`. -->
-                            <phase>process-classes</phase>
+                            <id>effect-audit</id>
                             <goals>
-                                <goal>check</goal>
+                                <goal>audit</goal>
                             </goals>
                         </execution>
                     </executions>
@@ -239,6 +238,10 @@
                     <publishingServerId>central</publishingServerId>
                     <autoPublish>true</autoPublish>
                     <waitUntil>published</waitUntil>
+                    <!-- Build-internal; the raoh modules use it while building, nobody else does. -->
+                    <excludeArtifacts>
+                        <artifact>raoh-effect-audit-maven-plugin</artifact>
+                    </excludeArtifacts>
                 </configuration>
             </plugin>
         </plugins>

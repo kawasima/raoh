@@ -63,7 +63,6 @@ public class ResourceBundleMessageResolver implements MessageResolver {
      * @param meta the issue metadata used to fill the template placeholders
      * @return the resolved message for {@link Locale#getDefault()}
      */
-    @SuppressForbidden("chooses the display locale; decoders never call this")
     @Override
     public String resolve(String code, Map<String, Object> meta) {
         return resolve(code, meta, Locale.getDefault());
@@ -78,7 +77,6 @@ public class ResourceBundleMessageResolver implements MessageResolver {
      * @param issue the issue to resolve
      * @return the resolved message for {@link Locale#getDefault()}
      */
-    @SuppressForbidden("chooses the display locale; decoders never call this")
     @Override
     public String resolve(Issue issue) {
         return resolve(issue, Locale.getDefault());
@@ -163,7 +161,6 @@ public class ResourceBundleMessageResolver implements MessageResolver {
      * specific first. {@link PropertyResourceBundle#handleGetObject} on each one sees only
      * the keys its own file defines, not its parents'.
      */
-    @SuppressForbidden("the locale is explicit and NO_FALLBACK stops getBundle from falling back to the default locale")
     private List<PropertyResourceBundle> layers(Locale locale) {
         List<PropertyResourceBundle> layers = new ArrayList<>();
         for (Locale candidate : NO_FALLBACK.getCandidateLocales(baseName, locale)) {

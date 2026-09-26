@@ -37,6 +37,46 @@ When adding a new error code and its associated decoder constraint, verify all o
 - **`messages.properties` templates must reference the same meta keys**: The placeholders in `raoh.<code>=...` must match the keys actually put into the meta map by the decoder. Mismatches silently produce literal `{key}` output.
 - **`MessageResolver.DEFAULT` and `messages.properties` must both be updated**: The `ErrorCodesDefaultCoverageTest` reflection test enforces this automatically — a new `ErrorCodes` constant without coverage in both will fail the build.
 
+## Effect Audit
+
+`raoh-effect-audit-maven-plugin` (built first in the reactor, not published) checks every
+external member that `raoh`, `raoh-json` and `raoh-jooq` use, right after compilation (#151).
+Members are written as the class file refers to them, return type included
+(`java.util.List#get(int):java.lang.Object`). When it fails, the message lists entries ready to
+paste.
+
+- **Member missing from `effect-audit/catalog.txt`**: file it under the effect its API contract
+  gives it, not what its implementation happens to do. `CLOSED` means it runs no code a caller of
+  Raoh can supply: not through its receiver, not through an argument whose type a caller can
+  implement (a `CharSequence`, a `Collection`, an `Object`'s `hashCode`), not through a class it
+  initializes. Anything that may is `DELEGATED`, observing or converting alike; the approval's
+  reason is where observing (allowed) and adopting a caller's behaviour (not allowed) are told
+  apart. The audit also rejects `CLOSED` / `EXPLICIT` for an overridable method called virtually,
+  and requires a note (`  -- why`) on a `CLOSED` / `EXPLICIT` member that takes an argument of a
+  type a caller can implement, saying why none of its code runs. Map and Set iteration order is
+  not part of any contract Raoh relies on. JDK classes are read from the `--release` API
+  (`ct.sym`), so the result does not depend on the JDK running Maven.
+- **Use without an approval in `effect-audit/<module>.txt`**: file the `caller -> member` line under
+  the existing `[reason]` it fits. An `AMBIENT` use names its caller exactly, descriptor included,
+  so one method's approval never covers an overload. Add a new reason only when none fits, and never approve a
+  delegation that adopts the input's behaviour as the meaning of a conversion; fix the code
+  instead (#152 is the model).
+- **`AMBIENT` reached from a decoder package**: cannot be approved, whether the decoder reads it
+  itself or through Raoh's own methods (the audit walks Raoh's call graph across modules and prints
+  the path). The walk includes callbacks: once decoder code constructs a Raoh class, that class's
+  overrides of external methods (`hashCode`, `compare`, `apply`) count as reached. Take the value
+  from the input or explicit configuration.
+- **A static field that is not final, or a write to one outside its class initializer** (directly
+  or through a `VarHandle`): not allowed; mutable static state is ambient configuration the audit
+  cannot follow, whoever writes it.
+  The audit cannot see mutation through a `static final` reference (a cache map, a registry), so do
+  not keep mutable objects in static fields either.
+- **Stale approval**: remove the line.
+- **Unknown bootstrap method**: teach `BytecodeScanner` which members it reaches before approving
+  anything; do not add it to the known set without the expansion.
+
+Build a single module with `-am` (`mvn -pl raoh-json -am verify`) so the plugin is built too.
+
 ## Tutorial Verification with jetshell
 
 Use jetshell to verify code snippets in `docs/tutorial.ja.md`.
