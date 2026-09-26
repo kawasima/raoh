@@ -10,6 +10,7 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.Year;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -17,12 +18,13 @@ import java.util.regex.Pattern;
  * The text forms Raoh accepts for its temporal conversions, and the values they denote.
  *
  * <p>Each form is a regular expression over ASCII characters, and that expression alone decides
- * whether a text is accepted. The fields it captures are handed to {@code java.time} factory
- * methods such as {@link LocalDate#of(int, int, int)} and
- * {@link ZoneOffset#ofHoursMinutesSeconds(int, int, int)}, which only check that the value exists
- * and is in range (February 30, hour 25, an offset beyond 18 hours). No {@code java.time} parser
- * or formatter reads the text, so their leniency (case-insensitive letters, hours-only offsets,
- * an empty fraction, a sign on a four-digit year) cannot widen the accepted language.
+ * whether a text is accepted. The JDK only builds the value and checks that it exists and is in
+ * range (February 30, hour 25, an offset beyond 18 hours): the local forms hand the captured
+ * fields to factories such as {@link LocalDate#of(int, int, int)} and
+ * {@link ZoneOffset#ofHoursMinutesSeconds(int, int, int)}, and an instant, once matched, is built
+ * by {@link DateTimeFormatter#ISO_INSTANT}. No JDK formatter decides acceptance, so their leniency
+ * (case-insensitive letters, hours-only offsets, an empty fraction, the width-based sign rule of
+ * {@code SignStyle.EXCEEDS_PAD}) cannot widen the accepted language.
  *
  * <p>Everything {@code toString()} of the matching {@code java.time} type writes is accepted, so
  * the {@code ObjectEncoders} output always decodes back.
@@ -48,13 +50,6 @@ final class TemporalText {
     private static final Pattern OFFSET_DATE_TIME_PATTERN = Pattern.compile(DATE + "T" + TIME + OFFSET);
     // An instant requires the seconds.
     private static final Pattern INSTANT_PATTERN = Pattern.compile(DATE + "T" + HOUR_MINUTE + SECOND + OFFSET);
-
-    private static final long SECONDS_PER_DAY = 86_400;
-    // The Gregorian calendar repeats every 400 years, which are 146097 days.
-    private static final int YEARS_PER_CYCLE = 400;
-    private static final long DAYS_PER_CYCLE = 146_097;
-    // Instant.MIN and Instant.MAX fall in these years.
-    private static final long MAX_INSTANT_YEAR = 1_000_000_000L;
 
     private TemporalText() {
     }
@@ -113,52 +108,27 @@ final class TemporalText {
     /**
      * Reads the form of {@link #offsetDateTime(String)} with the seconds required, as the moment
      * it names. The year may reach the {@link Instant} range, beyond {@link LocalDate}'s.
-     * {@code 24:00:00} is the start of the next day; second {@code 60} is rejected, because an
-     * {@link Instant} has no leap seconds and the text would name no moment.
+     * {@code 24:00:00} is the start of the next day; second {@code 60} is rejected.
      *
      * @param text the text to read
      * @return the instant, or {@code null} if the text is not in the form or names no instant
      */
     static @Nullable Instant instant(String text) {
-        var m = INSTANT_PATTERN.matcher(text);
-        if (!m.matches()) {
+        if (!INSTANT_PATTERN.matcher(text).matches()) {
             return null;
         }
-        long year = Long.parseLong(m.group("year"));
-        int month = Integer.parseInt(m.group("month"));
-        int day = Integer.parseInt(m.group("day"));
-        int hour = Integer.parseInt(m.group("hour"));
-        int minute = Integer.parseInt(m.group("minute"));
-        int second = Integer.parseInt(m.group("second"));
-        int nano = nano(m);
-        var offset = offset(m);
-        if (offset == null || Math.abs(year) > MAX_INSTANT_YEAR) {
-            return null;
-        }
-        // End of day: 24:00:00 is 00:00:00 of the next day, the same instant.
-        boolean endOfDay = hour == 24 && minute == 0 && second == 0 && nano == 0;
+        // The pattern decided the grammar. ISO_INSTANT only builds the value: it is the JDK's
+        // constructor for the whole Instant range, whose years LocalDate cannot hold, and it
+        // gives 24:00:00 its meaning as the start of the next day.
         try {
-            var time = LocalTime.of(endOfDay ? 0 : hour, minute, second, nano);
-            long epochSecond = epochDay(year, month, day) * SECONDS_PER_DAY
-                    + (endOfDay ? SECONDS_PER_DAY : 0)
-                    + time.toSecondOfDay()
-                    - offset.getTotalSeconds();
-            return Instant.ofEpochSecond(epochSecond, nano);
+            var parsed = DateTimeFormatter.ISO_INSTANT.parse(text);
+            // parsedLeapSecond() reports that the parser replaced second 60 with 59, a moment the
+            // text does not name.
+            return parsed.query(DateTimeFormatter.parsedLeapSecond()) ? null : Instant.from(parsed);
         } catch (DateTimeException e) {
-            // A date or time that does not exist, or a moment beyond Instant.MIN/MAX.
+            // A field out of range (month 13, hour 25), or a moment beyond Instant.MIN/MAX.
             return null;
         }
-    }
-
-    // LocalDate cannot hold years beyond ±999,999,999, which Instant reaches. The date 400 years
-    // closer to zero is the same calendar date, 146097 days away.
-    private static long epochDay(long year, int month, int day) {
-        if (year >= Year.MIN_VALUE && year <= Year.MAX_VALUE) {
-            return LocalDate.of((int) year, month, day).toEpochDay();
-        }
-        int direction = year > 0 ? 1 : -1;
-        var shifted = LocalDate.of((int) (year - direction * YEARS_PER_CYCLE), month, day);
-        return shifted.toEpochDay() + direction * DAYS_PER_CYCLE;
     }
 
     private static @Nullable LocalDate date(Matcher m) {

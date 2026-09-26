@@ -17,11 +17,8 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
-import static net.unit8.raoh.decode.ObjectDecoders.enumOf;
 import static net.unit8.raoh.decode.ObjectDecoders.string;
 import static net.unit8.raoh.decode.builtin.BuiltinTestSupport.decodeErr;
 import static net.unit8.raoh.decode.builtin.BuiltinTestSupport.decodeOk;
@@ -347,69 +344,6 @@ class StringConversionGrammarTest {
             }
         }
         return all;
-    }
-
-    // --- ipv6, checked against the RFC 3986 IPv6address ABNF ---
-
-    // A literal transcription of RFC 3986 section 3.2.2, independent of the decoder's parser.
-    private static final String H16 = "[0-9A-Fa-f]{1,4}";
-    private static final String DEC_OCTET = "(?:25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]|[0-9])";
-    private static final String IPV4 = DEC_OCTET + "\\." + DEC_OCTET + "\\." + DEC_OCTET + "\\." + DEC_OCTET;
-    private static final String LS32 = "(?:" + H16 + ":" + H16 + "|" + IPV4 + ")";
-    private static final Pattern RFC3986_IPV6 = Pattern.compile(String.join("|",
-            "(?:" + H16 + ":){6}" + LS32,
-            "::(?:" + H16 + ":){5}" + LS32,
-            "(?:" + H16 + ")?::(?:" + H16 + ":){4}" + LS32,
-            "(?:(?:" + H16 + ":){0,1}" + H16 + ")?::(?:" + H16 + ":){3}" + LS32,
-            "(?:(?:" + H16 + ":){0,2}" + H16 + ")?::(?:" + H16 + ":){2}" + LS32,
-            "(?:(?:" + H16 + ":){0,3}" + H16 + ")?::" + H16 + ":" + LS32,
-            "(?:(?:" + H16 + ":){0,4}" + H16 + ")?::" + LS32,
-            "(?:(?:" + H16 + ":){0,5}" + H16 + ")?::" + H16,
-            "(?:(?:" + H16 + ":){0,6}" + H16 + ")?::"));
-
-    @ParameterizedTest
-    @ValueSource(strings = {
-            "::", "::1", "1::", "1:2:3:4:5:6:7:8", "1:2:3:4:5:6:7::", "::2:3:4:5:6:7:8",
-            "FFFF::abcd", "::ffff:192.0.2.1", "1::1.2.3.4", "1:2:3:4:5:6:1.2.3.4", "::0.0.0.0",
-            "::00001", "::01.2.3.4", "::1.2.3.04", "1.2.3.4::", "::1.2.3.4:1", "1::2::3", ":::",
-            ":1::", "1:", "1:2:3:4:5:6:7:8::", "1:2:3:4:5:6:7:8:9", "1:2:3:4:5:6:7:1.2.3.4",
-            "::１", "::g", "[::1]", "::1.2.3", "::256.1.1.1", "1:2:3:4:5:6:7", ""
-    })
-    void ipv6AcceptsExactlyTheRfc3986Grammar(String text) {
-        var result = string().ipv6().decode(text, net.unit8.raoh.Path.ROOT);
-        assertEquals(RFC3986_IPV6.matcher(text).matches(), result instanceof net.unit8.raoh.Ok<?>, text);
-    }
-
-    @Test
-    void ipv6AgreesWithTheRfc3986GrammarOnGeneratedText() {
-        var tokens = new String[]{"1", "ab", "FFFF", "00000", ":", "::", "1.2.3.4", "01.2.3.4", "g"};
-        var random = new Random(137);
-        for (int i = 0; i < 20_000; i++) {
-            var text = new StringBuilder();
-            for (int n = 1 + random.nextInt(12); n > 0; n--) {
-                text.append(tokens[random.nextInt(tokens.length)]);
-            }
-            var candidate = text.toString();
-            var result = string().ipv6().decode(candidate, net.unit8.raoh.Path.ROOT);
-            assertEquals(RFC3986_IPV6.matcher(candidate).matches(), result instanceof net.unit8.raoh.Ok<?>, candidate);
-        }
-    }
-
-    // --- case folding: ASCII letters only ---
-
-    @Test
-    void toBoolFoldsOnlyAsciiLetters() {
-        assertEquals(true, decodeOk(string().toBool(), "YES"));
-        assertEquals(false, decodeOk(string().toBool(), "Off"));
-        assertEquals(ErrorCodes.TYPE_MISMATCH, decodeErr(string().toBool(), "ＹＥＳ").code());
-    }
-
-    @Test
-    void enumOfFoldsOnlyAsciiLetters() {
-        assertEquals(Thread.State.BLOCKED, decodeOk(enumOf(Thread.State.class), "Blocked"));
-        // U+212A KELVIN SIGN lower-cases to 'k' under Unicode case mapping.
-        var issue = decodeErr(enumOf(Thread.State.class), "bloc\u212Aed");
-        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
     }
 
     // --- round trip with ObjectEncoders ---

@@ -229,10 +229,7 @@ class DecodersCombinatorTest {
         }
     }
 
-    /**
-     * Constant names U+FF21 and U+10400, which String.compareTo orders the other way. Only ASCII
-     * letters are folded, so they are listed as declared.
-     */
+    /** Constant names whose lower case is U+FF41 and U+10428, which String.compareTo orders the other way. */
     enum Wide { Ａ, 𐐀 }
 
     @Test
@@ -240,7 +237,7 @@ class DecodersCombinatorTest {
         switch (ObjectDecoders.enumOf(Wide.class).decode("x")) {
             case Ok<Wide>(var v) -> fail("expected Err, got " + v);
             case Err<Wide>(var issues) ->
-                    assertEquals(List.of("Ａ", "𐐀"), issues.asList().getFirst().meta().get("allowed"));
+                    assertEquals(List.of("ａ", "𐐨"), issues.asList().getFirst().meta().get("allowed"));
         }
     }
 

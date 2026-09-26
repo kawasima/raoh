@@ -15,6 +15,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -699,12 +700,8 @@ public final class Decoders {
     /**
      * Decodes a string into an enum constant (case-insensitive).
      *
-     * <p>The text matches a constant whose name equals it with the ASCII letters {@code A}–{@code Z}
-     * in any case; every other character must match exactly. Unicode case mapping is not used, so
-     * the KELVIN SIGN (U+212A) does not match {@code K}.
-     *
-     * <p>On a miss, the issue lists the constant names with their ASCII letters lower-cased as
-     * {@code allowed}, in {@link CodePointOrder code point order}.
+     * <p>On a miss, the issue lists the lower-cased constant names as {@code allowed}, in
+     * {@link CodePointOrder code point order}.
      *
      * @param <I>       the input type
      * @param <E>       the enum type
@@ -716,7 +713,7 @@ public final class Decoders {
         // Build lookup table and allowed-list once at decoder construction time.
         var lookup = new HashMap<String, E>();
         for (var c : cls.getEnumConstants()) {
-            lookup.put(asciiLowerCase(c.name()), c);
+            lookup.put(c.name().toLowerCase(Locale.ROOT), c);
         }
         var allowed = CodePointOrder.sorted(lookup.keySet());
         return (in, path) -> {
@@ -724,7 +721,7 @@ public final class Decoders {
             return switch (r) {
                 case Err<String> err -> err.coerce();
                 case Ok<String> ok -> {
-                    var constant = lookup.get(asciiLowerCase(ok.value()));
+                    var constant = lookup.get(ok.value().toLowerCase(Locale.ROOT));
                     if (constant != null) yield Result.ok(constant);
                     yield Result.fail(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_ENUM,
                             "invalid value",
@@ -734,18 +731,6 @@ public final class Decoders {
         };
     }
 
-
-    // The same folding as StringDecoder.toBool(): ASCII letters only. String.toLowerCase would
-    // map the KELVIN SIGN (U+212A) to 'k' and widen what enumOf accepts.
-    private static String asciiLowerCase(String value) {
-        var chars = value.toCharArray();
-        for (int i = 0; i < chars.length; i++) {
-            if (chars[i] >= 'A' && chars[i] <= 'Z') {
-                chars[i] = (char) (chars[i] + ('a' - 'A'));
-            }
-        }
-        return new String(chars);
-    }
     /**
      * Creates a decoder that dispatches to different decoders based on a discriminator value.
      *
