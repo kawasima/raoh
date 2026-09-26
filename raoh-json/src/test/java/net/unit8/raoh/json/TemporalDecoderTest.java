@@ -2,6 +2,7 @@ package net.unit8.raoh.json;
 
 import net.unit8.raoh.Err;
 import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.Result;
 import tools.jackson.databind.JsonNode;
@@ -232,6 +233,19 @@ class TemporalDecoderTest {
         switch (result) {
             case Ok(_) -> fail("Expected Err");
             case Err(var issues) -> assertEquals(ErrorCodes.INVALID_FORMAT, issues.asList().getFirst().code());
+        }
+    }
+
+    @Test
+    void iso8601RejectsALeapSecond() {
+        var dec = field("t", string().iso8601());
+        switch (dec.decode(parse("{\"t\":\"2016-12-31T23:59:60Z\"}"))) {
+            case Ok(var value) -> fail("Expected Err, got Ok: " + value);
+            case Err(var issues) -> {
+                var issue = issues.asList().getFirst();
+                assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+                assertEquals(MessageKeys.INVALID_FORMAT_INSTANT_LEAP_SECOND, issue.messageKey());
+            }
         }
     }
 

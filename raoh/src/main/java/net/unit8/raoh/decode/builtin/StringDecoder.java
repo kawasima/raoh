@@ -13,12 +13,15 @@ import java.math.BigDecimal;
 import java.net.Inet6Address;
 import java.net.URI;
 import java.text.Normalizer;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.TemporalAccessor;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -769,6 +772,9 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as an ISO 8601 instant (e.g., {@code 2024-01-15T10:30:00Z}).
      *
+     * <p>A leap second ({@code 23:59:60Z}) is rejected with {@code invalid_format}; see
+     * {@link #iso8601(String)}.
+     *
      * @return a temporal decoder producing {@link Instant}
      */
     public TemporalDecoder<I, Instant> iso8601() {
@@ -778,14 +784,26 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as an ISO 8601 instant.
      *
+     * <p>A leap second ({@code 23:59:60Z}) is rejected with {@code invalid_format} and the message
+     * key {@link MessageKeys#INVALID_FORMAT_INSTANT_LEAP_SECOND}. The JDK parser reads it as the
+     * second before, but an {@link Instant} has no value for that second, so accepting it would
+     * return a moment the text did not name.
+     *
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link Instant}
      */
     public TemporalDecoder<I, Instant> iso8601(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
-                return Result.ok(Instant.parse(value));
-            } catch (DateTimeParseException e) {
+                TemporalAccessor parsed = DateTimeFormatter.ISO_INSTANT.parse(value);
+                if (parsed.query(DateTimeFormatter.parsedLeapSecond())) {
+                    return Result.failWith(path, ErrorCodes.INVALID_FORMAT,
+                            MessageKeys.INVALID_FORMAT_INSTANT_LEAP_SECOND, message,
+                            "not a valid ISO 8601 instant: " + value + " is a leap second",
+                            Map.of("value", value));
+                }
+                return Result.ok(Instant.from(parsed));
+            } catch (DateTimeException e) {
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_INSTANT,
                         message, "not a valid ISO 8601 instant", Map.of());
             }

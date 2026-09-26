@@ -3,6 +3,7 @@ package net.unit8.raoh.decode;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Issue;
+import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
@@ -256,6 +257,35 @@ class ObjectDecoderTemporalTest {
                 string().offsetDateTime().decode("nonsense", Path.ROOT));
     }
 
+    // --- leap seconds ---
+
+    @Test
+    void iso8601RejectsALeapSecondLikeTheStringRoute() {
+        var leap = "2016-12-31T23:59:60Z";
+        assertSameFailure(iso8601().decode(leap, Path.ROOT), string().iso8601().decode(leap, Path.ROOT));
+        assertEquals(MessageKeys.INVALID_FORMAT_INSTANT_LEAP_SECOND,
+                firstIssue(iso8601().decode(leap, Path.ROOT)).messageKey());
+    }
+
+    @Test
+    void iso8601TreatsSecondSixtyOutsideAUtcDayEndAsMalformed() {
+        // The JDK only reads 60 as a leap second at 23:59 UTC; anywhere else it is plain bad text.
+        for (var text : new String[] {"2016-12-31T12:34:60Z", "2017-01-01T08:59:60+09:00"}) {
+            assertSameFailure(iso8601().decode(text, Path.ROOT), string().iso8601().decode(text, Path.ROOT));
+            assertEquals(MessageKeys.INVALID_FORMAT_INSTANT,
+                    firstIssue(iso8601().decode(text, Path.ROOT)).messageKey(), text);
+        }
+    }
+
+    @Test
+    void secondSixtyIsRefusedByEveryTemporalDecoder() {
+        assertSameFailure(time().decode("23:59:60", Path.ROOT), string().time().decode("23:59:60", Path.ROOT));
+        assertSameFailure(dateTime().decode("2016-12-31T23:59:60", Path.ROOT),
+                string().dateTime().decode("2016-12-31T23:59:60", Path.ROOT));
+        assertSameFailure(offsetDateTime().decode("2016-12-31T23:59:60Z", Path.ROOT),
+                string().offsetDateTime().decode("2016-12-31T23:59:60Z", Path.ROOT));
+    }
+
     private static <T> void assertRoundTrips(T original, Object encoded, Decoder<Object, T> decoder) {
         assertInstanceOf(String.class, encoded, "the encoder writes ISO text");
         switch (decoder.decode(encoded, Path.ROOT)) {
@@ -265,15 +295,14 @@ class ObjectDecoderTemporalTest {
     }
 
     /**
-     * Both routes read the same ISO text, so a value they both reject must be rejected with the
-     * same code and the same message.
+     * Both routes read the same ISO text, so a value they both reject must be rejected with an
+     * identical {@link Issue}: path, code, message key, message, meta and custom-message flag.
      */
     private static void assertSameFailure(Result<?> viaObject, Result<?> viaString) {
         Issue expected = firstIssue(viaString);
         Issue actual = firstIssue(viaObject);
         assertEquals(ErrorCodes.INVALID_FORMAT, actual.code());
-        assertEquals(expected.code(), actual.code());
-        assertEquals(expected.message(), actual.message());
+        assertEquals(expected, actual);
     }
 
     private static Issue firstIssue(Result<?> result) {

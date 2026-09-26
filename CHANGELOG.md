@@ -12,6 +12,16 @@ detailed from the current development cycle onward.
 
 ### Fixed
 
+- **`iso8601()` rejects a leap second instead of returning the second before it.** It handed the
+  text to `Instant.parse`, which reads `2016-12-31T23:59:60Z` as `2016-12-31T23:59:59Z` and drops
+  the fact that it adjusted anything, so the caller got a moment the text did not name. Both
+  `StringDecoder.iso8601()` (and with it `JsonDecoders.string().iso8601()`) and
+  `ObjectDecoders.iso8601()` now report `invalid_format` with the message key
+  `invalid_format.instant.leap_second`, which supplies the text as `value`. This matches `time()`,
+  `dateTime()` and `offsetDateTime()`, which already refused second `60`. Along with it, the
+  `ObjectDecoders` temporal decoders no longer parse a `String` themselves: they hand it to the
+  matching `StringDecoder` conversion, so the two routes read text by one set of rules and report
+  identical issues ([#130](https://github.com/kawasima/raoh/issues/130)).
 - **`ipv6()` and `ip()` no longer depend on the host's network interfaces.** They checked a literal
   with `InetAddress.getByName`, which looks a zone ID up among the interfaces of the running machine,
   so `fe80::1%en0` was accepted on macOS and rejected on Linux, and `fe80::1%eth0` the other way

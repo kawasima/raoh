@@ -115,6 +115,12 @@ public final class MessageKeys {
     /** ISO-8601 instant from {@code iso8601()}. */
     public static final String INVALID_FORMAT_INSTANT = "invalid_format.instant";
 
+    /**
+     * A leap second ({@code 23:59:60Z}) given to {@code iso8601()}, which an {@code Instant} cannot
+     * represent. Supplies {@code value}.
+     */
+    public static final String INVALID_FORMAT_INSTANT_LEAP_SECOND = "invalid_format.instant.leap_second";
+
     /** ISO-8601 local date from {@code date()}. */
     public static final String INVALID_FORMAT_DATE = "invalid_format.date";
 

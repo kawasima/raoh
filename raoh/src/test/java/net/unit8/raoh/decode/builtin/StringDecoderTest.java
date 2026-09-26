@@ -1,6 +1,7 @@
 package net.unit8.raoh.decode.builtin;
 
 import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.MessageKeys;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -8,6 +9,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.text.Normalizer;
+import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -446,6 +449,33 @@ class StringDecoderTest {
         var issue = decodeErr(string().uri(), "http://exa mple.com");
         assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
         assertEquals("not a valid URI", issue.message());
+    }
+
+    @Test
+    void iso8601ParsesValidRejectsInvalid() {
+        assertEquals(Instant.parse("2016-12-31T23:59:59Z"), decodeOk(string().iso8601(), "2016-12-31T23:59:59Z"));
+        var issue = decodeErr(string().iso8601(), "nonsense");
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals(MessageKeys.INVALID_FORMAT_INSTANT, issue.messageKey());
+        assertEquals("not a valid ISO 8601 instant", issue.message());
+    }
+
+    @Test
+    void iso8601RejectsALeapSecondInsteadOfReturningTheSecondBefore() {
+        var issue = decodeErr(string().iso8601(), "2016-12-31T23:59:60Z");
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals(MessageKeys.INVALID_FORMAT_INSTANT_LEAP_SECOND, issue.messageKey());
+        assertEquals("not a valid ISO 8601 instant: 2016-12-31T23:59:60Z is a leap second", issue.message());
+        assertEquals(Map.of("value", "2016-12-31T23:59:60Z"), issue.meta());
+    }
+
+    @Test
+    void iso8601LeapSecondKeepsItsKeyUnderACustomMessage() {
+        var issue = decodeErr(string().iso8601("bad timestamp"), "2016-12-31T23:59:60Z");
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals(MessageKeys.INVALID_FORMAT_INSTANT_LEAP_SECOND, issue.messageKey());
+        assertEquals("bad timestamp", issue.message());
+        assertTrue(issue.customMessage());
     }
 
     @Test

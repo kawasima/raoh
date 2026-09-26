@@ -345,6 +345,9 @@ class ConstraintMessageResolutionTest {
         var offsetEn = "not a valid ISO-8601 offset date-time (e.g., 2024-01-15T10:30:00+09:00)";
         var offsetJa = "オフセット付き日時の形式が不正です（例: 2024-01-15T10:30:00+09:00）";
         var instantJa = "日時の形式が不正です（例: 2024-01-15T01:30:00Z）";
+        var leap = "2016-12-31T23:59:60Z";
+        var leapEn = "not a valid ISO 8601 instant: 2016-12-31T23:59:60Z is a leap second";
+        var leapJa = "うるう秒（2016-12-31T23:59:60Z）は日時として扱えません";
         return List.of(
                 f("email", string().email().decode("nope", Path.ROOT), MessageKeys.INVALID_FORMAT_EMAIL,
                         "not a valid email", "メールアドレスの形式が不正です"),
@@ -377,6 +380,8 @@ class ConstraintMessageResolutionTest {
 
                 f("string.iso8601", string().iso8601().decode("x", Path.ROOT), MessageKeys.INVALID_FORMAT_INSTANT,
                         "not a valid ISO 8601 instant", instantJa),
+                f("string.iso8601.leapSecond", string().iso8601().decode(leap, Path.ROOT),
+                        MessageKeys.INVALID_FORMAT_INSTANT_LEAP_SECOND, leapEn, leapJa),
                 f("string.date", string().date().decode("x", Path.ROOT), MessageKeys.INVALID_FORMAT_DATE,
                         "not a valid date (yyyy-MM-dd)", "日付の形式が不正です（yyyy-MM-dd）"),
                 f("string.time", string().time().decode("x", Path.ROOT), MessageKeys.INVALID_FORMAT_TIME,
@@ -388,6 +393,8 @@ class ConstraintMessageResolutionTest {
 
                 f("object.iso8601", iso8601().decode("x", Path.ROOT), MessageKeys.INVALID_FORMAT_INSTANT,
                         "not a valid ISO 8601 instant", instantJa),
+                f("object.iso8601.leapSecond", iso8601().decode(leap, Path.ROOT),
+                        MessageKeys.INVALID_FORMAT_INSTANT_LEAP_SECOND, leapEn, leapJa),
                 f("object.date", date().decode("x", Path.ROOT), MessageKeys.INVALID_FORMAT_DATE,
                         "not a valid date (yyyy-MM-dd)", "日付の形式が不正です（yyyy-MM-dd）"),
                 f("object.time", time().decode("x", Path.ROOT), MessageKeys.INVALID_FORMAT_TIME,
