@@ -6,6 +6,11 @@ package net.unit8.raoh.audit;
  * <p>The contract the audit protects: a built-in decoder does not itself acquire ambient
  * capabilities (default locale, default time zone, clock, randomness, class path, filesystem,
  * network, ...) except those passed to it in its input or explicit configuration.
+ *
+ * <p>Whether an observable result is deterministic is a separate property that these effects do
+ * not model: {@code Map.of} acquires nothing, yet its iteration order may differ between JVM runs.
+ * Raoh keeps such order out of what it exposes at the value itself, as {@code Issue} does by
+ * ordering its metadata keys.
  */
 public enum Effect {
 

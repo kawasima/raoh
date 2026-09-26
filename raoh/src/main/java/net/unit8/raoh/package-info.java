@@ -16,11 +16,21 @@
  *   <li>{@link net.unit8.raoh.decode.map.MapDecoders} — for {@code Map<String, Object>} structure (field extraction, combine)</li>
  * </ul>
  *
- * <p>Built-in decoders do not themselves read the JVM default locale or the JVM default time
- * zone. Such context enters only through a decoder's input or its explicit configuration. What a
- * caller-provided input does in its own methods, such as a {@code List} implementation's
- * {@code get}, is outside this guarantee. Locale enters Raoh's own message resolution through
+ * <p>Built-in decoders do not acquire ambient capabilities on their own: the JVM default locale
+ * or time zone, the clock, randomness, the host's network or filesystem, and the like. State that
+ * affects decoding must be reachable from the decoder input or supplied explicitly as
+ * configuration. What caller-provided inputs and callbacks do in their own methods, such as a
+ * {@code List} implementation's {@code get}, is outside this guarantee. Locale enters Raoh's own
+ * message resolution through
  * {@link net.unit8.raoh.MessageResolver#resolve(net.unit8.raoh.Issue, java.util.Locale)}.
+ *
+ * <p>When built-in decoding creates an observable collection, it either keeps the order the input
+ * gives, as the map decoders keep key order, or uses a deterministic canonical order, as
+ * {@link net.unit8.raoh.Issue#meta()} orders its keys. Collection values supplied by callers, such
+ * as the values a {@code refine} metadata function returns, are kept as given.
+ *
+ * <p>The running Java platform version is not ambient state for these guarantees. Behavior that
+ * depends on the platform release, such as Unicode data or a JDK parser, may change with it.
  */
 @NullMarked
 package net.unit8.raoh;
