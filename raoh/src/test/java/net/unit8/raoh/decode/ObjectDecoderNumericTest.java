@@ -100,6 +100,15 @@ class ObjectDecoderNumericTest {
         assertOutsideRange(int_().decode(new BigDecimal("5000000000"), Path.ROOT), "integer");
         // A huge exponent is rejected without expanding the value to its digits.
         assertOutsideRange(int_().decode(new BigDecimal("1E+999999999"), Path.ROOT), "integer");
+        // precision - scale overflows int here; it must still count as too many digits.
+        assertOutsideRange(int_().decode(new BigDecimal("1E+2147483647"), Path.ROOT), "integer");
+    }
+
+    @Test
+    void intAcceptsZeroWithAnyExponent() {
+        // precision - scale counts 0E+30 as 31 digits, but its value is zero.
+        assertEquals(0, ok(int_().decode(new BigDecimal("0E+30"), Path.ROOT)));
+        assertEquals(0L, ok(long_().decode(new BigDecimal("0E+2147483647"), Path.ROOT)));
     }
 
     @Test
@@ -147,6 +156,12 @@ class ObjectDecoderNumericTest {
         assertEquals(5_000_000_000L, ok(long_().decode(new BigDecimal("5000000000.00"), Path.ROOT)));
         assertTypeMismatch(long_().decode(new BigDecimal("0.5"), Path.ROOT), "long");
         assertOutsideRange(long_().decode(new BigDecimal("1E+19"), Path.ROOT), "long");
+        assertEquals(Long.MAX_VALUE, ok(long_().decode(new BigDecimal("9223372036854775807.000"), Path.ROOT)));
+        assertEquals(Long.MIN_VALUE, ok(long_().decode(new BigDecimal("-9223372036854775808"), Path.ROOT)));
+        assertOutsideRange(long_().decode(new BigDecimal("9223372036854775808"), Path.ROOT), "long");
+        assertOutsideRange(long_().decode(new BigDecimal("-9223372036854775809"), Path.ROOT), "long");
+        assertEquals(Integer.MIN_VALUE, ok(int_().decode(new BigDecimal("-2147483648.0"), Path.ROOT)));
+        assertOutsideRange(int_().decode(new BigDecimal("2147483648"), Path.ROOT), "integer");
     }
 
     @Test

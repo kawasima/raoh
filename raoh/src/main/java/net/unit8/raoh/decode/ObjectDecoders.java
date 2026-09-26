@@ -83,8 +83,7 @@ public final class ObjectDecoders {
             if (in instanceof String s) {
                 return Result.ok(s);
             }
-            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected string",
-                    Map.of("expected", "string", "actual", in.getClass().getSimpleName()));
+            return typeMismatch(path, "string", in);
         };
     }
 
@@ -104,8 +103,7 @@ public final class ObjectDecoders {
             if (in instanceof Boolean b) {
                 return Result.ok(b);
             }
-            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected boolean",
-                    Map.of("expected", "boolean", "actual", in.getClass().getSimpleName()));
+            return typeMismatch(path, "boolean", in);
         });
     }
 
@@ -114,8 +112,9 @@ public final class ObjectDecoders {
     // closed set of JDK representations and never call a conversion method on an arbitrary
     // Number (intValue(), toString(), ...), whose result depends on how the input implements it.
     // BigInteger and BigDecimal are not final, so they are matched by exact class: a subclass
-    // could override the very methods used below. JsonDecoders hands its number nodes to these
-    // decoders, so the JSON route converts by the same rules.
+    // could override the very methods used below. JsonDecoders hands the number nodes it admits to
+    // these decoders, so the JSON route converts by the same rules; which JSON numbers it admits
+    // is decided in JsonDecoders.
 
     /**
      * Creates an integer decoder.
@@ -126,7 +125,10 @@ public final class ObjectDecoders {
      * if the value is {@code null}, and {@code type_mismatch} for an integer outside the
      * {@code int} range, a {@code BigDecimal} with a fractional part, a {@link Double} or
      * {@link Float} (even when it holds an integral value), and any other type, other
-     * {@link Number} subtypes included.
+     * {@link Number} subtypes included. A binary floating-point value is rejected even when
+     * integral because it may already be the rounded form of a different number
+     * ({@code 1.0000000000000001} parses to the {@code double} {@code 1.0}); a {@code BigDecimal}
+     * holds the decimal it was given.
      *
      * @return an integer decoder for {@code Object} input
      */
@@ -141,18 +143,12 @@ public final class ObjectDecoders {
                 case Byte b -> Result.ok((int) b);
                 case Long l when l == (int) (long) l -> Result.ok((int) (long) l);
                 case Long l -> outsideRange(path, "integer");
-                case BigInteger bi when bi.getClass() == BigInteger.class ->
-                        bi.bitLength() < Integer.SIZE ? Result.ok(bi.intValue()) : outsideRange(path, "integer");
+                case BigInteger bi when bi.getClass() == BigInteger.class -> toInt(bi, path);
                 case BigDecimal bd when bd.getClass() == BigDecimal.class && isIntegral(bd) -> {
-                    try {
-                        yield Result.ok(bd.intValueExact());
-                    } catch (ArithmeticException e) {
-                        // isIntegral() ruled out a fractional part, so this is an overflow.
-                        yield outsideRange(path, "integer");
-                    }
+                    var bi = toBoundedBigInteger(bd);
+                    yield bi == null ? outsideRange(path, "integer") : toInt(bi, path);
                 }
-                default -> Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected integer",
-                        Map.of("expected", "integer", "actual", in.getClass().getSimpleName()));
+                default -> typeMismatch(path, "integer", in);
             };
         });
     }
@@ -166,7 +162,10 @@ public final class ObjectDecoders {
      * if the value is {@code null}, and {@code type_mismatch} for an integer outside the
      * {@code long} range, a {@code BigDecimal} with a fractional part, a {@link Double} or
      * {@link Float} (even when it holds an integral value), and any other type, other
-     * {@link Number} subtypes included.
+     * {@link Number} subtypes included. A binary floating-point value is rejected even when
+     * integral because it may already be the rounded form of a different number
+     * ({@code 1.0000000000000001} parses to the {@code double} {@code 1.0}); a {@code BigDecimal}
+     * holds the decimal it was given.
      *
      * @return a long decoder for {@code Object} input
      */
@@ -180,18 +179,12 @@ public final class ObjectDecoders {
                 case Integer i -> Result.ok((long) i);
                 case Short s -> Result.ok((long) s);
                 case Byte b -> Result.ok((long) b);
-                case BigInteger bi when bi.getClass() == BigInteger.class ->
-                        bi.bitLength() < Long.SIZE ? Result.ok(bi.longValue()) : outsideRange(path, "long");
+                case BigInteger bi when bi.getClass() == BigInteger.class -> toLong(bi, path);
                 case BigDecimal bd when bd.getClass() == BigDecimal.class && isIntegral(bd) -> {
-                    try {
-                        yield Result.ok(bd.longValueExact());
-                    } catch (ArithmeticException e) {
-                        // isIntegral() ruled out a fractional part, so this is an overflow.
-                        yield outsideRange(path, "long");
-                    }
+                    var bi = toBoundedBigInteger(bd);
+                    yield bi == null ? outsideRange(path, "long") : toLong(bi, path);
                 }
-                default -> Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected long",
-                        Map.of("expected", "long", "actual", in.getClass().getSimpleName()));
+                default -> typeMismatch(path, "long", in);
             };
         });
     }
@@ -227,8 +220,7 @@ public final class ObjectDecoders {
                 default -> null;
             };
             if (d == null) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
-                        Map.of("expected", "double", "actual", in.getClass().getSimpleName()));
+                return typeMismatch(path, "double", in);
             }
             // NaN is left to flow through so range constraints can reject it as out_of_range
             // (see DoubleDecoderTest#rangeRejectsNaN).
@@ -268,8 +260,7 @@ public final class ObjectDecoders {
                 default -> null;
             };
             if (f == null) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
-                        Map.of("expected", "float", "actual", in.getClass().getSimpleName()));
+                return typeMismatch(path, "float", in);
             }
             // See double_(): NaN flows through for range constraints to catch.
             if (f.isInfinite()) {
@@ -310,23 +301,48 @@ public final class ObjectDecoders {
                 default -> null;
             };
             if (bd == null) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected number",
-                        Map.of("expected", "number", "actual", in.getClass().getSimpleName()));
+                return typeMismatch(path, "number", in);
             }
             return Result.ok(bd);
         });
     }
 
+    private static Result<Integer> toInt(BigInteger bi, Path path) {
+        return bi.bitLength() < Integer.SIZE ? Result.ok(bi.intValue()) : outsideRange(path, "integer");
+    }
+
+    private static Result<Long> toLong(BigInteger bi, Path path) {
+        return bi.bitLength() < Long.SIZE ? Result.ok(bi.longValue()) : outsideRange(path, "long");
+    }
+
     /**
-     * Whether {@code bd} has no fractional part. Checking this before {@code intValueExact()} /
-     * {@code longValueExact()} tells a fraction apart from an overflow, which both methods report
-     * with the same exception.
+     * Whether {@code bd} has no fractional part, so that {@code 5.00} counts as an integer.
+     * A non-positive scale short-circuits, so a value such as {@code 1E+999999999} is never
+     * stripped.
      *
      * @param bd the value to check
      * @return {@code true} if {@code bd} is an integer
      */
     private static boolean isIntegral(BigDecimal bd) {
-        return bd.signum() == 0 || bd.scale() <= 0 || bd.stripTrailingZeros().scale() <= 0;
+        return bd.scale() <= 0 || bd.stripTrailingZeros().scale() <= 0;
+    }
+
+    /**
+     * The value of an integral {@code bd} as a {@link BigInteger}, or {@code null} when it has
+     * more integer digits than any {@code long} (19). Counting digits first keeps
+     * {@code toBigInteger()} from expanding a value such as {@code 1E+999999999} to a billion
+     * digits.
+     *
+     * @param bd an integral value
+     * @return the same value as a {@code BigInteger}, or {@code null} if it cannot fit a {@code long}
+     */
+    private static @Nullable BigInteger toBoundedBigInteger(BigDecimal bd) {
+        if (bd.signum() == 0) {
+            // precision - scale counts 0E+30 as 31 digits, but it is zero.
+            return BigInteger.ZERO;
+        }
+        // long arithmetic: precision - scale overflows int for a scale near Integer.MIN_VALUE.
+        return (long) bd.precision() - bd.scale() <= 19 ? bd.toBigInteger() : null;
     }
 
     private static <T> Result<T> outsideRange(Path path, String expected) {
@@ -487,8 +503,7 @@ public final class ObjectDecoders {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!(in instanceof List<?> rawList)) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected array",
-                        Map.of("expected", "array", "actual", in.getClass().getSimpleName()));
+                return typeMismatch(path, "array", in);
             }
             var issues = Issues.EMPTY;
             var results = new ArrayList<T>();
@@ -529,8 +544,7 @@ public final class ObjectDecoders {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!(in instanceof Map<?, ?> rawMap)) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected object",
-                        Map.of("expected", "object", "actual", in.getClass().getSimpleName()));
+                return typeMismatch(path, "object", in);
             }
             var keyType = nonStringKeyType(rawMap);
             if (keyType != null) {
@@ -596,8 +610,7 @@ public final class ObjectDecoders {
             if (in instanceof byte[] ba) {
                 return Result.ok(ba);
             }
-            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected byte[]",
-                    Map.of("expected", "byte[]", "actual", in.getClass().getSimpleName()));
+            return typeMismatch(path, "byte[]", in);
         };
     }
 

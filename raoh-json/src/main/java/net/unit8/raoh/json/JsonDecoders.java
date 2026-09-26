@@ -91,20 +91,27 @@ public final class JsonDecoders {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isString()) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected string",
-                        Map.of("expected", "string", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, path, "string");
             }
             return Result.ok(in.asString());
         };
     }
 
     // --- Numeric decoders ---
-    // These decoders only observe the node: they check its JSON type and read the value it holds
-    // with numberValue(). The conversion to the target type is ObjectDecoders', so the JSON route
-    // and the Object route follow one set of rules. Jackson's target-typed accessors (intValue(),
-    // doubleValue(), decimalValue(), ...) are not used: they decide range and rounding by
-    // Jackson's rules, and in Jackson 3 throw JsonNodeException out of decode() for a value the
-    // target cannot hold.
+    // Each decoder works in two steps. First it decides which JSON numbers it admits: any number,
+    // or for int_() and long_() only an integer literal. That decision is JSON's own and stays
+    // here. Then it reads the admitted node's value with numberValue() and hands it to the
+    // ObjectDecoders decoder, which owns the conversion to the target type: range checks,
+    // rounding and each source-to-target rule are defined there only.
+    //
+    // int_() and long_() must not leave a fractional literal to ObjectDecoders, which accepts an
+    // integral BigDecimal: whether 1.0 arrives as a Double or a BigDecimal depends on the
+    // mapper's USE_BIG_DECIMAL_FOR_FLOATS setting, and the result must not.
+    // JsonDecoderTest#intRejectsFractionalLiteralWhateverTheMapperConfiguration guards this.
+    //
+    // Jackson's target-typed accessors (intValue(), doubleValue(), decimalValue(), ...) are not
+    // used: they decide range and rounding by Jackson's rules, and in Jackson 3 throw
+    // JsonNodeException out of decode() for a value the target cannot hold.
 
     /**
      * Creates an integer decoder.
@@ -122,7 +129,7 @@ public final class JsonDecoders {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isIntegralNumber()) {
-                return nonIntegral(in, path, "integer");
+                return typeMismatch(in, path, "integer");
             }
             return base.decode(in.numberValue(), path);
         });
@@ -144,7 +151,7 @@ public final class JsonDecoders {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isIntegralNumber()) {
-                return nonIntegral(in, path, "long");
+                return typeMismatch(in, path, "long");
             }
             return base.decode(in.numberValue(), path);
         });
@@ -167,8 +174,7 @@ public final class JsonDecoders {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isNumber()) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
-                        Map.of("expected", "double", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, path, "double");
             }
             return base.decode(in.numberValue(), path);
         });
@@ -190,8 +196,7 @@ public final class JsonDecoders {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isNumber()) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
-                        Map.of("expected", "float", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, path, "float");
             }
             return base.decode(in.numberValue(), path);
         });
@@ -208,8 +213,7 @@ public final class JsonDecoders {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isBoolean()) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected boolean",
-                        Map.of("expected", "boolean", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, path, "boolean");
             }
             return Result.ok(in.booleanValue());
         });
@@ -235,32 +239,26 @@ public final class JsonDecoders {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isNumber()) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected number",
-                        Map.of("expected", "number", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, path, "number");
             }
             return base.decode(in.numberValue(), path);
         });
     }
 
     /**
-     * The failure for a node an integral decoder does not accept. A fractional number is
-     * rejected here rather than by {@code ObjectDecoders}, which accepts an integral
-     * {@code BigDecimal}: whether {@code 1.0} arrives as a {@code Double} or a {@code BigDecimal}
-     * depends on the mapper's configuration, and the result must not.
+     * The {@code type_mismatch} failure for a node of the wrong JSON type, naming that type as
+     * {@code actual} ({@code "string"}, {@code "number"}, {@code "null"}, ...).
      *
-     * @param in the node
+     * @param in the node, or {@code null} when there is none
      * @param path the path of the node
-     * @param expected the target type named in the issue
+     * @param expected the type the decoder expected
      * @param <T> the decoder's value type
      * @return a {@code type_mismatch} failure
      */
-    private static <T> Result<T> nonIntegral(JsonNode in, Path path, String expected) {
-        if (in.isNumber()) {
-            return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected " + expected,
-                    Map.of("expected", expected));
-        }
+    private static <T> Result<T> typeMismatch(@Nullable JsonNode in, Path path, String expected) {
         return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected " + expected,
-                Map.of("expected", expected, "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                Map.of("expected", expected,
+                        "actual", in == null ? "null" : in.getNodeType().name().toLowerCase(Locale.ROOT)));
     }
 
     // --- field / optionalField / nullable ---
@@ -276,9 +274,7 @@ public final class JsonDecoders {
     public static <T> CombinePart<JsonNode, T> field(String name, Decoder<JsonNode, T> dec) {
         return CombinePart.named(name, (in, fieldPath) -> {
             if (in == null || !in.isObject()) {
-                return Result.fail(fieldPath, ErrorCodes.TYPE_MISMATCH, "expected object",
-                        Map.of("expected", "object", "actual",
-                                in == null ? "null" : in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, fieldPath, "object");
             }
             var node = in.get(name);
             if (node == null) {
@@ -429,8 +425,7 @@ public final class JsonDecoders {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isArray()) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected array",
-                        Map.of("expected", "array", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, path, "array");
             }
             var issues = Issues.EMPTY;
             var results = new ArrayList<T>();
@@ -465,8 +460,7 @@ public final class JsonDecoders {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isObject()) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected object",
-                        Map.of("expected", "object", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, path, "object");
             }
             var issues = Issues.EMPTY;
             var results = new LinkedHashMap<String, V>();
