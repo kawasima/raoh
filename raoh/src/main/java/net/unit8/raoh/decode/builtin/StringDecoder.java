@@ -1064,6 +1064,11 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * example to amounts without an exponent, apply {@link #pattern(Pattern)} before this
      * conversion.
      *
+     * <p>The time {@link BigDecimal} takes to read a string grows faster than linearly with its
+     * number of digits, and the decoder sets no limit of its own, since how many digits are valid
+     * is up to the caller. For input from an untrusted source, bound the length first, as in
+     * {@code string().maxLength(40).toDecimal()}.
+     *
      * @param message custom error message, or {@code null} for the default
      * @return a decimal decoder with the parsed value
      */
