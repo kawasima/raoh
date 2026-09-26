@@ -176,6 +176,8 @@ public interface MessageResolver {
                         "not a valid ISO-8601 local date-time (e.g., 2024-01-15T10:30 or 2024-01-15T10:30:45)";
                 case MessageKeys.INVALID_FORMAT_OFFSET_DATE_TIME ->
                         "not a valid ISO-8601 offset date-time (e.g., 2024-01-15T10:30:00+09:00)";
+                case MessageKeys.TYPE_MISMATCH_STRING_KEYS ->
+                        "expected object with string keys, found %s key".formatted(meta.get("actual"));
                 default -> resolve(issue.code(), meta);
             };
         }

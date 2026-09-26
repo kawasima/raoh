@@ -1,6 +1,7 @@
 package net.unit8.raoh;
 
 import net.unit8.raoh.decode.ObjectDecoders;
+import net.unit8.raoh.decode.map.MapDecoders;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -180,8 +181,42 @@ class ConstraintMessageResolutionTest {
                 k("date.between", date().between(future, future).decode("2025-06-01", Path.ROOT), MessageKeys.OUT_OF_RANGE_BETWEEN),
 
                 k("list.nonempty", ObjectDecoders.list(string()).nonempty().decode(List.of(), Path.ROOT), MessageKeys.TOO_SMALL_NONEMPTY),
-                k("map.nonempty", ObjectDecoders.map(string()).nonempty().decode(java.util.Map.of(), Path.ROOT), MessageKeys.TOO_SMALL_NONEMPTY)
+                k("map.nonempty", ObjectDecoders.map(string()).nonempty().decode(java.util.Map.of(), Path.ROOT), MessageKeys.TOO_SMALL_NONEMPTY),
+
+                k("map.stringKeys", ObjectDecoders.map(string()).decode(java.util.Map.of(1, "a"), Path.ROOT), MessageKeys.TYPE_MISMATCH_STRING_KEYS),
+                k("nested.stringKeys", MapDecoders.nested((in, path) -> Result.ok(in)).decode(java.util.Map.of(1, "a"), Path.ROOT), MessageKeys.TYPE_MISMATCH_STRING_KEYS)
         );
+    }
+
+    /**
+     * Asserts that the message stored at decode time is the one resolution produces, both with
+     * {@link MessageResolver#DEFAULT} and with the English bundle. A caller who never resolves reads
+     * the stored message, so it must not say more, or less, than the key and metadata do.
+     *
+     * @param testCase the constraint and the key it must emit
+     */
+    @ParameterizedTest
+    @MethodSource("everyConstraintKey")
+    void storedMessageIsWhatResolutionGives(KeyCase testCase) {
+        var issue = firstIssue(testCase.result());
+        assertEquals(issue.message(), issue.resolve(MessageResolver.DEFAULT).message(), "DEFAULT");
+        assertEquals(issue.message(), en(testCase.result()), "English bundle");
+    }
+
+    /**
+     * Asserts that every {@link MessageKeys} constant is emitted by some case above or in
+     * {@link #everyFormatCheck()}, so each key's stored message is compared with its resolution.
+     * A key added without a case would otherwise have its wording checked by nothing.
+     */
+    @Test
+    void everyMessageKeyHasACase() {
+        var covered = new java.util.HashSet<String>();
+        everyConstraintKey().forEach(c -> covered.add(c.expectedKey()));
+        everyFormatCheck().forEach(c -> covered.add(c.expectedKey()));
+        var missing = MessageKeysBundleCoverageTest.allMessageKeys()
+                .filter(key -> !covered.contains(key))
+                .toList();
+        assertEquals(List.of(), missing, "message keys without a resolution case");
     }
 
     /**
