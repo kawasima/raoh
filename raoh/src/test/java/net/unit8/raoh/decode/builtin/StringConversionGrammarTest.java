@@ -81,14 +81,22 @@ class StringConversionGrammarTest {
             "٣",              // Arabic-Indic digit
             "१२",             // Devanagari digits
             "1２",             // mixed
-            "2147483648",     // one past Integer.MAX_VALUE
-            "-2147483649",
             "", "+", "-", "+-1", "1.0", "1e3", " 1", "1 ", "0x10", "1_000"
     })
     void toIntRejectsOtherForms(String text) {
         var issue = decodeErr(string().toInt(), text);
         assertEquals(ErrorCodes.TYPE_MISMATCH, issue.code());
         assertEquals("expected integer", issue.message());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"2147483648", "-2147483649", "99999999999999999999"})
+    void toIntReportsAWellFormedIntegerOutsideTheRange(String text) {
+        // Same issue as ObjectDecoders.int_() gives for a number outside the int range.
+        var issue = decodeErr(string().toInt(), text);
+        assertEquals(ErrorCodes.TYPE_MISMATCH, issue.code());
+        assertEquals(MessageKeys.TYPE_MISMATCH_NUMERIC_RANGE, issue.messageKey());
+        assertEquals("value is outside the integer range", issue.message());
     }
 
     @Test
@@ -100,11 +108,20 @@ class StringConversionGrammarTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"٣", "１２３", "9223372036854775808", "", "1.0", " 1"})
+    @ValueSource(strings = {"٣", "１２３", "", "1.0", " 1"})
     void toLongRejectsOtherForms(String text) {
         var issue = decodeErr(string().toLong(), text);
         assertEquals(ErrorCodes.TYPE_MISMATCH, issue.code());
         assertEquals("expected long", issue.message());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"9223372036854775808", "-9223372036854775809"})
+    void toLongReportsAWellFormedIntegerOutsideTheRange(String text) {
+        var issue = decodeErr(string().toLong(), text);
+        assertEquals(ErrorCodes.TYPE_MISMATCH, issue.code());
+        assertEquals(MessageKeys.TYPE_MISMATCH_NUMERIC_RANGE, issue.messageKey());
+        assertEquals("value is outside the long range", issue.message());
     }
 
     // --- toDecimal ---

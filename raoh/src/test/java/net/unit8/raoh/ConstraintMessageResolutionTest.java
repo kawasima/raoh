@@ -187,7 +187,9 @@ class ConstraintMessageResolutionTest {
                 k("nested.stringKeys", MapDecoders.nested((in, path) -> Result.ok(in)).decode(java.util.Map.of(1, "a"), Path.ROOT), MessageKeys.TYPE_MISMATCH_STRING_KEYS),
 
                 k("int.numericRange", ObjectDecoders.int_().decode(5_000_000_000L, Path.ROOT), MessageKeys.TYPE_MISMATCH_NUMERIC_RANGE),
-                k("float.numericRange", ObjectDecoders.float_().decode(1e40d, Path.ROOT), MessageKeys.TYPE_MISMATCH_NUMERIC_RANGE)
+                k("float.numericRange", ObjectDecoders.float_().decode(1e40d, Path.ROOT), MessageKeys.TYPE_MISMATCH_NUMERIC_RANGE),
+                k("toInt.numericRange", string().toInt().decode("2147483648", Path.ROOT), MessageKeys.TYPE_MISMATCH_NUMERIC_RANGE),
+                k("toLong.numericRange", string().toLong().decode("9223372036854775808", Path.ROOT), MessageKeys.TYPE_MISMATCH_NUMERIC_RANGE)
         );
     }
 
