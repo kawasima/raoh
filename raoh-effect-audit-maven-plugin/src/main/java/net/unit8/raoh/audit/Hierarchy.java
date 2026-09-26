@@ -11,7 +11,8 @@ import java.util.Optional;
  * Answers questions about the class hierarchy of the audited code and its dependencies.
  *
  * <p>Classes are loaded without initialization from the loader given, which should see the
- * audited classes, their compile classpath and the JDK the build compiles against.
+ * audited classes, their compile classpath and the JDK the build compiles against. Methods are
+ * matched by their whole descriptor, return type included, as the JVM matches them.
  */
 public final class Hierarchy {
 
@@ -36,7 +37,7 @@ public final class Hierarchy {
      * @throws IllegalStateException if the owner or the method cannot be found
      */
     public boolean isOverridable(Member member) {
-        if (member.isField() || member.name().equals("<init>") || member.owner().endsWith("[]")) {
+        if (member.isField() || member.isConstructor() || member.owner().endsWith("[]")) {
             return false;
         }
         var owner = load(member.owner());
@@ -58,10 +59,24 @@ public final class Hierarchy {
      *         are not inherited, or for a method the owner does not have
      */
     public Optional<String> declaringClass(Member member) {
-        if (member.isField() || member.name().equals("<init>") || member.owner().endsWith("[]")) {
+        if (member.isField() || member.isConstructor() || member.owner().endsWith("[]")) {
             return Optional.empty();
         }
         return find(load(member.owner()), member).map(m -> m.getDeclaringClass().getName());
+    }
+
+    /**
+     * Whether a value of class {@code sub} is also a {@code sup}.
+     *
+     * @param sub the binary name of the class
+     * @param sup the binary name of the possible supertype
+     * @return {@code true} if {@code sup} is {@code sub} or one of its supertypes
+     */
+    public boolean isSubtype(String sub, String sup) {
+        if (sup.endsWith("[]") || sub.endsWith("[]")) {
+            return sub.equals(sup) || sup.equals("java.lang.Object");
+        }
+        return load(sup).isAssignableFrom(load(sub));
     }
 
     private Class<?> load(String name) {
@@ -100,19 +115,16 @@ public final class Hierarchy {
         return owner.isInterface() ? declared(Object.class, member) : Optional.empty();
     }
 
-    /** The method {@code type} declares with the member's name and parameters, preferring a non-bridge one. */
+    /** The method {@code type} declares with the member's exact descriptor. */
     private static Optional<Method> declared(Class<?> type, Member member) {
-        Method bridge = null;
         for (var method : type.getDeclaredMethods()) {
             if (method.getName().equals(member.name())
+                    && method.getReturnType().getTypeName().equals(member.type())
                     && Arrays.stream(method.getParameterTypes()).map(Class::getTypeName).toList()
                             .equals(member.parameters())) {
-                if (!method.isBridge()) {
-                    return Optional.of(method);
-                }
-                bridge = method;
+                return Optional.of(method);
             }
         }
-        return Optional.ofNullable(bridge);
+        return Optional.empty();
     }
 }

@@ -41,23 +41,28 @@ When adding a new error code and its associated decoder constraint, verify all o
 
 `raoh-effect-audit-maven-plugin` (built first in the reactor, not published) checks every
 external member that `raoh`, `raoh-json` and `raoh-jooq` use, right after compilation (#151).
-When it fails, the message lists entries ready to paste.
+Members are written as the class file refers to them, return type included
+(`java.util.List#get(int):java.lang.Object`). When it fails, the message lists entries ready to
+paste.
 
 - **Member missing from `effect-audit/catalog.txt`**: file it under the effect its API contract
-  gives it, not what its implementation happens to do. `CLOSED` and `EXPLICIT` are only for members
-  no subclass can override; the audit rejects them otherwise. A method that converts an argument
-  through the argument's own methods (`String.valueOf(Object)`) is `DELEGATED`; one that only
-  observes an argument through its interface (a `CharSequence`'s chars, a key's `equals`) is not.
+  gives it, not what its implementation happens to do. `CLOSED` means it runs no code a caller of
+  Raoh can supply: not through its receiver, not through an argument whose type a caller can
+  implement (a `CharSequence`, a `Collection`, an `Object`'s `hashCode`), not through a class it
+  initializes. Anything that may is `DELEGATED`, observing or converting alike; the approval's
+  reason is where observing (allowed) and adopting a caller's behaviour (not allowed) are told
+  apart. The audit also rejects `CLOSED` / `EXPLICIT` for an overridable method called virtually.
   Map and Set iteration order is not part of any contract Raoh relies on.
 - **Use without an approval in `effect-audit/<module>.txt`**: file the `caller -> member` line under
   the existing `[reason]` it fits. Add a new reason only when none fits, and never approve a
   delegation that adopts the input's behaviour as the meaning of a conversion; fix the code
   instead (#152 is the model).
-- **`AMBIENT` in a decoder package**: cannot be approved. Take the value from the input or explicit
-  configuration.
+- **`AMBIENT` reached from a decoder package**: cannot be approved, whether the decoder reads it
+  itself or through Raoh's own methods (the audit walks Raoh's call graph across modules and prints
+  the path). Take the value from the input or explicit configuration.
 - **Stale approval**: remove the line.
-- **Unknown bootstrap method**: teach `BytecodeScanner` which members it calls before approving
-  anything.
+- **Unknown bootstrap method**: teach `BytecodeScanner` which members it reaches before approving
+  anything; do not add it to the known set without the expansion.
 
 Build a single module with `-am` (`mvn -pl raoh-json -am verify`) so the plugin is built too.
 

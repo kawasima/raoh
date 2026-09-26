@@ -130,8 +130,10 @@ detailed from the current development cycle onward.
   build. A `DELEGATED` member (an overridable method called virtually, or one that converts an
   argument through the argument's own methods) and an `AMBIENT` member need an approval for each
   calling method in `effect-audit/<module>.txt`, filed under the reason it is acceptable there,
-  and an `AMBIENT` member is refused in decoder code outright. Lambdas, method references,
-  record methods and string concatenation are followed to the members they call. This replaces
+  and decoder code must not reach an `AMBIENT` member at all, directly or through Raoh's own
+  methods: the audit walks Raoh's call graph, across modules, and prints the path. Lambdas,
+  method references, record methods, pattern and enum switches and dynamic constants are
+  followed to the members they reach, and an unknown bootstrap method fails the build. This replaces
   the test that derived default-locale readers from the JDK call graph, which could not be made
   complete; `forbidden-apis/ambient-state.txt` keeps a short list of well-known ambient readers
   for a readable failure. The plugin is not published

@@ -1,296 +1,302 @@
 # The effect of each external member Raoh's bytecode uses (#151).
 #
-# The raoh-effect-audit-maven-plugin fails the build when raoh, raoh-json or raoh-jooq uses a
-# member this file does not list. Each member is filed under the effect its API contract gives
-# it, not under what its current implementation happens to do: Map.of randomizes iteration
-# order per JVM, but iteration order is not part of a Map's contract, so Map.of is CLOSED.
+# raoh-effect-audit-maven-plugin fails the build when raoh, raoh-json or raoh-jooq uses a member
+# this file does not list. A member is written as the class file refers to it, return type
+# included: java.util.List#get(int):java.lang.Object, java.util.Locale#ROOT:java.util.Locale.
 #
-# CLOSED     Acquires nothing outside its receiver, its arguments and what they explicitly
-#            reach. Observing an argument through its interface (the chars of a CharSequence,
-#            the elements of a Collection, a key's equals/hashCode) stays CLOSED.
-# EXPLICIT   The ambient value it depends on is an argument: String#toLowerCase(Locale).
-# DELEGATED  Runs code the receiver or an argument chooses: any overridable method called
-#            virtually, and a method that converts an argument into another value through the
-#            argument's own methods (String.valueOf(Object) through toString()). Each use needs
-#            an approval in effect-audit/<module>.txt.
-# AMBIENT    Acquires ambient state itself: default locale, time zone, clock, randomness,
-#            class path, filesystem, network. Each use needs an approval, and none is allowed
-#            in a decoder package.
+# Each member is filed under the effect its API contract gives it, not under what its current
+# implementation happens to do. Map and Set iteration order is not part of any contract Raoh
+# relies on, so Map.of's per-JVM iteration order is not an effect.
 #
-# CLOSED and EXPLICIT are only for members no subclass can override; the audit checks this.
-# A note after "  -- " is for the reader.
+# CLOSED     Runs no code a caller of Raoh can supply and acquires nothing outside its receiver
+#            and arguments. A member no subclass can override may still delegate: a final method
+#            that calls an overridable one on its receiver, or a method that calls methods of an
+#            argument whose type a caller can implement (a CharSequence, a Collection, an
+#            Object's hashCode). Those are DELEGATED.
+# EXPLICIT   Like CLOSED, except that the ambient value it depends on is an argument:
+#            String#toLowerCase(Locale).
+# DELEGATED  May run code chosen by its receiver, an argument, or a class it initializes. Each
+#            use needs an approval in effect-audit/<module>.txt, whose reason says whether the
+#            use only observes what Raoh accepted (allowed) or adopts a caller's behaviour as the
+#            meaning of a conversion (not allowed; fix the code as #152 did).
+# AMBIENT    Acquires ambient state itself: default locale, time zone, clock, randomness, class
+#            path, filesystem, network. Each use needs an approval, and decoder code must not
+#            reach one, directly or through Raoh's own methods.
+#
+# The audit rejects CLOSED and EXPLICIT for a method a subclass can override that is called
+# virtually. A note after "  -- " is for the reader.
 
 [CLOSED]
-java.lang.Boolean#FALSE
-java.lang.Boolean#TRUE
-java.lang.Boolean#booleanValue()
-java.lang.Boolean#compare(boolean,boolean)
-java.lang.Boolean#valueOf(boolean)
-java.lang.Byte#byteValue()
-java.lang.Character#charCount(int)
-java.lang.Class#equals(java.lang.Object)
-java.lang.Class#getEnumConstants()  -- initializes the enum class the caller configured
-java.lang.Class#getName()
-java.lang.Class#getSimpleName()
-java.lang.Class#hashCode()
-java.lang.Class#toString()
-java.lang.Double#compare(double,double)
-java.lang.Double#doubleValue()
-java.lang.Double#isFinite(double)
-java.lang.Double#isInfinite()
-java.lang.Double#valueOf(double)
-java.lang.Enum#name()
-java.lang.Float#compare(float,float)
-java.lang.Float#floatValue()
-java.lang.Float#isFinite(float)
-java.lang.Float#isInfinite()
-java.lang.Float#toString(float)
-java.lang.Float#valueOf(float)
+java.lang.Boolean#FALSE:java.lang.Boolean
+java.lang.Boolean#TRUE:java.lang.Boolean
+java.lang.Boolean#booleanValue():boolean
+java.lang.Boolean#compare(boolean,boolean):int
+java.lang.Boolean#valueOf(boolean):java.lang.Boolean
+java.lang.Byte#byteValue():byte
+java.lang.Character#charCount(int):int
+java.lang.Class#equals(java.lang.Object):boolean
+java.lang.Class#getName():java.lang.String
+java.lang.Class#getSimpleName():java.lang.String
+java.lang.Class#hashCode():int
+java.lang.Class#toString():java.lang.String
+java.lang.Double#compare(double,double):int
+java.lang.Double#doubleValue():double
+java.lang.Double#isFinite(double):boolean
+java.lang.Double#isInfinite():boolean
+java.lang.Double#valueOf(double):java.lang.Double
+java.lang.Enum#name():java.lang.String
+java.lang.Float#compare(float,float):int
+java.lang.Float#floatValue():float
+java.lang.Float#isFinite(float):boolean
+java.lang.Float#isInfinite():boolean
+java.lang.Float#toString(float):java.lang.String
+java.lang.Float#valueOf(float):java.lang.Float
 java.lang.IllegalArgumentException#<init>(java.lang.String)
 java.lang.IllegalStateException#<init>(java.lang.String)
-java.lang.Integer#compare(int,int)
-java.lang.Integer#intValue()
-java.lang.Integer#parseInt(java.lang.String)
-java.lang.Integer#valueOf(int)
-java.lang.Long#longValue()
-java.lang.Long#parseLong(java.lang.String)
-java.lang.Long#valueOf(long)
+java.lang.Integer#compare(int,int):int
+java.lang.Integer#intValue():int
+java.lang.Integer#parseInt(java.lang.String):int
+java.lang.Integer#valueOf(int):java.lang.Integer
+java.lang.Long#longValue():long
+java.lang.Long#parseLong(java.lang.String):long
+java.lang.Long#valueOf(long):java.lang.Long
 java.lang.MatchException#<init>(java.lang.String,java.lang.Throwable)
 java.lang.Object#<init>()
-java.lang.Object#getClass()
+java.lang.Object#getClass():java.lang.Class
 java.lang.Record#<init>()
-java.lang.Short#shortValue()
-java.lang.String#codePointAt(int)
-java.lang.String#codePointCount(int,int)
-java.lang.String#contains(java.lang.CharSequence)
-java.lang.String#endsWith(java.lang.String)
-java.lang.String#equals(java.lang.Object)
-java.lang.String#hashCode()
-java.lang.String#indexOf(int)
-java.lang.String#indexOf(int,int)
-java.lang.String#isBlank()
-java.lang.String#isEmpty()
-java.lang.String#length()
-java.lang.String#replace(java.lang.CharSequence,java.lang.CharSequence)
-java.lang.String#startsWith(java.lang.String)
-java.lang.String#substring(int,int)
-java.lang.String#toString()
-java.lang.String#trim()
-java.lang.String#valueOf(int)
+java.lang.Short#shortValue():short
+java.lang.String#codePointAt(int):int
+java.lang.String#codePointCount(int,int):int
+java.lang.String#endsWith(java.lang.String):boolean
+java.lang.String#equals(java.lang.Object):boolean
+java.lang.String#hashCode():int
+java.lang.String#indexOf(int):int
+java.lang.String#indexOf(int,int):int
+java.lang.String#isBlank():boolean
+java.lang.String#isEmpty():boolean
+java.lang.String#length():int
+java.lang.String#startsWith(java.lang.String):boolean
+java.lang.String#substring(int,int):java.lang.String
+java.lang.String#toString():java.lang.String
+java.lang.String#trim():java.lang.String
+java.lang.String#valueOf(int):java.lang.String
 java.lang.StringBuilder#<init>()
-java.lang.StringBuilder#append(char)
-java.lang.StringBuilder#append(java.lang.String)
-java.lang.StringBuilder#toString()
-java.lang.invoke.ConstantBootstraps#nullConstant(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.Class)
-java.lang.invoke.LambdaMetafactory#metafactory(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.MethodType,java.lang.invoke.MethodType,java.lang.invoke.MethodHandle,java.lang.invoke.MethodType)
-java.lang.invoke.StringConcatFactory#makeConcatWithConstants(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.MethodType,java.lang.String,java.lang.Object[])
-java.lang.runtime.ObjectMethods#bootstrap(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.TypeDescriptor,java.lang.Class,java.lang.String,java.lang.invoke.MethodHandle[])
-java.lang.runtime.SwitchBootstraps#typeSwitch(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.MethodType,java.lang.Object[])
+java.lang.StringBuilder#append(char):java.lang.StringBuilder
+java.lang.StringBuilder#append(java.lang.String):java.lang.StringBuilder
+java.lang.StringBuilder#toString():java.lang.String
+java.lang.invoke.ConstantBootstraps#nullConstant(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.Class):java.lang.Object
+java.lang.invoke.LambdaMetafactory#metafactory(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.MethodType,java.lang.invoke.MethodType,java.lang.invoke.MethodHandle,java.lang.invoke.MethodType):java.lang.invoke.CallSite
+java.lang.invoke.StringConcatFactory#makeConcatWithConstants(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.MethodType,java.lang.String,java.lang.Object[]):java.lang.invoke.CallSite
+java.lang.runtime.ObjectMethods#bootstrap(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.TypeDescriptor,java.lang.Class,java.lang.String,java.lang.invoke.MethodHandle[]):java.lang.Object
+java.lang.runtime.SwitchBootstraps#typeSwitch(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.MethodType,java.lang.Object[]):java.lang.invoke.CallSite
 java.math.BigDecimal#<init>(java.lang.String)
-java.math.BigDecimal#<init>(java.math.BigInteger)
-java.math.BigDecimal#ZERO
-java.math.BigDecimal#valueOf(double)
-java.math.BigDecimal#valueOf(long)
-java.math.BigInteger#ZERO
-java.net.Inet6Address#getAddress()
-java.net.Inet6Address#ofLiteral(java.lang.String)
-java.net.URI#create(java.lang.String)
-java.net.URI#getHost()
-java.net.URI#getScheme()
-java.net.URI#toString()
-java.text.Normalizer#normalize(java.lang.CharSequence,java.text.Normalizer$Form)
-java.text.Normalizer$Form#NFC
-java.time.Instant#toString()
-java.time.LocalDate#of(int,int,int)
-java.time.LocalDate#toString()
-java.time.LocalDateTime#of(java.time.LocalDate,java.time.LocalTime)
-java.time.LocalDateTime#toString()
-java.time.LocalTime#of(int,int,int,int)
-java.time.LocalTime#toString()
-java.time.OffsetDateTime#of(java.time.LocalDateTime,java.time.ZoneOffset)
-java.time.OffsetDateTime#toString()
-java.time.ZoneOffset#UTC
-java.time.ZoneOffset#ofHoursMinutesSeconds(int,int,int)
-java.time.format.DateTimeFormatter#ISO_INSTANT
-java.time.format.DateTimeFormatter#parse(java.lang.CharSequence)  -- ISO formatters read no locale-sensitive text
-java.time.format.DateTimeFormatter#parsedLeapSecond()
+java.math.BigDecimal#ZERO:java.math.BigDecimal
+java.math.BigDecimal#valueOf(double):java.math.BigDecimal
+java.math.BigDecimal#valueOf(long):java.math.BigDecimal
+java.math.BigInteger#ZERO:java.math.BigInteger
+java.net.Inet6Address#getAddress():byte[]
+java.net.Inet6Address#ofLiteral(java.lang.String):java.net.InetAddress
+java.net.URI#create(java.lang.String):java.net.URI
+java.net.URI#getHost():java.lang.String
+java.net.URI#getScheme():java.lang.String
+java.net.URI#toString():java.lang.String
+java.text.Normalizer$Form#NFC:java.text.Normalizer$Form
+java.time.Instant#toString():java.lang.String
+java.time.LocalDate#of(int,int,int):java.time.LocalDate
+java.time.LocalDate#toString():java.lang.String
+java.time.LocalDateTime#of(java.time.LocalDate,java.time.LocalTime):java.time.LocalDateTime
+java.time.LocalDateTime#toString():java.lang.String
+java.time.LocalTime#of(int,int,int,int):java.time.LocalTime
+java.time.LocalTime#toString():java.lang.String
+java.time.OffsetDateTime#of(java.time.LocalDateTime,java.time.ZoneOffset):java.time.OffsetDateTime
+java.time.OffsetDateTime#toString():java.lang.String
+java.time.ZoneOffset#UTC:java.time.ZoneOffset
+java.time.ZoneOffset#ofHoursMinutesSeconds(int,int,int):java.time.ZoneOffset
+java.time.format.DateTimeFormatter#ISO_INSTANT:java.time.format.DateTimeFormatter
+java.time.format.DateTimeFormatter#parsedLeapSecond():java.time.temporal.TemporalQuery
 java.util.ArrayList#<init>()
 java.util.ArrayList#<init>(int)
-java.util.ArrayList#<init>(java.util.Collection)
-java.util.Collections#reverse(java.util.List)
-java.util.Collections#unmodifiableList(java.util.List)
-java.util.Collections#unmodifiableMap(java.util.Map)
-java.util.Collections#unmodifiableSet(java.util.Set)
+java.util.Collections#unmodifiableList(java.util.List):java.util.List
+java.util.Collections#unmodifiableMap(java.util.Map):java.util.Map
+java.util.Collections#unmodifiableSet(java.util.Set):java.util.Set
 java.util.HashMap#<init>()
-java.util.HashMap#newHashMap(int)
+java.util.HashMap#newHashMap(int):java.util.HashMap
 java.util.HashSet#<init>()
 java.util.HashSet#<init>(int)
-java.util.HashSet#<init>(java.util.Collection)
 java.util.LinkedHashMap#<init>()
 java.util.LinkedHashMap#<init>(int)
-java.util.LinkedHashMap#newLinkedHashMap(int)
+java.util.LinkedHashMap#newLinkedHashMap(int):java.util.LinkedHashMap
 java.util.LinkedHashSet#<init>()
-java.util.LinkedHashSet#<init>(java.util.Collection)
-java.util.List#copyOf(java.util.Collection)
-java.util.List#of()
-java.util.List#of(java.lang.Object[])
-java.util.Locale#ROOT
-java.util.Locale#equals(java.lang.Object)
-java.util.Map#of()
-java.util.Map#of(java.lang.Object,java.lang.Object)  -- iteration order is not part of its contract (nor of any Map's in Raoh)
-java.util.Map#of(java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object)
-java.util.Map#of(java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object)
-java.util.Objects#requireNonNull(java.lang.Object)
-java.util.Objects#requireNonNull(java.lang.Object,java.lang.String)
-java.util.Optional#empty()
-java.util.Optional#equals(java.lang.Object)
-java.util.Optional#hashCode()
-java.util.Optional#of(java.lang.Object)
-java.util.Optional#orElse(java.lang.Object)
-java.util.ResourceBundle$Control#FORMAT_PROPERTIES
-java.util.ResourceBundle$Control#getNoFallbackControl(java.util.List)
-java.util.Set#copyOf(java.util.Collection)
-java.util.Set#of()
-java.util.Set#of(java.lang.Object)
-java.util.Set#of(java.lang.Object[])  -- iteration order is not part of its contract (nor of any Set's in Raoh)
-java.util.TreeSet#<init>(java.util.Collection)
-java.util.UUID#fromString(java.lang.String)
-java.util.UUID#toString()
-java.util.regex.Matcher#appendReplacement(java.lang.StringBuilder,java.lang.String)
-java.util.regex.Matcher#appendTail(java.lang.StringBuilder)
-java.util.regex.Matcher#find()
-java.util.regex.Matcher#group()
-java.util.regex.Matcher#group(int)
-java.util.regex.Matcher#group(java.lang.String)
-java.util.regex.Matcher#matches()
-java.util.regex.Matcher#quoteReplacement(java.lang.String)
-java.util.regex.Pattern#compile(java.lang.String)
-java.util.regex.Pattern#matcher(java.lang.CharSequence)
-java.util.regex.Pattern#pattern()
-java.util.stream.Collectors#groupingBy(java.util.function.Function,java.util.function.Supplier,java.util.stream.Collector)
-java.util.stream.Collectors#joining(java.lang.CharSequence,java.lang.CharSequence,java.lang.CharSequence)
-java.util.stream.Collectors#mapping(java.util.function.Function,java.util.stream.Collector)
-java.util.stream.Collectors#toList()
-org.jooq.types.UByte#toBigInteger()
-org.jooq.types.UInteger#toBigInteger()
-org.jooq.types.ULong#toBigInteger()
-org.jooq.types.UShort#toBigInteger()
-tools.jackson.databind.JsonNode#isBoolean()
-tools.jackson.databind.JsonNode#isNull()
-tools.jackson.databind.JsonNode#isNumber()
-tools.jackson.databind.JsonNode#isString()
-tools.jackson.databind.node.JsonNodeType#name()
-tools.jackson.databind.node.MissingNode#getInstance()
+java.util.List#of():java.util.List
+java.util.List#of(java.lang.Object[]):java.util.List
+java.util.Locale#ROOT:java.util.Locale
+java.util.Locale#equals(java.lang.Object):boolean
+java.util.Map#of():java.util.Map
+java.util.Objects#requireNonNull(java.lang.Object):java.lang.Object
+java.util.Objects#requireNonNull(java.lang.Object,java.lang.String):java.lang.Object
+java.util.Optional#empty():java.util.Optional
+java.util.Optional#of(java.lang.Object):java.util.Optional
+java.util.Optional#orElse(java.lang.Object):java.lang.Object
+java.util.ResourceBundle$Control#FORMAT_PROPERTIES:java.util.List
+java.util.Set#of():java.util.Set
+java.util.UUID#fromString(java.lang.String):java.util.UUID
+java.util.UUID#toString():java.lang.String
+java.util.regex.Matcher#quoteReplacement(java.lang.String):java.lang.String
+java.util.regex.Pattern#compile(java.lang.String):java.util.regex.Pattern
+java.util.regex.Pattern#pattern():java.lang.String
+java.util.stream.Collectors#groupingBy(java.util.function.Function,java.util.function.Supplier,java.util.stream.Collector):java.util.stream.Collector
+java.util.stream.Collectors#joining(java.lang.CharSequence,java.lang.CharSequence,java.lang.CharSequence):java.util.stream.Collector
+java.util.stream.Collectors#mapping(java.util.function.Function,java.util.stream.Collector):java.util.stream.Collector
+java.util.stream.Collectors#toList():java.util.stream.Collector
+org.jooq.types.UByte#toBigInteger():java.math.BigInteger
+org.jooq.types.UInteger#toBigInteger():java.math.BigInteger
+org.jooq.types.ULong#toBigInteger():java.math.BigInteger
+org.jooq.types.UShort#toBigInteger():java.math.BigInteger
+tools.jackson.databind.node.JsonNodeType#name():java.lang.String
+tools.jackson.databind.node.MissingNode#getInstance():tools.jackson.databind.node.MissingNode
 
 [EXPLICIT]
-java.lang.String#toLowerCase(java.util.Locale)
-java.lang.String#toUpperCase(java.util.Locale)
+java.lang.String#toLowerCase(java.util.Locale):java.lang.String
+java.lang.String#toUpperCase(java.util.Locale):java.lang.String
 
 [DELEGATED]
-java.lang.Comparable#compareTo(java.lang.Object)
-java.lang.Object#equals(java.lang.Object)
-java.lang.Object#hashCode()
-java.lang.Object#toString()
-java.lang.String#format(java.util.Locale,java.lang.String,java.lang.Object[])  -- the locale is explicit, but it converts each argument with its toString() or formatTo()
-java.lang.String#valueOf(java.lang.Object)  -- converts the argument with its toString()
-java.lang.Throwable#toString()
-java.math.BigDecimal#compareTo(java.math.BigDecimal)
-java.math.BigDecimal#doubleValue()
-java.math.BigDecimal#floatValue()
-java.math.BigDecimal#precision()
-java.math.BigDecimal#remainder(java.math.BigDecimal)
-java.math.BigDecimal#scale()
-java.math.BigDecimal#signum()
-java.math.BigDecimal#stripTrailingZeros()
-java.math.BigDecimal#toBigInteger()
-java.math.BigInteger#bitLength()
-java.math.BigInteger#doubleValue()
-java.math.BigInteger#floatValue()
-java.math.BigInteger#intValue()
-java.math.BigInteger#longValue()
-java.time.Instant#from(java.time.temporal.TemporalAccessor)  -- converts the argument through its own getLong() and query()
-java.time.temporal.TemporalAccessor#query(java.time.temporal.TemporalQuery)
-java.util.ArrayList#add(java.lang.Object)
-java.util.ArrayList#addAll(java.util.Collection)
-java.util.ArrayList#get(int)
-java.util.ArrayList#isEmpty()
-java.util.ArrayList#size()
-java.util.Collection#iterator()
-java.util.Collection#stream()
-java.util.HashMap#containsKey(java.lang.Object)
-java.util.HashMap#get(java.lang.Object)
-java.util.HashMap#keySet()
-java.util.HashMap#put(java.lang.Object,java.lang.Object)
-java.util.HashSet#add(java.lang.Object)
-java.util.HashSet#addAll(java.util.Collection)
-java.util.HashSet#contains(java.lang.Object)
-java.util.Iterator#hasNext()
-java.util.Iterator#next()
-java.util.LinkedHashMap#get(java.lang.Object)
-java.util.LinkedHashMap#keySet()
-java.util.LinkedHashMap#put(java.lang.Object,java.lang.Object)
-java.util.LinkedHashSet#add(java.lang.Object)
-java.util.List#add(java.lang.Object)
-java.util.List#contains(java.lang.Object)
-java.util.List#equals(java.lang.Object)
-java.util.List#get(int)
-java.util.List#hashCode()
-java.util.List#isEmpty()
-java.util.List#iterator()
-java.util.List#size()
-java.util.List#stream()
-java.util.List#toString()
-java.util.Map#containsKey(java.lang.Object)
-java.util.Map#entrySet()
-java.util.Map#equals(java.lang.Object)
-java.util.Map#forEach(java.util.function.BiConsumer)
-java.util.Map#get(java.lang.Object)
-java.util.Map#hashCode()
-java.util.Map#isEmpty()
-java.util.Map#keySet()
-java.util.Map#put(java.lang.Object,java.lang.Object)
-java.util.Map#size()
-java.util.Map#toString()
-java.util.Map$Entry#getKey()
-java.util.Map$Entry#getValue()
-java.util.Optional#toString()  -- converts the value with its toString()
-java.util.PropertyResourceBundle#handleGetObject(java.lang.String)
-java.util.ResourceBundle#getLocale()
-java.util.ResourceBundle$Control#getCandidateLocales(java.lang.String,java.util.Locale)
-java.util.Set#contains(java.lang.Object)
-java.util.Set#containsAll(java.util.Collection)
-java.util.Set#equals(java.lang.Object)
-java.util.Set#hashCode()
-java.util.Set#iterator()
-java.util.Set#stream()
-java.util.Set#toString()
-java.util.function.BiFunction#apply(java.lang.Object,java.lang.Object)
-java.util.function.Function#apply(java.lang.Object)
-java.util.function.Predicate#test(java.lang.Object)
-java.util.function.Supplier#get()
-java.util.stream.Stream#allMatch(java.util.function.Predicate)
-java.util.stream.Stream#collect(java.util.stream.Collector)
-java.util.stream.Stream#map(java.util.function.Function)
-java.util.stream.Stream#reduce(java.util.function.BinaryOperator)
-java.util.stream.Stream#sorted()
-java.util.stream.Stream#sorted(java.util.Comparator)
-java.util.stream.Stream#toList()
-org.jooq.Record#field(java.lang.String)
-org.jooq.Record#get(java.lang.String)
-tools.jackson.databind.JsonNode#asString()
-tools.jackson.databind.JsonNode#booleanValue()
-tools.jackson.databind.JsonNode#get(int)
-tools.jackson.databind.JsonNode#get(java.lang.String)
-tools.jackson.databind.JsonNode#getNodeType()
-tools.jackson.databind.JsonNode#isArray()
-tools.jackson.databind.JsonNode#isIntegralNumber()
-tools.jackson.databind.JsonNode#isMissingNode()
-tools.jackson.databind.JsonNode#isObject()
-tools.jackson.databind.JsonNode#numberValue()
-tools.jackson.databind.JsonNode#properties()
-tools.jackson.databind.JsonNode#propertyNames()
-tools.jackson.databind.JsonNode#size()
+java.lang.Class#getEnumConstants():java.lang.Object[]  -- initializes the enum class it is called on
+java.lang.Comparable#compareTo(java.lang.Object):int
+java.lang.Object#equals(java.lang.Object):boolean
+java.lang.Object#hashCode():int
+java.lang.Object#toString():java.lang.String
+java.lang.String#contains(java.lang.CharSequence):boolean  -- calls the argument's toString()
+java.lang.String#format(java.util.Locale,java.lang.String,java.lang.Object[]):java.lang.String  -- the locale is explicit, but it converts each argument with its toString() or formatTo()
+java.lang.String#replace(java.lang.CharSequence,java.lang.CharSequence):java.lang.String  -- calls the arguments' toString()
+java.lang.String#valueOf(java.lang.Object):java.lang.String  -- converts the argument with its toString()
+java.lang.Throwable#toString():java.lang.String
+java.math.BigDecimal#<init>(java.math.BigInteger)  -- reads a BigInteger, whose methods a subclass can override
+java.math.BigDecimal#compareTo(java.math.BigDecimal):int
+java.math.BigDecimal#doubleValue():double
+java.math.BigDecimal#floatValue():float
+java.math.BigDecimal#precision():int
+java.math.BigDecimal#remainder(java.math.BigDecimal):java.math.BigDecimal
+java.math.BigDecimal#scale():int
+java.math.BigDecimal#signum():int
+java.math.BigDecimal#stripTrailingZeros():java.math.BigDecimal
+java.math.BigDecimal#toBigInteger():java.math.BigInteger
+java.math.BigInteger#bitLength():int
+java.math.BigInteger#doubleValue():double
+java.math.BigInteger#floatValue():float
+java.math.BigInteger#intValue():int
+java.math.BigInteger#longValue():long
+java.text.Normalizer#normalize(java.lang.CharSequence,java.text.Normalizer$Form):java.lang.String  -- reads the CharSequence argument
+java.time.Instant#from(java.time.temporal.TemporalAccessor):java.time.Instant  -- converts the argument through its own getLong() and query()
+java.time.format.DateTimeFormatter#parse(java.lang.CharSequence):java.time.temporal.TemporalAccessor  -- reads the CharSequence argument
+java.time.temporal.TemporalAccessor#query(java.time.temporal.TemporalQuery):java.lang.Object
+java.util.ArrayList#<init>(java.util.Collection)  -- calls the argument's toArray()
+java.util.ArrayList#add(java.lang.Object):boolean
+java.util.ArrayList#addAll(java.util.Collection):boolean
+java.util.ArrayList#get(int):java.lang.Object
+java.util.ArrayList#isEmpty():boolean
+java.util.ArrayList#size():int
+java.util.Collection#iterator():java.util.Iterator
+java.util.Collection#stream():java.util.stream.Stream
+java.util.Collections#reverse(java.util.List):void  -- calls the list's own methods
+java.util.HashMap#containsKey(java.lang.Object):boolean
+java.util.HashMap#get(java.lang.Object):java.lang.Object
+java.util.HashMap#keySet():java.util.Set
+java.util.HashMap#put(java.lang.Object,java.lang.Object):java.lang.Object
+java.util.HashSet#<init>(java.util.Collection)  -- iterates the argument and calls each element's hashCode() and equals()
+java.util.HashSet#add(java.lang.Object):boolean
+java.util.HashSet#addAll(java.util.Collection):boolean
+java.util.HashSet#contains(java.lang.Object):boolean
+java.util.Iterator#hasNext():boolean
+java.util.Iterator#next():java.lang.Object
+java.util.LinkedHashMap#get(java.lang.Object):java.lang.Object
+java.util.LinkedHashMap#keySet():java.util.Set
+java.util.LinkedHashMap#put(java.lang.Object,java.lang.Object):java.lang.Object
+java.util.LinkedHashSet#<init>(java.util.Collection)  -- iterates the argument and calls each element's hashCode() and equals()
+java.util.LinkedHashSet#add(java.lang.Object):boolean
+java.util.List#add(java.lang.Object):boolean
+java.util.List#contains(java.lang.Object):boolean
+java.util.List#copyOf(java.util.Collection):java.util.List  -- calls the argument's toArray()
+java.util.List#equals(java.lang.Object):boolean
+java.util.List#get(int):java.lang.Object
+java.util.List#hashCode():int
+java.util.List#isEmpty():boolean
+java.util.List#iterator():java.util.Iterator
+java.util.List#size():int
+java.util.List#stream():java.util.stream.Stream
+java.util.List#toString():java.lang.String
+java.util.Map#containsKey(java.lang.Object):boolean
+java.util.Map#entrySet():java.util.Set
+java.util.Map#equals(java.lang.Object):boolean
+java.util.Map#forEach(java.util.function.BiConsumer):void
+java.util.Map#get(java.lang.Object):java.lang.Object
+java.util.Map#hashCode():int
+java.util.Map#isEmpty():boolean
+java.util.Map#keySet():java.util.Set
+java.util.Map#of(java.lang.Object,java.lang.Object):java.util.Map  -- calls the keys' hashCode() and equals()
+java.util.Map#of(java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object):java.util.Map  -- calls the keys' hashCode() and equals()
+java.util.Map#of(java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object):java.util.Map  -- calls the keys' hashCode() and equals()
+java.util.Map#put(java.lang.Object,java.lang.Object):java.lang.Object
+java.util.Map#size():int
+java.util.Map#toString():java.lang.String
+java.util.Map$Entry#getKey():java.lang.Object
+java.util.Map$Entry#getValue():java.lang.Object
+java.util.Optional#equals(java.lang.Object):boolean  -- calls the value's equals()
+java.util.Optional#hashCode():int  -- calls the value's hashCode()
+java.util.Optional#toString():java.lang.String  -- converts the value with its toString()
+java.util.PropertyResourceBundle#handleGetObject(java.lang.String):java.lang.Object
+java.util.ResourceBundle#getLocale():java.util.Locale
+java.util.ResourceBundle$Control#getCandidateLocales(java.lang.String,java.util.Locale):java.util.List
+java.util.ResourceBundle$Control#getNoFallbackControl(java.util.List):java.util.ResourceBundle$Control  -- reads the list argument
+java.util.Set#contains(java.lang.Object):boolean
+java.util.Set#containsAll(java.util.Collection):boolean
+java.util.Set#copyOf(java.util.Collection):java.util.Set  -- calls the argument's toArray() and each element's hashCode() and equals()
+java.util.Set#equals(java.lang.Object):boolean
+java.util.Set#hashCode():int
+java.util.Set#iterator():java.util.Iterator
+java.util.Set#of(java.lang.Object):java.util.Set  -- calls the element's hashCode()
+java.util.Set#of(java.lang.Object[]):java.util.Set  -- calls the elements' hashCode() and equals()
+java.util.Set#stream():java.util.stream.Stream
+java.util.Set#toString():java.lang.String
+java.util.TreeSet#<init>(java.util.Collection)  -- iterates the argument and orders the elements with their compareTo()
+java.util.function.BiFunction#apply(java.lang.Object,java.lang.Object):java.lang.Object
+java.util.function.Function#apply(java.lang.Object):java.lang.Object
+java.util.function.Predicate#test(java.lang.Object):boolean
+java.util.function.Supplier#get():java.lang.Object
+java.util.regex.Matcher#appendReplacement(java.lang.StringBuilder,java.lang.String):java.util.regex.Matcher  -- reads the CharSequence the matcher was made for
+java.util.regex.Matcher#appendTail(java.lang.StringBuilder):java.lang.StringBuilder  -- reads the CharSequence the matcher was made for
+java.util.regex.Matcher#find():boolean  -- reads the CharSequence the matcher was made for
+java.util.regex.Matcher#group():java.lang.String  -- reads the CharSequence the matcher was made for
+java.util.regex.Matcher#group(int):java.lang.String  -- reads the CharSequence the matcher was made for
+java.util.regex.Matcher#group(java.lang.String):java.lang.String  -- reads the CharSequence the matcher was made for
+java.util.regex.Matcher#matches():boolean  -- reads the CharSequence the matcher was made for
+java.util.regex.Pattern#matcher(java.lang.CharSequence):java.util.regex.Matcher  -- reads the CharSequence argument
+java.util.stream.Stream#allMatch(java.util.function.Predicate):boolean
+java.util.stream.Stream#collect(java.util.stream.Collector):java.lang.Object
+java.util.stream.Stream#map(java.util.function.Function):java.util.stream.Stream
+java.util.stream.Stream#reduce(java.util.function.BinaryOperator):java.util.Optional
+java.util.stream.Stream#sorted():java.util.stream.Stream
+java.util.stream.Stream#sorted(java.util.Comparator):java.util.stream.Stream
+java.util.stream.Stream#toList():java.util.List
+org.jooq.Record#field(java.lang.String):org.jooq.Field
+org.jooq.Record#get(java.lang.String):java.lang.Object
+tools.jackson.databind.JsonNode#asString():java.lang.String
+tools.jackson.databind.JsonNode#booleanValue():boolean
+tools.jackson.databind.JsonNode#get(int):tools.jackson.databind.JsonNode
+tools.jackson.databind.JsonNode#get(java.lang.String):tools.jackson.databind.JsonNode
+tools.jackson.databind.JsonNode#getNodeType():tools.jackson.databind.node.JsonNodeType
+tools.jackson.databind.JsonNode#isArray():boolean
+tools.jackson.databind.JsonNode#isBoolean():boolean  -- final, but calls the node's getNodeType()
+tools.jackson.databind.JsonNode#isIntegralNumber():boolean
+tools.jackson.databind.JsonNode#isMissingNode():boolean
+tools.jackson.databind.JsonNode#isNull():boolean  -- final, but calls the node's getNodeType()
+tools.jackson.databind.JsonNode#isNumber():boolean  -- final, but calls the node's getNodeType()
+tools.jackson.databind.JsonNode#isObject():boolean
+tools.jackson.databind.JsonNode#isString():boolean  -- final, but calls the node's getNodeType()
+tools.jackson.databind.JsonNode#numberValue():java.lang.Number
+tools.jackson.databind.JsonNode#properties():java.util.Set
+tools.jackson.databind.JsonNode#propertyNames():java.util.Collection
+tools.jackson.databind.JsonNode#size():int
 
 [AMBIENT]
-java.util.Locale#getDefault()  -- reads the JVM default locale
-java.util.ResourceBundle#getBundle(java.lang.String,java.util.Locale,java.util.ResourceBundle$Control)  -- loads resources from the class path
+java.util.Locale#getDefault():java.util.Locale  -- reads the JVM default locale
+java.util.ResourceBundle#getBundle(java.lang.String,java.util.Locale,java.util.ResourceBundle$Control):java.util.ResourceBundle  -- loads resources from the class path

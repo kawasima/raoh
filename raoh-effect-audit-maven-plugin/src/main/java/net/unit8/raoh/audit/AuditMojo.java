@@ -51,7 +51,10 @@ public class AuditMojo extends AbstractMojo {
     @Parameter(required = true)
     private List<String> internalPackages;
 
-    /** Package prefixes of decoder code, where no {@code AMBIENT} member may be used. */
+    /**
+     * Package prefixes of decoder code, from which no {@code AMBIENT} use may be reached, directly
+     * or through internal methods.
+     */
     @Parameter(required = true)
     private List<String> decoderPackages;
 
@@ -71,11 +74,16 @@ public class AuditMojo extends AbstractMojo {
         }
         try (var loader = new URLClassLoader(urls(), ClassLoader.getPlatformClassLoader())) {
             var hierarchy = new Hierarchy(loader);
+            // The internal classes of other modules (raoh, for raoh-json) join the call graph, so a
+            // decoder here that reaches an ambient read through them is caught.
+            var dependencies = classpathElements.stream()
+                    .map(java.nio.file.Path::of)
+                    .filter(p -> !p.toAbsolutePath().equals(classesDirectory.toPath().toAbsolutePath()))
+                    .toList();
             var scan = new BytecodeScanner(name -> inPackages(name, internalPackages), hierarchy)
-                    .scan(classesDirectory.toPath());
+                    .scan(classesDirectory.toPath(), dependencies);
             var report = EffectAudit.check(scan, EffectCatalog.read(catalog.toPath()),
-                    Approvals.read(approvals.toPath()), hierarchy,
-                    caller -> inPackages(caller.substring(0, caller.indexOf('#')), decoderPackages));
+                    Approvals.read(approvals.toPath()), hierarchy, name -> inPackages(name, decoderPackages));
             if (!report.passed()) {
                 throw new MojoFailureException("Effect audit failed. The rules are in "
                         + "raoh-effect-audit-maven-plugin's EffectAudit." + report.describe(
