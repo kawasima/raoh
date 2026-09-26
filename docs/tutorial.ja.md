@@ -4,6 +4,7 @@
 
 ---
 
+<!-- souther-section: why-decoders -->
 ## なぜデコーダーなのか？
 
 Webアプリケーションやバッチ処理では、外部からやってくるデータを信頼することはできません。HTTPリクエストのボディ、CSVファイル、外部APIのレスポンス、データベースのカラム値——これらはどれも、アプリケーションが期待する型や制約を満たしている保証がありません。
@@ -30,6 +31,7 @@ Ok[ドメインオブジェクト]  または  Err[{path: "/email", code: "inval
 
 ---
 
+<!-- souther-section: setup -->
 ## 0. 準備
 
 [jetshell](https://github.com/kawasima/jetshell) を起動してRaohを読み込みます。
@@ -50,6 +52,7 @@ import java.time.*;
 
 ---
 
+<!-- souther-section: primitive-values -->
 ## 1. プリミティブ値のデコード
 
 Raohの最小単位は、単一の値を読み取るデコーダーです。`ObjectDecoders` の `string()`, `int_()`, `decimal()`, `bool()` がそれぞれの型に対応しています。
@@ -88,10 +91,12 @@ int_().decode("not a number")
 
 ---
 
+<!-- souther-section: constraints -->
 ## 2. 制約の付与
 
 デコーダーにはチェーンで制約を付けられます。制約に違反するとデコード失敗になります。
 
+<!-- souther-section: string-constraints -->
 ### 文字列の制約
 
 ```java
@@ -111,6 +116,7 @@ string().uuid().decode("550e8400-e29b-41d4-a716-446655440000")
 // ==> Ok[550e8400-e29b-41d4-a716-446655440000]
 ```
 
+<!-- souther-section: normalization -->
 ### 正規化
 
 `minLength` / `maxLength` / `fixedLength` はコードポイントで数えますが、同じ「が」でも合成済み（U+304C）と分解済み（U+304B U+3099）ではコードポイント数が違います。HFS+ 由来のファイル名や、macOS 上の一部の経路、IME、クリップボードから、分解形のテキストが届くことがあります。`normalize()` を前に挟むと、どちらの形で届いても同じ数え方になります。
@@ -133,6 +139,7 @@ string().normalize().maxLength(1).decode(nfd)
 
 なお、正規化されるのは値だけで、後続の制約に渡す引数は正規化されません。Java は文字列リテラルを正規化しないので、`oneOf("か\u3099")` と書けば引数は分解形のままで、NFC に正規化された値とはマッチしません。リテラルは同じ形式で書くか、明示的に正規化してください。
 
+<!-- souther-section: uri-url -->
 ### URI / URL バリデーション
 
 ```java
@@ -148,6 +155,7 @@ string().url().decode("ftp://example.com")
 
 `uri()` は任意のスキームを受け入れ、`java.net.URI` を返します。`url()` はより厳格で、`http` または `https` スキーム、空でないホスト、最大 2048 文字を要求します。どちらも終端メソッドで、`String` ではなく `URI` を返します。
 
+<!-- souther-section: numeric-constraints -->
 ### 数値の制約
 
 ```java
@@ -164,6 +172,7 @@ decimal().scale(4).decode(new BigDecimal("0.1234"))
 // ==> Ok[0.1234]
 ```
 
+<!-- souther-section: temporal-constraints -->
 ### 日時の制約
 
 ```java
@@ -189,6 +198,7 @@ iso8601().future().decode(Instant.now().minusSeconds(3600))
 // ==> Err[/: must be in the future]
 ```
 
+<!-- souther-section: coerce -->
 ### 文字列からの型変換（coerce）
 
 フォームデータやクエリパラメータでは、数値や真偽値もすべて文字列として届きます。`toInt()`, `toLong()`, `toDecimal()`, `toBool()` を使うと、文字列をパースして型付きデコーダーに変換できます。変換後はそのまま制約をチェーンできます。
@@ -247,6 +257,7 @@ string().trim().toInt().decode("  42  ")
 
 ---
 
+<!-- souther-section: domain-primitives -->
 ## 3. ドメインプリミティブへの変換
 
 `map` を使うと、生の値をドメイン固有の型に変換できます。これがRaohの核心です。境界でドメイン型に昇格させることで、アプリケーションの内側では「すでに検証済み・変換済みの値」だけが流通します。
@@ -274,6 +285,7 @@ userIdDec.decode("550e8400-e29b-41d4-a716-446655440000")
 
 ---
 
+<!-- souther-section: objects -->
 ## 4. オブジェクトのデコード — combine + field
 
 ここから `MapDecoders` に切り替えます。`Map<String, Object>` を入力として `field()` と `combine()` でオブジェクトを組み立てます。
@@ -310,6 +322,7 @@ userDec.decode(Map.of("id", "not-uuid", "email", "invalid", "age", 300))
 
 ---
 
+<!-- souther-section: nested-objects -->
 ## 5. ネストしたオブジェクト
 
 `field` の中にオブジェクトデコーダーを渡すだけでネスト構造を表現できます。エラーパスは自動的に `/address/city` のように合成されます。
@@ -343,6 +356,7 @@ customerDec.decode(Map.of(
 
 ---
 
+<!-- souther-section: flat -->
 ## 6. フラットデータの構造化 — flat
 
 DBのJOIN結果やCSVでは、すべてのカラムが同一階層に並んだフラットな形式で届きます。`flat` を使うと、このフラットデータから構造化されたドメインモデルを組み立てられます。
@@ -414,6 +428,7 @@ deptPresenceDec.decode(row)
 // ==> Ok[PresentNull[]]  — JOINされなかったことを示す
 ```
 
+<!-- souther-section: one-to-many-join -->
 ### 1対多 JOIN — フラット行から親子モデルへの組み上げ
 
 DBの1対多JOINクエリは、親カラムが重複したフラット行のリストを返します。これを `Order { lines: [OrderLine] }` のような親子ドメインモデルに組み上げるには、`flat` で各行をデコードした後、親キーでグルーピングします。
@@ -484,6 +499,7 @@ orders
 
 ---
 
+<!-- souther-section: lists -->
 ## 7. リストのデコード
 
 リスト内の全要素が検査され、どの要素で失敗したかがインデックス付きのパスで報告されます。
@@ -527,6 +543,7 @@ field("tags", list(string()).minSize(1, "タグは1つ以上選んでくださ�
 
 ---
 
+<!-- souther-section: maps -->
 ## 8. マップのデコード
 
 キーが動的な辞書構造には `map(decoder)` を使います。
@@ -538,6 +555,7 @@ pricesDec.decode(Map.of("prices", Map.of("apple", 120, "banana", 80)))
 // ==> Ok[{apple=120, banana=80}]
 ```
 
+<!-- souther-section: json-in-string -->
 ### 文字列に格納された JSON をデコードする
 
 JSON を文字列として持つケースはよくあります。`VARCHAR` カラムに JSON を保存する、あるいは JSON ボディのフィールド値自体が JSON 文字列（二重エンコード）になっている、といった形です。素朴に書くと、Jackson で手パースして例外を握り潰しがちです。
@@ -588,6 +606,7 @@ dec.decode(Map.of("params", "{\"kind\":\"like\"}"))
 
 ---
 
+<!-- souther-section: optional-nullable -->
 ## 9. Optional / Nullable / 三値フィールド
 
 「フィールドが存在しない」「`null` が明示的に送られた」「値がある」の3状態を型レベルで分離できます。
@@ -640,6 +659,7 @@ profilePatchDec.decode(Map.of("nickname", "alice"))
 
 ---
 
+<!-- souther-section: enums -->
 ## 10. Enum値のデコード
 
 JavaのEnumをケース非依存でデコードできます。
@@ -659,6 +679,7 @@ field("role", withDefault(enumOf(Role.class), Role.MEMBER)).decode(Map.of())
 
 ---
 
+<!-- souther-section: one-of -->
 ## 11. Union型 — oneOf による判別
 
 `kind` フィールドで型を判別し、それぞれ異なる構造をデコードするパターンです。
@@ -691,6 +712,7 @@ contactDec.decode(Map.of("kind", "fax", "value", "123"))
 
 すべての候補がマッチしなかった場合、`no variant matched` エラーが返ります。
 
+<!-- souther-section: discriminate -->
 ### discriminate — フィールド値によるディスパッチ
 
 ディスクリミネーターフィールド名が固定の場合、`discriminate()` は `oneOf()` よりクリーンな代替手段です。`variant(tag, decoder)` を並べると、各アームは部分型のデコーダーをそのまま書けます。戻り値の型 `Decoder<..., Shape>` が `T = Shape` を固定するので、`(Shape)` へのアップキャストは要りません:
@@ -723,6 +745,7 @@ shapeDec.decode(Map.of("type", "hexagon"))
 
 ---
 
+<!-- souther-section: cross-field-validation -->
 ## 12. クロスフィールドバリデーション — flatMap
 
 複数フィールド間の整合性チェックには `flatMap` を使います。`combine` でフィールドを読み取った後、ドメインルールを適用します。
@@ -755,6 +778,7 @@ dateRangeDec.decode(Map.of("start", "2025-12-31", "end", "2025-01-01"))
 
 ---
 
+<!-- souther-section: conditional-decoding -->
 ## 13. 条件付きデコード — method フィールドによる分岐
 
 あるフィールドの値によって後続のデコード方法が変わるケースです。`Decoder<I, T>` ラムダとして記述し、最初に `method` フィールドを読んでから残りのフィールドを切り替えます。
@@ -789,6 +813,7 @@ paymentDec.decode(Map.of("method", "bank_transfer", "bankCode", "0001", "account
 
 ---
 
+<!-- souther-section: result-map2 -->
 ## 14. 異なるソースの合成 — Result.map2
 
 `combine` は同一入力からフィールドを取り出す合成です。異なるデータソース（別テーブル、別API応答など）から得た2つの `Result` を合成するには `Result.map2` を使います。
@@ -819,6 +844,7 @@ Result.map2(nameResult, contactResult, CustomerProfile::new)
 
 ---
 
+<!-- souther-section: result-traverse -->
 ## 15. リスト要素の一括デコード — Result.traverse
 
 複数行をドメインオブジェクトのリストに変換する場合、`Result.traverse` がすべての行を検査しエラーを蓄積します。
@@ -845,8 +871,10 @@ Result.traverse(rows, orderDec::decode, Path.of("orders"))
 
 ---
 
+<!-- souther-section: defaults-and-recovery -->
 ## 16. デフォルト値とリカバリ
 
+<!-- souther-section: with-default -->
 ### withDefault — 欠損時のフォールバック
 
 フィールドが存在しないか `null` のときだけデフォルト値を適用します。値があって不正な場合はエラーになります。
@@ -862,6 +890,7 @@ field("role", withDefault(enumOf(Role.class), Role.MEMBER)).decode(Map.of("role"
 // ==> Err[/role: ...]
 ```
 
+<!-- souther-section: recover -->
 ### recover — あらゆる失敗からのフォールバック
 
 値が不正な場合も含め、あらゆるデコード失敗をフォールバック値で吸収します。
@@ -878,6 +907,7 @@ recover(field("pageSize", int_().range(1, 100)), 20).decode(Map.of())
 
 ---
 
+<!-- souther-section: strict-mode -->
 ## 17. strictモード — 未知フィールドの拒否
 
 スキーマに定義されていないフィールドが混入していたら拒否します。
@@ -899,6 +929,7 @@ apiRequestDec.decode(Map.of("action", "transfer", "amount", 100, "extra", true))
 
 ---
 
+<!-- souther-section: lazy -->
 ## 18. 再帰構造 — lazy
 
 型が自分自身を参照する場合は `lazy` で循環参照を解決します。
@@ -927,6 +958,7 @@ commentDec.decode(Map.of(
 
 ---
 
+<!-- souther-section: error-handling -->
 ## 19. エラーハンドリングの実践パターン
 
 Raohのエラーは構造化されており、用途に応じて複数の表現形式で取り出せます。
@@ -940,6 +972,7 @@ var checkDec = combine(
 var result = checkDec.decode(Map.of("email", "bad", "age", 300));
 ```
 
+<!-- souther-section: flatten -->
 ### フォーム向け — flatten
 
 パスをキー、メッセージのリストを値とするフラットなマップです。フロントのフォームバリデーション表示に直結します。
@@ -952,6 +985,7 @@ switch (result) {
 // ==> {/email=[not a valid email], /age=[must be between 0 and 150]}
 ```
 
+<!-- souther-section: to-json-list -->
 ### API向け — toJsonList
 
 各エラーを `path`, `code`, `message`, `meta` を含むオブジェクトのリストとして返します。REST APIのエラーレスポンスに直結します。
@@ -964,6 +998,7 @@ switch (result) {
 // ==> [{path=/email, code=invalid_format, message=not a valid email, meta={}}, ...]
 ```
 
+<!-- souther-section: locale-aware-messages -->
 ### ロケール対応メッセージ
 
 `ResourceBundleMessageResolver` と組み合わせると、デコーダーを変更することなくロケールに応じたメッセージを生成できます。
@@ -978,6 +1013,7 @@ switch (result) {
 
 ---
 
+<!-- souther-section: user-registration -->
 ## 20. 業務シナリオ: ユーザー登録API
 
 ここまでのパターンを組み合わせた実例です。
@@ -1047,6 +1083,7 @@ Spring MVC Controller でJSON入力を受け取る場合は `JsonDecoders` に�
 
 ---
 
+<!-- souther-section: list-to-map -->
 ## 21. リストをMapに変換する
 
 **シーン:** 商品マスタAPIが `[{"id": "APPLE", "price": 120}, ...]` のようなリスト形式でデータを返す場合、アプリ内部では `Map<String, BigDecimal>` として持ちたいことがあります。ID→価格のルックアップを繰り返すなら、リストのままでは毎回線形探索になるため、デコード時点でMapに変換してしまうのが自然です。
@@ -1099,6 +1136,7 @@ strictPriceMapDec.decode(Map.of("products", List.of(
 
 ---
 
+<!-- souther-section: remaining-fields -->
 ## 22. 既知フィールド＋残余フィールドのMap収集
 
 **シーン:** 商品やイベントのような「基本属性＋自由な拡張属性」を持つエンティティを扱うとき、スキーマで決まった固定フィールドと動的な追加属性が同一のMapに混在することがあります。たとえば `{"name": "T-shirt", "color": "red", "size": "L"}` の `name` は必須フィールドですが、`color` や `size` はカテゴリによって変わる拡張属性です。
@@ -1138,6 +1176,7 @@ itemDec.decode(Map.of("name", "T-shirt", "color", "red", "size", "L"))
 
 ---
 
+<!-- souther-section: password-confirmation -->
 ## 23. パスワード確認 — 典型的クロスフィールドバリデーション
 
 **シーン:** パスワード変更フォームでは「新パスワードと確認パスワードが一致すること」「新パスワードが現在のパスワードと異なること」という2つのクロスフィールドルールがあります。これらはいずれも個別フィールドの制約ではなく、複数フィールドの値の組み合わせに対するルールです。
@@ -1177,6 +1216,7 @@ passwordChangeDec.decode(Map.of(
 
 ---
 
+<!-- souther-section: pagination -->
 ## 24. ページネーション / クエリパラメータ
 
 **シーン:** 検索APIでは `page`, `size`, `sort` のようなクエリパラメータを受け取ります。これらには「省略された場合のデフォルト値」と「壊れた値への対処方針」の2軸があります。`page` は負数を明示的にエラーにしたい一方、`size` や `sort` は多少おかしな値でも安全なデフォルトにフォールバックして動作継続させたい、という違いが典型的です。
@@ -1217,6 +1257,7 @@ pageRequestDec.decode(Map.of("page", -1))
 
 ---
 
+<!-- souther-section: amount-currency -->
 ## 25. 金額と通貨のクロスフィールドバリデーション
 
 **シーン:** 決済システムや会計処理では、金額と通貨コードのペアを受け取る場面が頻繁にあります。金額の妥当性チェックは通貨ごとに異なります。JPYは小数点以下を許さない、USD/EURは2桁まで、というルールは個別フィールドの制約ではなく、両フィールドを合わせて初めて判定できるクロスフィールドルールです。
@@ -1254,6 +1295,7 @@ moneyDec.decode(Map.of("amount", new BigDecimal("9.99"), "currency", "usd"))
 
 ---
 
+<!-- souther-section: csv-import -->
 ## 26. CSVインポート — 行番号付きエラー蓄積
 
 **シーン:** 会員一括登録やデータ移行では、CSVファイルをアップロードしてもらう機能がよくあります。このとき、1行目でエラーが見つかっても即座に止めずに全行を検査して「2行目のemailが不正、4行目のageが範囲外」のように一度にフィードバックすることが、ユーザーにとって親切です。`Result.traverse` がこのパターンにフィットします。
@@ -1292,6 +1334,7 @@ switch (result) {
 
 ---
 
+<!-- souther-section: configuration-files -->
 ## 27. 設定ファイルのデコード — ネスト構造 + withDefault
 
 **シーン:** アプリケーション設定ファイル（YAML/TOMLをMapにパースしたもの）を読み込む場面では、「DBの接続先は必須だが、キャッシュ設定はなければデフォルトで動かしたい」「ログレベルは省略時はINFOで十分」のように、必須セクションとオプショナルセクションが混在します。型安全にデコードすることで、設定ミスをアプリ起動時に検出できます。
@@ -1339,6 +1382,7 @@ appConfigDec.decode(Map.of(
 
 設定デコーダーをアプリ起動時に実行することで、環境変数の設定漏れや型ミスを本番コードに入る前に検出できます。
 
+<!-- souther-section: tuples -->
 ## 28. タプル型 — 軽量な結果コンテナ
 
 `combine(...).map(...)` では通常、結果用の専用 record を定義します。
@@ -1385,6 +1429,7 @@ switch (dec.decode(input)) {
 
 ---
 
+<!-- souther-section: encoding -->
 ## 29. エンコード — ドメインオブジェクトから Map へ
 
 Raoh はデコーダーの逆操作として、ドメインオブジェクトを `Map<String, Object>` に変換するエンコーダーも提供しています。JDBC バインディングや JSON シリアライズに使えます。
@@ -1417,6 +1462,7 @@ Map<String, Object> row = ITEM_ENCODER.encode(new Item(new ItemId(42L), "Widget"
 | `nullable(dec)` | `nullableProperty("x", T::x, enc)` |
 | `withDefault(dec, v)` | `propertyWithDefault("x", T::x, enc, v)` |
 
+<!-- souther-section: encoding-nullable -->
 ## 30. エンコード — nullableProperty と propertyWithDefault
 
 null を扱う分岐はエンコーダー本体ではなく property 層が担います。値エンコーダー（`string()` など）は常に非null 値を受け取る形のままで、デコーダー側の `field` / `optionalField` と対称です。
@@ -1435,6 +1481,7 @@ propertyWithDefault("tags", Article::tags, list(nested(TAG_ENCODER)), List.of())
 // getter が null → 出力では []
 ```
 
+<!-- souther-section: null-analysis -->
 ### null 解析を有効にしている場合の一行設定
 
 consumer 側のコードを `@NullMarked` にして厳格な null 解析（Eclipse JDT / ecj、NullAway、IntelliJ）を有効にしていると、raoh との境界で「unchecked conversion（`@NonNull` への未検査変換）」系の警告が出ることがあります。これらは nullness の欠陥ではなく、`@NullMarked` モジュールと非注釈の JDK / ライブラリ型との相互運用で生じる既知のノイズです。raoh 自身も `.settings/org.eclipse.jdt.core.prefs` に次の一行を置いて抑制しています。
@@ -1445,6 +1492,7 @@ org.eclipse.jdt.core.compiler.problem.nullUncheckedConversion=ignore
 
 ecj のバッチ実行では `-properties` でこのキーを渡せば同じ効果になります。真の null 契約違反（`nullSpecViolation`）は有効なままです。
 
+<!-- souther-section: encoding-nested -->
 ## 31. エンコード — ネストしたオブジェクト
 
 `nested()` で構造化エンコーダーを親に埋め込み、`list()` でコレクションをエンコードします：
@@ -1457,6 +1505,7 @@ Encoder<Order, Map<String, Object>> ORDER_ENCODER = object(
 );
 ```
 
+<!-- souther-section: encoding-discriminate -->
 ## 32. エンコード — discriminate（タグ付きユニオン）
 
 sealed インターフェース（タグ付きユニオン）は `discriminate()` でエンコードします。値の実行時型でバリアントを選び、ディスクリミネーターのタグを出力に書き込みます。デコーダー側の `discriminate()`（第11節）の鏡像です。デコーダーが入力データからタグを読むのに対し、エンコーダーは値の型からタグを選びます。
