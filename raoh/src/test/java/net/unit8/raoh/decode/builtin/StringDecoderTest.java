@@ -36,6 +36,67 @@ class StringDecoderTest {
         assertEquals("must not be blank", issue.message());
     }
 
+    // The expected sets are written out as literals; they are never derived from
+    // Character.isWhitespace, String.isBlank or String.trim.
+    private static final String[] WHITE_SPACE = {
+            "\u0009", "\n", "\u000B", "\u000C", "\r", "\u0020", "\u0085", "\u00A0", "\u1680",
+            "\u2000", "\u2001", "\u2002", "\u2003", "\u2004", "\u2005", "\u2006", "\u2007",
+            "\u2008", "\u2009", "\u200A", "\u2028", "\u2029", "\u202F", "\u205F", "\u3000"
+    };
+    // Whitespace to the JDK (Java's isWhitespace or trim), but not Unicode White_Space,
+    // plus invisible characters that are deliberately not whitespace.
+    private static final String[] NOT_WHITE_SPACE = {
+            "\u0000", "\u0001", "\u001C", "\u001D", "\u001E", "\u001F", "\u180E", "\u200B",
+            "\u200C", "\u200D", "\u2060", "\uFEFF", "a"
+    };
+
+    @Test
+    void nonBlankRejectsExactlyUnicodeWhiteSpace() {
+        assertEquals(25, WHITE_SPACE.length);
+        for (var ws : WHITE_SPACE) {
+            assertEquals(ErrorCodes.BLANK, decodeErr(string().nonBlank(), ws).code(), ws);
+            assertEquals(ErrorCodes.BLANK, decodeErr(string().nonBlank(), ws + ws).code(), ws);
+        }
+        for (var ch : NOT_WHITE_SPACE) {
+            assertEquals(ch, decodeOk(string().nonBlank(), ch));
+        }
+        assertEquals(ErrorCodes.BLANK, decodeErr(string().nonBlank(), "").code());
+    }
+
+    @Test
+    void trimStripsExactlyUnicodeWhiteSpace() {
+        for (var ws : WHITE_SPACE) {
+            assertEquals("x y", decodeOk(string().trim(), ws + "x y" + ws), ws);
+            assertEquals("", decodeOk(string().trim(), ws), ws);
+        }
+        for (var ch : NOT_WHITE_SPACE) {
+            assertEquals(ch + "x" + ch, decodeOk(string().trim(), ch + "x" + ch));
+        }
+        // Supplementary-plane characters are not whitespace and stay intact.
+        assertEquals("\uD83D\uDE00", decodeOk(string().trim(), "\u3000\uD83D\uDE00\u00A0"));
+    }
+
+    @Test
+    void trimAndNonBlankAgreeOnEveryInput() {
+        var samples = new java.util.ArrayList<String>();
+        for (var a : WHITE_SPACE) {
+            samples.add(a);
+            samples.add(a + "x");
+        }
+        for (var a : NOT_WHITE_SPACE) {
+            samples.add(a);
+            samples.add("\u0020" + a + "\u3000");
+        }
+        samples.add("");
+        for (var s : samples) {
+            var trimmed = decodeOk(string().trim(), s);
+            assertEquals(trimmed, decodeOk(string().trim().trim(), s), "idempotent");
+            assertEquals(trimmed.isEmpty(), !string().nonBlank().decode(s).isOk(), "blank iff empty after trim");
+            assertEquals(string().nonBlank().decode(s).isOk(),
+                    string().trim().nonBlank().decode(s).isOk(), "trim().nonBlank() agrees with nonBlank()");
+        }
+    }
+
     // --- length constraints ---
 
     @Test
