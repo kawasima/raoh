@@ -17,20 +17,42 @@ import org.jspecify.annotations.Nullable;
 final class UriSyntax {
 
     /**
-     * The components of an accepted URI.
+     * The components of an accepted URI, kept as offsets into the text so that reading the result
+     * copies nothing.
      *
-     * @param scheme the scheme, as written
-     * @param authority the authority without the leading {@code //}, or {@code null} if there is none
-     * @param host the host, brackets included for an {@code IP-literal}, or {@code null} if there is
-     *             no authority
-     * @param port the port digits without the {@code :}, possibly empty, or {@code null} if there is none
-     * @param path the path, possibly empty
-     * @param query the query without the {@code ?}, or {@code null} if there is none
-     * @param fragment the fragment without the {@code #}, or {@code null} if there is none
+     * @param value the accepted text
+     * @param schemeEnd the index of the {@code :} after the scheme
+     * @param authorityStart the index after the {@code //}, or {@code -1} if there is no authority
+     * @param hostStart the start of the host, brackets included for an {@code IP-literal}; only
+     *                  meaningful with an authority
+     * @param hostEnd the end of the host, exclusive
+     * @param authorityEnd the end of the authority, exclusive; the path starts here
+     * @param hierEnd the end of the path, exclusive; a {@code ?} or {@code #} or the end of the
+     *                text follows
+     * @param hasQuery whether a query follows the path
+     * @param hasFragment whether a fragment follows
      */
-    record Parsed(String scheme, @Nullable String authority, @Nullable String host,
-                  @Nullable String port, String path, @Nullable String query,
-                  @Nullable String fragment) {
+    record Parsed(String value, int schemeEnd, int authorityStart, int hostStart, int hostEnd,
+                  int authorityEnd, int hierEnd, boolean hasQuery, boolean hasFragment) {
+
+        /**
+         * Returns whether the scheme equals the given lower-case ASCII text, ignoring case.
+         *
+         * @param expected the scheme to compare with
+         * @return {@code true} if it is equal
+         */
+        boolean schemeIs(String expected) {
+            return value.regionMatches(true, 0, expected, 0, schemeEnd) && schemeEnd == expected.length();
+        }
+
+        /**
+         * Returns whether the URI has an authority and its host is not empty.
+         *
+         * @return {@code true} if there is a non-empty host
+         */
+        boolean hasHost() {
+            return authorityStart >= 0 && hostStart < hostEnd;
+        }
 
         /**
          * Returns whether {@link java.net.URI} can be built from the text. It follows RFC 2396 and
@@ -44,32 +66,44 @@ final class UriSyntax {
          * @return {@code true} if the text can be held by {@link java.net.URI}
          */
         boolean representableAsJavaUri() {
-            if (authority == null) {
-                return !path.isEmpty() || query != null;
+            boolean pathEmpty = authorityEnd == hierEnd;
+            if (authorityStart < 0) {
+                return schemeEnd + 1 < hierEnd || hasQuery;
             }
-            if (authority.isEmpty() && path.isEmpty() && query == null && fragment == null) {
+            if (authorityStart == authorityEnd && pathEmpty && !hasQuery && !hasFragment) {
                 return false;
             }
             // A bracket starts an IP-literal, and an IPvFuture inside it starts with "v".
-            var host = this.host;
-            if (host == null || !host.startsWith("[")) {
+            if (hostStart >= hostEnd || value.charAt(hostStart) != '[') {
                 return true;
             }
-            if ((host.charAt(1) | 0x20) == 'v') {
+            if ((value.charAt(hostStart + 1) | 0x20) == 'v') {
                 return false;
             }
-            var port = this.port;
-            return port == null || fitsInt(port);
+            // hostEnd is the "]"'s successor; a port, when there is one, follows a ":".
+            return hostEnd == authorityEnd || fitsInt(hostEnd + 1, authorityEnd);
         }
 
-        // Whether the decimal digits denote a value no greater than Integer.MAX_VALUE.
-        private static boolean fitsInt(String digits) {
-            int start = 0;
-            while (start < digits.length() - 1 && digits.charAt(start) == '0') {
+        // Whether the decimal digits in value[from, to) denote a value no greater than
+        // Integer.MAX_VALUE.
+        private boolean fitsInt(int from, int to) {
+            int start = from;
+            while (start < to - 1 && value.charAt(start) == '0') {
                 start++;
             }
-            int length = digits.length() - start;
-            return length < 10 || (length == 10 && digits.substring(start).compareTo("2147483647") <= 0);
+            int length = to - start;
+            return length < 10 || (length == 10 && compare(start) <= 0);
+        }
+
+        // Compares the ten digits at start with 2147483647.
+        private int compare(int start) {
+            for (int i = 0; i < 10; i++) {
+                int diff = value.charAt(start + i) - "2147483647".charAt(i);
+                if (diff != 0) {
+                    return diff;
+                }
+            }
+            return 0;
         }
     }
 
@@ -95,7 +129,7 @@ final class UriSyntax {
         }
         int queryEnd = hierEnd;
         if (hierEnd < length && value.charAt(hierEnd) == '?') {
-            queryEnd = value.indexOf('#', hierEnd);
+            queryEnd = indexOf(value, '#', hierEnd, length);
             if (queryEnd < 0) {
                 queryEnd = length;
             }
@@ -107,28 +141,27 @@ final class UriSyntax {
             return null;
         }
 
-        String authority = null;
-        String host = null;
-        String port = null;
-        int pathStart = hierStart;
+        int authorityStart = -1;
+        int hostStart = hierStart;
+        int hostEnd = hierStart;
+        int authorityEnd = hierStart;
         if (hierEnd - hierStart >= 2 && value.charAt(hierStart) == '/' && value.charAt(hierStart + 1) == '/') {
-            int authorityStart = hierStart + 2;
-            int authorityEnd = value.indexOf('/', authorityStart);
-            if (authorityEnd < 0 || authorityEnd > hierEnd) {
+            authorityStart = hierStart + 2;
+            authorityEnd = indexOf(value, '/', authorityStart, hierEnd);
+            if (authorityEnd < 0) {
                 authorityEnd = hierEnd;
             }
-            int hostStart = authorityStart;
-            int at = value.indexOf('@', authorityStart);
-            if (at >= 0 && at < authorityEnd) {
+            hostStart = authorityStart;
+            int at = indexOf(value, '@', authorityStart, authorityEnd);
+            if (at >= 0) {
                 if (!allMatch(value, authorityStart, at, USERINFO)) {
                     return null;
                 }
                 hostStart = at + 1;
             }
-            int hostEnd;
             if (hostStart < authorityEnd && value.charAt(hostStart) == '[') {
-                int close = value.indexOf(']', hostStart);
-                if (close < 0 || close >= authorityEnd) {
+                int close = indexOf(value, ']', hostStart, authorityEnd);
+                if (close < 0) {
                     return null;
                 }
                 if (!IpSyntax.isIpv6(value, hostStart + 1, close) && !isIpFuture(value, hostStart + 1, close)) {
@@ -154,25 +187,26 @@ final class UriSyntax {
                         return null;
                     }
                 }
-                port = value.substring(hostEnd + 1, authorityEnd);
             }
-            authority = value.substring(authorityStart, authorityEnd);
-            host = value.substring(hostStart, hostEnd);
-            pathStart = authorityEnd;
         }
         // Every path form is pchar and "/"; the forms differ only in how they start, and a path
         // starting with "//" has already been read as an authority.
-        if (!allMatch(value, pathStart, hierEnd, PATH)) {
+        if (!allMatch(value, authorityEnd, hierEnd, PATH)) {
             return null;
         }
-        return new Parsed(
-                value.substring(0, schemeEnd),
-                authority,
-                host,
-                port,
-                value.substring(pathStart, hierEnd),
-                queryEnd > hierEnd ? value.substring(hierEnd + 1, queryEnd) : null,
-                queryEnd < length ? value.substring(queryEnd + 1) : null);
+        return new Parsed(value, schemeEnd, authorityStart, hostStart, hostEnd, authorityEnd, hierEnd,
+                queryEnd > hierEnd, queryEnd < length);
+    }
+
+    // Like String#indexOf(int, int) but stops at "to". Returns -1 if the character is not in
+    // value[from, to).
+    private static int indexOf(String value, char c, int from, int to) {
+        for (int i = from; i < to; i++) {
+            if (value.charAt(i) == c) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     // scheme = ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ), followed by ":".

@@ -725,10 +725,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
 
     // RFC 9110 section 4.2: the http or https scheme, compared without case, and a non-empty host.
     private static boolean isHttpUrl(UriSyntax.Parsed parsed) {
-        var scheme = parsed.scheme();
-        var host = parsed.host();
-        return (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))
-                && host != null && !host.isEmpty();
+        return (parsed.schemeIs("http") || parsed.schemeIs("https")) && parsed.hasHost();
     }
 
     /**

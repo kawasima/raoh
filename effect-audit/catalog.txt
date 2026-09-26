@@ -71,7 +71,7 @@ java.lang.String#codePointCount(int,int):int
 java.lang.String#compareTo(java.lang.String):int
 java.lang.String#endsWith(java.lang.String):boolean
 java.lang.String#equals(java.lang.Object):boolean  -- checks instanceof String before reading the argument
-java.lang.String#equalsIgnoreCase(java.lang.String):boolean
+java.lang.String#regionMatches(boolean,int,java.lang.String,int,int):boolean
 java.lang.String#hashCode():int
 java.lang.String#indexOf(int):int
 java.lang.String#indexOf(int,int):int
