@@ -254,6 +254,7 @@ java.util.Set#of(java.lang.Object):java.util.Set  -- calls the element's hashCod
 java.util.Set#of(java.lang.Object[]):java.util.Set  -- calls the elements' hashCode() and equals()
 java.util.Set#stream():java.util.stream.Stream
 java.util.Set#toString():java.lang.String
+java.util.TreeMap#<init>(java.util.Map)  -- iterates the argument's entries and orders the keys with their compareTo()
 java.util.TreeSet#<init>(java.util.Collection)  -- iterates the argument and orders the elements with their compareTo()
 java.util.function.BiFunction#apply(java.lang.Object,java.lang.Object):java.lang.Object
 java.util.function.Function#apply(java.lang.Object):java.lang.Object

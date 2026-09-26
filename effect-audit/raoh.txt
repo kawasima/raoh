@@ -454,6 +454,9 @@ net.unit8.raoh.decode.builtin.TemporalText#time -> java.util.regex.Matcher#group
 net.unit8.raoh.decode.builtin.TemporalText#time -> java.util.regex.Matcher#matches():boolean
 net.unit8.raoh.decode.builtin.TemporalText#time -> java.util.regex.Pattern#matcher(java.lang.CharSequence):java.util.regex.Matcher
 
+[an issue copies the metadata map it is given into key order; it reads the entries, and the keys are Strings, so ordering them runs no caller-defined comparison]
+net.unit8.raoh.Issue#<init> -> java.util.TreeMap#<init>(java.util.Map)
+
 [a record's generated equals, hashCode and toString use its components' own]
 net.unit8.raoh.Issue#equals -> java.util.Map#equals(java.lang.Object):boolean
 net.unit8.raoh.Issue#hashCode -> java.util.Map#hashCode():int

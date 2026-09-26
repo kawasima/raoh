@@ -12,6 +12,16 @@ detailed from the current development cycle onward.
 
 ### Fixed
 
+- **`Issue.meta()` iterates its keys in a fixed order and snapshots its top-level mapping.**
+  `Issue` kept the map it was given. Built-in constraints build their metadata with `Map.of`,
+  whose iteration order changes with each JVM start, so the key order of `meta()` and of
+  `Issues.toJsonList()` did too; a caller that passed a mutable map could also add, remove or
+  replace entries of an issue already created. `Issue` now copies `meta` into an unmodifiable map ordered by its `String` keys.
+  `null` keys are rejected, `null` values are kept, and a value that is itself a collection or map
+  is kept as given, so changes made to that value later are still visible. The `net.unit8.raoh` package documentation states the general contract:
+  built-in decoders acquire no ambient capability themselves, and a collection that built-in
+  decoding exposes keeps the input's order or uses a deterministic one
+  ([#142](https://github.com/kawasima/raoh/issues/142)).
 - **`list()` and `map()` keep `null` values and the input's key order.** `ObjectDecoders` and
   `JsonDecoders` collected the decoded values and returned `List.copyOf` / `Map.copyOf` of them.
   Both reject `null`, so `map(nullable(string()))` on `{"a": null}` and `list(nullable(string()))`

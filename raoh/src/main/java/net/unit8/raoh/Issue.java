@@ -1,7 +1,9 @@
 package net.unit8.raoh;
 
+import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * A single validation issue describing what went wrong and where.
@@ -12,15 +14,38 @@ import java.util.Map;
  * {@link ErrorCodes#OUT_OF_RANGE} but need different sentences and carry different
  * metadata. See {@link MessageKeys}.
  *
+ * <p>{@code meta} is copied when the issue is created and exposed as an unmodifiable map whose
+ * keys iterate in their natural {@code String} order, whatever map was passed in. Built-in
+ * constraints build their metadata with {@code Map.of}, whose iteration order can differ between
+ * JVM runs; the copy keeps that order out of {@link #meta()} and out of anything serialized from
+ * it, such as {@link Issues#toJsonList()}. Keys must not be {@code null}; values may be. Only the
+ * top-level map is copied and ordered: a value that is itself a collection or map, such as one a
+ * {@code refine} metadata function returns, is kept as given.
+ *
  * @param path          the location in the input structure where the issue occurred
  * @param code          a machine-readable error code (e.g., {@code "required"}, {@code "out_of_range"})
  * @param messageKey    the key identifying which message describes this issue; defaults to {@code code}
  * @param message       a human-readable error message
- * @param meta          additional metadata about the issue (e.g., min/max values)
+ * @param meta          additional metadata about the issue (e.g., min/max values), ordered by key
  * @param customMessage whether the message was explicitly set and should not be overridden by a {@link MessageResolver}
  */
 public record Issue(Path path, String code, String messageKey, String message,
                     Map<String, Object> meta, boolean customMessage) {
+
+    /**
+     * Creates an issue, copying {@code meta} into an unmodifiable map ordered by key.
+     *
+     * @param path          the location in the input structure where the issue occurred
+     * @param code          a machine-readable error code
+     * @param messageKey    the key identifying which message describes this issue
+     * @param message       a human-readable error message
+     * @param meta          additional metadata about the issue; its keys must not be {@code null}
+     * @param customMessage whether the message was explicitly set and should not be overridden by a {@link MessageResolver}
+     * @throws NullPointerException if {@code meta} or one of its keys is {@code null}
+     */
+    public Issue {
+        meta = Collections.unmodifiableMap(new TreeMap<>(meta));
+    }
 
     /**
      * Creates an issue whose message key is its error code.
