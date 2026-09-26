@@ -9,6 +9,7 @@ import net.unit8.raoh.Result;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
@@ -64,7 +65,7 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
             if (Float.compare(value, n) < 0) {
                 var meta = Map.<String, Object>of("min", n, "actual", value);
                 return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_MINIMUM,
-                        message, "must be at least %s".formatted(n), meta);
+                        message, String.format(Locale.ROOT, "must be at least %s", n), meta);
             }
             return Result.ok(value);
         });
@@ -92,7 +93,7 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
             if (Float.compare(value, n) > 0) {
                 var meta = Map.<String, Object>of("max", n, "actual", value);
                 return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_MAXIMUM,
-                        message, "must be at most %s".formatted(n), meta);
+                        message, String.format(Locale.ROOT, "must be at most %s", n), meta);
             }
             return Result.ok(value);
         });
@@ -121,13 +122,13 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
      */
     public FloatDecoder<I> range(float min, float max, @Nullable String message) {
         if (Float.compare(min, max) > 0) {
-            throw new IllegalArgumentException("min (%s) must not be greater than max (%s)".formatted(min, max));
+            throw new IllegalArgumentException(String.format(Locale.ROOT, "min (%s) must not be greater than max (%s)", min, max));
         }
         return chain((value, path) -> {
             if (Float.compare(value, min) < 0 || Float.compare(value, max) > 0) {
                 var meta = Map.<String, Object>of("min", min, "max", max, "actual", value);
                 return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_RANGE,
-                        message, "must be between %s and %s".formatted(min, max), meta);
+                        message, String.format(Locale.ROOT, "must be between %s and %s", min, max), meta);
             }
             return Result.ok(value);
         });
@@ -202,7 +203,7 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
     public FloatDecoder<I> oneOf(Float... allowed) {
         var allowedSet = Set.of(allowed);
         var sortedAllowed = List.copyOf(new TreeSet<>(allowedSet));
-        var message = "must be one of %s".formatted(sortedAllowed);
+        var message = String.format(Locale.ROOT, "must be one of %s", sortedAllowed);
         return chain((value, path) -> {
             if (!allowedSet.contains(value)) {
                 var meta = Map.<String, Object>of("allowed", sortedAllowed, "actual", value);

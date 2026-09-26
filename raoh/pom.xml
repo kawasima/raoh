@@ -41,6 +41,11 @@
                 <groupId>com.github.siom79.japicmp</groupId>
                 <artifactId>japicmp-maven-plugin</artifactId>
             </plugin>
+            <!-- Rejects JDK calls that read the default locale; configured in the parent POM. -->
+            <plugin>
+                <groupId>de.thetaphi</groupId>
+                <artifactId>forbiddenapis</artifactId>
+            </plugin>
             <!-- The repo-root docs ride inside the jar under META-INF/souther-docs/raoh/, so a
                  consumer that bundles raoh (the Souther CLI's `souther doc`) serves the docs of
                  the exact raoh it depends on. The topic list lives in

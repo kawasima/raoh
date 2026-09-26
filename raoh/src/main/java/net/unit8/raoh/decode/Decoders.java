@@ -15,6 +15,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -712,7 +713,7 @@ public final class Decoders {
         // Build lookup table and allowed-list once at decoder construction time.
         var lookup = new HashMap<String, E>();
         for (var c : cls.getEnumConstants()) {
-            lookup.put(c.name().toLowerCase(), c);
+            lookup.put(c.name().toLowerCase(Locale.ROOT), c);
         }
         var allowed = CodePointOrder.sorted(lookup.keySet());
         return (in, path) -> {
@@ -720,7 +721,7 @@ public final class Decoders {
             return switch (r) {
                 case Err<String> err -> err.coerce();
                 case Ok<String> ok -> {
-                    var constant = lookup.get(ok.value().toLowerCase());
+                    var constant = lookup.get(ok.value().toLowerCase(Locale.ROOT));
                     if (constant != null) yield Result.ok(constant);
                     yield Result.fail(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_ENUM,
                             "invalid value",

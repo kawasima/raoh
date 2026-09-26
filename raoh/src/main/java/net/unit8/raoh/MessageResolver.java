@@ -151,10 +151,10 @@ public interface MessageResolver {
                 case MessageKeys.OUT_OF_RANGE_NEGATIVE     -> "must be negative";
                 case MessageKeys.OUT_OF_RANGE_NON_NEGATIVE -> "must be non-negative";
                 case MessageKeys.OUT_OF_RANGE_NON_POSITIVE -> "must be non-positive";
-                case MessageKeys.OUT_OF_RANGE_BEFORE  -> "must be before %s".formatted(meta.get("before"));
-                case MessageKeys.OUT_OF_RANGE_AFTER   -> "must be after %s".formatted(meta.get("after"));
+                case MessageKeys.OUT_OF_RANGE_BEFORE  -> String.format(Locale.ROOT, "must be before %s", meta.get("before"));
+                case MessageKeys.OUT_OF_RANGE_AFTER   -> String.format(Locale.ROOT, "must be after %s", meta.get("after"));
                 case MessageKeys.OUT_OF_RANGE_BETWEEN ->
-                        "must be between %s and %s".formatted(meta.get("from"), meta.get("to"));
+                        String.format(Locale.ROOT, "must be between %s and %s", meta.get("from"), meta.get("to"));
                 case MessageKeys.TOO_SMALL_NONEMPTY   -> "must not be empty";
                 case MessageKeys.INVALID_FORMAT_EMAIL -> "not a valid email";
                 case MessageKeys.INVALID_FORMAT_URL   -> "not a valid URL";
@@ -165,9 +165,9 @@ public interface MessageResolver {
                 case MessageKeys.INVALID_FORMAT_IPV6  -> "not a valid IPv6 address";
                 case MessageKeys.INVALID_FORMAT_ULID  -> "not a valid ULID";
                 case MessageKeys.INVALID_FORMAT_CUID  -> "not a valid CUID";
-                case MessageKeys.INVALID_FORMAT_STARTS_WITH -> "must start with \"%s\"".formatted(meta.get("prefix"));
-                case MessageKeys.INVALID_FORMAT_ENDS_WITH   -> "must end with \"%s\"".formatted(meta.get("suffix"));
-                case MessageKeys.INVALID_FORMAT_INCLUDES    -> "must include \"%s\"".formatted(meta.get("substring"));
+                case MessageKeys.INVALID_FORMAT_STARTS_WITH -> String.format(Locale.ROOT, "must start with \"%s\"", meta.get("prefix"));
+                case MessageKeys.INVALID_FORMAT_ENDS_WITH   -> String.format(Locale.ROOT, "must end with \"%s\"", meta.get("suffix"));
+                case MessageKeys.INVALID_FORMAT_INCLUDES    -> String.format(Locale.ROOT, "must include \"%s\"", meta.get("substring"));
                 case MessageKeys.INVALID_FORMAT_ENUM, MessageKeys.INVALID_FORMAT_LITERAL -> "invalid value";
                 case MessageKeys.INVALID_FORMAT_INSTANT -> "not a valid ISO 8601 instant";
                 case MessageKeys.INVALID_FORMAT_DATE    -> "not a valid date (yyyy-MM-dd)";
@@ -177,7 +177,7 @@ public interface MessageResolver {
                 case MessageKeys.INVALID_FORMAT_OFFSET_DATE_TIME ->
                         "not a valid ISO-8601 offset date-time (e.g., 2024-01-15T10:30:00+09:00)";
                 case MessageKeys.TYPE_MISMATCH_STRING_KEYS ->
-                        "expected object with string keys, found %s key".formatted(meta.get("actual"));
+                        String.format(Locale.ROOT, "expected object with string keys, found %s key", meta.get("actual"));
                 default -> resolve(issue.code(), meta);
             };
         }
@@ -204,31 +204,31 @@ public interface MessageResolver {
         return switch (code) {
             case ErrorCodes.REQUIRED        -> "is required";
             case ErrorCodes.BLANK           -> "must not be blank";
-            case ErrorCodes.TOO_SHORT       -> "must be at least %s characters".formatted(meta.get("min"));
-            case ErrorCodes.TOO_LONG        -> "must be at most %s characters".formatted(meta.get("max"));
+            case ErrorCodes.TOO_SHORT       -> String.format(Locale.ROOT, "must be at least %s characters", meta.get("min"));
+            case ErrorCodes.TOO_LONG        -> String.format(Locale.ROOT, "must be at most %s characters", meta.get("max"));
             case ErrorCodes.OUT_OF_RANGE    -> {
                 var min = meta.get("min");
                 var max = meta.get("max");
-                if (min != null && max != null) yield "must be between %s and %s".formatted(min, max);
-                if (min != null) yield "must be at least %s".formatted(min);
-                if (max != null) yield "must be at most %s".formatted(max);
+                if (min != null && max != null) yield String.format(Locale.ROOT, "must be between %s and %s", min, max);
+                if (min != null) yield String.format(Locale.ROOT, "must be at least %s", min);
+                if (max != null) yield String.format(Locale.ROOT, "must be at most %s", max);
                 yield "out of range";
             }
-            case ErrorCodes.INVALID_LENGTH  -> "must be exactly %s characters".formatted(meta.get("expected"));
+            case ErrorCodes.INVALID_LENGTH  -> String.format(Locale.ROOT, "must be exactly %s characters", meta.get("expected"));
             case ErrorCodes.INVALID_FORMAT  -> "invalid format";
-            case ErrorCodes.TYPE_MISMATCH   -> "expected %s".formatted(meta.get("expected"));
-            case ErrorCodes.INVALID_VALUE   -> "must be %s".formatted(meta.get("expected"));
-            case ErrorCodes.TOO_SMALL       -> "must have at least %s elements".formatted(meta.get("min"));
-            case ErrorCodes.TOO_BIG         -> "must have at most %s elements".formatted(meta.get("max"));
-            case ErrorCodes.INVALID_SIZE    -> "must have exactly %s elements".formatted(meta.get("expected"));
-            case ErrorCodes.NOT_MULTIPLE_OF -> "must be a multiple of %s".formatted(meta.get("divisor"));
-            case ErrorCodes.MISSING_ELEMENT  -> "must contain %s".formatted(meta.get("expected"));
-            case ErrorCodes.MISSING_ELEMENTS -> "must contain all of %s (missing: %s)".formatted(meta.get("expected"), meta.get("missing"));
-            case ErrorCodes.DUPLICATE_ELEMENT -> "must not contain duplicates: %s".formatted(meta.get("duplicates"));
-            case ErrorCodes.NOT_ALLOWED     -> "must be one of %s".formatted(meta.get("allowed"));
+            case ErrorCodes.TYPE_MISMATCH   -> String.format(Locale.ROOT, "expected %s", meta.get("expected"));
+            case ErrorCodes.INVALID_VALUE   -> String.format(Locale.ROOT, "must be %s", meta.get("expected"));
+            case ErrorCodes.TOO_SMALL       -> String.format(Locale.ROOT, "must have at least %s elements", meta.get("min"));
+            case ErrorCodes.TOO_BIG         -> String.format(Locale.ROOT, "must have at most %s elements", meta.get("max"));
+            case ErrorCodes.INVALID_SIZE    -> String.format(Locale.ROOT, "must have exactly %s elements", meta.get("expected"));
+            case ErrorCodes.NOT_MULTIPLE_OF -> String.format(Locale.ROOT, "must be a multiple of %s", meta.get("divisor"));
+            case ErrorCodes.MISSING_ELEMENT  -> String.format(Locale.ROOT, "must contain %s", meta.get("expected"));
+            case ErrorCodes.MISSING_ELEMENTS -> String.format(Locale.ROOT, "must contain all of %s (missing: %s)", meta.get("expected"), meta.get("missing"));
+            case ErrorCodes.DUPLICATE_ELEMENT -> String.format(Locale.ROOT, "must not contain duplicates: %s", meta.get("duplicates"));
+            case ErrorCodes.NOT_ALLOWED     -> String.format(Locale.ROOT, "must be one of %s", meta.get("allowed"));
             case ErrorCodes.ONE_OF_FAILED   -> "no variant matched";
             case ErrorCodes.UNKNOWN_FIELD   -> "unknown field";
-            case ErrorCodes.INVALID_SCALE   -> "too many decimal places (max %s)".formatted(meta.get("maxScale"));
+            case ErrorCodes.INVALID_SCALE   -> String.format(Locale.ROOT, "too many decimal places (max %s)", meta.get("maxScale"));
             case ErrorCodes.MISSING_FIELD   -> "field is missing";
             default -> "validation failed: " + code;
         };

@@ -30,6 +30,7 @@ import tools.jackson.databind.exc.JsonNodeException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -90,7 +91,7 @@ public final class JsonDecoders {
             }
             if (!in.isString()) {
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected string",
-                        Map.of("expected", "string", "actual", in.getNodeType().name().toLowerCase()));
+                        Map.of("expected", "string", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
             }
             return Result.ok(in.asString());
         };
@@ -112,7 +113,7 @@ public final class JsonDecoders {
                             Map.of("expected", "integer"));
                 }
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected integer",
-                        Map.of("expected", "integer", "actual", in.getNodeType().name().toLowerCase()));
+                        Map.of("expected", "integer", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
             }
             return Result.ok(in.intValue());
         });
@@ -130,7 +131,7 @@ public final class JsonDecoders {
             }
             if (!in.isInt() && !in.isLong() && !in.isShort()) {
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected long",
-                        Map.of("expected", "long", "actual", in.getNodeType().name().toLowerCase()));
+                        Map.of("expected", "long", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
             }
             return Result.ok(in.longValue());
         });
@@ -152,7 +153,7 @@ public final class JsonDecoders {
             }
             if (!in.isNumber()) {
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
-                        Map.of("expected", "double", "actual", in.getNodeType().name().toLowerCase()));
+                        Map.of("expected", "double", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
             }
             try {
                 double v = in.doubleValue();
@@ -187,7 +188,7 @@ public final class JsonDecoders {
             }
             if (!in.isNumber()) {
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
-                        Map.of("expected", "float", "actual", in.getNodeType().name().toLowerCase()));
+                        Map.of("expected", "float", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
             }
             try {
                 float v = in.floatValue();
@@ -218,7 +219,7 @@ public final class JsonDecoders {
             }
             if (!in.isBoolean()) {
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected boolean",
-                        Map.of("expected", "boolean", "actual", in.getNodeType().name().toLowerCase()));
+                        Map.of("expected", "boolean", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
             }
             return Result.ok(in.booleanValue());
         });
@@ -236,7 +237,7 @@ public final class JsonDecoders {
             }
             if (!in.isNumber()) {
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected number",
-                        Map.of("expected", "number", "actual", in.getNodeType().name().toLowerCase()));
+                        Map.of("expected", "number", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
             }
             return Result.ok(in.decimalValue());
         });
@@ -257,7 +258,7 @@ public final class JsonDecoders {
             if (in == null || !in.isObject()) {
                 return Result.fail(fieldPath, ErrorCodes.TYPE_MISMATCH, "expected object",
                         Map.of("expected", "object", "actual",
-                                in == null ? "null" : in.getNodeType().name().toLowerCase()));
+                                in == null ? "null" : in.getNodeType().name().toLowerCase(Locale.ROOT)));
             }
             var node = in.get(name);
             if (node == null) {
@@ -406,7 +407,7 @@ public final class JsonDecoders {
             }
             if (!in.isArray()) {
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected array",
-                        Map.of("expected", "array", "actual", in.getNodeType().name().toLowerCase()));
+                        Map.of("expected", "array", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
             }
             var issues = Issues.EMPTY;
             var results = new ArrayList<T>();
@@ -439,7 +440,7 @@ public final class JsonDecoders {
             }
             if (!in.isObject()) {
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected object",
-                        Map.of("expected", "object", "actual", in.getNodeType().name().toLowerCase()));
+                        Map.of("expected", "object", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
             }
             var issues = Issues.EMPTY;
             var results = new LinkedHashMap<String, V>();

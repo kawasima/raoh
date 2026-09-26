@@ -51,11 +51,34 @@ public class ResourceBundleMessageResolver implements MessageResolver {
         this.baseName = baseName;
     }
 
+    /**
+     * Resolves a message in the JVM default locale.
+     *
+     * <p>This is the one place in Raoh that reads {@link Locale#getDefault()} on purpose:
+     * choosing a display locale is the job of a message resolver, while decoders never
+     * depend on it. Pass the locale explicitly with
+     * {@link #resolve(String, Map, Locale)} when it should not follow the JVM setting.
+     *
+     * @param code the error code
+     * @param meta the issue metadata used to fill the template placeholders
+     * @return the resolved message for {@link Locale#getDefault()}
+     */
+    @SuppressForbidden("chooses the display locale; decoders never call this")
     @Override
     public String resolve(String code, Map<String, Object> meta) {
         return resolve(code, meta, Locale.getDefault());
     }
 
+    /**
+     * Resolves the message for an issue in the JVM default locale.
+     *
+     * <p>Like {@link #resolve(String, Map)}, this reads {@link Locale#getDefault()} on
+     * purpose. Use {@link #resolve(Issue, Locale)} to choose the locale explicitly.
+     *
+     * @param issue the issue to resolve
+     * @return the resolved message for {@link Locale#getDefault()}
+     */
+    @SuppressForbidden("chooses the display locale; decoders never call this")
     @Override
     public String resolve(Issue issue) {
         return resolve(issue, Locale.getDefault());

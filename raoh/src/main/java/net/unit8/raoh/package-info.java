@@ -15,6 +15,11 @@
  *   <li>{@code net.unit8.raoh.json.JsonDecoders} — for Jackson {@code JsonNode}</li>
  *   <li>{@link net.unit8.raoh.decode.map.MapDecoders} — for {@code Map<String, Object>} structure (field extraction, combine)</li>
  * </ul>
+ *
+ * <p>Built-in decoders are deterministic with respect to their explicit input and
+ * configuration: host or JVM ambient state, such as the default locale, never affects the
+ * decoded value or the generated issues. Locale enters only at message resolution, through
+ * {@link net.unit8.raoh.MessageResolver#resolve(net.unit8.raoh.Issue, java.util.Locale)}.
  */
 @NullMarked
 package net.unit8.raoh;
