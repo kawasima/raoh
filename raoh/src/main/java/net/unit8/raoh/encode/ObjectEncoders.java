@@ -179,8 +179,10 @@ public final class ObjectEncoders {
     /**
      * Returns an encoder that converts a {@link URI} to its string representation.
      *
-     * <p>The dual of {@link net.unit8.raoh.decode.builtin.StringDecoder#uri()}
-     * ({@link URI#create(String)}); {@code URI.create(uri.toString())} round-trips exactly.
+     * <p>The dual of {@link net.unit8.raoh.decode.builtin.StringDecoder#uri()}: a {@link URI} that
+     * decoder returned is written back as the text it was decoded from, which decodes to an equal
+     * {@link URI}. A {@link URI} built elsewhere, such as a relative reference, is written by
+     * {@link URI#toString()} as well, but {@code uri()} may reject that text.
      *
      * @return a URI encoder
      */

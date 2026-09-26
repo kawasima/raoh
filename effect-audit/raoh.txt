@@ -431,8 +431,6 @@ net.unit8.raoh.decode.builtin.StringDecoder#cuid -> java.util.regex.Pattern#matc
 net.unit8.raoh.decode.builtin.StringDecoder#email -> java.util.regex.Matcher#matches():boolean
 net.unit8.raoh.decode.builtin.StringDecoder#email -> java.util.regex.Pattern#matcher(java.lang.CharSequence):java.util.regex.Matcher
 net.unit8.raoh.decode.builtin.StringDecoder#includes -> java.lang.String#contains(java.lang.CharSequence):boolean
-net.unit8.raoh.decode.builtin.StringDecoder#isIPv4 -> java.util.regex.Matcher#matches():boolean
-net.unit8.raoh.decode.builtin.StringDecoder#isIPv4 -> java.util.regex.Pattern#matcher(java.lang.CharSequence):java.util.regex.Matcher
 net.unit8.raoh.decode.builtin.StringDecoder#normalize -> java.text.Normalizer#normalize(java.lang.CharSequence,java.text.Normalizer$Form):java.lang.String
 net.unit8.raoh.decode.builtin.StringDecoder#pattern -> java.util.regex.Matcher#matches():boolean
 net.unit8.raoh.decode.builtin.StringDecoder#pattern -> java.util.regex.Pattern#matcher(java.lang.CharSequence):java.util.regex.Matcher

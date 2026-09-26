@@ -315,7 +315,7 @@ Other:
 - `includes(...)`
 - `oneOf(...)`
 - `email()`
-- `url()` — validates http/https and returns `URI`
+- `url()` — an RFC 3986 URI with the http/https scheme and a host, returns `URI`
 - `ipv4()`
 - `ipv6()`
 - `ip()`
@@ -326,7 +326,7 @@ Other:
 - `toUpperCase()`
 - `normalize(...)` — Unicode normalization, NFC by default
 - `uuid()`
-- `uri()` — accepts any scheme, returns `URI`
+- `uri()` — an RFC 3986 URI of any scheme, returns `URI`
 - `iso8601()`
 - `date()`
 - `time()`

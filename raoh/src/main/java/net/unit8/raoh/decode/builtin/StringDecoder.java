@@ -10,7 +10,6 @@ import net.unit8.raoh.Result;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
-import java.net.Inet6Address;
 import java.net.URI;
 import java.text.Normalizer;
 import java.time.Instant;
@@ -41,15 +40,9 @@ import java.util.function.Predicate;
 public final class StringDecoder<I extends @Nullable Object> implements Decoder<I, String> {
 
     private static final int MAX_EMAIL_LENGTH = 254;
-    private static final int MAX_URL_LENGTH = 2048;
-    private static final int MAX_IPV4_LENGTH = 15;
-    // Longest IPv6 text without a zone ID; a zone ID has no standard maximum length (RFC 9844).
-    private static final int MAX_IPV6_ADDRESS_LENGTH = 45;
 
     private static final Pattern EMAIL_PATTERN = Pattern.compile(
             "^[a-zA-Z0-9._%+\\-]{1,64}@[a-zA-Z0-9.\\-]{1,255}\\.[a-zA-Z]{2,}$");
-    private static final Pattern IPV4_PATTERN = Pattern.compile(
-            "^((25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]\\d|\\d)$");
     private static final Pattern CUID_PATTERN = Pattern.compile(
             "^c[a-z0-9]{24}$");
     private static final Pattern ULID_PATTERN = Pattern.compile(
@@ -385,17 +378,12 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     }
 
     /**
-     * Decodes the string value to a {@link URI}, validating that it is a valid http or https URL.
-     *
-     * <p>Requires an absolute URL with the {@code http} or {@code https} scheme and a
-     * non-empty host. Values longer than 2048 UTF-16 code units are rejected before parsing; this
-     * caps the input handed to {@link URI}, and is neither a character count nor a bound on the
-     * percent-encoded form actually sent.
-     * Uses {@link URI} parsing to avoid ReDoS from regex backtracking.
+     * Decodes the string value to a {@link URI}, validating that it is an http or https URL.
+     * See {@link #url(String)} for the accepted text.
      *
      * <p>This is a terminal method — the returned decoder produces {@link URI},
      * not {@link String}, so no further {@link StringDecoder} constraints can be chained.
-     * For URLs that accept any scheme, use {@link #uri()}.
+     * For URIs of any scheme, use {@link #uri()}.
      *
      * @return a decoder producing {@link URI} from validated http/https URLs
      */
@@ -404,36 +392,30 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     }
 
     /**
-     * Decodes the string value to a {@link URI}, validating that it is a valid http or https URL.
+     * Decodes the string value to a {@link URI}, validating that it is an http or https URL.
      *
-     * <p>Requires an absolute URL with the {@code http} or {@code https} scheme and a
-     * non-empty host. Values longer than 2048 UTF-16 code units are rejected before parsing; this
-     * caps the input handed to {@link URI}, and is neither a character count nor a bound on the
-     * percent-encoded form actually sent.
-     * Uses {@link URI} parsing to avoid ReDoS from regex backtracking.
+     * <p>The text is a URI that {@link #uri(String)} accepts, with the {@code http} or
+     * {@code https} scheme in any case, an authority, and a non-empty host (RFC 9110 section
+     * 4.2). The host is the RFC 3986 {@code host}, not a DNS name: a {@code reg-name} such as
+     * {@code my_host} or {@code example.123} is accepted. The length is not limited; put
+     * {@link #maxLength(int)} before this conversion to bound it.
+     *
+     * <p>The returned {@link URI} holds the accepted text, but its component accessors follow the
+     * RFC 2396 model of {@code java.net.URI}, so {@link URI#getHost()} can be {@code null} for a
+     * {@code reg-name} this decoder accepts. Consumers with narrower URI requirements, including
+     * some JDK networking APIs, may reject such a value.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a decoder producing {@link URI} from validated http/https URLs
      */
     public Decoder<I, URI> url(@Nullable String message) {
         return (in, path) -> this.decode(in, path).flatMap(value -> {
-            if (value.length() > MAX_URL_LENGTH) {
+            var parsed = UriSyntax.parse(value);
+            if (parsed == null || !parsed.representableAsJavaUri() || !isHttpUrl(parsed)) {
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_URL,
                         message, "not a valid URL", Map.of());
             }
-            try {
-                var uri = URI.create(value);
-                var scheme = uri.getScheme();
-                if ((!"http".equals(scheme) && !"https".equals(scheme))
-                        || uri.getHost() == null || uri.getHost().isEmpty()) {
-                    return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_URL,
-                            message, "not a valid URL", Map.of());
-                }
-                return Result.ok(uri);
-            } catch (IllegalArgumentException e) {
-                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_URL,
-                        message, "not a valid URL", Map.of());
-            }
+            return Result.ok(URI.create(value));
         });
     }
 
@@ -475,14 +457,18 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Validates that the string is a valid IPv6 address.
      *
-     * <p>The address is the RFC 4291 text form, including the compressed form and the forms that
-     * embed an IPv4 address, such as {@code ::ffff:192.0.2.1}. It may be followed by an RFC 4007
-     * zone ID ({@code fe80::1%eth0}) when the address is of a scope below global: link-local
-     * unicast ({@code fe80::/10}) or multicast whose scope is 1 to D (RFC 4291 section 2.7, as
-     * updated by RFC 7346). The zone ID is taken as an opaque,
-     * non-empty string that contains neither {@code %} nor NUL. The decoder does not look the zone
-     * up among the host's network interfaces, so the result does not depend on the machine it
-     * runs on. Brackets ({@code [::1]}) belong to the URI host syntax and are rejected.
+     * <p>The address is the RFC 4291 section 2.2 text form, as RFC 3986 section 3.2.2 writes it
+     * in the {@code IPv6address} rule: eight groups of one to four hexadecimal digits, at most one
+     * {@code ::} standing for one or more zero groups, and optionally an IPv4 address in place of the
+     * last two groups, such as {@code ::ffff:192.0.2.1}. So {@code ::00001} is rejected, and so is
+     * {@code ::01.2.3.4}, because the embedded IPv4 address follows the rules of
+     * {@link #ipv4(String)}. Brackets ({@code [::1]}) belong to the URI host syntax and are rejected.
+     *
+     * <p>The address may be followed by an RFC 4007 zone ID ({@code fe80::1%eth0}) when its scope is
+     * below global: link-local unicast ({@code fe80::/10}) or multicast whose scope is 1 to D
+     * (RFC 4291 section 2.7, as updated by RFC 7346). The zone ID is taken as an opaque, non-empty
+     * string that contains neither {@code %} nor NUL. The decoder does not look the zone up among
+     * the host's network interfaces, so the result does not depend on the machine it runs on.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid IPv6 address
@@ -524,46 +510,30 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     }
 
     private static boolean isIPv4(String value) {
-        return value.length() <= MAX_IPV4_LENGTH && IPV4_PATTERN.matcher(value).matches();
+        return IpSyntax.isIpv4(value);
     }
 
     private static boolean isIPv6(String value) {
         int zoneAt = value.indexOf('%');
-        if (zoneAt >= 0 && (zoneAt == value.length() - 1
+        if (zoneAt < 0) {
+            return IpSyntax.isIpv6(value);
+        }
+        if (zoneAt == value.length() - 1
                 || value.indexOf('%', zoneAt + 1) >= 0
-                || value.indexOf('\0', zoneAt + 1) >= 0)) {
+                || value.indexOf('\0', zoneAt + 1) >= 0) {
             return false;
         }
-        var address = zoneAt < 0 ? value : value.substring(0, zoneAt);
-        // Brackets frame an address inside a URI; they are not part of the address.
-        // Inet6Address.ofLiteral accepts them, so reject them before parsing.
-        if (address.length() > MAX_IPV6_ADDRESS_LENGTH || address.indexOf(':') < 0
-                || address.indexOf('[') >= 0 || address.indexOf(']') >= 0) {
-            return false;
-        }
-        try {
-            // The zone is stripped before parsing: passed to the JDK, a zone name is looked up
-            // among the host's network interfaces.
-            var parsed = Inet6Address.ofLiteral(address);
-            if (zoneAt < 0) {
-                // A successful parse decides it. An IPv4-mapped address such as ::ffff:1.2.3.4
-                // comes back as an Inet4Address, but its text is still IPv6.
-                return true;
-            }
-            return parsed instanceof Inet6Address ipv6 && canHaveZone(ipv6);
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
+        var address = value.substring(0, zoneAt);
+        return IpSyntax.isIpv6(address) && canHaveZone(IpSyntax.ipv6FirstGroup(address));
     }
 
-    // Whether a zone ID may follow the address, decided from the address bytes as RFC 4291 and its
-    // updates define the scopes, rather than by Inet6Address's classifiers: isSiteLocalAddress()
+    // Whether a zone ID may follow the address, decided from its first 16-bit group as RFC 4291 and
+    // its updates define the scopes, rather than by Inet6Address's classifiers: isSiteLocalAddress()
     // still reports the deprecated fec0::/10 range, which RFC 4291 says to treat as global unicast,
     // and isMCGlobal() is false for the reserved multicast scopes 0 and F.
-    private static boolean canHaveZone(Inet6Address address) {
-        byte[] bytes = address.getAddress();
-        int first = bytes[0] & 0xff;
-        int second = bytes[1] & 0xff;
+    private static boolean canHaveZone(int firstGroup) {
+        int first = firstGroup >> 8;
+        int second = firstGroup & 0xff;
         // Link-local unicast, fe80::/10 (RFC 4291 section 2.5.6).
         if (first == 0xfe && (second & 0xc0) == 0x80) {
             return true;
@@ -753,10 +723,19 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
         });
     }
 
+    // RFC 9110 section 4.2: the http or https scheme, compared without case, and a non-empty host.
+    private static boolean isHttpUrl(UriSyntax.Parsed parsed) {
+        var scheme = parsed.scheme();
+        var host = parsed.host();
+        return (scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))
+                && host != null && !host.isEmpty();
+    }
+
     /**
      * Parses the string as a {@link URI}.
+     * See {@link #uri(String)} for the accepted text.
      *
-     * <p>Unlike {@link #url()}, this accepts any valid URI regardless of scheme.
+     * <p>Unlike {@link #url()}, this accepts any scheme.
      *
      * @return a decoder producing {@link URI} from validated URI strings
      */
@@ -767,17 +746,31 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as a {@link URI}.
      *
+     * <p>The text is a {@code URI} by RFC 3986 section 3: a scheme, a colon and the rest, with
+     * every character outside the grammar percent-encoded. A relative reference such as
+     * {@code foo/bar} or {@code #top} has no scheme and is rejected, as are raw non-ASCII
+     * characters. An IPv6 host follows the rules of {@link #ipv6(String)} without a zone ID, which
+     * RFC 9844 removed from URIs, so {@code http://[fe80::1%25eth0]/} is rejected.
+     *
+     * <p>{@link URI} follows the older RFC 2396 and RFC 2732 and cannot hold every RFC 3986 URI.
+     * Those this decoder cannot return are rejected: an empty scheme-specific part
+     * ({@code a:}, {@code a:#f}), an empty authority followed by nothing ({@code a://}), an
+     * {@code IPvFuture} host ({@code http://[v1.abc]/}), and an IPv6 host with a port above
+     * {@link Integer#MAX_VALUE} ({@code http://[::1]:2147483648/}). The returned {@link URI} holds the accepted
+     * text, but its component accessors follow the RFC 2396 model, so {@link URI#getHost()} can be
+     * {@code null} for an RFC 3986 {@code reg-name} such as {@code my_host}.
+     *
      * @param message custom error message, or {@code null} for the default
      * @return a decoder producing {@link URI} from validated URI strings
      */
     public Decoder<I, URI> uri(@Nullable String message) {
         return (in, path) -> this.decode(in, path).flatMap(value -> {
-            try {
-                return Result.ok(URI.create(value));
-            } catch (IllegalArgumentException e) {
+            var parsed = UriSyntax.parse(value);
+            if (parsed == null || !parsed.representableAsJavaUri()) {
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_URI,
                         message, "not a valid URI", Map.of());
             }
+            return Result.ok(URI.create(value));
         });
     }
 

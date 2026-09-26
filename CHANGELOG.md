@@ -229,6 +229,36 @@ detailed from the current development cycle onward.
   expanded year and a time may omit its seconds. The `messages.properties` and
   `messages_ja.properties` entries changed with them
   ([#137](https://github.com/kawasima/raoh/issues/137)).
+- **`uri()` and `url()` accept the RFC 3986 `URI` grammar, not whatever `java.net.URI` parses.**
+  Both passed the text to `URI.create`, which follows RFC 2396 and RFC 2732, and `url()` then
+  required `URI.getHost()` to be non-null, which is RFC 2396's hostname rule rather than the RFC
+  3986 `host`. Raoh now reads the text by the RFC 3986 `URI` rule itself, in one pass without
+  backtracking, and `java.net.URI` only builds the value. The result type is still
+  `java.net.URI`, so the RFC 3986 URIs it cannot hold are rejected and listed in the Javadoc: an
+  empty scheme-specific part (`a:`, `a:#f`), an empty authority followed by nothing (`a://`), an
+  `IPvFuture` host (`http://[v1.abc]/`), and an IPv6 host with a port above `Integer.MAX_VALUE`.
+  The following inputs were accepted before and are now rejected:
+  - A relative reference, which has no scheme and is not a URI: `foo/bar`, `../x`, `#top`,
+    `//example.com/`.
+  - A zone ID in an IPv6 host, `http://[fe80::1%25eth0]/`; RFC 9844 obsoleted RFC 6874, which had
+    added it.
+  - Raw non-ASCII characters, such as `http://exé.com/`; they must be percent-encoded.
+
+  The following were rejected by `url()` and are now accepted:
+  - An RFC 3986 `reg-name` that is not an RFC 2396 hostname: `http://my_host/`,
+    `http://example.123/`, `http://%41.com/`. `URI.getHost()` returns `null` for these, and some
+    JDK networking APIs, such as `HttpRequest.newBuilder`, reject them.
+  - An upper-case scheme, `HTTP://example.com/`; RFC 3986 schemes are case-insensitive.
+  - Text longer than 2048 UTF-16 code units. The limit was a resource policy, not part of the
+    grammar; write `string().maxLength(2048).url()` to keep it
+    ([#144](https://github.com/kawasima/raoh/issues/144)).
+- **`ipv6()` and `ip()` check the RFC 4291 text form themselves.** A successful
+  `Inet6Address.ofLiteral` decided acceptance, and it accepts text outside RFC 4291 section 2.2.
+  The address is now read by the RFC 3986 `IPv6address` rule, the same one `uri()` uses for an IPv6
+  host, and the zone check reads the scope from the first group of that text, so the JDK is no
+  longer called. Now rejected: a group of more than four digits (`::00001`) and an embedded IPv4
+  address with a leading zero (`::01.2.3.4`, `::1.2.3.04`), which `ipv4()` already rejected
+  on its own ([#146](https://github.com/kawasima/raoh/issues/146)).
 - **`ipv6()` and `ip()` reject a bracketed address such as `[::1]`.** The brackets belong to the host
   syntax of a URI, not to the address, and were accepted only because the JDK parser strips them
   ([#127](https://github.com/kawasima/raoh/issues/127)).

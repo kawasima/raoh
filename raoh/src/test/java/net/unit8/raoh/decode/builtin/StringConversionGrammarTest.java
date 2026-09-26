@@ -363,6 +363,151 @@ class StringConversionGrammarTest {
         return all;
     }
 
+    // --- uri / url (issue #144) ---
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "urn:isbn:0451450523",
+            "mailto:user@example.com",
+            "file:///tmp/data.csv",
+            "a:?q",                              // path-empty with a query
+            "a://#f",                            // empty authority followed by a fragment
+            "http://my_host/",                   // "_" is allowed in a reg-name
+            "http://example.123/",               // a reg-name need not end in a letter
+            "http://%41.com/",
+            "HTTP://example.com/",
+            "http://[::1]:8080/",
+            "http://[::ffff:192.0.2.1]/",
+            "http://h:99999999999/",             // a port is any digits (RFC 3986 section 3.2.3)
+            "http://[::1]:2147483647/",
+            "https://user:pass@example.com:8443/a/b;c?x=1&y=%20#frag/?"
+    })
+    void uriAcceptsRfc3986UrisAndKeepsTheirText(String text) {
+        assertEquals(text, decodeOk(string().uri(), text).toString());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "",
+            "foo/bar",                           // relative-ref, not a URI
+            "../foo",
+            "#fragment",
+            "//example.com/",
+            "1a:b",                              // a scheme starts with a letter
+            "http://[fe80::1%25eth0]/",          // zone ID, removed by RFC 9844
+            "http://[fe80::1%eth0]/",
+            "http://exa mple.com",
+            "https://example.com/%ZZ",
+            "https://example.com/%2",
+            "http://ex\u00e9.com/",             // raw non-ASCII
+            "http://example.com/\u00e9",
+            "http://[::1/",
+            "http://[::00001]/",                 // a group is at most four digits
+            "http://[::01.2.3.4]/",              // dec-octet has no leading zero
+            "http://h:8x/",
+            "http://a@b@c/",
+            "a:b#c#d",
+            "a:b c"
+    })
+    void uriRejectsTextOutsideRfc3986(String text) {
+        var issue = decodeErr(string().uri(), text);
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals(MessageKeys.INVALID_FORMAT_URI, issue.messageKey());
+        assertEquals("not a valid URI", issue.message());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "a:",                                // empty scheme-specific part
+            "a:#f",
+            "a://",                              // empty authority followed by nothing
+            "http://[v1.abc]/",                  // IPvFuture
+            "http://[V1f.a:b]/",
+            "http://[::1]:2147483648/"           // IPv6 host with a port above Integer.MAX_VALUE
+    })
+    void uriRejectsRfc3986UrisThatJavaNetUriCannotHold(String text) {
+        var issue = decodeErr(string().uri(), text);
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals("not a valid URI", issue.message());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "http://my_host/",
+            "http://example.123/",
+            "http://%41.com/",
+            "HTTP://example.com/",
+            "HtTpS://example.com",
+            "http://[::1]/",
+            "http://192.0.2.1:8080",
+            "http://h:/",                        // empty port
+            "https://user@example.com/a?b#c"
+    })
+    void urlAcceptsHttpUrisWithAnRfc3986Host(String text) {
+        assertEquals(text, decodeOk(string().url(), text).toString());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "ftp://example.com",
+            "https+x://example.com",
+            "http:/path",                        // no authority
+            "http:example.com",
+            "http://",                           // empty host
+            "http:///path",
+            "http://user@/",
+            "http://:80/",
+            "http://[v1.abc]/",
+            "http://[fe80::1%25eth0]/",
+            "example.com"
+    })
+    void urlRejectsOtherText(String text) {
+        var issue = decodeErr(string().url(), text);
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals(MessageKeys.INVALID_FORMAT_URL, issue.messageKey());
+        assertEquals("not a valid URL", issue.message());
+    }
+
+    // --- ipv6 (issue #146) ---
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "1:2:3:4:5:6:7:8",
+            "1:2:3:4:5:6:7::",
+            "::2:3:4:5:6:7:8",
+            "1:2:3:4:5:6:1.2.3.4",
+            "1:2:3:4:5::1.2.3.4",
+            "::",
+            "fe80::1.2.3.4%eth0",
+            "FE80::1%eth0"
+    })
+    void ipv6AcceptsTheRfc4291TextForms(String text) {
+        assertEquals(text, decodeOk(string().ipv6(), text));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "::00001",                           // a group is 1 to 4 hex digits
+            "::01.2.3.4",                        // dec-octet has no leading zeros
+            "::1.2.3.04",
+            "::256.1.1.1",
+            "1:2:3:4:5:6:7:8:9",
+            "1:2:3:4:5:6:7",
+            "1::2::3",
+            ":1::",
+            "1::2:",
+            ":::",
+            "1:2:3:4:5:6::1.2.3.4",              // "::" stands for at least one group
+            "1:2:3:4:5:6:7:1.2.3.4",
+            "::1.2.3.4:1",
+            "::g"
+    })
+    void ipv6RejectsTextOutsideRfc4291(String text) {
+        var issue = decodeErr(string().ipv6(), text);
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals("not a valid IPv6 address", issue.message());
+    }
+
     // --- round trip with ObjectEncoders ---
 
     @Test
@@ -412,6 +557,15 @@ class StringConversionGrammarTest {
     void everyUuidTheEncoderWritesDecodesBack() {
         for (var value : List.of(new UUID(0, 0), new UUID(-1, -1), new UUID(0x550e8400e29b41d4L, 0xa716446655440000L))) {
             assertEquals(value, decodeOk(string().uuid(), ObjectEncoders.uuid().encode(value)));
+        }
+    }
+
+    @Test
+    void everyUriTheDecoderReturnsEncodesToTextItDecodesBack() {
+        for (var text : List.of("urn:isbn:0451450523", "a:?q", "http://my_host/", "HTTP://example.com/",
+                "http://[::1]:8080/p?q#f", "https://user@example.com/%7Efoo")) {
+            var decoded = decodeOk(string().uri(), text);
+            assertEquals(decoded, decodeOk(string().uri(), ObjectEncoders.uri().encode(decoded)));
         }
     }
 }

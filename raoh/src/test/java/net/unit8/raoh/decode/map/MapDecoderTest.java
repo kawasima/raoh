@@ -1149,8 +1149,8 @@ class MapDecoderTest {
     }
 
     @Test
-    void urlRejectsExceedingLength() {
-        var dec = field("link", string().url());
+    void urlLengthIsBoundedByMaxLength() {
+        var dec = field("link", string().maxLength(2048).url());
         var longUrl = "https://example.com/" + "a".repeat(2030);
         assertErr(dec.decode(Map.of("link", longUrl)));
     }

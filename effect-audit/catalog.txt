@@ -65,10 +65,13 @@ java.lang.Object#<init>()
 java.lang.Object#getClass():java.lang.Class
 java.lang.Record#<init>()
 java.lang.Short#shortValue():short
+java.lang.String#charAt(int):char
 java.lang.String#codePointAt(int):int
 java.lang.String#codePointCount(int,int):int
+java.lang.String#compareTo(java.lang.String):int
 java.lang.String#endsWith(java.lang.String):boolean
 java.lang.String#equals(java.lang.Object):boolean  -- checks instanceof String before reading the argument
+java.lang.String#equalsIgnoreCase(java.lang.String):boolean
 java.lang.String#hashCode():int
 java.lang.String#indexOf(int):int
 java.lang.String#indexOf(int,int):int
@@ -76,6 +79,7 @@ java.lang.String#isBlank():boolean
 java.lang.String#isEmpty():boolean
 java.lang.String#length():int
 java.lang.String#startsWith(java.lang.String):boolean
+java.lang.String#substring(int):java.lang.String
 java.lang.String#substring(int,int):java.lang.String
 java.lang.String#toString():java.lang.String
 java.lang.String#trim():java.lang.String
@@ -94,11 +98,7 @@ java.math.BigDecimal#ZERO:java.math.BigDecimal
 java.math.BigDecimal#valueOf(double):java.math.BigDecimal
 java.math.BigDecimal#valueOf(long):java.math.BigDecimal
 java.math.BigInteger#ZERO:java.math.BigInteger
-java.net.Inet6Address#getAddress():byte[]
-java.net.Inet6Address#ofLiteral(java.lang.String):java.net.InetAddress
 java.net.URI#create(java.lang.String):java.net.URI
-java.net.URI#getHost():java.lang.String
-java.net.URI#getScheme():java.lang.String
 java.net.URI#toString():java.lang.String
 java.text.Normalizer$Form#NFC:java.text.Normalizer$Form
 java.time.Instant#toString():java.lang.String

@@ -207,34 +207,17 @@ class StringDecoderTest {
     }
 
     @Test
-    void urlRejectsTooLongValue() {
-        // Exceeds the 2048-character maximum, exercising the length guard branch of url().
-        var tooLong = "https://example.com/" + "a".repeat(2048);
-        var issue = decodeErr(string().url(), tooLong);
-        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
-        assertEquals("not a valid URL", issue.message());
-    }
-
-    @Test
-    void urlLengthGuardCountsUtf16UnitsNotCodePoints() {
-        // The 2048 bound in url() caps the size of the Java string handed to URI.create, so it
-        // stays in UTF-16 units even though minLength/maxLength count code points. It is neither a
-        // character count nor a bound on the URL as sent: the percent-encoded ASCII form of a
-        // supplementary character is 12 characters where the Java string holds two.
-        // java.net.URI accepts supplementary characters in a path, so this URL is otherwise valid
-        // and only the guard rejects it — under a code point count it would decode successfully.
-        var url = "https://example.com/" + "𠮷".repeat(1025);   // 𠮷 ×1025
-        assertTrue(url.length() > 2048, "over the guard when counted in UTF-16 units");
-        assertTrue(url.codePointCount(0, url.length()) < 2048, "under it when counted in code points");
-
-        var issue = decodeErr(string().url(), url);
-        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
-        assertEquals("not a valid URL", issue.message());
+    void urlDoesNotLimitLengthButComposesWithMaxLength() {
+        // url() has no length bound of its own (issue #144); maxLength() is how a caller sets one.
+        var url = "https://example.com/" + "a".repeat(2048);
+        assertEquals(URI.create(url), decodeOk(string().url(), url));
+        var issue = decodeErr(string().maxLength(2048).url(), url);
+        assertEquals(ErrorCodes.TOO_LONG, issue.code());
     }
 
     @Test
     void urlRejectsMalformedValue() {
-        // The embedded space makes URI.create throw, exercising the parse-failure branch of url().
+        // A space is outside the RFC 3986 grammar.
         var issue = decodeErr(string().url(), "http://exa mple.com");
         assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
         assertEquals("not a valid URL", issue.message());
@@ -242,7 +225,7 @@ class StringDecoderTest {
 
     @Test
     void urlRejectsMissingHost() {
-        // Valid http scheme but empty host, exercising the host==null/empty branch of url().
+        // Valid http scheme but empty authority, which RFC 9110 rejects for http URIs.
         var issue = decodeErr(string().url(), "http://");
         assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
         assertEquals("not a valid URL", issue.message());

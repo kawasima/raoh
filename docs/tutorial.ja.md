@@ -153,7 +153,7 @@ string().url().decode("ftp://example.com")
 // ==> Err[/: not a valid URL]
 ```
 
-`uri()` は任意のスキームを受け入れ、`java.net.URI` を返します。`url()` はより厳格で、`http` または `https` スキーム、空でないホスト、最大 2048 文字を要求します。どちらも終端メソッドで、`String` ではなく `URI` を返します。
+`uri()` は RFC 3986 の URI を受け入れ、`java.net.URI` を返します。スキームの種類は問いませんが、スキームがあることは必須なので、`foo/bar` のような相対参照は拒否します。`url()` はそれに加えて、`http` または `https` スキーム（大文字小文字は区別しません）と空でないホストを要求します。ホストは DNS 名ではなく RFC 3986 の host なので `http://my_host/` も通りますが、このとき `URI#getHost()` は `null` を返します。長さは制限しないので、上限が必要なら `string().maxLength(2048).url()` のように前に `maxLength()` を置いてください。どちらも終端メソッドで、`String` ではなく `URI` を返します。
 
 <!-- souther-section: numeric-constraints -->
 ### 数値の制約
