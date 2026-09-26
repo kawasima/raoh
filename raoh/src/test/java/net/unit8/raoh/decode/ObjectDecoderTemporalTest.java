@@ -3,6 +3,7 @@ package net.unit8.raoh.decode;
 import net.unit8.raoh.Err;
 import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Issue;
+import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
@@ -256,6 +257,33 @@ class ObjectDecoderTemporalTest {
                 string().offsetDateTime().decode("nonsense", Path.ROOT));
     }
 
+    // --- second 60 ---
+
+    @Test
+    void iso8601RejectsSecondSixtyLikeTheStringRoute() {
+        for (var text : new String[] {"2016-12-31T23:59:60Z", "2016-12-31T23:59:60+09:00",
+                "2017-01-01T08:59:60+09:00"}) {
+            assertSameFailure(iso8601().decode(text, Path.ROOT), string().iso8601().decode(text, Path.ROOT));
+            assertEquals(MessageKeys.INVALID_FORMAT_INSTANT,
+                    firstIssue(iso8601().decode(text, Path.ROOT)).messageKey(), text);
+        }
+    }
+
+    @Test
+    void secondSixtyIsRefusedByEveryTemporalDecoder() {
+        assertSameFailure(time().decode("23:59:60", Path.ROOT), string().time().decode("23:59:60", Path.ROOT));
+        assertSameFailure(dateTime().decode("2016-12-31T23:59:60", Path.ROOT),
+                string().dateTime().decode("2016-12-31T23:59:60", Path.ROOT));
+        assertSameFailure(offsetDateTime().decode("2016-12-31T23:59:60Z", Path.ROOT),
+                string().offsetDateTime().decode("2016-12-31T23:59:60Z", Path.ROOT));
+    }
+
+    @Test
+    void iso8601DecodesWhatTheEncoderWroteAtTheEndsOfTheInstantRange() {
+        assertRoundTrips(Instant.MAX, ObjectEncoders.iso8601().encode(Instant.MAX), iso8601());
+        assertRoundTrips(Instant.MIN, ObjectEncoders.iso8601().encode(Instant.MIN), iso8601());
+    }
+
     private static <T> void assertRoundTrips(T original, Object encoded, Decoder<Object, T> decoder) {
         assertInstanceOf(String.class, encoded, "the encoder writes ISO text");
         switch (decoder.decode(encoded, Path.ROOT)) {
@@ -265,15 +293,14 @@ class ObjectDecoderTemporalTest {
     }
 
     /**
-     * Both routes read the same ISO text, so a value they both reject must be rejected with the
-     * same code and the same message.
+     * Both routes read the same ISO text, so a value they both reject must be rejected with an
+     * identical {@link Issue}: path, code, message key, message, meta and custom-message flag.
      */
     private static void assertSameFailure(Result<?> viaObject, Result<?> viaString) {
         Issue expected = firstIssue(viaString);
         Issue actual = firstIssue(viaObject);
         assertEquals(ErrorCodes.INVALID_FORMAT, actual.code());
-        assertEquals(expected.code(), actual.code());
-        assertEquals(expected.message(), actual.message());
+        assertEquals(expected, actual);
     }
 
     private static Issue firstIssue(Result<?> result) {

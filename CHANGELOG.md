@@ -12,6 +12,18 @@ detailed from the current development cycle onward.
 
 ### Fixed
 
+- **`iso8601()` rejects second `60` instead of returning the second before it.** It handed the
+  text to `Instant.parse`, whose `ISO_INSTANT` parser reads a clock time of `23:59:60` as
+  `23:59:59` (at any offset, so `2016-12-31T23:59:60+09:00` became `14:59:59Z`) and reports the
+  adjustment only through `DateTimeFormatter.parsedLeapSecond()`, which `Instant.parse` drops. The
+  caller got a moment the text did not name. `iso8601()` now checks that report and fails with
+  `invalid_format` / `not a valid ISO 8601 instant`, the same issue as any other second `60`. The
+  report says the parser replaced the second, not that the text is a UTC leap second, so no
+  leap-second message key is added. `24:00:00` is still accepted as the start of the next day,
+  which is the same instant. Along with it, the `ObjectDecoders` temporal decoders no longer parse
+  a `String` themselves: they hand it to the matching `StringDecoder` conversion, so the two routes
+  read text by one set of rules and report identical issues
+  ([#130](https://github.com/kawasima/raoh/issues/130)).
 - **`ipv6()` and `ip()` no longer depend on the host's network interfaces.** They checked a literal
   with `InetAddress.getByName`, which looks a zone ID up among the interfaces of the running machine,
   so `fe80::1%en0` was accepted on macOS and rejected on Linux, and `fe80::1%eth0` the other way

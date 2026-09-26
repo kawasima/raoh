@@ -13,11 +13,13 @@ import java.math.BigDecimal;
 import java.net.Inet6Address;
 import java.net.URI;
 import java.text.Normalizer;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
@@ -769,6 +771,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as an ISO 8601 instant (e.g., {@code 2024-01-15T10:30:00Z}).
      *
+     * <p>See {@link #iso8601(String)} for the accepted text.
+     *
      * @return a temporal decoder producing {@link Instant}
      */
     public TemporalDecoder<I, Instant> iso8601() {
@@ -778,17 +782,29 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as an ISO 8601 instant.
      *
+     * <p>The text is read with {@link DateTimeFormatter#ISO_INSTANT}. A clock time of
+     * {@code 23:59:60}, at any offset, is rejected with {@code invalid_format}: that parser reads
+     * it as {@code 23:59:59}, so accepting it would return a moment the text does not name. An end
+     * of day {@code 24:00:00} is accepted as the start of the next day, the same instant.
+     *
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link Instant}
      */
     public TemporalDecoder<I, Instant> iso8601(@Nullable String message) {
         return new TemporalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
             try {
-                return Result.ok(Instant.parse(value));
-            } catch (DateTimeParseException e) {
-                return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_INSTANT,
-                        message, "not a valid ISO 8601 instant", Map.of());
+                var parsed = DateTimeFormatter.ISO_INSTANT.parse(value);
+                // parsedLeapSecond() reports only that the parser replaced second 60 with 59.
+                if (!parsed.query(DateTimeFormatter.parsedLeapSecond())) {
+                    return Result.ok(Instant.from(parsed));
+                }
+            } catch (DateTimeException e) {
+                // DateTimeParseException for text outside the grammar, and a plain
+                // DateTimeException from Instant.from for a year the grammar admits but an
+                // Instant cannot hold (e.g. +1000000001).
             }
+            return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_INSTANT,
+                    message, "not a valid ISO 8601 instant", Map.of());
         }));
     }
 
