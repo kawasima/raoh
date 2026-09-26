@@ -223,7 +223,7 @@ string().toDecimal().decode("abc")
 // ==> Err[/: expected decimal]
 ```
 
-`toBool()` はフォームデータでよく使われる文字列をケース非依存で認識します。
+`toBool()` はフォームデータでよく使われる文字列を、ASCII の大文字小文字を区別せずに認識します。
 
 ```java
 string().toBool().decode("true")
@@ -662,7 +662,7 @@ profilePatchDec.decode(Map.of("nickname", "alice"))
 <!-- souther-section: enums -->
 ## 10. Enum値のデコード
 
-JavaのEnumをケース非依存でデコードできます。
+JavaのEnumを、ASCII の大文字小文字を区別せずにデコードできます。ASCII 以外の文字は完全一致が必要です。
 
 ```java
 enum Role { ADMIN, MEMBER, GUEST }
