@@ -1079,7 +1079,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Parses the string as a boolean.
      *
-     * <p>Recognises common form-data representations (case-insensitive):</p>
+     * <p>Recognises common form-data representations (ASCII case-insensitive:
+     * {@code A}-{@code Z} are equivalent to {@code a}-{@code z}, with no Unicode case mapping):</p>
      * <ul>
      *   <li>true: {@code "true"}, {@code "1"}, {@code "yes"}, {@code "on"}</li>
      *   <li>false: {@code "false"}, {@code "0"}, {@code "no"}, {@code "off"}</li>
@@ -1103,7 +1104,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      */
     public BoolDecoder<I> toBool(@Nullable String message) {
         return new BoolDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            Boolean parsed = switch (value.toLowerCase(Locale.ROOT)) {
+            Boolean parsed = switch (asciiLowerCase(value)) {
                 case "true", "1", "yes", "on" -> Boolean.TRUE;
                 case "false", "0", "no", "off" -> Boolean.FALSE;
                 default -> null;
@@ -1117,6 +1118,24 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
                     : Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected boolean",
                             Map.of("expected", "boolean"));
         }));
+    }
+
+    /** Lower-cases {@code A}-{@code Z} only; see {@code Decoders.enumOf}, which keeps its own copy. */
+    private static String asciiLowerCase(String value) {
+        int first = 0;
+        while (first < value.length() && (value.charAt(first) < 'A' || value.charAt(first) > 'Z')) {
+            first++;
+        }
+        if (first == value.length()) {
+            return value;
+        }
+        var chars = value.toCharArray();
+        for (int i = first; i < chars.length; i++) {
+            if (chars[i] >= 'A' && chars[i] <= 'Z') {
+                chars[i] += 'a' - 'A';
+            }
+        }
+        return new String(chars);
     }
 
     /**

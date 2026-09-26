@@ -482,11 +482,17 @@ public final class JsonDecoders {
     // --- enumOf / literal ---
 
     /**
-     * Decodes a JSON string into an enum constant (case-insensitive).
+     * Decodes a JSON string into an enum constant, matching the constant name ASCII
+     * case-insensitively.
+     *
+     * <p>{@code A}-{@code Z} are equivalent to {@code a}-{@code z}; every other character must
+     * match exactly. See {@link Decoders#enumOf} for the full contract.
      *
      * @param <E> the enum type
      * @param cls the enum class
      * @return an enum decoder
+     * @throws IllegalArgumentException if two enum constant names are equal under ASCII
+     *                                  case-insensitive matching
      */
     public static <E extends Enum<E>> Decoder<JsonNode, E> enumOf(Class<E> cls) {
         return Decoders.<JsonNode, E>enumOf(cls, string());

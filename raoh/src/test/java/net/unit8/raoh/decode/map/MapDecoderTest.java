@@ -887,6 +887,17 @@ class MapDecoderTest {
     }
 
     @Test
+    void toBoolTreatsNonAsciiAsDifferentFromAscii() {
+        var dec = field("agree", string().toBool());
+        // Non-ASCII look-alikes and full-width letters are not ASCII letters
+        for (var input : new String[]{"\u0130", "on\u212A", "yeſ", "ＴＲＵＥ"}) {
+            assertInstanceOf(Err.class, dec.decode(Map.of("agree", input)), input);
+        }
+        assertTrue(assertOk(dec.decode(Map.of("agree", "TrUe"))));
+        assertFalse(assertOk(dec.decode(Map.of("agree", "oFf"))));
+    }
+
+    @Test
     void toBoolInvalid() {
         var dec = field("agree", string().toBool());
         var result = dec.decode(Map.of("agree", "maybe"));

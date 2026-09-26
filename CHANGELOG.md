@@ -10,6 +10,19 @@ detailed from the current development cycle onward.
 
 ## [Unreleased]
 
+### Changed
+
+- **`enumOf()` and `toBool()` match ASCII case-insensitively.** They compared with
+  `String.toLowerCase(Locale.ROOT)`, so the JDK's Unicode case mapping decided what was accepted;
+  on Java 25 `blocKed` (with U+212A KELVIN SIGN as the fifth letter) decoded to `Thread.State.BLOCKED`. Case-insensitive now
+  means `A`-`Z` equal `a`-`z` and nothing else; every other character must match exactly, so the
+  accepted names no longer depend on the JDK's Unicode version. Constants with non-ASCII letters
+  (`enum Wide { Ａ }`) no longer match their lower-case forms, and `allowed` lists them as declared.
+  `enumOf()` also throws `IllegalArgumentException` when it is built for an enum with two constants
+  that are equal under this matching (`A` and `a`); one of them used to become unreachable
+  silently. `StringDecoder.toLowerCase()` still uses the JDK's mapping, as it is an explicit
+  text transformation ([#147](https://github.com/kawasima/raoh/issues/147)).
+
 ### Fixed
 
 - **`Issue.meta()` iterates its keys in a fixed order and snapshots its top-level mapping.**
