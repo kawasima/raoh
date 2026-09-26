@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.net.URI;
 import java.text.Normalizer;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -78,7 +79,7 @@ class StringDecoderTest {
 
     @Test
     void trimAndNonBlankAgreeOnEveryInput() {
-        var samples = new java.util.ArrayList<String>();
+        var samples = new ArrayList<String>();
         for (var a : WHITE_SPACE) {
             samples.add(a);
             samples.add(a + "x");
