@@ -1,54 +1,43 @@
 package net.unit8.raoh.audit;
 
 /**
- * What an external member can do beyond reading what it is given.
+ * What an external member can do beyond reading what it is given, by its API contract.
  *
  * <p>The contract the audit protects: a built-in decoder does not itself acquire ambient
- * capabilities (default locale, default time zone, clock, randomness, filesystem, network, ...)
- * except those passed to it in its input or explicit configuration.
+ * capabilities (default locale, default time zone, clock, randomness, class path, filesystem,
+ * network, ...) except those passed to it in its input or explicit configuration.
  */
 public enum Effect {
 
     /**
-     * Acquires nothing outside its receiver and arguments and what is explicitly reachable from
-     * them, and runs no code a caller of Raoh can supply. {@code Integer.valueOf(int)},
-     * {@code String#trim()}. Only a member no subclass can override may be {@code CLOSED}.
+     * Runs no code a caller of Raoh can supply and acquires nothing outside its receiver and
+     * arguments: {@code Integer.valueOf(int)}, {@code String#trim()}. Not through its receiver,
+     * not through an argument whose type a caller can implement, not through a class it
+     * initializes. Only a member no subclass can override may be {@code CLOSED}.
      */
-    CLOSED(false),
+    CLOSED,
 
     /**
-     * The ambient value it depends on is an explicit argument: {@code String#toLowerCase(Locale)},
-     * {@code LocalDate.now(Clock)}. Only a member no subclass can override may be {@code EXPLICIT}.
+     * Like {@link #CLOSED}, except that the ambient value it depends on is an explicit argument:
+     * {@code String#toLowerCase(Locale)}, {@code LocalDate.now(Clock)}.
      */
-    EXPLICIT(false),
+    EXPLICIT,
 
     /**
-     * Runs an implementation chosen by its receiver, an argument or a provider: every
+     * May run code its receiver, an argument, or a class it initializes chooses: every
      * overridable method called virtually ({@code List#get(int)}, {@code Function#apply}), and
-     * methods that call into their arguments ({@code List.copyOf(Collection)},
-     * {@code String.valueOf(Object)}). Each use needs an approval that says why the delegation is
-     * acceptable there, such as observing the input through its own interface.
+     * members that call into an argument ({@code List.copyOf(Collection)}, {@code Map.of} on its
+     * keys). Each use needs an approval whose reason says whether it only observes what Raoh
+     * accepted, which is allowed, or adopts a caller's behaviour as the meaning of a conversion,
+     * which is not.
      */
-    DELEGATED(true),
+    DELEGATED,
 
     /**
-     * Reads ambient state itself: {@code Locale.getDefault()}, {@code System.currentTimeMillis()}.
-     * Each use needs an approval, and none is allowed in a decoder package.
+     * Acquires ambient state itself: {@code Locale.getDefault()}, {@code System.currentTimeMillis()},
+     * and any lookup by name in the class path ({@code Class.forName}, {@code ServiceLoader},
+     * {@code MethodHandles.Lookup#find*}). Each use needs an approval, and decoder code must not
+     * reach one, directly or through the audited code base's own methods.
      */
-    AMBIENT(true);
-
-    private final boolean needsApproval;
-
-    Effect(boolean needsApproval) {
-        this.needsApproval = needsApproval;
-    }
-
-    /**
-     * Whether each use of a member with this effect needs a caller-specific approval.
-     *
-     * @return {@code true} for {@link #DELEGATED} and {@link #AMBIENT}
-     */
-    public boolean needsApproval() {
-        return needsApproval;
-    }
+    AMBIENT
 }

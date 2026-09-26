@@ -4,19 +4,26 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
  * Answers questions about the class hierarchy of the audited code and its dependencies.
  *
  * <p>Classes are loaded without initialization from the loader given, which should see the
  * audited classes, their compile classpath and the JDK the build compiles against. Methods are
- * matched by their whole descriptor, return type included, as the JVM matches them.
+ * matched by their whole descriptor, return type included, as the JVM matches them. Answers are
+ * cached, since the same member is asked about from many call sites.
  */
 public final class Hierarchy {
 
     private final ClassLoader loader;
+    private final Map<Member, Optional<Method>> resolved = new HashMap<>();
+    private final Map<List<String>, Boolean> subtypes = new HashMap<>();
 
     /**
      * Creates a hierarchy over the classes {@code loader} can see.
@@ -37,14 +44,14 @@ public final class Hierarchy {
      * @throws IllegalStateException if the owner or the method cannot be found
      */
     public boolean isOverridable(Member member) {
-        if (member.isField() || member.isConstructor() || member.owner().endsWith("[]")) {
+        if (!isInheritable(member)) {
             return false;
         }
         var owner = load(member.owner());
         if (Modifier.isFinal(owner.getModifiers())) {
             return false;
         }
-        var method = find(owner, member).orElseThrow(() -> new IllegalStateException(
+        var method = find(member).orElseThrow(() -> new IllegalStateException(
                 "cannot resolve " + member + " in " + owner.getName()));
         int modifiers = method.getModifiers();
         return !Modifier.isStatic(modifiers) && !Modifier.isPrivate(modifiers) && !Modifier.isFinal(modifiers);
@@ -59,10 +66,10 @@ public final class Hierarchy {
      *         are not inherited, or for a method the owner does not have
      */
     public Optional<String> declaringClass(Member member) {
-        if (member.isField() || member.isConstructor() || member.owner().endsWith("[]")) {
+        if (!isInheritable(member)) {
             return Optional.empty();
         }
-        return find(load(member.owner()), member).map(m -> m.getDeclaringClass().getName());
+        return find(member).map(m -> m.getDeclaringClass().getName());
     }
 
     /**
@@ -76,7 +83,59 @@ public final class Hierarchy {
         if (sup.endsWith("[]") || sub.endsWith("[]")) {
             return sub.equals(sup) || sup.equals("java.lang.Object");
         }
-        return load(sup).isAssignableFrom(load(sub));
+        return subtypes.computeIfAbsent(List.of(sub, sup), k -> load(sup).isAssignableFrom(load(sub)));
+    }
+
+    /**
+     * Whether code outside the audited code base can call {@code method} on an instance of
+     * {@code type}: the method is an instance method that overrides or implements one an
+     * external supertype of {@code type} declares ({@code toString()}, {@code compare}, a
+     * {@code Function}'s {@code apply}).
+     *
+     * @param type the binary name of an audited class
+     * @param method a method {@code type} or an internal superclass of it declares
+     * @param internal whether a class belongs to the audited code base
+     * @return {@code true} if an external supertype declares a method it overrides
+     */
+    public boolean overridesExternal(String type, Member method, Predicate<String> internal) {
+        if (!isInheritable(method) || method.name().equals("<clinit>")) {
+            return false;
+        }
+        var queue = new ArrayDeque<Class<?>>();
+        queue.add(load(type));
+        var seen = new HashSet<Class<?>>();
+        while (!queue.isEmpty()) {
+            var c = queue.poll();
+            if (!seen.add(c)) {
+                continue;
+            }
+            if (!internal.test(c.getName()) && declaresOverridable(c, method)) {
+                return true;
+            }
+            if (c.getSuperclass() != null) {
+                queue.add(c.getSuperclass());
+            }
+            queue.addAll(Arrays.asList(c.getInterfaces()));
+        }
+        // Every interface has Object's public methods (JLS 9.2).
+        return declaresOverridable(Object.class, method);
+    }
+
+    /** Whether {@code type} declares an instance method, not private, with the name and parameters of {@code method}. */
+    private static boolean declaresOverridable(Class<?> type, Member method) {
+        for (var candidate : type.getDeclaredMethods()) {
+            int modifiers = candidate.getModifiers();
+            if (candidate.getName().equals(method.name()) && !Modifier.isStatic(modifiers)
+                    && !Modifier.isPrivate(modifiers) && parameters(candidate).equals(method.parameters())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** A method, as opposed to a field, a constructor or a method of an array type. */
+    private static boolean isInheritable(Member member) {
+        return !member.isField() && !member.isConstructor() && !member.owner().endsWith("[]");
     }
 
     private Class<?> load(String name) {
@@ -88,7 +147,17 @@ public final class Hierarchy {
     }
 
     /** Resolves a method the way the JVM does: the class chain first, then the interfaces. */
-    private static Optional<Method> find(Class<?> owner, Member member) {
+    private Optional<Method> find(Member member) {
+        var cached = resolved.get(member);
+        if (cached != null) {
+            return cached;
+        }
+        var result = search(load(member.owner()), member);
+        resolved.put(member, result);
+        return result;
+    }
+
+    private static Optional<Method> search(Class<?> owner, Member member) {
         for (Class<?> c = owner; c != null; c = c.getSuperclass()) {
             var found = declared(c, member);
             if (found.isPresent()) {
@@ -120,11 +189,14 @@ public final class Hierarchy {
         for (var method : type.getDeclaredMethods()) {
             if (method.getName().equals(member.name())
                     && method.getReturnType().getTypeName().equals(member.type())
-                    && Arrays.stream(method.getParameterTypes()).map(Class::getTypeName).toList()
-                            .equals(member.parameters())) {
+                    && parameters(method).equals(member.parameters())) {
                 return Optional.of(method);
             }
         }
         return Optional.empty();
+    }
+
+    private static List<String> parameters(Method method) {
+        return Arrays.stream(method.getParameterTypes()).map(Class::getTypeName).toList();
     }
 }

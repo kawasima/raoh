@@ -131,7 +131,9 @@ detailed from the current development cycle onward.
   argument through the argument's own methods) and an `AMBIENT` member need an approval for each
   calling method in `effect-audit/<module>.txt`, filed under the reason it is acceptable there,
   and decoder code must not reach an `AMBIENT` member at all, directly or through Raoh's own
-  methods: the audit walks Raoh's call graph, across modules, and prints the path. Lambdas,
+  methods, including the overrides external code calls back on a Raoh object a decoder creates:
+  the audit walks Raoh's call graph, across modules, and prints the path. A lookup by name is
+  always `AMBIENT`, and writing Raoh's own static state after class initialization is refused. Lambdas,
   method references, record methods, pattern and enum switches and dynamic constants are
   followed to the members they reach, and an unknown bootstrap method fails the build. This replaces
   the test that derived default-locale readers from the JDK call graph, which could not be made

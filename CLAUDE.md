@@ -59,7 +59,12 @@ paste.
   instead (#152 is the model).
 - **`AMBIENT` reached from a decoder package**: cannot be approved, whether the decoder reads it
   itself or through Raoh's own methods (the audit walks Raoh's call graph across modules and prints
-  the path). Take the value from the input or explicit configuration.
+  the path). The walk includes callbacks: once decoder code constructs a Raoh class, that class's
+  overrides of external methods (`hashCode`, `compare`, `apply`) count as reached. Take the value
+  from the input or explicit configuration. A lookup by name (`Class.forName`, `ServiceLoader`,
+  reflection) is always `AMBIENT`.
+- **Write to an internal static field outside its class initializer**: not allowed; mutable static
+  state is ambient configuration the audit cannot follow.
 - **Stale approval**: remove the line.
 - **Unknown bootstrap method**: teach `BytecodeScanner` which members it reaches before approving
   anything; do not add it to the known set without the expansion.

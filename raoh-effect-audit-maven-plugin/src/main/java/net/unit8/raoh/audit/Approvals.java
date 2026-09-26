@@ -42,12 +42,7 @@ public final class Approvals {
         this.reasons = reasons;
     }
 
-    /**
-     * No approvals.
-     *
-     * @return an empty set of approvals
-     */
-    public static Approvals none() {
+    private static Approvals none() {
         return new Approvals(Map.of());
     }
 

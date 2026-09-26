@@ -98,6 +98,6 @@ final class Fixtures {
         var catalogFile = Files.writeString(dir.resolve("catalog.txt"), catalog);
         var approvalFile = Files.writeString(dir.resolve("approvals.txt"), approvals);
         return EffectAudit.check(compiled.scan(), EffectCatalog.read(catalogFile), Approvals.read(approvalFile),
-                compiled.hierarchy(), name -> name.startsWith("fixture.decode."));
+                compiled.hierarchy(), name -> name.startsWith("fixture."), name -> name.startsWith("fixture.decode."));
     }
 }

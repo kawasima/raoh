@@ -5,7 +5,6 @@ package net.unit8.raoh.audit;
  *
  * @param caller the audited method as approvals name it, {@code binary.ClassName#method}; see
  *               {@link BytecodeScanner} for how lambdas and local classes are attributed
- * @param callerMethod the exact method whose bytecode makes the use, for the call graph
  * @param callee the external member used
  * @param virtual whether the member is chosen at run time by the receiver: an
  *                {@code invokevirtual} / {@code invokeinterface} call, a virtual method handle, or
@@ -13,7 +12,7 @@ package net.unit8.raoh.audit;
  *                generated method calls on a component
  * @param via how the bytecode reaches the member, for messages
  */
-public record Edge(String caller, Member callerMethod, Member callee, boolean virtual, Via via) {
+public record Edge(String caller, Member callee, boolean virtual, Via via) {
 
     /** How the bytecode reaches an external member. */
     public enum Via {

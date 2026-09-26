@@ -13,9 +13,9 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 /**
  * Fails the build when the module's bytecode uses an external member whose effect is not
@@ -80,18 +80,18 @@ public class AuditMojo extends AbstractMojo {
                     .map(java.nio.file.Path::of)
                     .filter(p -> !p.toAbsolutePath().equals(classesDirectory.toPath().toAbsolutePath()))
                     .toList();
-            var scan = new BytecodeScanner(name -> inPackages(name, internalPackages), hierarchy)
-                    .scan(classesDirectory.toPath(), dependencies);
-            var report = EffectAudit.check(scan, EffectCatalog.read(catalog.toPath()),
-                    Approvals.read(approvals.toPath()), hierarchy, name -> inPackages(name, decoderPackages));
+            Predicate<String> isInternal = inPackages(internalPackages);
+            var scan = new BytecodeScanner(isInternal, hierarchy).scan(classesDirectory.toPath(), dependencies);
+            var approved = Approvals.read(approvals.toPath());
+            var report = EffectAudit.check(scan, EffectCatalog.read(catalog.toPath()), approved, hierarchy,
+                    isInternal, inPackages(decoderPackages));
             if (!report.passed()) {
                 throw new MojoFailureException("Effect audit failed. The rules are in "
                         + "raoh-effect-audit-maven-plugin's EffectAudit." + report.describe(
                                 catalog.getName(), approvals.getName()));
             }
             getLog().info("Effect audit passed: " + scan.edges().size() + " external uses, "
-                    + (Files.exists(approvals.toPath()) ? Approvals.read(approvals.toPath()).uses().size() : 0)
-                    + " approved");
+                    + approved.uses().size() + " approved");
         } catch (IOException | IllegalArgumentException e) {
             throw new MojoExecutionException("Effect audit could not run: " + e.getMessage(), e);
         }
@@ -109,12 +109,9 @@ public class AuditMojo extends AbstractMojo {
         return urls.toArray(URL[]::new);
     }
 
-    private static boolean inPackages(String className, List<String> packages) {
-        for (var prefix : packages) {
-            if (className.startsWith(prefix + ".")) {
-                return true;
-            }
-        }
-        return false;
+    /** Whether a class, by binary name, is in one of the packages or their subpackages. */
+    private static Predicate<String> inPackages(List<String> packages) {
+        var prefixes = packages.stream().map(p -> p + ".").toList();
+        return className -> prefixes.stream().anyMatch(className::startsWith);
     }
 }

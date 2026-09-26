@@ -1,6 +1,7 @@
 package net.unit8.raoh.audit;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -23,23 +24,16 @@ public final class CallGraph {
      */
     public record Call(Member target, boolean virtual) {}
 
-    /**
-     * What the graph knows about one internal class.
-     *
-     * @param name its binary name
-     * @param methods the methods it declares with code
-     */
-    public record ClassInfo(String name, Set<Member> methods) {}
-
     private final Map<Member, Set<Call>> calls = new HashMap<>();
     private final Map<Member, List<Edge>> external = new HashMap<>();
-    private final Map<String, ClassInfo> classes = new HashMap<>();
+    private final Map<String, Set<Member>> classes = new HashMap<>();
+    private final Map<String, Set<Member>> classesView = Collections.unmodifiableMap(classes);
 
     /** Only {@link BytecodeScanner} builds a graph. */
     CallGraph() {}
 
-    void addClass(ClassInfo info) {
-        classes.put(info.name(), info);
+    void addClass(String name, Set<Member> methods) {
+        classes.put(name, Set.copyOf(methods));
     }
 
     void addCall(Member caller, Call call) {
@@ -71,11 +65,11 @@ public final class CallGraph {
     }
 
     /**
-     * The internal classes known to the graph.
+     * The internal classes known to the graph, each with the methods it declares with code.
      *
-     * @return class name to class info
+     * @return class name to declared methods, read-only
      */
-    public Map<String, ClassInfo> classes() {
-        return Map.copyOf(classes);
+    public Map<String, Set<Member>> classes() {
+        return classesView;
     }
 }

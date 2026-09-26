@@ -138,20 +138,19 @@ public final class BytecodeScanner {
      * @throws IOException if a class file cannot be read
      */
     public Result scan(Path classesDirectory, List<Path> dependencies) throws IOException {
-        var own = read(classesDirectory);
+        var own = read(classesDirectory, name -> true);
         var context = new ArrayList<ClassModel>();
         for (var dependency : dependencies) {
             if (Files.isDirectory(dependency)) {
-                context.addAll(read(dependency));
+                context.addAll(read(dependency, internal));
             } else if (Files.isRegularFile(dependency) && dependency.toString().endsWith(".jar")) {
                 try (var jar = FileSystems.newFileSystem(dependency)) {
                     for (var root : jar.getRootDirectories()) {
-                        context.addAll(read(root));
+                        context.addAll(read(root, internal));
                     }
                 }
             }
         }
-        context.removeIf(m -> !internal.test(Member.typeName(m.thisClass().asSymbol())));
 
         var all = new ArrayList<ClassModel>(own);
         all.addAll(context);
@@ -164,9 +163,9 @@ public final class BytecodeScanner {
             audited.add(Member.typeName(model.thisClass().asSymbol()));
         }
         for (var model : all) {
-            boolean isAudited = audited.contains(Member.typeName(model.thisClass().asSymbol()));
-            scanClass(model, attribution, graph, isAudited ? edges : new LinkedHashSet<>(),
-                    isAudited ? problems : new ArrayList<>());
+            // A dependency's classes feed the call graph only; their own module audits their edges.
+            scanClass(model, attribution, graph, audited.contains(Member.typeName(model.thisClass().asSymbol())),
+                    edges, problems);
         }
         var sorted = edges.stream()
                 .sorted(Comparator.comparing(Edge::caller).thenComparing(e -> e.callee().toString())
@@ -175,11 +174,15 @@ public final class BytecodeScanner {
         return new Result(sorted, graph, Set.copyOf(audited), List.copyOf(problems));
     }
 
-    private static List<ClassModel> read(Path root) throws IOException {
+    /** Parses the class files under {@code root} whose binary name, taken from the path, is wanted. */
+    private static List<ClassModel> read(Path root, Predicate<String> wanted) throws IOException {
         var models = new ArrayList<ClassModel>();
         try (var files = Files.walk(root)) {
             for (var file : files.filter(f -> f.toString().endsWith(".class")).sorted().toList()) {
-                if (file.getFileName().toString().equals("module-info.class")) {
+                var relative = root.relativize(file).toString();
+                var name = relative.substring(0, relative.length() - ".class".length())
+                        .replace(file.getFileSystem().getSeparator(), ".");
+                if (name.endsWith("module-info") || name.startsWith("META-INF.") || !wanted.test(name)) {
                     continue;
                 }
                 models.add(ClassFile.of().parse(Files.readAllBytes(file)));
@@ -189,7 +192,7 @@ public final class BytecodeScanner {
     }
 
     private void scanClass(ClassModel model, Map<String, String> attribution, CallGraph graph,
-                           Set<Edge> edges, List<String> problems) {
+                           boolean audited, Set<Edge> edges, List<String> problems) {
         var classDesc = model.thisClass().asSymbol();
         var className = Member.typeName(classDesc);
         var declared = new LinkedHashSet<Member>();
@@ -201,16 +204,14 @@ public final class BytecodeScanner {
             var self = Member.method(classDesc, method.methodName().stringValue(), method.methodTypeSymbol());
             declared.add(self);
             var collector = new Collector(caller(className, self.name(), attribution), self, className,
-                    graph, edges, problems);
+                    graph, audited, edges, problems);
             for (var element : code.get()) {
                 switch (element) {
                     case InvokeInstruction i -> collector.add(
                             Member.method(i.owner().asSymbol(), i.name().stringValue(), i.typeSymbol()),
                             i.opcode() == Opcode.INVOKEVIRTUAL || i.opcode() == Opcode.INVOKEINTERFACE,
                             Edge.Via.CALL);
-                    case FieldInstruction f -> collector.add(
-                            Member.field(f.owner().asSymbol(), f.name().stringValue(), f.typeSymbol()),
-                            false, Edge.Via.FIELD);
+                    case FieldInstruction f -> collector.field(f);
                     case NewObjectInstruction n -> collector.touch(Member.typeName(n.className().asSymbol()));
                     case InvokeDynamicInstruction indy -> collector.invokedynamic(indy);
                     case ConstantInstruction c -> collector.constant(c.constantValue());
@@ -218,7 +219,7 @@ public final class BytecodeScanner {
                 }
             }
         }
-        graph.addClass(new CallGraph.ClassInfo(className, Set.copyOf(declared)));
+        graph.addClass(className, declared);
     }
 
     /**
@@ -271,17 +272,37 @@ public final class BytecodeScanner {
         private final Member self;
         private final String className;
         private final CallGraph graph;
+        private final boolean audited;
         private final Set<Edge> edges;
         private final List<String> problems;
 
-        Collector(String caller, Member self, String className, CallGraph graph, Set<Edge> edges,
-                  List<String> problems) {
+        Collector(String caller, Member self, String className, CallGraph graph, boolean audited,
+                  Set<Edge> edges, List<String> problems) {
             this.caller = caller;
             this.self = self;
             this.className = className;
             this.graph = graph;
+            this.audited = audited;
             this.edges = edges;
             this.problems = problems;
+        }
+
+        private void problem(String message) {
+            if (audited) {
+                problems.add(caller + ": " + message);
+            }
+        }
+
+        void field(FieldInstruction f) {
+            var member = Member.field(f.owner().asSymbol(), f.name().stringValue(), f.typeSymbol());
+            // A static field Raoh writes after class initialization is state every decoder shares,
+            // set by whoever wrote last: ambient configuration the call graph cannot follow.
+            if (f.opcode() == Opcode.PUTSTATIC && internal.test(member.owner())
+                    && !(member.owner().equals(className) && self.name().equals(STATIC_INITIALIZER))) {
+                problem("writes the static field " + member + " outside its class initializer;"
+                        + " mutable static state is ambient");
+            }
+            add(member, false, Edge.Via.FIELD);
         }
 
         void add(Member member, boolean virtual, Edge.Via via) {
@@ -298,8 +319,10 @@ public final class BytecodeScanner {
                 }
                 member = new Member(declaring.get(), member.name(), member.parameters(), member.type());
             }
-            var edge = new Edge(caller, self, member, virtual, via);
-            edges.add(edge);
+            var edge = new Edge(caller, member, virtual, via);
+            if (audited) {
+                edges.add(edge);
+            }
             graph.addExternal(self, edge);
         }
 
@@ -336,7 +359,7 @@ public final class BytecodeScanner {
                             add(Member.method(ConstantDescs.CD_Number, "intValue", MethodTypeDesc.of(ConstantDescs.CD_int)),
                                     true, Edge.Via.NAMED_BY_BOOTSTRAP);
                         } else if (label instanceof ClassDesc type && type.isPrimitive()) {
-                            problems.add(caller + ": typeSwitch on a primitive type pattern, whose conversions"
+                            problem("typeSwitch on a primitive type pattern, whose conversions"
                                     + " the scanner does not expand");
                         }
                     }
@@ -362,7 +385,7 @@ public final class BytecodeScanner {
                 default -> null;
             };
             if (generated == null) {
-                problems.add(caller + ": ObjectMethods bootstrap for unknown method " + indy.name().stringValue());
+                problem("ObjectMethods bootstrap for unknown method " + indy.name().stringValue());
                 return;
             }
             for (var arg : indy.bootstrapArgs()) {
@@ -401,11 +424,11 @@ public final class BytecodeScanner {
                                 add(Member.field(declaring, dynamic.constantName(), fieldType),
                                         false, Edge.Via.NAMED_BY_BOOTSTRAP);
                             } else {
-                                problems.add(caller + ": field VarHandle bootstrap with unexpected arguments " + args);
+                                problem("field VarHandle bootstrap with unexpected arguments " + args);
                             }
                         }
                         case NULL_CONSTANT, PRIMITIVE_CLASS, INVOKE, EXPLICIT_CAST -> { }
-                        default -> problems.add(caller + ": bootstrap " + bootstrap
+                        default -> problem("bootstrap " + bootstrap
                                 + " used for a dynamic constant, which the scanner does not expand");
                     }
                 }
@@ -420,8 +443,7 @@ public final class BytecodeScanner {
         private String bootstrap(DirectMethodHandleDesc bootstrap) {
             var key = Member.typeName(bootstrap.owner()) + "#" + bootstrap.methodName();
             if (!KNOWN_BOOTSTRAPS.contains(key)) {
-                problems.add(caller + ": unknown bootstrap method " + key
-                        + "; teach BytecodeScanner which members it reaches");
+                problem("unknown bootstrap method " + key + "; teach BytecodeScanner which members it reaches");
                 return null;
             }
             add(Member.method(bootstrap.owner(), bootstrap.methodName(),
@@ -430,17 +452,20 @@ public final class BytecodeScanner {
         }
 
         private void handle(DirectMethodHandleDesc handle) {
+            if (handle.kind() == DirectMethodHandleDesc.Kind.STATIC_SETTER && internal.test(Member.typeName(handle.owner()))) {
+                problem("takes a setter handle for the static field " + handle.owner().displayName() + "."
+                        + handle.methodName() + "; mutable static state is ambient");
+            }
             switch (handle.kind()) {
                 case GETTER, SETTER, STATIC_GETTER, STATIC_SETTER -> add(Member.field(handle.owner(),
                         handle.methodName(), ClassDesc.ofDescriptor(handle.lookupDescriptor())),
                         false, Edge.Via.METHOD_HANDLE);
-                case CONSTRUCTOR -> add(Member.method(handle.owner(), "<init>",
-                        MethodTypeDesc.ofDescriptor(handle.lookupDescriptor())), false, Edge.Via.METHOD_HANDLE);
-                case VIRTUAL, INTERFACE_VIRTUAL -> add(Member.method(handle.owner(), handle.methodName(),
-                        MethodTypeDesc.ofDescriptor(handle.lookupDescriptor())), true, Edge.Via.METHOD_HANDLE);
-                case STATIC, INTERFACE_STATIC, SPECIAL, INTERFACE_SPECIAL -> add(Member.method(handle.owner(),
-                        handle.methodName(), MethodTypeDesc.ofDescriptor(handle.lookupDescriptor())),
-                        false, Edge.Via.METHOD_HANDLE);
+                // methodName() is "<init>" for a constructor handle.
+                default -> add(Member.method(handle.owner(), handle.methodName(),
+                        MethodTypeDesc.ofDescriptor(handle.lookupDescriptor())),
+                        handle.kind() == DirectMethodHandleDesc.Kind.VIRTUAL
+                                || handle.kind() == DirectMethodHandleDesc.Kind.INTERFACE_VIRTUAL,
+                        Edge.Via.METHOD_HANDLE);
             }
         }
 

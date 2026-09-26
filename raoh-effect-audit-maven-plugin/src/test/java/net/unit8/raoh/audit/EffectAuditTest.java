@@ -133,6 +133,52 @@ class EffectAuditTest {
     }
 
     @Test
+    void followsExternalCallbacksIntoAClassADecoderConstructs() throws IOException {
+        // The decoder never calls Key#hashCode; HashMap does, once the decoder hands it a Key.
+        var report = audit(Map.of(
+                "Key", "public final class Key { @Override public int hashCode() { return java.util.Locale.getDefault().hashCode(); } }",
+                "decode/D", "package fixture.decode; public class D { Object l() { var m = new java.util.HashMap<Object, Object>(); m.put(new fixture.Key(), 1); return m; } }"),
+                BASE_CATALOG, "[hashes a key]\nfixture.Key#hashCode -> java.util.Locale#getDefault():java.util.Locale\n");
+        assertEquals(Set.of(new Approvals.Use("fixture.Key#hashCode", GET_DEFAULT)), report.ambientInDecoder().keySet());
+        assertTrue(report.ambientInDecoder().values().iterator().next().endsWith("fixture.Key#hashCode():int"));
+    }
+
+    @Test
+    void reportsAWriteToInternalStaticStateAfterInitialization() throws IOException {
+        var report = audit(Map.of("Settings", """
+                public final class Settings {
+                    static Object current;
+                    public static void set(Object value) { current = value; }
+                }
+                """), BASE_CATALOG, "");
+        assertTrue(report.problems().stream().anyMatch(p -> p.contains("fixture.Settings#set")
+                && p.contains("mutable static state")), report.problems()::toString);
+    }
+
+    @Test
+    void refusesToFileALookupByNameAsAnythingButAmbient() throws IOException {
+        var report = audit(Map.of("Loader", """
+                public final class Loader {
+                    static Object load(String name) throws Exception { return Class.forName(name); }
+                }
+                """), BASE_CATALOG + "[DELEGATED]\njava.lang.Class#forName(java.lang.String):java.lang.Class\n",
+                "[loads what the caller named]\nfixture.Loader#load -> java.lang.Class#forName(java.lang.String):java.lang.Class\n");
+        assertEquals(Set.of(Member.parse("java.lang.Class#forName(java.lang.String):java.lang.Class")),
+                report.lookupByName().keySet());
+    }
+
+    @Test
+    void reportsAnUncataloguedMemberADecoderReachesInADependency() throws IOException {
+        var core = Fixtures.compile(dir, "core", Map.of(
+                "Helper", "public final class Helper { public static String t(String s) { return s.strip(); } }"));
+        var json = Fixtures.compile(dir, "json", Map.of(
+                "decode/J", "package fixture.decode; public class J { Object l() { return fixture.Helper.t(\"x\"); } }"), core);
+        var report = Fixtures.audit(json, dir, BASE_CATALOG, "");
+        assertTrue(report.problems().stream().anyMatch(p -> p.contains("fixture.Helper#t -> java.lang.String#strip()")),
+                report.problems()::toString);
+    }
+
+    @Test
     void passesWhenNoDecoderReachesTheAmbientRead() throws IOException {
         var report = audit(Map.of(
                 "Environment", "public final class Environment { public static Object locale() { return java.util.Locale.getDefault(); } }",
