@@ -110,6 +110,33 @@ detailed from the current development cycle onward.
 
 ### Changed
 
+- **String conversions accept a grammar Raoh defines, not whatever the JDK parser accepts.**
+  `uuid()`, `toInt()`, `toLong()`, `toDecimal()`, `date()`, `time()`, `dateTime()`,
+  `offsetDateTime()` and `iso8601()` passed the text to `UUID.fromString`, `Integer.parseInt`,
+  `Long.parseLong`, `new BigDecimal(String)` and the `DateTimeFormatter.ISO_*` parsers, so the
+  accepted language was the JDK's and was written down nowhere. Each conversion now checks its own
+  grammar, documented in its Javadoc, before the JDK builds the value; no JDK formatter decides
+  what is accepted. Everything `ObjectEncoders` writes is still accepted. The following inputs
+  were accepted before and are now rejected:
+  - `uuid()`: anything other than 32 hexadecimal digits grouped `8-4-4-4-12` (RFC 9562), such as
+    `1-1-1-1-1`, which `UUID.fromString` read as `00000001-0001-0001-0001-000000000001`.
+  - `toInt()`, `toLong()`, `toDecimal()`: digits other than ASCII `0`–`9`, such as full-width
+    `１２３` or Arabic-Indic `٣`. Signs, leading zeros, and (for `toDecimal()`) `5.`, `.5` and
+    exponents such as `1e3` are still accepted.
+  - The temporal conversions: a lower-case `t` or `z`, as in `2016-12-31t23:59:59z`, and a year
+    written other than as `LocalDate.toString()` and `Instant.toString()` write it: leading zeros
+    on a signed year (`+00001`, `-00001`, `+0999999999`), which the JDK read as the year without
+    them.
+  - `offsetDateTime()`: an offset of hours only, such as `2024-01-15T10:30+09`.
+  - `time()`, `dateTime()`, `offsetDateTime()`, `iso8601()`: a decimal point with no fraction
+    digits after it, such as `10:30:00.`.
+
+  The default messages of `date()` and `time()` changed from `not a valid date (yyyy-MM-dd)` and
+  `not a valid time (HH:mm:ss)` to `not a valid ISO-8601 date (e.g., 2024-01-15)` and
+  `not a valid ISO-8601 local time (e.g., 10:30 or 10:30:45)`, because a date may have a signed
+  expanded year and a time may omit its seconds. The `messages.properties` and
+  `messages_ja.properties` entries changed with them
+  ([#137](https://github.com/kawasima/raoh/issues/137)).
 - **`ipv6()` and `ip()` reject a bracketed address such as `[::1]`.** The brackets belong to the host
   syntax of a URI, not to the address, and were accepted only because the JDK parser strips them
   ([#127](https://github.com/kawasima/raoh/issues/127)).
@@ -120,7 +147,7 @@ detailed from the current development cycle onward.
   where it can decide what a collision means
   ([#133](https://github.com/kawasima/raoh/issues/133)).
 - **Format checks carry a refined `messageKey`.** The English message stored on each issue is
-  byte-identical to before, and `MessageResolver.DEFAULT` resolves each key to that same sentence. A
+  byte-identical to before (except for `date()` and `time()`, whose wording changed with #137), and `MessageResolver.DEFAULT` resolves each key to that same sentence. A
   bundle that defines only `raoh.invalid_format` still resolves these issues, because
   `ResourceBundleMessageResolver` falls back from the message key to the code. Since
   `Issue.equals` compares `messageKey`, an expected `Issue` built with

@@ -62,7 +62,7 @@ raoh.out_of_range=must be between {min} and {max}
 raoh.invalid_format.email=not a valid email
 raoh.invalid_format.uuid=not a valid UUID
 raoh.invalid_format.starts_with=must start with "{prefix}"
-raoh.invalid_format.date=not a valid date (yyyy-MM-dd)
+raoh.invalid_format.date=not a valid ISO-8601 date (e.g., 2024-01-15)
 raoh.invalid_format=invalid format
 ```
 

@@ -167,8 +167,8 @@ public final class ObjectEncoders {
     /**
      * Returns an encoder that converts a {@link UUID} to its canonical string representation.
      *
-     * <p>The dual of {@link net.unit8.raoh.decode.builtin.StringDecoder#uuid()}
-     * ({@link UUID#fromString(String)}); {@code UUID.fromString(uuid.toString())} round-trips exactly.
+     * <p>The dual of {@link net.unit8.raoh.decode.builtin.StringDecoder#uuid()}: the output is the
+     * lower-case {@code 8-4-4-4-12} form that decoder accepts, so decoding it returns the same UUID.
      *
      * @return a UUID encoder
      */
