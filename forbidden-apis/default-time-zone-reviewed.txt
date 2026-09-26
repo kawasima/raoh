@@ -1,0 +1,8 @@
+# JDK methods where DefaultTimeZoneApiAuditTest stops walking back from the default time zone,
+# because the zone read below them does not reach the caller's result. One per line:
+#
+#   <forbidden-apis style signature>  # <why the zone cannot reach the caller>
+#
+# Name the JDK method where the value is dropped, not the public methods above it, so one
+# entry covers every path through it and a real path elsewhere is still found. The audit
+# fails on an entry no path reaches any more.

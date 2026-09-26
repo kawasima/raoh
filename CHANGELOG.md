@@ -122,6 +122,24 @@ detailed from the current development cycle onward.
 
 ### Changed
 
+- **Breaking: the `ObjectDecoders` temporal decoders no longer accept `java.sql` values.**
+  `date()`, `time()`, `dateTime()` and `iso8601()` accepted `java.sql.Date`, `java.sql.Time` and
+  `java.sql.Timestamp` and converted them with `toLocalDate()`, `toLocalTime()`,
+  `toLocalDateTime()` and `toInstant()`. Those conversions read the JVM default time zone, so the
+  same input object decoded to a different value after `TimeZone.setDefault`:
+  `new java.sql.Date(0L)` was `1970-01-01` in UTC and `1969-12-31` in `America/Los_Angeles`.
+  `toInstant()` reads it only for a `Timestamp` changed through its deprecated setters. Under
+  JDBC's own convention this usually came out right, since a driver builds these values in the
+  same default zone and reading them back in that zone returns what the database held. The
+  conversions are removed because a built-in decoder's result is determined by its input and its
+  explicit configuration alone, which a `java.sql` value cannot satisfy without the zone it was
+  built in. They now report `type_mismatch`. Convert JDBC values to `java.time` types where they
+  are read, for example with `ResultSet.getObject(column, LocalDate.class)`, or with jOOQ
+  fields typed as `LocalDate`, `LocalTime` and `LocalDateTime`. The build now also runs forbidden-apis
+  against the JDK calls that read the default time zone, kept complete by a test that walks the
+  JDK bytecode back from `TimeZone.getDefaultRef()`, `TimeZone.getDefault()`,
+  `ZoneId.systemDefault()` and `Clock.systemDefaultZone()`, as #136 did for the default locale
+  ([#141](https://github.com/kawasima/raoh/issues/141)).
 - **String conversions accept a grammar Raoh defines, not whatever the JDK parser accepts.**
   `uuid()`, `toInt()`, `toLong()`, `toDecimal()`, `date()`, `time()`, `dateTime()`,
   `offsetDateTime()` and `iso8601()` passed the text to `UUID.fromString`, `Integer.parseInt`,

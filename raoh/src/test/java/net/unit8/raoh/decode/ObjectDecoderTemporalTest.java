@@ -21,8 +21,8 @@ import static net.unit8.raoh.decode.ObjectDecoders.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Tests for temporal decoders in {@link ObjectDecoders}, including
- * {@code java.sql.*} type conversion support.
+ * Tests for temporal decoders in {@link ObjectDecoders}. They reject the {@code java.sql}
+ * temporal types, whose conversion reads the JVM default time zone (#141).
  */
 class ObjectDecoderTemporalTest {
 
@@ -38,13 +38,8 @@ class ObjectDecoderTemporalTest {
     }
 
     @Test
-    void iso8601AcceptsSqlTimestamp() {
-        var instant = Instant.parse("2024-06-15T10:30:00Z");
-        var ts = java.sql.Timestamp.from(instant);
-        switch (iso8601().decode(ts, Path.ROOT)) {
-            case Ok<Instant>(var v) -> assertEquals(instant, v);
-            case Err<Instant>(var issues) -> fail("Expected Ok but got: " + issues);
-        }
+    void iso8601RejectsSqlTimestamp() {
+        assertTypeMismatch(iso8601().decode(new java.sql.Timestamp(0L), Path.ROOT));
     }
 
     @Test
@@ -77,13 +72,8 @@ class ObjectDecoderTemporalTest {
     }
 
     @Test
-    void dateAcceptsSqlDate() {
-        var date = LocalDate.of(2024, 6, 15);
-        var sqlDate = java.sql.Date.valueOf(date);
-        switch (date().decode(sqlDate, Path.ROOT)) {
-            case Ok<LocalDate>(var v) -> assertEquals(date, v);
-            case Err<LocalDate>(var issues) -> fail("Expected Ok but got: " + issues);
-        }
+    void dateRejectsSqlDate() {
+        assertTypeMismatch(date().decode(new java.sql.Date(0L), Path.ROOT));
     }
 
     @Test
@@ -116,13 +106,8 @@ class ObjectDecoderTemporalTest {
     }
 
     @Test
-    void timeAcceptsSqlTime() {
-        var time = LocalTime.of(10, 30, 0);
-        var sqlTime = java.sql.Time.valueOf(time);
-        switch (time().decode(sqlTime, Path.ROOT)) {
-            case Ok<LocalTime>(var v) -> assertEquals(time, v);
-            case Err<LocalTime>(var issues) -> fail("Expected Ok but got: " + issues);
-        }
+    void timeRejectsSqlTime() {
+        assertTypeMismatch(time().decode(new java.sql.Time(0L), Path.ROOT));
     }
 
     @Test
@@ -184,13 +169,13 @@ class ObjectDecoderTemporalTest {
     }
 
     @Test
-    void dateTimeAcceptsSqlTimestamp() {
-        var dt = LocalDateTime.of(2024, 6, 15, 10, 30);
-        var ts = java.sql.Timestamp.valueOf(dt);
-        switch (dateTime().decode(ts, Path.ROOT)) {
-            case Ok<LocalDateTime>(var v) -> assertEquals(dt, v);
-            case Err<LocalDateTime>(var issues) -> fail("Expected Ok but got: " + issues);
-        }
+    void dateTimeRejectsSqlTimestamp() {
+        assertTypeMismatch(dateTime().decode(new java.sql.Timestamp(0L), Path.ROOT));
+    }
+
+    @Test
+    void offsetDateTimeRejectsSqlTimestamp() {
+        assertTypeMismatch(offsetDateTime().decode(new java.sql.Timestamp(0L), Path.ROOT));
     }
 
     // --- ISO text: the representation ObjectEncoders writes ---
@@ -308,5 +293,9 @@ class ObjectDecoderTemporalTest {
             case Ok<?> ok -> fail("Expected Err but got: " + ok);
             case Err<?>(var issues) -> issues.asList().getFirst();
         };
+    }
+
+    private static void assertTypeMismatch(Result<?> result) {
+        assertEquals(ErrorCodes.TYPE_MISMATCH, firstIssue(result).code());
     }
 }
