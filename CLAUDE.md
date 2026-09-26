@@ -66,8 +66,9 @@ paste.
   the path). The walk includes callbacks: once decoder code constructs a Raoh class, that class's
   overrides of external methods (`hashCode`, `compare`, `apply`) count as reached. Take the value
   from the input or explicit configuration.
-- **Write to an internal static field outside its class initializer** (directly or through a
-  `VarHandle`): not allowed; mutable static state is ambient configuration the audit cannot follow.
+- **A static field that is not final, or a write to one outside its class initializer** (directly
+  or through a `VarHandle`): not allowed; mutable static state is ambient configuration the audit
+  cannot follow, whoever writes it.
   The audit cannot see mutation through a `static final` reference (a cache map, a registry), so do
   not keep mutable objects in static fields either.
 - **Stale approval**: remove the line.

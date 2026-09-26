@@ -217,6 +217,17 @@ public final class BytecodeScanner {
                            boolean audited, Set<Edge> edges, List<String> problems) {
         var classDesc = model.thisClass().asSymbol();
         var className = Member.typeName(classDesc);
+        if (audited) {
+            // A static field that is not final is state every decoder shares, and anyone who can
+            // reach it can change it; whether Raoh or a caller writes it, the walk cannot follow.
+            for (var field : model.fields()) {
+                var flags = field.flags().flags();
+                if (flags.contains(java.lang.reflect.AccessFlag.STATIC) && !flags.contains(java.lang.reflect.AccessFlag.FINAL)) {
+                    problems.add(className + ": declares the static field " + field.fieldName().stringValue()
+                            + " without final; mutable static state is ambient");
+                }
+            }
+        }
         var declared = new LinkedHashSet<Member>();
         for (var method : model.methods()) {
             var code = method.code();

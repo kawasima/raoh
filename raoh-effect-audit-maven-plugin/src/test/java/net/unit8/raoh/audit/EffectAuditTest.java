@@ -214,6 +214,15 @@ class EffectAuditTest {
     }
 
     @Test
+    void reportsAStaticFieldThatIsNotFinalEvenIfRaohNeverWritesIt() throws IOException {
+        // A caller could write CURRENT and change what every decoder reads.
+        var report = audit(Map.of("Config", "public final class Config { public static Object CURRENT = \"x\"; }"),
+                BASE_CATALOG, "");
+        assertTrue(report.problems().stream().anyMatch(p -> p.contains("fixture.Config: declares the static field CURRENT")),
+                report.problems()::toString);
+    }
+
+    @Test
     void reportsAnUncataloguedMemberADecoderReachesInADependency() throws IOException {
         var core = Fixtures.compile(dir, "core", Map.of(
                 "Helper", "public final class Helper { public static String t(String s) { return s.strip(); } }"));
