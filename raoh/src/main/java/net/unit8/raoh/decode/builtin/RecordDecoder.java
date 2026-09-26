@@ -20,7 +20,7 @@ import java.util.function.Predicate;
  * @param <I> the input type
  * @param <V> the value type
  */
-public final class RecordDecoder<I extends @Nullable Object, V> implements Decoder<I, Map<String, V>> {
+public final class RecordDecoder<I extends @Nullable Object, V extends @Nullable Object> implements Decoder<I, Map<String, V>> {
 
     private final Decoder<I, Map<String, V>> inner;
 

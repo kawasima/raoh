@@ -6,6 +6,7 @@ import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -27,7 +28,7 @@ import java.util.function.Predicate;
  * @param <I> the input type
  * @param <T> the element type
  */
-public final class ListDecoder<I extends @Nullable Object, T> implements Decoder<I, List<T>> {
+public final class ListDecoder<I extends @Nullable Object, T extends @Nullable Object> implements Decoder<I, List<T>> {
 
     private final Decoder<I, List<T>> inner;
 
@@ -160,7 +161,7 @@ public final class ListDecoder<I extends @Nullable Object, T> implements Decoder
      * @param element the element that must be present
      * @return a new decoder that fails with {@link ErrorCodes#MISSING_ELEMENT} if the element is absent
      */
-    public ListDecoder<I, T> contains(T element) {
+    public ListDecoder<I, T> contains(@NonNull T element) {
         return contains(element, null);
     }
 
@@ -171,7 +172,7 @@ public final class ListDecoder<I extends @Nullable Object, T> implements Decoder
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#MISSING_ELEMENT} if the element is absent
      */
-    public ListDecoder<I, T> contains(T element, @Nullable String message) {
+    public ListDecoder<I, T> contains(@NonNull T element, @Nullable String message) {
         Objects.requireNonNull(element, "element must not be null");
         return chain((value, path) -> {
             if (!value.contains(element)) {
@@ -191,7 +192,7 @@ public final class ListDecoder<I extends @Nullable Object, T> implements Decoder
      * @throws IllegalArgumentException if {@code elements} is empty
      */
     @SafeVarargs
-    public final ListDecoder<I, T> containsAll(T... elements) {
+    public final ListDecoder<I, T> containsAll(@NonNull T... elements) {
         if (elements.length == 0) throw new IllegalArgumentException("elements must not be empty");
         var required = List.of(elements);
         return chain((value, path) -> {

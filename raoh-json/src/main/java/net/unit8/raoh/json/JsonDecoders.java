@@ -28,6 +28,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.exc.JsonNodeException;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -396,11 +397,14 @@ public final class JsonDecoders {
      * Creates a decoder for JSON arrays, decoding each element with the given decoder.
      * Element errors are accumulated with path indices (e.g., {@code /items/0}).
      *
+     * <p>The decoded list is unmodifiable and holds every element in input order, including
+     * {@code null} when {@code elementDec} decodes an element to {@code null}.
+     *
      * @param <T>        the element type
      * @param elementDec the decoder for each element
      * @return a list decoder
      */
-    public static <T> ListDecoder<JsonNode, T> list(Decoder<JsonNode, T> elementDec) {
+    public static <T extends @Nullable Object> ListDecoder<JsonNode, T> list(Decoder<JsonNode, T> elementDec) {
         return new ListDecoder<>((in, path) -> {
             if (in == null || in.isNull() || in.isMissingNode()) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
@@ -422,18 +426,21 @@ public final class JsonDecoders {
             if (!issues.isEmpty()) {
                 return Result.err(issues);
             }
-            return Result.ok(List.copyOf(results));
+            return Result.ok(Collections.unmodifiableList(results));
         });
     }
 
     /**
      * Creates a decoder for JSON objects as string-keyed maps.
      *
+     * <p>The decoded map is unmodifiable, iterates in the input's key order, and keeps a
+     * {@code null} value when {@code valDec} decodes a value to {@code null}.
+     *
      * @param <V>    the value type
      * @param valDec the decoder for each value
      * @return a record (map) decoder
      */
-    public static <V> RecordDecoder<JsonNode, V> map(Decoder<JsonNode, V> valDec) {
+    public static <V extends @Nullable Object> RecordDecoder<JsonNode, V> map(Decoder<JsonNode, V> valDec) {
         return new RecordDecoder<>((in, path) -> {
             if (in == null || in.isNull() || in.isMissingNode()) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
@@ -455,7 +462,7 @@ public final class JsonDecoders {
             if (!issues.isEmpty()) {
                 return Result.err(issues);
             }
-            return Result.ok(Map.copyOf(results));
+            return Result.ok(Collections.unmodifiableMap(results));
         });
     }
 
