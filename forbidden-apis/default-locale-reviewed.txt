@@ -1,12 +1,11 @@
-# JDK methods where AmbientStateApiAuditTest stops walking back from a default-value root,
-# because the default read below them does not reach the caller's result. One per line:
+# JDK methods where DefaultLocaleApiAuditTest stops walking back from Locale.getDefault,
+# because the locale read below them does not reach the caller's result. One per line:
 #
-#   <forbidden-apis style signature>  # <why the default cannot reach the caller>
+#   <forbidden-apis style signature>  # <why the locale cannot reach the caller>
 #
 # Name the JDK method where the value is dropped, not the public methods above it, so one
 # entry covers every path through it and a real path elsewhere is still found. The audit
 # fails on an entry no path reaches any more.
 
-sun.util.calendar.CalendarDate#<init>()  # a scratch date whose zone the caller overwrites or never reads; Date keeps its own default-zone read in normalize(), which the audit still follows
 java.lang.ThreadLocal#printStackTrace()  # debug trace to stderr, enabled only by -Djdk.traceVirtualThreadLocals
 java.lang.module.Resolver#trace(java.lang.String,java.lang.Object[])  # module-resolution trace; its PrintStream is set only by the launcher (--show-module-resolution), never by Configuration.resolve

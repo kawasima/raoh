@@ -60,8 +60,6 @@
             at a time until it says nothing about the change in front of you.
         -->
         <japicmp.baseline>0.7.2</japicmp.baseline>
-        <!-- The plugin and the test-scoped jar AmbientStateApiAuditTest reads its lists from. -->
-        <forbiddenapis.version>3.11</forbiddenapis.version>
     </properties>
 
     <build>
@@ -150,34 +148,28 @@
                     </executions>
                 </plugin>
                 <!--
-                    A decoder's result is a function of its input and configuration; the JVM's
-                    ambient state must not reach it. In tr-TR, "TITLE".toLowerCase() is "tıtle";
-                    in th-TH-u-nu-thai, "%d".formatted(1000) is "๑๐๐๐" (#136); a zone ID used
-                    to be checked against the host's network interfaces (#127). This check fails
-                    the build on JDK calls that read such state, so a new call site cannot bring
-                    it back.
+                    A decoder's result must not depend on the JVM default locale: in tr-TR,
+                    "TITLE".toLowerCase() is "tıtle", and in th-TH-u-nu-thai "%d".formatted(1000)
+                    is "๑๐๐๐" (#136). This check fails the build on JDK calls that read the default
+                    locale, so a new call site cannot bring it back. Pass Locale.ROOT instead.
 
-                    Two lists apply. forbidden-apis' bundled jdk-unsafe covers the calls that
-                    use the default locale, time zone or charset, and is picked for the compiler
-                    release. forbidden-apis/ambient-state.txt adds what jdk-unsafe misses, found
-                    by scanning the JDK, plus host, process, clock and randomness calls.
-                    AmbientStateApiAuditTest keeps the default-value part complete against the
-                    JDK, so neither list is trusted to be complete on its own.
+                    The list is forbidden-apis/default-locale.txt. It is not the bundled
+                    jdk-unsafe list, which misses locale readers and also bans default time zone
+                    and charset calls that this contract does not cover. DefaultLocaleApiAuditTest
+                    walks the JDK bytecode back from Locale.getDefault and fails when the list
+                    lacks a reader, so the list is complete against the JDK rather than against
+                    what someone thought of.
 
-                    A method that depends on ambient state by contract, such as
-                    ResourceBundleMessageResolver choosing a display locale, says so with a
-                    package-private @SuppressForbidden and a reason.
+                    ResourceBundleMessageResolver chooses a display locale, which is its job, and
+                    marks those methods with a package-private @SuppressForbidden.
                 -->
                 <plugin>
                     <groupId>de.thetaphi</groupId>
                     <artifactId>forbiddenapis</artifactId>
-                    <version>${forbiddenapis.version}</version>
+                    <version>3.11</version>
                     <configuration>
-                        <bundledSignatures>
-                            <bundledSignature>jdk-unsafe</bundledSignature>
-                        </bundledSignatures>
                         <signaturesFiles>
-                            <signaturesFile>${project.basedir}/../forbidden-apis/ambient-state.txt</signaturesFile>
+                            <signaturesFile>${project.basedir}/../forbidden-apis/default-locale.txt</signaturesFile>
                         </signaturesFiles>
                         <suppressAnnotations>
                             <suppressAnnotation>**.SuppressForbidden</suppressAnnotation>
@@ -185,7 +177,7 @@
                     </configuration>
                     <executions>
                         <execution>
-                            <id>ambient-state</id>
+                            <id>default-locale</id>
                             <!-- The plugin defaults to verify; run it right after compile so
                                  that `mvn test` fails too, not only `mvn verify`. -->
                             <phase>process-classes</phase>

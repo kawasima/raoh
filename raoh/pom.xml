@@ -32,14 +32,6 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
-
-        <!-- AmbientStateApiAuditTest reads the bundled jdk-unsafe list out of this jar. -->
-        <dependency>
-            <groupId>de.thetaphi</groupId>
-            <artifactId>forbiddenapis</artifactId>
-            <version>${forbiddenapis.version}</version>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
@@ -49,7 +41,7 @@
                 <groupId>com.github.siom79.japicmp</groupId>
                 <artifactId>japicmp-maven-plugin</artifactId>
             </plugin>
-            <!-- Rejects JDK calls that read ambient JVM state; configured in the parent POM. -->
+            <!-- Rejects JDK calls that read the default locale; configured in the parent POM. -->
             <plugin>
                 <groupId>de.thetaphi</groupId>
                 <artifactId>forbiddenapis</artifactId>
@@ -82,7 +74,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- AmbientStateApiAuditTest checks forbidden-apis/ against the JDK of this release. -->
+            <!-- DefaultLocaleApiAuditTest checks forbidden-apis/ against this release of the JDK. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>

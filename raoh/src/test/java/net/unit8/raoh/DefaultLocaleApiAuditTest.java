@@ -5,9 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import com.sun.source.util.JavacTask;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.instruction.InvokeInstruction;
 import java.lang.constant.ClassDesc;
@@ -41,34 +39,34 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Keeps the forbidden-API list complete against the JDK itself.
  *
- * <p>The build bans JDK calls that read the JVM default locale, time zone or charset (#136).
- * A hand-written list of such calls always has gaps, and so do the lists of forbidden-apis
- * ({@code jdk-unsafe}) and Error Prone ({@code DefaultLocale}): neither knows
- * {@code ListFormat.getInstance()}, {@code DateTimeFormatter.ofLocalizedPattern(String)} or
- * {@code java.sql.Date#toLocalDate()}. This test derives the set from the JDK instead. It walks
- * the bytecode of every {@code java.*} module, finds the public API methods that reach one of
- * the default-value roots ({@code Locale.getDefault}, {@code TimeZone.getDefault},
- * {@code ZoneId.systemDefault}, {@code Charset.defaultCharset}), and requires each to be banned,
- * by the bundled {@code jdk-unsafe} list or by {@code forbidden-apis/ambient-state.txt}.
+ * <p>The build bans JDK calls that read the JVM default locale, because a decoder's result must
+ * not depend on it (#136). A hand-written list of such calls always has gaps, and so do the lists
+ * of forbidden-apis ({@code jdk-unsafe}) and Error Prone ({@code DefaultLocale}): neither knows
+ * {@code ListFormat.getInstance()}, {@code DateTimeFormatter.ofLocalizedPattern(String)},
+ * {@code DecimalStyle.ofDefaultLocale()} or {@code Scanner(String)}. This test derives the set
+ * from the JDK instead. It walks the bytecode of every {@code java.*} module back from
+ * {@code Locale.getDefault()} and {@code Locale.getDefault(Locale.Category)}, the only ways to
+ * read the default locale, and requires every public API method it reaches to be banned by
+ * {@code forbidden-apis/default-locale.txt}.
  *
- * <p>A root is followed through non-public JDK code without limit and through at most one other
- * public method. One public hop catches {@code ZonedDateTime.now()}, which reads the zone through
- * {@code Clock.systemDefaultZone()}; more hops mostly find exception-message paths such as
+ * <p>The walk follows non-public JDK code without limit and passes through at most one other
+ * public method. One public hop catches {@code String.format}, which reads the locale through
+ * {@code new Formatter()}; with more hops the result is mostly exception-message paths such as
  * {@code Integer.parseInt} → {@code Objects.checkIndex} → {@code String.format}, which do not
  * reach a decoder's result. A call is resolved up the superclass chain to the class declaring the
  * method, since bytecode names the class it was compiled against.
  *
- * <p>Some paths read a default without letting it reach the caller's result, such as a scratch
- * calendar object whose zone is overwritten. {@code forbidden-apis/ambient-state-reviewed.txt}
- * names such a JDK method with the reason; the walk stops there. An entry that no path reaches
- * any more fails the test, so the file cannot silently outlive the JDK code it describes.
+ * <p>Some paths read the locale without letting it reach the caller, such as a debug trace.
+ * {@code forbidden-apis/default-locale-reviewed.txt} names such a JDK method with the reason;
+ * the walk stops there. An entry no path reaches any more fails the test, so the file cannot
+ * silently outlive the JDK code it describes.
  *
  * <p>Method bodies come from the JDK running the test, which may be newer than the compiler
  * release. Methods that release does not have cannot be called by the library, so they are
  * dropped by looking each one up in javac's {@code --release} symbol table. Raising the release
  * makes this test list the new release's additions.
  */
-class AmbientStateApiAuditTest {
+class DefaultLocaleApiAuditTest {
 
     /** A method reference in JVM internal form. */
     record MethodRef(String owner, String name, String descriptor) {}
@@ -78,11 +76,7 @@ class AmbientStateApiAuditTest {
 
     static final Set<MethodRef> ROOTS = Set.of(
             new MethodRef("java/util/Locale", "getDefault", "()Ljava/util/Locale;"),
-            new MethodRef("java/util/Locale", "getDefault", "(Ljava/util/Locale$Category;)Ljava/util/Locale;"),
-            new MethodRef("java/util/TimeZone", "getDefault", "()Ljava/util/TimeZone;"),
-            new MethodRef("java/util/TimeZone", "getDefaultRef", "()Ljava/util/TimeZone;"),
-            new MethodRef("java/time/ZoneId", "systemDefault", "()Ljava/time/ZoneId;"),
-            new MethodRef("java/nio/charset/Charset", "defaultCharset", "()Ljava/nio/charset/Charset;"));
+            new MethodRef("java/util/Locale", "getDefault", "(Ljava/util/Locale$Category;)Ljava/util/Locale;"));
 
     static final int MAX_PUBLIC_HOPS = 1;
 
@@ -94,21 +88,20 @@ class AmbientStateApiAuditTest {
     static void scanTheJdk() throws IOException {
         int release = Integer.parseInt(requiredProperty("raoh.release"));
         var dir = Path.of(requiredProperty("raoh.forbiddenApisDir"));
-        banned = new HashSet<>(bundledSignatures("jdk-unsafe-" + release));
-        banned.addAll(signatures(Files.readAllLines(dir.resolve("ambient-state.txt"), StandardCharsets.UTF_8)));
-        reviewed = reviewedEntries(Files.readAllLines(dir.resolve("ambient-state-reviewed.txt"), StandardCharsets.UTF_8));
+        banned = signatures(Files.readAllLines(dir.resolve("default-locale.txt"), StandardCharsets.UTF_8));
+        reviewed = reviewedEntries(Files.readAllLines(dir.resolve("default-locale-reviewed.txt"), StandardCharsets.UTF_8));
         var raw = scanJdk(reviewed.keySet());
         var inRelease = releaseApi(release);
         scan = new Scan(raw.readers().stream().filter(inRelease).collect(Collectors.toSet()), raw.reachedStops());
     }
 
     @Test
-    void everyJdkApiThatReadsADefaultIsBanned() {
+    void everyJdkApiThatReadsTheDefaultLocaleIsBanned() {
         var uncovered = scan.readers().stream().filter(sig -> !isBanned(sig)).sorted().toList();
-        assertTrue(uncovered.isEmpty(), () -> "These JDK methods read the default locale, time zone or"
-                + " charset but are not banned. Add each to forbidden-apis/ambient-state.txt, or, if the"
-                + " default cannot reach the caller's result, add the JDK method on the path where it is"
-                + " dropped to ambient-state-reviewed.txt with the reason:\n  " + String.join("\n  ", uncovered));
+        assertTrue(uncovered.isEmpty(), () -> "These JDK methods read the default locale but are not banned."
+                + " Add each to forbidden-apis/default-locale.txt, or, if the locale cannot reach the"
+                + " caller's result, add the JDK method on the path where it is dropped to"
+                + " default-locale-reviewed.txt with the reason:\n  " + String.join("\n  ", uncovered));
     }
 
     @Test
@@ -117,20 +110,20 @@ class AmbientStateApiAuditTest {
                 .filter(sig -> !scan.reachedStops().contains(sig) || isBanned(sig))
                 .sorted()
                 .toList();
-        assertTrue(stale.isEmpty(), () -> "Remove these from forbidden-apis/ambient-state-reviewed.txt;"
-                + " no path from a default reaches them any more, or they are banned anyway:\n  "
+        assertTrue(stale.isEmpty(), () -> "Remove these from forbidden-apis/default-locale-reviewed.txt;"
+                + " no path from the default locale reaches them any more, or they are banned anyway:\n  "
                 + String.join("\n  ", stale));
     }
 
     @Test
-    void scanFindsReadersTheBundledListsMiss() {
-        // Pins what the walk must be able to see: a direct reader, a reader behind an inherited
-        // call, and a reader one public method away. The expected names come from the JDK
-        // documentation, not from this scan.
+    void scanFindsKnownReaders() {
+        // Pins what the walk must be able to see: a direct reader, a reader one public method
+        // away, and a reader the bundled lists of forbidden-apis and Error Prone both miss. The
+        // expected names come from the JDK documentation, not from this scan.
         assertAll(
-                () -> assertTrue(scan.readers().contains("java.text.ListFormat#getInstance()")),
-                () -> assertTrue(scan.readers().contains("java.sql.Date#toLocalDate()")),
-                () -> assertTrue(scan.readers().contains("java.time.ZonedDateTime#now()")));
+                () -> assertTrue(scan.readers().contains("java.lang.String#toLowerCase()")),
+                () -> assertTrue(scan.readers().contains("java.lang.String#format(java.lang.String,java.lang.Object[])")),
+                () -> assertTrue(scan.readers().contains("java.text.ListFormat#getInstance()")));
     }
 
     static boolean isBanned(String signature) {
@@ -146,7 +139,7 @@ class AmbientStateApiAuditTest {
     /**
      * Walks the {@code java.*} modules backwards from the roots.
      *
-     * @param stops JDK methods, as signatures, where the walk stops because the default read
+     * @param stops JDK methods, as signatures, where the walk stops because the locale read
      *              there does not reach the caller
      * @return the public API methods reached within {@link #MAX_PUBLIC_HOPS} public methods, and
      *         the stops the walk reached
@@ -250,7 +243,7 @@ class AmbientStateApiAuditTest {
     /** Formats a method the way forbidden-apis signatures name it. */
     static String signature(MethodRef method) {
         var params = MethodTypeDesc.ofDescriptor(method.descriptor()).parameterList().stream()
-                .map(AmbientStateApiAuditTest::typeName)
+                .map(DefaultLocaleApiAuditTest::typeName)
                 .collect(Collectors.joining(","));
         return method.owner().replace('/', '.') + "#" + method.name() + "(" + params + ")";
     }
@@ -300,26 +293,6 @@ class AmbientStateApiAuditTest {
         };
     }
 
-    /** Reads a list bundled in the forbidden-apis jar, following its {@code @includeBundled} lines. */
-    static Set<String> bundledSignatures(String name) throws IOException {
-        var resource = "/de/thetaphi/forbiddenapis/signatures/" + name + ".txt";
-        try (var in = AmbientStateApiAuditTest.class.getResourceAsStream(resource)) {
-            assertNotNull(in, "forbidden-apis bundles no " + name + " list; is it on the test classpath?");
-            List<String> lines;
-            try (var reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
-                lines = reader.lines().toList();
-            }
-            var result = new HashSet<>(signatures(lines));
-            for (var line : lines) {
-                var trimmed = line.strip();
-                if (trimmed.startsWith("@includeBundled ")) {
-                    result.addAll(bundledSignatures(trimmed.substring("@includeBundled ".length()).strip()));
-                }
-            }
-            return result;
-        }
-    }
-
     /** Returns the signature lines of a forbidden-apis file, without comments, directives or messages. */
     static Set<String> signatures(List<String> lines) {
         var result = new HashSet<String>();
@@ -340,7 +313,7 @@ class AmbientStateApiAuditTest {
             if (trimmed.isEmpty() || trimmed.startsWith("#")) continue;
             int hash = trimmed.indexOf('#', trimmed.indexOf('(') + 1);
             assertTrue(hash > 0 && !trimmed.substring(hash + 1).isBlank(),
-                    "ambient-state-reviewed.txt needs a reason after '#': " + trimmed);
+                    "default-locale-reviewed.txt needs a reason after '#': " + trimmed);
             result.put(trimmed.substring(0, hash).strip(), trimmed.substring(hash + 1).strip());
         }
         return result;
