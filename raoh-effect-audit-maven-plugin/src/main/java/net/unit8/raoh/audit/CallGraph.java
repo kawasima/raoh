@@ -35,6 +35,9 @@ public final class CallGraph {
     private final Map<Member, List<Edge>> external = new HashMap<>();
     private final Map<String, ClassInfo> classes = new HashMap<>();
 
+    /** Only {@link BytecodeScanner} builds a graph. */
+    CallGraph() {}
+
     void addClass(ClassInfo info) {
         classes.put(info.name(), info);
     }
