@@ -257,12 +257,12 @@ class ObjectDecoderTemporalTest {
                 string().offsetDateTime().decode("nonsense", Path.ROOT));
     }
 
-    // --- clock readings outside the hour and second ranges ---
+    // --- second 60 ---
 
     @Test
-    void iso8601RejectsSecondSixtyAndHourTwentyFourLikeTheStringRoute() {
+    void iso8601RejectsSecondSixtyLikeTheStringRoute() {
         for (var text : new String[] {"2016-12-31T23:59:60Z", "2016-12-31T23:59:60+09:00",
-                "2017-01-01T08:59:60+09:00", "2016-12-31T24:00:00Z"}) {
+                "2017-01-01T08:59:60+09:00"}) {
             assertSameFailure(iso8601().decode(text, Path.ROOT), string().iso8601().decode(text, Path.ROOT));
             assertEquals(MessageKeys.INVALID_FORMAT_INSTANT,
                     firstIssue(iso8601().decode(text, Path.ROOT)).messageKey(), text);

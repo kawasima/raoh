@@ -466,9 +466,9 @@ class StringDecoderTest {
             "2016-12-31T23:59:60+09:00",  // Instant.parse would answer 14:59:59Z
             "2017-01-01T08:59:60+09:00",  // the UTC leap second, written in +09:00
             "2016-12-31T12:34:60Z",
-            "2016-12-31T24:00:00Z"        // Instant.parse would answer the next midnight
+            "+1000000001-01-01T00:00:00Z" // parses, but beyond Instant.MAX
     })
-    void iso8601RejectsAClockReadingOutsideTheHourAndSecondRanges(String text) {
+    void iso8601RejectsSecondSixtyAndYearsBeyondTheInstantRange(String text) {
         var issue = decodeErr(string().iso8601(), text);
         assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
         assertEquals(MessageKeys.INVALID_FORMAT_INSTANT, issue.messageKey());
@@ -481,6 +481,11 @@ class StringDecoderTest {
                 decodeOk(string().iso8601(), "+1000000000-12-31T23:59:59.999999999Z"));
         assertEquals(Instant.ofEpochSecond(-31557014167219200L),
                 decodeOk(string().iso8601(), "-1000000000-01-01T00:00:00Z"));
+    }
+
+    @Test
+    void iso8601AcceptsEndOfDayAsTheStartOfTheNextDay() {
+        assertEquals(Instant.ofEpochSecond(1483228800), decodeOk(string().iso8601(), "2016-12-31T24:00:00Z"));
     }
 
     @Test
