@@ -457,9 +457,9 @@ public final class ObjectDecoders {
                 return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected object",
                         Map.of("expected", "object", "actual", in.getClass().getSimpleName()));
             }
-            var badKey = nonStringKey(rawMap);
-            if (badKey != null) {
-                return nonStringKeyFailure(path, badKey);
+            var keyType = nonStringKeyType(rawMap);
+            if (keyType != null) {
+                return nonStringKeyFailure(path, keyType);
             }
             var issues = Issues.EMPTY;
             var results = new LinkedHashMap<String, V>();
@@ -479,13 +479,13 @@ public final class ObjectDecoders {
     }
 
     /**
-     * Describes the first key of {@code map} that is not a {@link String}, or returns {@code null}
-     * if every key is one. Every key is checked: a map is a {@code Map<String, ?>} only if all of
+     * Names the type of the first key of {@code map} that is not a {@link String}, or returns
+     * {@code null} if every key is one. Every key is checked: a map is a {@code Map<String, ?>} only if all of
      * them are, and the first key says nothing about the rest.
      *
      * <p>{@code MapDecoders.nested()} applies the same check at the same boundary.
      */
-    private static @Nullable String nonStringKey(Map<?, ?> map) {
+    private static @Nullable String nonStringKeyType(Map<?, ?> map) {
         for (var key : map.keySet()) {
             if (!(key instanceof String)) {
                 return key == null ? "null" : key.getClass().getSimpleName();
@@ -494,10 +494,10 @@ public final class ObjectDecoders {
         return null;
     }
 
-    private static <T> Result<T> nonStringKeyFailure(Path path, String badKey) {
-        return Result.fail(path, ErrorCodes.TYPE_MISMATCH,
-                "expected object with string keys, got a " + badKey + " key",
-                Map.of("expected", "object", "actual", badKey + " key"));
+    private static <T> Result<T> nonStringKeyFailure(Path path, String keyType) {
+        return Result.fail(path, ErrorCodes.TYPE_MISMATCH, MessageKeys.TYPE_MISMATCH_STRING_KEYS,
+                "expected object with string keys, found " + keyType + " key",
+                Map.of("expected", "object with string keys", "actual", keyType));
     }
 
     // --- bytes ---

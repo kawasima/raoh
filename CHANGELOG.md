@@ -39,6 +39,13 @@ detailed from the current development cycle onward.
 
 ### Added
 
+- **`MessageKeys.TYPE_MISMATCH_STRING_KEYS`** (`type_mismatch.string_keys`) for a map rejected
+  because of a key that is not a `String`, with templates in both bundles:
+  `expected object with string keys, found Integer key` in English. Its metadata carries
+  `expected` = `object with string keys` and `actual` = the key's type (`Integer`, `null`), so a
+  bundle that defines only `raoh.type_mismatch` still resolves it to
+  `expected object with string keys` rather than `expected object`
+  ([#133](https://github.com/kawasima/raoh/issues/133)).
 - **A message key for each format check**, under the unchanged `invalid_format` code, with templates
   in both shipped locales:
   `raoh.invalid_format.{email,url,uri,uuid,ip,ipv4,ipv6,ulid,cuid,starts_with,ends_with,includes,enum,literal}`
@@ -53,8 +60,7 @@ detailed from the current development cycle onward.
 - **`ObjectDecoders.map()` requires `String` keys.** It converted each key with `String.valueOf`
   and used the result as the output key, so `1` and `"1"`, or `null` and `"null"`, became one key and
   one of the two values was dropped with no issue. A map with any key that is not a non-null `String`
-  now fails with `type_mismatch` at the map's own path (`actual` is e.g. `Integer key`), checked before
-  any value is decoded. A caller that relied on the conversion must turn its keys into strings itself,
+  now fails with `type_mismatch` at the map's own path, checked before any value is decoded. A caller that relied on the conversion must turn its keys into strings itself,
   where it can decide what a collision means
   ([#133](https://github.com/kawasima/raoh/issues/133)).
 - **Format checks carry a refined `messageKey`.** The English message stored on each issue is

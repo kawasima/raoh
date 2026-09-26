@@ -6,6 +6,7 @@ import net.unit8.raoh.decode.InputFields;
 import net.unit8.raoh.decode.combinator.CombinePart;
 import net.unit8.raoh.decode.ObjectDecoders;
 import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Presence;
 import net.unit8.raoh.Result;
@@ -139,24 +140,24 @@ public final class MapDecoders {
                         Map.of("expected", "object", "actual", in.getClass().getSimpleName()));
             }
             // Every key must be a String before the cast; the inner decoder never sees a bad key.
-            var badKey = nonStringKey(rawMap);
-            if (badKey != null) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH,
-                        "expected object with string keys, got a " + badKey + " key",
-                        Map.of("expected", "object", "actual", badKey + " key"));
+            var keyType = nonStringKeyType(rawMap);
+            if (keyType != null) {
+                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, MessageKeys.TYPE_MISMATCH_STRING_KEYS,
+                        "expected object with string keys, found " + keyType + " key",
+                        Map.of("expected", "object with string keys", "actual", keyType));
             }
             return dec.decode((Map<String, Object>) rawMap, path);
         };
     }
 
     /**
-     * Describes the first key of {@code map} that is not a {@link String}, or returns {@code null}
-     * if every key is one. Every key is checked: a map is a {@code Map<String, ?>} only if all of
+     * Names the type of the first key of {@code map} that is not a {@link String}, or returns
+     * {@code null} if every key is one. Every key is checked: a map is a {@code Map<String, ?>} only if all of
      * them are, and the first key says nothing about the rest.
      *
      * <p>{@code ObjectDecoders.map()} applies the same check at the same boundary.
      */
-    private static @Nullable String nonStringKey(Map<?, ?> map) {
+    private static @Nullable String nonStringKeyType(Map<?, ?> map) {
         for (var key : map.keySet()) {
             if (!(key instanceof String)) {
                 return key == null ? "null" : key.getClass().getSimpleName();

@@ -126,4 +126,14 @@ public final class MessageKeys {
 
     /** ISO-8601 offset date-time from {@code offsetDateTime()}. */
     public static final String INVALID_FORMAT_OFFSET_DATE_TIME = "invalid_format.offset_date_time";
+
+    // --- Input shape (ErrorCodes.TYPE_MISMATCH) ---
+
+    /**
+     * A map with a key that is not a non-null {@code String}, from {@code ObjectDecoders.map()} and
+     * {@code MapDecoders.nested()}. Supplies {@code expected} ({@code "object with string keys"}),
+     * so the plain {@code type_mismatch} template still names the requirement, and {@code actual},
+     * the offending key's type ({@code "Integer"}, {@code "null"}).
+     */
+    public static final String TYPE_MISMATCH_STRING_KEYS = "type_mismatch.string_keys";
 }
