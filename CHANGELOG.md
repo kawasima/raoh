@@ -12,6 +12,18 @@ detailed from the current development cycle onward.
 
 ### Fixed
 
+- **`ipv6()` and `ip()` no longer depend on the host's network interfaces.** They checked a literal
+  with `InetAddress.getByName`, which looks a zone ID up among the interfaces of the running machine,
+  so `fe80::1%en0` was accepted on macOS and rejected on Linux, and `fe80::1%eth0` the other way
+  round. The zone ID after `%` is now taken as an opaque string (RFC 4007, RFC 9844): any non-empty
+  string without `%` or NUL is accepted, and only for an address whose scope is below global
+  (link-local unicast `fe80::/10`, or multicast of scope 1 to D per RFC 4291 and RFC 7346), so
+  `2001:db8::1%eth0`, `::1%lo0` and the deprecated site-local `fec0::1%eth0` are rejected.
+  The same change fixes two neighbours. An IPv4-mapped address such as `::ffff:192.0.2.1` was
+  rejected, because the JDK returns an `Inet4Address` for it, although RFC 4291 defines it as IPv6
+  text. And the 45-character guard applied to the whole string, zone ID included, so a full-form
+  link-local address with an interface name failed; it now applies to the address part only
+  ([#127](https://github.com/kawasima/raoh/issues/127)).
 - **`MapDecoders.nested()` checks every key, not only the first.** It cast the map to
   `Map<String, Object>` when its first key was a `String`, so a later `Integer` key reached the inner
   decoder and surfaced as a `ClassCastException` (under `strict(...)`, for one) instead of an issue,
@@ -57,6 +69,9 @@ detailed from the current development cycle onward.
 
 ### Changed
 
+- **`ipv6()` and `ip()` reject a bracketed address such as `[::1]`.** The brackets belong to the host
+  syntax of a URI, not to the address, and were accepted only because the JDK parser strips them
+  ([#127](https://github.com/kawasima/raoh/issues/127)).
 - **`ObjectDecoders.map()` requires `String` keys.** It converted each key with `String.valueOf`
   and used the result as the output key, so `1` and `"1"`, or `null` and `"null"`, became one key and
   one of the two values was dropped with no issue. A map with any key that is not a non-null `String`

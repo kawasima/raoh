@@ -2,6 +2,8 @@ package net.unit8.raoh.decode.builtin;
 
 import net.unit8.raoh.ErrorCodes;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.math.BigDecimal;
 import java.net.URI;
@@ -258,6 +260,62 @@ class StringDecoderTest {
         var issue = decodeErr(string().ipv6(), "not-an-ip");
         assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
         assertEquals("not a valid IPv6 address", issue.message());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "::ffff:192.0.2.1",
+            "::FFFF:129.144.52.38",
+            "fe80::1%eth0",
+            // Intentionally unlikely to name a real interface; the zone ID must not be looked up.
+            "fe80::1%this-interface-does-not-exist",
+            "fe80::1%3",
+            "febf::1%eth0",       // last /16 of fe80::/10
+            // Every multicast scope below global, including the unassigned ones the JDK has no
+            // classifier for.
+            "ff01::1%eth0",
+            "ff02::1%uplink",
+            "ff03::1%eth0",       // realm-local (RFC 7346)
+            "ff04::1%eth0",
+            "ff05::1%eth0",
+            "ff06::1%eth0",
+            "ff07::1%eth0",
+            "ff08::1%eth0",
+            "ff09::1%eth0",
+            "ff0d::1%eth0",
+            "ff32::1%eth0",       // flags set, link-local scope
+            "ff33::1%eth0",       // flags set, realm-local scope
+            // Longer than 45 characters with the zone ID; the address part alone is 45.
+            "fe80:0000:0000:0000:0000:ffff:255.255.255.255%long-interface-name"
+    })
+    void ipv6AcceptsWithoutConsultingTheHost(String value) {
+        assertEquals(value, decodeOk(string().ipv6(), value));
+        assertEquals(value, decodeOk(string().ip(), value));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "2001:db8::1%eth0",   // global unicast
+            "fec0::1%eth0",       // deprecated site-local, now global unicast
+            "ff00::1%eth0",       // reserved multicast scope 0
+            "ff0e::1%eth0",       // global multicast
+            "ff0f::1%eth0",       // reserved multicast scope F
+            "ff3e::1%eth0",       // flags set, global scope
+            "::1%lo0",            // loopback
+            "::%0",               // unspecified
+            "::ffff:192.0.2.1%eth0",
+            "fe80::1%",           // empty zone ID
+            "fe80::1%a%b",        // delimiter inside the zone ID
+            "fe80::1%\0",         // NUL inside the zone ID
+            "[::1]",              // URI host framing
+            "[fe80::1%eth0]",
+            "%eth0"
+    })
+    void ipv6Rejects(String value) {
+        var issue = decodeErr(string().ipv6(), value);
+        assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals("not a valid IPv6 address", issue.message());
+        assertEquals(ErrorCodes.INVALID_FORMAT, decodeErr(string().ip(), value).code());
     }
 
     @Test
