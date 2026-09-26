@@ -49,6 +49,31 @@ public final class ObjectDecoders {
 
     private ObjectDecoders() {}
 
+    // A java.sql temporal value is defined relative to the JVM default time zone: the JDBC
+    // driver builds it from the database value in that zone, and these conversions undo it the
+    // same way. The build's forbidden-API check rejects default-zone reads elsewhere (#136).
+
+    @SuppressForbidden("JDBC convention: a java.sql.Date is written and read in the default time zone")
+    private static LocalDate jdbcDate(java.sql.Date date) {
+        return date.toLocalDate();
+    }
+
+    @SuppressForbidden("JDBC convention: a java.sql.Time is written and read in the default time zone")
+    private static LocalTime jdbcTime(java.sql.Time time) {
+        return time.toLocalTime();
+    }
+
+    @SuppressForbidden("JDBC convention: a java.sql.Timestamp is written and read in the default time zone")
+    private static LocalDateTime jdbcDateTime(java.sql.Timestamp timestamp) {
+        return timestamp.toLocalDateTime();
+    }
+
+    @SuppressForbidden("reads the epoch millis; the default zone enters only if the caller changed "
+            + "the Timestamp through its deprecated field setters, which already mean that zone")
+    private static Instant jdbcInstant(java.sql.Timestamp timestamp) {
+        return timestamp.toInstant();
+    }
+
     // --- Primitive decoders ---
 
     /**
@@ -252,6 +277,10 @@ public final class ObjectDecoders {
      * value is {@code null}, {@code invalid_format} if the text does not parse, and
      * {@code type_mismatch} for any other type.
      *
+     * <p>A {@link java.sql.Date} is read in the JVM default time zone, the zone a JDBC driver
+     * wrote it in, so the conversion gives back the date the driver read from the database.
+     * This is the one input for which the result depends on the default time zone.
+     *
      * @return a temporal decoder for {@code Object} input producing {@link LocalDate}
      */
     public static TemporalDecoder<@Nullable Object, LocalDate> date() {
@@ -259,7 +288,7 @@ public final class ObjectDecoders {
         return new TemporalDecoder<>((in, path) -> switch (in) {
             case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
             case LocalDate d -> Result.ok(d);
-            case java.sql.Date sd -> Result.ok(sd.toLocalDate());
+            case java.sql.Date sd -> Result.ok(jdbcDate(sd));
             case String s -> text.decode(s, path);
             default -> typeMismatch(path, "date", in);
         });
@@ -274,6 +303,10 @@ public final class ObjectDecoders {
      * value is {@code null}, {@code invalid_format} if the text does not parse, and
      * {@code type_mismatch} for any other type.
      *
+     * <p>A {@link java.sql.Time} is read in the JVM default time zone, the zone a JDBC driver
+     * wrote it in, so the conversion gives back the time the driver read from the database.
+     * This is the one input for which the result depends on the default time zone.
+     *
      * @return a temporal decoder for {@code Object} input producing {@link LocalTime}
      */
     public static TemporalDecoder<@Nullable Object, LocalTime> time() {
@@ -281,7 +314,7 @@ public final class ObjectDecoders {
         return new TemporalDecoder<>((in, path) -> switch (in) {
             case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
             case LocalTime t -> Result.ok(t);
-            case java.sql.Time st -> Result.ok(st.toLocalTime());
+            case java.sql.Time st -> Result.ok(jdbcTime(st));
             case String s -> text.decode(s, path);
             default -> typeMismatch(path, "time", in);
         });
@@ -296,6 +329,10 @@ public final class ObjectDecoders {
      * {@code required} if the value is {@code null}, {@code invalid_format} if the text does not
      * parse, and {@code type_mismatch} for any other type.
      *
+     * <p>A {@link java.sql.Timestamp} is read in the JVM default time zone, the zone a JDBC
+     * driver wrote it in, so the conversion gives back the date-time the driver read from the
+     * database. This is the one input for which the result depends on the default time zone.
+     *
      * @return a temporal decoder for {@code Object} input producing {@link LocalDateTime}
      */
     public static TemporalDecoder<@Nullable Object, LocalDateTime> dateTime() {
@@ -303,7 +340,7 @@ public final class ObjectDecoders {
         return new TemporalDecoder<>((in, path) -> switch (in) {
             case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
             case LocalDateTime dt -> Result.ok(dt);
-            case java.sql.Timestamp ts -> Result.ok(ts.toLocalDateTime());
+            case java.sql.Timestamp ts -> Result.ok(jdbcDateTime(ts));
             case String s -> text.decode(s, path);
             default -> typeMismatch(path, "date-time", in);
         });
@@ -326,7 +363,7 @@ public final class ObjectDecoders {
         return new TemporalDecoder<>((in, path) -> switch (in) {
             case null -> Result.fail(path, ErrorCodes.REQUIRED, "is required");
             case Instant i -> Result.ok(i);
-            case java.sql.Timestamp ts -> Result.ok(ts.toInstant());
+            case java.sql.Timestamp ts -> Result.ok(jdbcInstant(ts));
             case String s -> text.decode(s, path);
             default -> typeMismatch(path, "instant", in);
         });

@@ -1,4 +1,4 @@
-package net.unit8.raoh;
+package net.unit8.raoh.decode;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

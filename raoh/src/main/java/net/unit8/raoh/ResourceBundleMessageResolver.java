@@ -163,6 +163,7 @@ public class ResourceBundleMessageResolver implements MessageResolver {
      * specific first. {@link PropertyResourceBundle#handleGetObject} on each one sees only
      * the keys its own file defines, not its parents'.
      */
+    @SuppressForbidden("the locale is explicit and NO_FALLBACK stops getBundle from falling back to the default locale")
     private List<PropertyResourceBundle> layers(Locale locale) {
         List<PropertyResourceBundle> layers = new ArrayList<>();
         for (Locale candidate : NO_FALLBACK.getCandidateLocales(baseName, locale)) {

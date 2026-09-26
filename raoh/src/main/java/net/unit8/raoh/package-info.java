@@ -17,9 +17,13 @@
  * </ul>
  *
  * <p>Built-in decoders are deterministic with respect to their explicit input and
- * configuration: host or JVM ambient state, such as the default locale, never affects the
- * decoded value or the generated issues. Locale enters only at message resolution, through
- * {@link net.unit8.raoh.MessageResolver#resolve(net.unit8.raoh.Issue, java.util.Locale)}.
+ * configuration: host or JVM ambient state, such as the default locale, time zone or network
+ * configuration, never affects the decoded value or the generated issues. Locale enters only at
+ * message resolution, through
+ * {@link net.unit8.raoh.MessageResolver#resolve(net.unit8.raoh.Issue, java.util.Locale)}. The
+ * one exception is a {@code java.sql} date or time value, which is defined relative to the
+ * default time zone by JDBC and is read in that zone; see
+ * {@link net.unit8.raoh.decode.ObjectDecoders#date()}.
  */
 @NullMarked
 package net.unit8.raoh;

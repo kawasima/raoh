@@ -1,0 +1,225 @@
+# JDK calls a decoder must not make, because their result depends on the state of the JVM or
+# host rather than on the decoder's input (#127, #136). Read by the forbiddenapis plugin
+# (configured in the parent POM) together with its bundled jdk-unsafe list, and by
+# AmbientStateApiAuditTest.
+#
+# A method whose job is to depend on such state (choosing a display locale, following the
+# JDBC time-zone convention) is marked with a package-private @SuppressForbidden("reason").
+
+# Default locale, time zone and charset.
+#
+# jdk-unsafe covers most of these. This section holds the rest, found by
+# AmbientStateApiAuditTest, which walks the JDK bytecode back from Locale.getDefault,
+# TimeZone.getDefault, ZoneId.systemDefault and Charset.defaultCharset and fails when a reader
+# is missing from both lists. Add what it reports; do not edit this section by guesswork.
+#
+# Whole packages are listed where a decoder has no use for any of the package.
+@defaultMessage Reads the JVM default locale, time zone or charset; pass it explicitly
+java.applet.**
+java.awt.**
+java.beans.**
+java.rmi.**
+java.util.logging.**
+javax.accessibility.**
+javax.imageio.**
+javax.management.**
+javax.print.**
+javax.script.**
+javax.security.auth.**
+javax.security.sasl.**
+javax.swing.**
+javax.tools.**
+
+java.io.StreamTokenizer#nextToken()
+java.net.HttpCookie#parse(java.lang.String)
+java.net.HttpURLConnection#getHeaderFieldDate(java.lang.String,long)
+java.net.URLConnection#getHeaderFieldDate(java.lang.String,long)
+java.nio.charset.Charset#defaultCharset()
+java.security.PKCS12Attribute#<init>(byte[])
+java.security.Timestamp#<init>(java.util.Date,java.security.cert.CertPath)
+java.security.Timestamp#getTimestamp()
+java.security.cert.CertificateFactory#generateCertificate(java.io.InputStream)
+java.security.cert.CertificateRevokedException#<init>(java.util.Date,java.security.cert.CRLReason,javax.security.auth.x500.X500Principal,java.util.Map)
+java.security.cert.CertificateRevokedException#getInvalidityDate()
+java.security.cert.X509CRLSelector#match(java.security.cert.CRL)
+java.security.cert.X509CRLSelector#setDateAndTime(java.util.Date)
+java.security.cert.X509CertSelector#match(java.security.cert.Certificate)
+java.sql.Date#toLocalDate()
+java.sql.Date#toString()
+java.sql.Statement#isSimpleIdentifier(java.lang.String)
+java.sql.Time#<init>(int,int,int)
+java.sql.Time#toLocalTime()
+java.sql.Time#toString()
+java.sql.Timestamp#<init>(int,int,int,int,int,int,int)
+java.sql.Timestamp#compareTo(java.util.Date)
+java.sql.Timestamp#getTime()
+java.sql.Timestamp#toInstant()
+java.sql.Timestamp#toLocalDateTime()
+java.sql.Timestamp#toString()
+java.text.CompactNumberFormat#toString()
+java.text.DecimalFormat#toString()
+java.text.ListFormat#getInstance()
+java.text.ListFormat#toString()
+java.text.MessageFormat#<init>(java.lang.String,java.util.Locale)
+java.text.MessageFormat#applyPattern(java.lang.String)
+java.text.MessageFormat#toString()
+java.text.SimpleDateFormat#<init>(java.lang.String,java.text.DateFormatSymbols)
+java.text.SimpleDateFormat#<init>(java.lang.String,java.util.Locale)
+java.text.SimpleDateFormat#parse(java.lang.String,java.text.ParsePosition)
+java.text.SimpleDateFormat#set2DigitYearStart(java.util.Date)
+java.text.SimpleDateFormat#toString()
+java.time.Clock#systemDefaultZone()
+java.time.ZoneId#systemDefault()
+java.time.ZonedDateTime#now()
+java.time.chrono.JapaneseChronology#range(java.time.temporal.ChronoField)
+java.time.chrono.JapaneseDate#getLong(java.time.temporal.TemporalField)
+java.time.chrono.JapaneseDate#lengthOfYear()
+java.time.chrono.JapaneseDate#range(java.time.temporal.TemporalField)
+java.time.format.DateTimeFormatter#ofLocalizedPattern(java.lang.String)
+java.time.format.DecimalStyle#ofDefaultLocale()
+java.util.Calendar#setTime(java.util.Date)
+java.util.Calendar$Builder#build()
+java.util.Calendar$Builder#setInstant(java.util.Date)
+java.util.Currency#getDisplayName()
+java.util.Date#<init>(int,int,int)
+java.util.Date#<init>(int,int,int,int,int)
+java.util.Date#<init>(int,int,int,int,int,int)
+java.util.Date#<init>(java.lang.String)
+java.util.Date#UTC(int,int,int,int,int,int)
+java.util.Date#after(java.util.Date)
+java.util.Date#before(java.util.Date)
+java.util.Date#compareTo(java.util.Date)
+java.util.Date#equals(java.lang.Object)
+java.util.Date#getDate()
+java.util.Date#getDay()
+java.util.Date#getHours()
+java.util.Date#getMinutes()
+java.util.Date#getMonth()
+java.util.Date#getSeconds()
+java.util.Date#getTime()
+java.util.Date#getTimezoneOffset()
+java.util.Date#getYear()
+java.util.Date#hashCode()
+java.util.Date#parse(java.lang.String)
+java.util.Date#setDate(int)
+java.util.Date#setHours(int)
+java.util.Date#setMinutes(int)
+java.util.Date#setMonth(int)
+java.util.Date#setSeconds(int)
+java.util.Date#setYear(int)
+java.util.Date#toGMTString()
+java.util.Date#toInstant()
+java.util.Date#toLocaleString()
+java.util.Date#toString()
+java.util.GregorianCalendar#from(java.time.ZonedDateTime)
+java.util.GregorianCalendar#setGregorianChange(java.util.Date)
+java.util.Locale#getDefault()
+java.util.Locale#getDefault(java.util.Locale$Category)
+java.util.Locale#getDisplayName(java.util.Locale)
+java.util.Locale#getDisplayScript()
+java.util.ResourceBundle#getBundle(java.lang.String,java.util.Locale)
+java.util.ResourceBundle#getBundle(java.lang.String,java.util.Locale,java.lang.ClassLoader)
+java.util.ResourceBundle#getBundle(java.lang.String,java.util.Locale,java.lang.ClassLoader,java.util.ResourceBundle$Control)
+java.util.ResourceBundle#getBundle(java.lang.String,java.util.Locale,java.lang.Module)
+java.util.ResourceBundle#getBundle(java.lang.String,java.util.Locale,java.util.ResourceBundle$Control)
+java.util.ResourceBundle$Control#getFallbackLocale(java.lang.String,java.util.Locale)
+java.util.ResourceBundle$Control#needsReload(java.lang.String,java.util.Locale,java.lang.String,java.lang.ClassLoader,java.util.ResourceBundle,long)
+java.util.Scanner#<init>(java.io.File,java.lang.String)
+java.util.Scanner#<init>(java.io.File,java.nio.charset.Charset)
+java.util.Scanner#<init>(java.io.InputStream,java.lang.String)
+java.util.Scanner#<init>(java.io.InputStream,java.nio.charset.Charset)
+java.util.Scanner#<init>(java.lang.Readable)
+java.util.Scanner#<init>(java.lang.String)
+java.util.Scanner#<init>(java.nio.channels.ReadableByteChannel,java.lang.String)
+java.util.Scanner#<init>(java.nio.channels.ReadableByteChannel,java.nio.charset.Charset)
+java.util.Scanner#<init>(java.nio.file.Path,java.nio.charset.Charset)
+java.util.Scanner#reset()
+java.util.SimpleTimeZone#inDaylightTime(java.util.Date)
+java.util.TimeZone#getDefault()
+java.util.Timer#schedule(java.util.TimerTask,java.util.Date)
+java.util.Timer#schedule(java.util.TimerTask,java.util.Date,long)
+java.util.Timer#scheduleAtFixedRate(java.util.TimerTask,java.util.Date,long)
+java.util.concurrent.locks.AbstractQueuedLongSynchronizer$ConditionObject#awaitUntil(java.util.Date)
+java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject#awaitUntil(java.util.Date)
+java.util.zip.ZipEntry#getLastModifiedTime()
+java.util.zip.ZipEntry#getTime()
+java.util.zip.ZipEntry#getTimeLocal()
+java.util.zip.ZipEntry#setLastModifiedTime(java.nio.file.attribute.FileTime)
+java.util.zip.ZipEntry#setTime(long)
+java.util.zip.ZipEntry#setTimeLocal(java.time.LocalDateTime)
+java.util.zip.ZipOutputStream#putNextEntry(java.util.zip.ZipEntry)
+javax.sql.rowset.serial.SQLOutputImpl#writeAsciiStream(java.io.InputStream)
+javax.sql.rowset.serial.SQLOutputImpl#writeBinaryStream(java.io.InputStream)
+javax.sql.rowset.spi.SyncFactory#getInstance(java.lang.String)
+javax.sql.rowset.spi.SyncProviderException#getSyncResolver()
+javax.xml.catalog.CatalogFeatures#defaults()
+javax.xml.catalog.CatalogFeatures$Builder#build()
+javax.xml.catalog.CatalogFeatures$Builder#with(javax.xml.catalog.CatalogFeatures$Feature,java.lang.String)
+javax.xml.catalog.CatalogManager#catalog(javax.xml.catalog.CatalogFeatures,java.net.URI[])
+javax.xml.catalog.CatalogManager#catalogResolver(javax.xml.catalog.Catalog)
+javax.xml.catalog.CatalogManager#catalogResolver(javax.xml.catalog.Catalog,javax.xml.catalog.CatalogResolver$NotFoundAction)
+javax.xml.catalog.CatalogManager#catalogResolver(javax.xml.catalog.CatalogFeatures,java.net.URI[])
+javax.xml.catalog.CatalogResolver$NotFoundAction#getType(java.lang.String)
+javax.xml.datatype.Duration#addTo(java.util.Date)
+javax.xml.datatype.Duration#getTimeInMillis(java.util.Calendar)
+javax.xml.datatype.Duration#getTimeInMillis(java.util.Date)
+javax.xml.stream.XMLInputFactory#newDefaultFactory()
+javax.xml.stream.XMLOutputFactory#newDefaultFactory()
+javax.xml.transform.TransformerException#printStackTrace()
+javax.xml.transform.TransformerException#printStackTrace(java.io.PrintWriter)
+javax.xml.validation.SchemaFactory#newDefaultInstance()
+javax.xml.validation.SchemaFactory#newInstance(java.lang.String)
+org.w3c.dom.bootstrap.DOMImplementationRegistry#newInstance()
+org.xml.sax.helpers.ParserFactory#makeParser()
+org.xml.sax.helpers.ParserFactory#makeParser(java.lang.String)
+org.xml.sax.helpers.XMLReaderAdapter#<init>()
+org.xml.sax.helpers.XMLReaderFactory#createXMLReader()
+org.xml.sax.helpers.XMLReaderFactory#createXMLReader(java.lang.String)
+
+# Host state (#127). A literal is checked by its syntax, never against the machine's
+# interfaces or name service.
+@defaultMessage Depends on the host's network configuration
+java.net.InetAddress#getByName(java.lang.String)
+java.net.InetAddress#getAllByName(java.lang.String)
+java.net.InetAddress#getLocalHost()
+java.net.InetAddress#getHostName()
+java.net.InetAddress#getCanonicalHostName()
+java.net.InetAddress#isReachable(int)
+java.net.InetAddress#isReachable(java.net.NetworkInterface,int,int)
+java.net.NetworkInterface
+java.net.URL#equals(java.lang.Object)
+java.net.URL#hashCode()
+java.net.URL#openConnection()
+java.net.URL#openStream()
+java.net.URL#getContent()
+
+# Process configuration. A decoder is configured by its arguments, not by the environment.
+@defaultMessage Depends on the process environment or system properties
+java.lang.System#getenv()
+java.lang.System#getenv(java.lang.String)
+java.lang.System#getProperties()
+java.lang.System#getProperty(java.lang.String)
+java.lang.System#getProperty(java.lang.String,java.lang.String)
+java.lang.Integer#getInteger(java.lang.String)
+java.lang.Integer#getInteger(java.lang.String,int)
+java.lang.Integer#getInteger(java.lang.String,java.lang.Integer)
+java.lang.Long#getLong(java.lang.String)
+java.lang.Long#getLong(java.lang.String,long)
+java.lang.Long#getLong(java.lang.String,java.lang.Long)
+java.lang.Boolean#getBoolean(java.lang.String)
+
+# Clock. A time-relative check must take a java.time.Clock.
+@defaultMessage Reads the system clock; take a java.time.Clock
+java.lang.System#currentTimeMillis()
+java.lang.System#nanoTime()
+java.time.Instant#now()
+java.time.Clock#systemUTC()
+
+# Randomness. The same input must give the same result.
+@defaultMessage Not deterministic
+java.lang.Math#random()
+java.lang.StrictMath#random()
+java.util.Random#<init>()
+java.util.UUID#randomUUID()
+java.util.concurrent.ThreadLocalRandom#current()
+java.security.SecureRandom#<init>()

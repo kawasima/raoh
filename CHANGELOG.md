@@ -46,8 +46,16 @@ detailed from the current development cycle onward.
   `map(s -> s.toLowerCase(locale))`. `ResourceBundleMessageResolver.resolve(code, meta)` and
   `resolve(issue)` still use the default locale, since choosing the display locale is their job.
   The build now runs [forbidden-apis](https://github.com/policeman-tools/forbidden-apis) on
-  `raoh`, `raoh-json` and `raoh-jooq` and fails on JDK calls that read the default locale
-  implicitly ([#136](https://github.com/kawasima/raoh/issues/136)).
+  `raoh`, `raoh-json` and `raoh-jooq` and fails on JDK calls whose result depends on the JVM or
+  host: the default locale, time zone and charset, the network configuration (the cause of #127),
+  environment variables and system properties, the system clock, and randomness. The list is
+  kept complete by a test that walks the JDK bytecode back from `Locale.getDefault`,
+  `TimeZone.getDefault`, `ZoneId.systemDefault` and `Charset.defaultCharset`, because the lists
+  bundled with forbidden-apis and Error Prone both miss calls such as `ListFormat.getInstance()`
+  and `java.sql.Date.toLocalDate()`. That walk also showed that the `ObjectDecoders` temporal
+  decoders read a `java.sql.Date`, `Time` or `Timestamp` in the default time zone; this follows
+  the JDBC convention and is kept, and is now documented
+  ([#136](https://github.com/kawasima/raoh/issues/136)).
 - **`MapDecoders.nested()` checks every key, not only the first.** It cast the map to
   `Map<String, Object>` when its first key was a `String`, so a later `Integer` key reached the inner
   decoder and surfaced as a `ClassCastException` (under `strict(...)`, for one) instead of an issue,

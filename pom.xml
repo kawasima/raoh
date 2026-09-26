@@ -60,6 +60,8 @@
             at a time until it says nothing about the change in front of you.
         -->
         <japicmp.baseline>0.7.2</japicmp.baseline>
+        <!-- The plugin and the test-scoped jar AmbientStateApiAuditTest reads its lists from. -->
+        <forbiddenapis.version>3.11</forbiddenapis.version>
     </properties>
 
     <build>
@@ -148,51 +150,42 @@
                     </executions>
                 </plugin>
                 <!--
-                    A decoder's result is a function of its input and configuration. The JVM
-                    default locale must not reach it: in tr-TR, "TITLE".toLowerCase() is
-                    "tıtle", and in th-TH-u-nu-thai "%d".formatted(1000) is "๑๐๐๐" (#136).
-                    This check fails the build on the JDK calls that read the default locale
-                    implicitly, so a new call site cannot bring it back. Pass Locale.ROOT
-                    instead.
+                    A decoder's result is a function of its input and configuration; the JVM's
+                    ambient state must not reach it. In tr-TR, "TITLE".toLowerCase() is "tıtle";
+                    in th-TH-u-nu-thai, "%d".formatted(1000) is "๑๐๐๐" (#136); a zone ID used
+                    to be checked against the host's network interfaces (#127). This check fails
+                    the build on JDK calls that read such state, so a new call site cannot bring
+                    it back.
 
-                    The list is limited to locale on purpose. Default charset and time zone
-                    are the same kind of ambient state, but have not caused a defect yet.
+                    Two lists apply. forbidden-apis' bundled jdk-unsafe covers the calls that
+                    use the default locale, time zone or charset, and is picked for the compiler
+                    release. forbidden-apis/ambient-state.txt adds what jdk-unsafe misses, found
+                    by scanning the JDK, plus host, process, clock and randomness calls.
+                    AmbientStateApiAuditTest keeps the default-value part complete against the
+                    JDK, so neither list is trusted to be complete on its own.
 
-                    ResourceBundleMessageResolver chooses a display locale, which is its job,
-                    and marks its two Locale.getDefault() calls with @SuppressForbidden.
+                    A method that depends on ambient state by contract, such as
+                    ResourceBundleMessageResolver choosing a display locale, says so with a
+                    package-private @SuppressForbidden and a reason.
                 -->
                 <plugin>
                     <groupId>de.thetaphi</groupId>
                     <artifactId>forbiddenapis</artifactId>
-                    <version>3.11</version>
+                    <version>${forbiddenapis.version}</version>
                     <configuration>
+                        <bundledSignatures>
+                            <bundledSignature>jdk-unsafe</bundledSignature>
+                        </bundledSignatures>
+                        <signaturesFiles>
+                            <signaturesFile>${project.basedir}/../forbidden-apis/ambient-state.txt</signaturesFile>
+                        </signaturesFiles>
                         <suppressAnnotations>
-                            <suppressAnnotation>net.unit8.raoh.SuppressForbidden</suppressAnnotation>
+                            <suppressAnnotation>**.SuppressForbidden</suppressAnnotation>
                         </suppressAnnotations>
-                        <signatures><![CDATA[
-                            @defaultMessage Uses the JVM default locale; pass Locale.ROOT
-                            java.lang.String#toLowerCase()
-                            java.lang.String#toUpperCase()
-                            java.lang.String#format(java.lang.String,java.lang.Object[])
-                            java.lang.String#formatted(java.lang.Object[])
-                            java.util.Formatter#<init>()
-                            java.util.Formatter#<init>(java.lang.Appendable)
-                            java.util.Locale#getDefault()
-                            java.util.Locale#getDefault(java.util.Locale$Category)
-                            java.text.MessageFormat#<init>(java.lang.String)
-                            java.text.MessageFormat#format(java.lang.String,java.lang.Object[])
-                            java.text.NumberFormat#getInstance()
-                            java.text.NumberFormat#getIntegerInstance()
-                            java.text.NumberFormat#getNumberInstance()
-                            java.text.DecimalFormat#<init>()
-                            java.text.DecimalFormat#<init>(java.lang.String)
-                            java.time.format.DateTimeFormatter#ofPattern(java.lang.String)
-                            java.time.format.DateTimeFormatterBuilder#toFormatter()
-                        ]]></signatures>
                     </configuration>
                     <executions>
                         <execution>
-                            <id>default-locale</id>
+                            <id>ambient-state</id>
                             <!-- The plugin defaults to verify; run it right after compile so
                                  that `mvn test` fails too, not only `mvn verify`. -->
                             <phase>process-classes</phase>
