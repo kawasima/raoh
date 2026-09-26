@@ -617,11 +617,17 @@ public final class ObjectDecoders {
     // --- enumOf / literal ---
 
     /**
-     * Creates an enum decoder that parses a string value into the given enum type.
+     * Creates an enum decoder that parses a string value into the given enum type, matching the
+     * constant name ASCII case-insensitively.
+     *
+     * <p>{@code A}-{@code Z} are equivalent to {@code a}-{@code z}; every other character must
+     * match exactly. See {@link Decoders#enumOf} for the full contract.
      *
      * @param <E> the enum type
      * @param cls the enum class
      * @return a decoder that produces enum constants from string input
+     * @throws IllegalArgumentException if two enum constant names are equal under ASCII
+     *                                  case-insensitive matching
      */
     public static <E extends Enum<E>> Decoder<@Nullable Object, E> enumOf(Class<E> cls) {
         return Decoders.<@Nullable Object, E>enumOf(cls, string());
