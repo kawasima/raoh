@@ -35,9 +35,11 @@ public enum Effect {
 
     /**
      * Acquires ambient state itself: {@code Locale.getDefault()}, {@code System.currentTimeMillis()},
-     * and any lookup by name in the class path ({@code Class.forName}, {@code ServiceLoader},
-     * {@code MethodHandles.Lookup#find*}). Each use needs an approval, and decoder code must not
-     * reach one, directly or through the audited code base's own methods.
+     * or what the class path holds under a name ({@code Class.forName(String)},
+     * {@code ServiceLoader.load}). Looking a name up in an object the caller passed, such as
+     * {@code Class#getDeclaredMethod} on a given class, is not ambient. Each use needs an
+     * approval, and decoder code must not reach one, directly or through the audited code base's
+     * own methods.
      */
     AMBIENT
 }

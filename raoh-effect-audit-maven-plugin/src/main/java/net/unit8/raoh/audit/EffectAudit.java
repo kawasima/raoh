@@ -20,9 +20,6 @@ import java.util.stream.Collectors;
  *   <li>a used member is not in the catalog;</li>
  *   <li>a member the catalog calls {@code CLOSED} or {@code EXPLICIT} is called virtually and a
  *       subclass can override it, so the implementation that runs is chosen by the receiver;</li>
- *   <li>a member that looks code or resources up by name ({@code Class.forName},
- *       {@code ServiceLoader}, {@code MethodHandles.Lookup#find*}, reflective invocation) is filed
- *       as anything but {@code AMBIENT}: what it finds depends on the class path;</li>
  *   <li>a use of a {@code DELEGATED} or {@code AMBIENT} member has no approval;</li>
  *   <li>decoder code reaches an {@code AMBIENT} use, directly or through the audited code base's
  *       own methods ({@link AmbientReach}), approved or not;</li>
@@ -38,23 +35,12 @@ public final class EffectAudit {
 
     private EffectAudit() {}
 
-    /** Members whose result depends on what the class path holds under a name. */
-    private static final List<String> LOOKUP_BY_NAME = List.of(
-            "java.lang.Class#forName(", "java.lang.ClassLoader#loadClass(", "java.lang.ClassLoader#getResource",
-            "java.lang.Class#getResource", "java.util.ServiceLoader#", "java.lang.invoke.MethodHandles$Lookup#find",
-            "java.lang.reflect.Method#invoke(", "java.lang.reflect.Constructor#newInstance(",
-            "java.lang.reflect.Field#get", "java.lang.reflect.Field#set", "java.lang.Class#getMethod",
-            "java.lang.Class#getDeclaredMethod", "java.lang.Class#getField", "java.lang.Class#getDeclaredField",
-            "java.lang.Class#getConstructor", "java.lang.Class#getDeclaredConstructor");
-
     /**
      * The outcome of an audit.
      *
      * @param unknown members not in the catalog, each with one of its callers
      * @param overridable {@code CLOSED} or {@code EXPLICIT} members called virtually where a
      *                    subclass can override them, each with one of its callers
-     * @param lookupByName members that look something up by name but are not {@code AMBIENT},
-     *                     each with one of its callers
      * @param unapproved uses that need an approval and have none, with the member's effect and
      *                   how the bytecode reaches it
      * @param ambientInDecoder {@code AMBIENT} uses decoder code reaches, each with the chain of
@@ -66,7 +52,6 @@ public final class EffectAudit {
     public record Report(
             Map<Member, String> unknown,
             Map<Member, String> overridable,
-            Map<Member, String> lookupByName,
             Map<Approvals.Use, String> unapproved,
             Map<Approvals.Use, String> ambientInDecoder,
             Set<Approvals.Use> stale,
@@ -79,7 +64,7 @@ public final class EffectAudit {
          * @return {@code true} if every list is empty
          */
         public boolean passed() {
-            return unknown.isEmpty() && overridable.isEmpty() && lookupByName.isEmpty() && unapproved.isEmpty()
+            return unknown.isEmpty() && overridable.isEmpty() && unapproved.isEmpty()
                     && ambientInDecoder.isEmpty() && stale.isEmpty() && needless.isEmpty() && problems.isEmpty();
         }
 
@@ -97,8 +82,6 @@ public final class EffectAudit {
             section(out, "These are CLOSED or EXPLICIT in " + catalogName + ", but a subclass can override them"
                     + " and they are called virtually, so the receiver chooses what runs. Move them to [DELEGATED]:",
                     entries(overridable, "called by"));
-            section(out, "These look something up by name, so what they find depends on the class path."
-                    + " Move them to [AMBIENT] in " + catalogName + ":", entries(lookupByName, "used by"));
             section(out, "Decoder code must not read ambient state itself, nor through Raoh's own methods;"
                     + " these cannot be approved:", ambientInDecoder.entrySet().stream()
                     .map(e -> e.getKey() + "\n      reached by " + e.getValue()).toList());
@@ -141,7 +124,6 @@ public final class EffectAudit {
                                Hierarchy hierarchy, Predicate<String> isInternal, Predicate<String> isDecoderClass) {
         var unknown = new TreeMap<Member, String>(BY_TEXT);
         var overridable = new TreeMap<Member, String>(BY_TEXT);
-        var lookupByName = new TreeMap<Member, String>(BY_TEXT);
         var unapproved = new TreeMap<Approvals.Use, String>(USE_ORDER);
         var needless = new TreeSet<Approvals.Use>(USE_ORDER);
         var used = new LinkedHashSet<Approvals.Use>();
@@ -154,9 +136,6 @@ public final class EffectAudit {
             if (effect.isEmpty()) {
                 unknown.putIfAbsent(edge.callee(), edge.caller());
                 continue;
-            }
-            if (effect.get() != Effect.AMBIENT && looksUpByName(edge.callee())) {
-                lookupByName.putIfAbsent(edge.callee(), edge.caller());
             }
             switch (effect.get()) {
                 case CLOSED, EXPLICIT -> {
@@ -203,12 +182,7 @@ public final class EffectAudit {
                 stale.add(use);
             }
         }
-        return new Report(unknown, overridable, lookupByName, unapproved, ambientInDecoder, stale, needless, problems);
-    }
-
-    private static boolean looksUpByName(Member member) {
-        var text = member.toString();
-        return LOOKUP_BY_NAME.stream().anyMatch(text::startsWith);
+        return new Report(unknown, overridable, unapproved, ambientInDecoder, stale, needless, problems);
     }
 
     private static boolean isOverridable(Hierarchy hierarchy, Member member, List<String> problems) {

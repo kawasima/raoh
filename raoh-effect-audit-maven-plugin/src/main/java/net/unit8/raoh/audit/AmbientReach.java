@@ -22,8 +22,9 @@ import java.util.function.Predicate;
  * decoder class and follows the {@link CallGraph}:
  * <ul>
  *   <li>a direct call to its target, resolved up the internal superclass chain;</li>
- *   <li>a virtual call on an internal type to every internal class that is a subtype of it and
- *       declares the method with the same descriptor;</li>
+ *   <li>a virtual call on an internal type to the method each internal subtype of it runs for
+ *       that call, found the way the JVM finds it, so an implementation a subtype inherits from
+ *       a superclass that is not itself a subtype of the called type is included;</li>
  *   <li>a lambda's body from the place the lambda is created, and a class's static initializer
  *       from any reference to the class;</li>
  *   <li>once a reached method constructs an internal class, every method of that class (or of an
@@ -48,7 +49,6 @@ final class AmbientReach {
     private final CallGraph graph;
     private final Hierarchy hierarchy;
     private final Predicate<String> internal;
-    private final Map<List<String>, List<Member>> bySignature = new HashMap<>();
     private final Map<Member, List<Member>> implementations = new HashMap<>();
     private final List<String> problems = new ArrayList<>();
 
@@ -56,11 +56,6 @@ final class AmbientReach {
         this.graph = graph;
         this.hierarchy = hierarchy;
         this.internal = internal;
-        for (var methods : graph.classes().values()) {
-            for (var method : methods) {
-                bySignature.computeIfAbsent(signature(method), k -> new ArrayList<>()).add(method);
-            }
-        }
     }
 
     /**
@@ -176,16 +171,45 @@ final class AmbientReach {
         return Optional.empty();
     }
 
-    /** Every internal method with the member's descriptor whose class is a subtype of the member's owner. */
+    /**
+     * The internal code a virtual call can run: for every internal class that is a subtype of
+     * the called type, the method the JVM selects when that class is the receiver. The lookup
+     * starts at the receiver class, not at the classes that declare the method: in
+     * {@code final class Impl extends Base implements Resolver}, a call to
+     * {@code Resolver#resolve()} runs {@code Base#resolve()} although {@code Base} is not a
+     * {@code Resolver}.
+     */
     private List<Member> implementationsOf(Member member) {
         return implementations.computeIfAbsent(member, m -> {
-            var result = new ArrayList<Member>();
-            for (var candidate : bySignature.getOrDefault(signature(m), List.of())) {
-                if (isSubtype(candidate.owner(), m.owner())) {
-                    result.add(candidate);
+            var result = new LinkedHashSet<Member>();
+            for (var receiver : graph.classes().keySet()) {
+                if (!isSubtype(receiver, m.owner())) {
+                    continue;
+                }
+                Optional<String> declaring;
+                try {
+                    declaring = hierarchy.declaringClass(new Member(receiver, m.name(), m.parameters(), m.type()));
+                } catch (IllegalStateException e) {
+                    problems.add("cannot resolve " + m + " for receiver " + receiver + ": " + e.getMessage());
+                    continue;
+                }
+                if (declaring.isEmpty()) {
+                    continue;
+                }
+                if (!internal.test(declaring.get())) {
+                    // The code that runs is external, but the call site names an internal type, so
+                    // neither the catalog nor this walk has seen it.
+                    problems.add(m + " runs " + declaring.get() + "'s implementation for receiver " + receiver
+                            + ", which the audit does not see; call it through the external type");
+                    continue;
+                }
+                var impl = new Member(declaring.get(), m.name(), m.parameters(), m.type());
+                // A method without code (abstract, or an interface's) is not what runs.
+                if (graph.classes().getOrDefault(impl.owner(), Set.of()).contains(impl)) {
+                    result.add(impl);
                 }
             }
-            return result;
+            return List.copyOf(result);
         });
     }
 
@@ -219,13 +243,5 @@ final class AmbientReach {
             problems.add("cannot tell whether " + sub + " is a " + sup + ": " + e.getMessage());
             return false;
         }
-    }
-
-    private static List<String> signature(Member method) {
-        var key = new ArrayList<String>();
-        key.add(method.name());
-        key.add(method.type());
-        key.addAll(method.parameters());
-        return key;
     }
 }

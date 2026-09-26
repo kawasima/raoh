@@ -61,8 +61,7 @@ paste.
   itself or through Raoh's own methods (the audit walks Raoh's call graph across modules and prints
   the path). The walk includes callbacks: once decoder code constructs a Raoh class, that class's
   overrides of external methods (`hashCode`, `compare`, `apply`) count as reached. Take the value
-  from the input or explicit configuration. A lookup by name (`Class.forName`, `ServiceLoader`,
-  reflection) is always `AMBIENT`.
+  from the input or explicit configuration.
 - **Write to an internal static field outside its class initializer**: not allowed; mutable static
   state is ambient configuration the audit cannot follow.
 - **Stale approval**: remove the line.

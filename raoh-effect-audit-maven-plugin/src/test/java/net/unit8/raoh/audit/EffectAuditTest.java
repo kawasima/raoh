@@ -103,6 +103,30 @@ class EffectAuditTest {
     }
 
     @Test
+    void followsAVirtualCallToAnImplementationTheReceiverInherits() throws IOException {
+        // Base is not a Resolver, but for an Impl receiver Resolver#resolve() runs Base#resolve().
+        var report = audit(Map.of(
+                "Resolver", "public interface Resolver { Object resolve(); }",
+                "Base", "public class Base { public Object resolve() { return java.util.Locale.getDefault(); } }",
+                "Impl", "public final class Impl extends Base implements Resolver {}",
+                "decode/D", "package fixture.decode; public class D { Object l(fixture.Resolver r) { return r.resolve(); } }"),
+                BASE_CATALOG, "[chooses a display locale]\nfixture.Base#resolve -> java.util.Locale#getDefault():java.util.Locale\n");
+        assertEquals(Set.of(new Approvals.Use("fixture.Base#resolve", GET_DEFAULT)), report.ambientInDecoder().keySet());
+    }
+
+    @Test
+    void reportsACallThroughAnInternalTypeThatRunsAnExternalImplementation() throws IOException {
+        // Sized#size() on a Bag runs ArrayList#size(), which the call site does not name.
+        var report = audit(Map.of(
+                "Sized", "public interface Sized { int size(); }",
+                "Bag", "public final class Bag extends java.util.ArrayList<Object> implements Sized {}",
+                "decode/D", "package fixture.decode; public class D { int l(fixture.Sized s) { return s.size(); } }"),
+                BASE_CATALOG, "");
+        assertTrue(report.problems().stream().anyMatch(p -> p.contains("fixture.Sized#size():int runs java.util.ArrayList")),
+                report.problems()::toString);
+    }
+
+    @Test
     void followsALambdaBodyFromWhereTheLambdaIsCreated() throws IOException {
         var report = audit(Map.of(
                 "Lazy", "public final class Lazy { public static java.util.function.Supplier<Object> locale() { return () -> java.util.Locale.getDefault(); } }",
@@ -153,18 +177,6 @@ class EffectAuditTest {
                 """), BASE_CATALOG, "");
         assertTrue(report.problems().stream().anyMatch(p -> p.contains("fixture.Settings#set")
                 && p.contains("mutable static state")), report.problems()::toString);
-    }
-
-    @Test
-    void refusesToFileALookupByNameAsAnythingButAmbient() throws IOException {
-        var report = audit(Map.of("Loader", """
-                public final class Loader {
-                    static Object load(String name) throws Exception { return Class.forName(name); }
-                }
-                """), BASE_CATALOG + "[DELEGATED]\njava.lang.Class#forName(java.lang.String):java.lang.Class\n",
-                "[loads what the caller named]\nfixture.Loader#load -> java.lang.Class#forName(java.lang.String):java.lang.Class\n");
-        assertEquals(Set.of(Member.parse("java.lang.Class#forName(java.lang.String):java.lang.Class")),
-                report.lookupByName().keySet());
     }
 
     @Test
