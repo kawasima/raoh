@@ -12,6 +12,7 @@ import net.unit8.raoh.Result;
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.decode.combinator.CombinePart;
 import net.unit8.raoh.decode.Decoders;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -322,10 +323,8 @@ class MapDecoderTest {
 
     @Test
     void listUniqueNullDuplicate() {
-        // Test unique() directly at the ListDecoder level to avoid List.copyOf restriction in MapDecoders.list()
-        var dec = new net.unit8.raoh.decode.builtin.ListDecoder<List<String>, String>(
-                (in, path) -> Result.ok(in)).unique();
-        var input = new java.util.ArrayList<String>();
+        var dec = list(nullable(string())).unique();
+        var input = new java.util.ArrayList<@Nullable Object>();
         input.add(null);
         input.add("a");
         input.add(null);
@@ -334,6 +333,22 @@ class MapDecoderTest {
             case Ok(var v) -> fail("Expected Err, got Ok: " + v);
             case Err(var issues) -> assertEquals(ErrorCodes.DUPLICATE_ELEMENT, issues.asList().getFirst().code());
         }
+    }
+
+    @Test
+    void listKeepsNullElementsInOrder() {
+        var input = new java.util.ArrayList<@Nullable Object>();
+        input.add(null);
+        input.add("x");
+        input.add(null);
+        var result = assertOk(list(nullable(string())).decode(input, Path.ROOT));
+        assertEquals(java.util.Arrays.asList(null, "x", null), result);
+    }
+
+    @Test
+    void listResultIsUnmodifiable() {
+        var result = assertOk(list(string()).decode(List.of("a"), Path.ROOT));
+        assertThrows(UnsupportedOperationException.class, () -> result.add("b"));
     }
 
     @Test
@@ -437,6 +452,35 @@ class MapDecoderTest {
                 Map.of("prices", Map.of("apple", 1.50, "banana", 0.99))));
         assertEquals(2, result.size());
         assertNotNull(result.get("apple"));
+    }
+
+    @Test
+    void mapKeepsNullValues() {
+        var input = new java.util.HashMap<String, @Nullable Object>();
+        input.put("a", null);
+        var result = assertOk(map(nullable(string())).decode(input, Path.ROOT));
+        assertTrue(result.containsKey("a"));
+        assertNull(result.get("a"));
+    }
+
+    @Test
+    void mapKeepsInputKeyOrder() {
+        // The same entries in two different orders: each output must follow its own input,
+        // so an implementation that reorders keys cannot pass both by coincidence.
+        var forward = List.of("z", "y", "x", "w", "v", "u");
+        var backward = forward.reversed();
+        for (var keys : List.of(forward, backward)) {
+            var input = new java.util.LinkedHashMap<String, Object>();
+            keys.forEach(k -> input.put(k, k.toUpperCase(java.util.Locale.ROOT)));
+            var result = assertOk(map(string()).decode(input, Path.ROOT));
+            assertEquals(keys, List.copyOf(result.keySet()));
+        }
+    }
+
+    @Test
+    void mapResultIsUnmodifiable() {
+        var result = assertOk(map(string()).decode(Map.of("a", "x"), Path.ROOT));
+        assertThrows(UnsupportedOperationException.class, () -> result.put("b", "y"));
     }
 
     @Test

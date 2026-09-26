@@ -28,6 +28,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -392,11 +393,14 @@ public final class ObjectDecoders {
      * <p>Returns {@code required} if the value is {@code null},
      * and {@code type_mismatch} if the value is not a {@link List}.
      *
+     * <p>The decoded list is unmodifiable and holds every element in input order, including
+     * {@code null} when {@code elementDec} decodes an element to {@code null}.
+     *
      * @param <T>        the decoded element type
      * @param elementDec the decoder for each list element
      * @return a list decoder for {@code Object} input
      */
-    public static <T> ListDecoder<@Nullable Object, T> list(Decoder<@Nullable Object, T> elementDec) {
+    public static <T extends @Nullable Object> ListDecoder<@Nullable Object, T> list(Decoder<@Nullable Object, T> elementDec) {
         return new ListDecoder<>((in, path) -> {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
@@ -418,7 +422,7 @@ public final class ObjectDecoders {
             if (!issues.isEmpty()) {
                 return Result.err(issues);
             }
-            return Result.ok(List.copyOf(results));
+            return Result.ok(Collections.unmodifiableList(results));
         });
     }
 
@@ -431,11 +435,14 @@ public final class ObjectDecoders {
      * checked before any value is decoded, and a bad key is reported at the map's own path: it is
      * never converted to a string, since {@code 1} and {@code "1"} would then be the same key.
      *
+     * <p>The decoded map is unmodifiable, iterates in the input's key order, and keeps a
+     * {@code null} value when {@code valDec} decodes a value to {@code null}.
+     *
      * @param <V>    the decoded value type
      * @param valDec the decoder for each map value
      * @return a record decoder for {@code Object} input
      */
-    public static <V> RecordDecoder<@Nullable Object, V> map(Decoder<@Nullable Object, V> valDec) {
+    public static <V extends @Nullable Object> RecordDecoder<@Nullable Object, V> map(Decoder<@Nullable Object, V> valDec) {
         return new RecordDecoder<>((in, path) -> {
             if (in == null) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
@@ -461,7 +468,7 @@ public final class ObjectDecoders {
             if (!issues.isEmpty()) {
                 return Result.err(issues);
             }
-            return Result.ok(Map.copyOf(results));
+            return Result.ok(Collections.unmodifiableMap(results));
         });
     }
 

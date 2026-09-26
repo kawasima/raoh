@@ -392,7 +392,7 @@ public sealed interface Result<T extends @Nullable Object> permits Ok, Err {
      * @param basePath the path prefix prepended to each element index
      * @return a result containing all decoded values, or all accumulated errors
      */
-    static <I, T> Result<List<T>> traverse(
+    static <I extends @Nullable Object, T extends @Nullable Object> Result<List<T>> traverse(
             List<I> items,
             BiFunction<? super I, ? super Path, ? extends Result<T>> f,
             Path basePath) {
@@ -422,7 +422,7 @@ public sealed interface Result<T extends @Nullable Object> permits Ok, Err {
      * @param f     the decoding function applied to each element together with its path
      * @return a result containing all decoded values, or all accumulated errors
      */
-    static <I, T> Result<List<T>> traverse(List<I> items, BiFunction<? super I, ? super Path, ? extends Result<T>> f) {
+    static <I extends @Nullable Object, T extends @Nullable Object> Result<List<T>> traverse(List<I> items, BiFunction<? super I, ? super Path, ? extends Result<T>> f) {
         return traverse(items, f, Path.ROOT);
     }
 
@@ -443,7 +443,7 @@ public sealed interface Result<T extends @Nullable Object> permits Ok, Err {
      * @param f     the mapping function applied to each element
      * @return a result containing all mapped values, or all accumulated errors
      */
-    static <I, T> Result<List<T>> traverseResults(List<I> items, Function<? super I, ? extends Result<T>> f) {
+    static <I extends @Nullable Object, T extends @Nullable Object> Result<List<T>> traverseResults(List<I> items, Function<? super I, ? extends Result<T>> f) {
         return traverse(items, (item, path) -> f.apply(item), Path.ROOT);
     }
 }

@@ -12,6 +12,18 @@ detailed from the current development cycle onward.
 
 ### Fixed
 
+- **`list()` and `map()` keep `null` values and the input's key order.** `ObjectDecoders` and
+  `JsonDecoders` collected the decoded values and returned `List.copyOf` / `Map.copyOf` of them.
+  Both reject `null`, so `map(nullable(string()))` on `{"a": null}` and `list(nullable(string()))`
+  on `[null]` threw `NullPointerException` instead of returning `Ok`. `Map.copyOf` also returned
+  the keys in an order that changes with each JVM start. The decoders now return an unmodifiable
+  view of their own `ArrayList` / `LinkedHashMap`, as `Result.traverse` already did: a `null`
+  that the element decoder produced is kept, and the map iterates in the input's key order (the
+  `Map`'s iteration order, or the JSON property order). The type parameters of `ListDecoder`,
+  `RecordDecoder`, these factories and `Result.traverse` now read `extends @Nullable Object`, so
+  the JSpecify signature admits the nullable element type the runtime already accepted.
+  `ListDecoder.contains` and `containsAll` mark their elements `@NonNull`, which is what they
+  already enforced at runtime ([#143](https://github.com/kawasima/raoh/issues/143)).
 - **`iso8601()` rejects second `60` instead of returning the second before it.** It handed the
   text to `Instant.parse`, whose `ISO_INSTANT` parser reads a clock time of `23:59:60` as
   `23:59:59` (at any offset, so `2016-12-31T23:59:60+09:00` became `14:59:59Z`) and reports the

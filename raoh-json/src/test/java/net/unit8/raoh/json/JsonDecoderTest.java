@@ -382,6 +382,33 @@ class JsonDecoderTest {
     }
 
     @Test
+    void listKeepsNullElementsInOrder() {
+        var result = assertOk(net.unit8.raoh.json.JsonDecoders.list(nullable(string()))
+                .decode(parse("[null,\"x\",null]"), Path.ROOT));
+        assertEquals(java.util.Arrays.asList(null, "x", null), result);
+        assertThrows(UnsupportedOperationException.class, () -> result.add("y"));
+    }
+
+    @Test
+    void mapKeepsNullValues() {
+        var result = assertOk(net.unit8.raoh.json.JsonDecoders.map(nullable(string()))
+                .decode(parse("{\"a\":null}"), Path.ROOT));
+        assertTrue(result.containsKey("a"));
+        assertNull(result.get("a"));
+        assertThrows(UnsupportedOperationException.class, () -> result.put("b", "y"));
+    }
+
+    @Test
+    void mapKeepsJsonPropertyOrder() {
+        // The same properties in two different orders: each output must follow its own input.
+        var dec = net.unit8.raoh.json.JsonDecoders.map(int_());
+        assertEquals(List.of("z", "y", "x", "w", "v", "u"), List.copyOf(assertOk(dec.decode(
+                parse("{\"z\":1,\"y\":2,\"x\":3,\"w\":4,\"v\":5,\"u\":6}"), Path.ROOT)).keySet()));
+        assertEquals(List.of("u", "v", "w", "x", "y", "z"), List.copyOf(assertOk(dec.decode(
+                parse("{\"u\":6,\"v\":5,\"w\":4,\"x\":3,\"y\":2,\"z\":1}"), Path.ROOT)).keySet()));
+    }
+
+    @Test
     void resultFold() {
         var dec = field("n", int_());
         var ok = dec.decode(parse("{\"n\":42}"))
