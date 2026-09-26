@@ -54,7 +54,7 @@ public final class JsonMembershipDecoders {
      * Decodes a JSON request body into a membership-addition command.
      * <pre>{@code { "userId": 1, "role": "ADMIN" } }</pre>
      */
-    // enumOf() decodes a string into an enum constant (case-insensitive).
+    // enumOf() decodes a string into an enum constant (ASCII case-insensitive).
     // withDefault() supplies MEMBER when the "role" field is absent, making it optional.
     public static final JsonDecoder<AddMemberCommand> ADD_MEMBER = wrapJson(
             combine(

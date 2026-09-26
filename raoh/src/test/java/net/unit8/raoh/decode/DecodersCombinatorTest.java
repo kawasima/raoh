@@ -202,7 +202,7 @@ class DecodersCombinatorTest {
         assertEquals(Optional.empty(), node.next().orElseThrow().next().orElseThrow().next());
     }
 
-    // --- enumOf: case-insensitive name lookup, invalid_format on miss ---
+    // --- enumOf: ASCII case-insensitive name lookup, invalid_format on miss ---
 
     enum Color { RED, GREEN, BLUE }
 
@@ -213,7 +213,7 @@ class DecodersCombinatorTest {
 
     @Test
     void enumOfIsCaseInsensitive() {
-        // Spec: "Decodes a string into an enum constant (case-insensitive)."
+        // Spec: ASCII case-insensitive; A-Z equal a-z, every other character matches exactly.
         assertEquals(Color.GREEN, ok(ObjectDecoders.enumOf(Color.class).decode("green")));
         assertEquals(Color.BLUE, ok(ObjectDecoders.enumOf(Color.class).decode("bLuE")));
     }
@@ -249,8 +249,9 @@ class DecodersCombinatorTest {
         var dec = ObjectDecoders.enumOf(Thread.State.class);
         assertEquals(Thread.State.BLOCKED, ok(dec.decode("BLOCKED")));
         assertEquals(Thread.State.BLOCKED, ok(dec.decode("bLoCkEd")));
-        // U+212A KELVIN SIGN lower-cases to 'k' under Unicode case mapping; it is not ASCII.
-        assertInstanceOf(Err.class, dec.decode("blo\u212Aed"));
+        // "bloc" + U+212A KELVIN SIGN + "ed": String.toLowerCase(Locale.ROOT) turns it into "blocked",
+        // so the old implementation accepted it. It is not an ASCII letter and must not match.
+        assertInstanceOf(Err.class, dec.decode("bloc\u212Aed"));
     }
 
     @Test

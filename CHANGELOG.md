@@ -14,7 +14,7 @@ detailed from the current development cycle onward.
 
 - **`enumOf()` and `toBool()` match ASCII case-insensitively.** They compared with
   `String.toLowerCase(Locale.ROOT)`, so the JDK's Unicode case mapping decided what was accepted;
-  on Java 25 `blocKed` (U+212A KELVIN SIGN) decoded to `Thread.State.BLOCKED`. Case-insensitive now
+  on Java 25 `blocKed` (with U+212A KELVIN SIGN as the fifth letter) decoded to `Thread.State.BLOCKED`. Case-insensitive now
   means `A`-`Z` equal `a`-`z` and nothing else; every other character must match exactly, so the
   accepted names no longer depend on the JDK's Unicode version. Constants with non-ASCII letters
   (`enum Wide { Ａ }`) no longer match their lower-case forms, and `allowed` lists them as declared.

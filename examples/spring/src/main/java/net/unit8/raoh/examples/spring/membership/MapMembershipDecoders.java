@@ -47,7 +47,7 @@ public final class MapMembershipDecoders {
                     field("group_id", long_()).map(GroupId::new),
                     field("group_name", string()),
                     // enumOf() decodes the stored role string into the MembershipRole enum
-                    // (case-insensitive). The DB column is NOT NULL so string() without nullable
+                    // (ASCII case-insensitive). The DB column is NOT NULL so string() without nullable
                     // is appropriate as the base.
                     field("role", enumOf(MembershipRole.class))
             ).map(GroupMembership::new);

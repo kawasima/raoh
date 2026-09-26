@@ -889,7 +889,7 @@ class MapDecoderTest {
     @Test
     void toBoolTreatsNonAsciiAsDifferentFromAscii() {
         var dec = field("agree", string().toBool());
-        // U+212A KELVIN SIGN; U+0130 lower-cases to "i" + U+0307 under Unicode mapping
+        // Non-ASCII look-alikes and full-width letters are not ASCII letters
         for (var input : new String[]{"\u0130", "on\u212A", "yeſ", "ＴＲＵＥ"}) {
             assertInstanceOf(Err.class, dec.decode(Map.of("agree", input)), input);
         }
