@@ -112,6 +112,15 @@ class StringDecoderTest {
         assertEquals("must be one of [a, b]", issue.message());
     }
 
+    @Test
+    void oneOfListsAllowedValuesInCodePointOrder() {
+        // U+1F600 is a surrogate pair starting at U+D83D, so String.compareTo puts it before
+        // U+FF21; by code point it comes after.
+        var issue = decodeErr(string().oneOf("\ud83d\ude00", "\uff21", "a"), "z");
+        assertEquals(java.util.List.of("a", "\uff21", "\ud83d\ude00"), issue.meta().get("allowed"));
+        assertEquals("must be one of [a, \uff21, \ud83d\ude00]", issue.message());
+    }
+
     // --- pattern ---
 
     @Test

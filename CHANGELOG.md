@@ -50,6 +50,14 @@ detailed from the current development cycle onward.
   `ResourceBundleMessageResolver` falls back from the message key to the code. Since
   `Issue.equals` compares `messageKey`, an expected `Issue` built with
   `Issue.of(path, "invalid_format", "not a valid email")` no longer equals the one `email()` emits.
+- **String `allowed` lists are in code point order.** `StringDecoder.oneOf()` and `discriminate()`
+  sorted the values they report with `String.compareTo`, which compares UTF-16 code units. Where a
+  character above U+FFFF meets one in U+E000–U+FFFF the two orders disagree: `compareTo` puts
+  `"😀"` (U+1F600, a surrogate pair from U+D83D) before `"Ａ"` (U+FF21). `enumOf()` did not sort at
+  all and reported its lower-cased constant names in `HashMap` order, which no version of Raoh
+  promised. All three now sort with the new `CodePointOrder`, the order Raoh for Rust sorts strings
+  in. Every string `allowed` Raoh reports follows this order, and `CodePointOrder.sorted()` lets a
+  custom decoder follow it too. The numeric `oneOf()` checks keep reporting theirs in numeric order.
 
 ## [0.7.2] - 2026-08-07
 

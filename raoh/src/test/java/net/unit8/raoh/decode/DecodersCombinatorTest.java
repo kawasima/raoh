@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -223,10 +222,22 @@ class DecodersCombinatorTest {
             case Err<Color>(var issues) -> {
                 var issue = issues.asList().getFirst();
                 assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
-                // Spec: the error lists the accepted values — the lower-cased constant names.
-                var allowed = (List<?>) issue.meta().get("allowed");
-                assertEquals(Set.of("red", "green", "blue"), Set.copyOf(allowed));
+                // Spec: the error lists the accepted values — the lower-cased constant names,
+                // in code point order rather than declaration order.
+                assertEquals(List.of("blue", "green", "red"), issue.meta().get("allowed"));
             }
+        }
+    }
+
+    /** Constant names whose lower case is U+FF41 and U+10428, which String.compareTo orders the other way. */
+    enum Wide { Ａ, 𐐀 }
+
+    @Test
+    void enumOfListsAllowedInCodePointOrder() {
+        switch (ObjectDecoders.enumOf(Wide.class).decode("x")) {
+            case Ok<Wide>(var v) -> fail("expected Err, got " + v);
+            case Err<Wide>(var issues) ->
+                    assertEquals(List.of("ａ", "𐐨"), issues.asList().getFirst().meta().get("allowed"));
         }
     }
 

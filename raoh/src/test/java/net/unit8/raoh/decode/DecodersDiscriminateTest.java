@@ -48,6 +48,16 @@ class DecodersDiscriminateTest {
     }
 
     @Test
+    void unknownTagListsTheTagsInCodePointOrder() {
+        Decoder<String, Animal> dec = discriminate("type", TAG,
+                variant("\ud83d\ude00", DOG),
+                variant("\uff21", CAT),
+                variant("dog", DOG));
+        var issue = assertErr(dec.decode("fish:nemo"));
+        assertEquals(java.util.List.of("dog", "\uff21", "\ud83d\ude00"), issue.meta().get("allowed"));
+    }
+
+    @Test
     void zeroVariantsFailsEveryTag() {
         // Explicit decision: zero variants is allowed and always fails NOT_ALLOWED, matching
         // discriminate(fieldName, tagDec, Map.of()).
