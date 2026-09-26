@@ -87,11 +87,25 @@ public final class Path {
     /**
      * Converts this path to a JSON Pointer string (RFC 6901).
      *
+     * <p>Each segment is written as a reference token: {@code ~} becomes {@code ~0} and {@code /}
+     * becomes {@code ~1}. A segment {@code "a/b"} is therefore {@code "/a~1b"}, distinct from the
+     * two segments {@code "a"} and {@code "b"} ({@code "/a/b"}), so two different paths never share
+     * a pointer. {@link #segments()} keeps the raw, unescaped names.
+     *
      * @return the JSON Pointer (e.g., {@code "/address/city"}), or empty string for root
      */
     public String toJsonPointer() {
         if (parent == null) return "";
-        return "/" + String.join("/", segments());
+        var sb = new StringBuilder();
+        for (var seg : segments()) {
+            sb.append('/').append(escapeReferenceToken(seg));
+        }
+        return sb.toString();
+    }
+
+    private static String escapeReferenceToken(String segment) {
+        // '~' first: escaping '/' first would turn the '~' of the '~1' it produces into '~0'.
+        return segment.replace("~", "~0").replace("/", "~1");
     }
 
     @Override

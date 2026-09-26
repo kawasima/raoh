@@ -159,6 +159,22 @@ class JsonDecoderTest {
     }
 
     @Test
+    void fieldNameWithSlashOrTildeIsEscapedInPath() throws Exception {
+        // The member "b" of "a" and the member "a/b" must not be reported at the same pointer.
+        var dec = combine(
+                field("a", combine(field("b", int_()), field("c", int_())).map((b, c) -> b)),
+                field("a/b", int_()),
+                field("~c", int_()))
+                .map((x, y, z) -> x);
+        switch (dec.decode(mapper.readTree("{\"a\":{\"c\":1}}"))) {
+            case Ok(_) -> fail("Expected Err");
+            case Err(var issues) -> assertEquals(
+                    List.of("/a/b", "/a~1b", "/~0c"),
+                    issues.asList().stream().map(i -> i.path().toJsonPointer()).toList());
+        }
+    }
+
+    @Test
     void moneyValid() {
         var json = parse("""
                 {"amount": 1500, "currency": "jpy"}
