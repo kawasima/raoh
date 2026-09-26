@@ -37,6 +37,10 @@ class ShippedDocsTest {
      * baseline: the markers in the markdown are what ships, and this list is what raoh has promised.
      * A new section is added here in the same change that adds its marker. A name that has shipped
      * in a release is never renamed or removed; reword the heading instead.
+     *
+     * <p>This does not compare against the last release: a change that edits both a marker and this
+     * list passes. What it does is keep a rename from happening as a side effect of editing prose,
+     * and put every change to the published names in this file, where a reviewer sees it.
      */
     private static final List<String> TUTORIAL_SECTIONS = List.of(
             "why-decoders",

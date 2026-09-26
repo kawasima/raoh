@@ -86,8 +86,14 @@ carries one, and both files use the same name above the corresponding heading.
 A published name is part of the API. Reword, renumber or translate the heading freely, but do not
 rename or remove the name once a release has carried it, for the same reason a method is not
 renamed. `ShippedDocsTest` holds the names that have shipped and fails when a guide stops declaring
-one. When you add a section, add a marker to both tutorials and the name to that list in the same
-change. Names are lower-case words joined by hyphens, without the section number.
+one. It does not compare against the last release, so a change to that list is itself the thing to
+review: removing or renaming an entry there is a breaking change. When you add a section, add a
+marker to both tutorials and the name to that list in the same change. Names are lower-case words joined by hyphens, without the section number.
+
+Souther rewrites `{{name}}` and `{{name:argument}}` anywhere in a guide, code blocks included, and
+refuses a name it does not know, which stops `souther doc` for every library. The guides do not use
+that notation; write a template placeholder some other way, for example with a space inside the
+braces.
 
 ### Tests
 

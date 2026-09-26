@@ -45,11 +45,42 @@ class ShippedDocSectionsTest {
     }
 
     @Test
-    void aDeclarationInsideAFenceIsRefused() {
+    void aDeclarationInsideAFenceIsOnlySampleText() {
+        // Souther reads fenced lines as they stand, so a guide may show the notation itself.
+        assertEquals(List.of(new ShippedDocSections.Heading(null, 2, "After", 6)),
+                ShippedDocSections.headings("t", """
+                        ```markdown
+                        <!-- souther-section: Not_Raoh_Style -->
+                        ## Example
+                        <!-- souther-section: dangling -->
+                        ```
+                        ## After
+                        """));
+    }
+
+    @Test
+    void aDeclarationAboveAFenceIsRefused() {
         assertThrows(IllegalArgumentException.class, () -> ShippedDocSections.headings("t", """
-                ```markdown
                 <!-- souther-section: flat -->
+                ```
                 ## Flat
+                ```
+                """));
+    }
+
+    @Test
+    void anAffordanceIsRefusedEvenInsideAFence() {
+        for (String text : List.of("See {{stdlib-api}}.\n", "```\n{{stdlib-source:list}}\n```\n")) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> ShippedDocSections.headings("t", text), text);
+        }
+    }
+
+    @Test
+    void aDoubleBraceInitializerIsNotAnAffordance() {
+        assertDoesNotThrow(() -> ShippedDocSections.headings("t", """
+                ```java
+                new HashMap<>() {{ put("a", 1); }};
                 ```
                 """));
     }
