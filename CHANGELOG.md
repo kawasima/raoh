@@ -137,8 +137,10 @@ detailed from the current development cycle onward.
   are read, for example with `ResultSet.getObject(column, LocalDate.class)`, or with jOOQ
   fields typed as `LocalDate`, `LocalTime` and `LocalDateTime`. The build now also runs forbidden-apis
   against the JDK calls that read the default time zone, kept complete by a test that walks the
-  JDK bytecode back from `TimeZone.getDefaultRef()`, `TimeZone.getDefault()`,
-  `ZoneId.systemDefault()` and `Clock.systemDefaultZone()`, as #136 did for the default locale
+  JDK bytecode back from `TimeZone.getDefaultRef()`, as #136 did for the default locale. The
+  walk is not limited in how many public methods it passes through, since the zone reaches
+  `LocalDate.now()` through three of them; paths where the zone does not reach the caller's
+  result are cut at reviewed JDK methods instead
   ([#141](https://github.com/kawasima/raoh/issues/141)).
 - **String conversions accept a grammar Raoh defines, not whatever the JDK parser accepts.**
   `uuid()`, `toInt()`, `toLong()`, `toDecimal()`, `date()`, `time()`, `dateTime()`,

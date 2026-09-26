@@ -6,12 +6,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -59,19 +55,17 @@ class DefaultLocaleApiAuditTest {
 
     @BeforeAll
     static void scanTheJdk() throws IOException {
-        int release = Integer.parseInt(requiredProperty("raoh.release"));
-        var dir = Path.of(requiredProperty("raoh.forbiddenApisDir"));
-        banned = JdkCallGraph.signatures(Files.readAllLines(dir.resolve("default-locale.txt"), StandardCharsets.UTF_8));
-        reviewed = JdkCallGraph.reviewedEntries(Files.readAllLines(dir.resolve("default-locale-reviewed.txt"),
-                StandardCharsets.UTF_8), "default-locale-reviewed.txt");
-        var raw = JdkCallGraph.ofSystem().scanBackwards(ROOTS, reviewed.keySet(), MAX_PUBLIC_HOPS);
-        var inRelease = JdkCallGraph.releaseApi(release);
-        scan = new Scan(raw.readers().stream().filter(inRelease).collect(Collectors.toSet()), raw.reachedStops());
+        banned = JdkCallGraph.signatures(JdkCallGraph.forbiddenApisFile("default-locale.txt"));
+        reviewed = JdkCallGraph.reviewedEntries(JdkCallGraph.forbiddenApisFile("default-locale-reviewed.txt"),
+                "default-locale-reviewed.txt");
+        scan = JdkCallGraph.ofSystem().scanBackwards(ROOTS, reviewed.keySet(), MAX_PUBLIC_HOPS)
+                .filterReaders(JdkCallGraph.releaseApi(JdkCallGraph.compilerRelease()));
     }
 
     @Test
     void everyJdkApiThatReadsTheDefaultLocaleIsBanned() {
-        var uncovered = scan.readers().stream().filter(sig -> !JdkCallGraph.isBanned(sig, banned)).sorted().toList();
+        var uncovered = scan.readers().stream().filter(sig -> !JdkCallGraph.isBanned(sig, banned)).sorted()
+                .map(scan::describe).toList();
         assertTrue(uncovered.isEmpty(), () -> "These JDK methods read the default locale but are not banned."
                 + " Add each to forbidden-apis/default-locale.txt, or, if the locale cannot reach the"
                 + " caller's result, add the JDK method on the path where it is dropped to"
@@ -98,11 +92,5 @@ class DefaultLocaleApiAuditTest {
                 () -> assertTrue(scan.readers().contains("java.lang.String#toLowerCase()")),
                 () -> assertTrue(scan.readers().contains("java.lang.String#format(java.lang.String,java.lang.Object[])")),
                 () -> assertTrue(scan.readers().contains("java.text.ListFormat#getInstance()")));
-    }
-
-    static String requiredProperty(String name) {
-        var value = System.getProperty(name);
-        assertNotNull(value, "system property " + name + " is set by the surefire configuration in raoh/pom.xml");
-        return value;
     }
 }

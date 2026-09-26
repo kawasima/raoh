@@ -12,7 +12,11 @@ import java.lang.module.ModuleFinder;
 import java.lang.module.ModuleReference;
 import java.lang.reflect.AccessFlag;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -28,6 +32,8 @@ import javax.lang.model.element.ExecutableElement;
 import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
 import javax.tools.ToolProvider;
+
+import org.jspecify.annotations.Nullable;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -46,8 +52,38 @@ final class JdkCallGraph {
     /** A method reference in JVM internal form. */
     record MethodRef(String owner, String name, String descriptor) {}
 
-    /** The public API methods that reach a root, and the reviewed stops the walk reached. */
-    record Scan(Set<String> readers, Set<String> reachedStops) {}
+    /**
+     * The public API methods that reach a root, and the reviewed stops the walk reached.
+     *
+     * @param readers      the public API methods, as signatures
+     * @param reachedStops the stops the walk reached
+     * @param paths        for each reader, one call path from it down to a root
+     */
+    record Scan(Set<String> readers, Set<String> reachedStops, Map<String, List<String>> paths) {
+
+        /**
+         * Keeps only the readers the predicate accepts.
+         *
+         * @param keep the predicate
+         * @return the narrowed scan
+         */
+        Scan filterReaders(Predicate<String> keep) {
+            var kept = readers.stream().filter(keep).collect(Collectors.toSet());
+            var keptPaths = new HashMap<String, List<String>>();
+            kept.forEach(r -> keptPaths.put(r, paths.get(r)));
+            return new Scan(kept, reachedStops, keptPaths);
+        }
+
+        /**
+         * Describes a reader with the call path by which it reaches a root.
+         *
+         * @param reader a reader's signature
+         * @return the signature followed by its path
+         */
+        String describe(String reader) {
+            return reader + "\n      via " + String.join("\n       -> ", paths.getOrDefault(reader, List.of()));
+        }
+    }
 
     private static JdkCallGraph system;
 
@@ -90,33 +126,50 @@ final class JdkCallGraph {
     Scan scanBackwards(Set<MethodRef> roots, Set<String> stops, int maxPublicHops) {
         var readers = new HashSet<String>();
         var reachedStops = new HashSet<String>();
+        var paths = new HashMap<String, List<String>>();
         for (var root : roots) {
             var fewestHops = new HashMap<MethodRef, Integer>();
-            var queue = new ArrayDeque<Map.Entry<MethodRef, Integer>>();
-            queue.add(Map.entry(root, 0));
+            var reachedFrom = new HashMap<MethodRef, MethodRef>();
+            var rootReaders = new HashSet<MethodRef>();
+            var queue = new ArrayDeque<Step>();
+            queue.add(new Step(root, null, 0));
             while (!queue.isEmpty()) {
-                var entry = queue.poll();
-                var method = entry.getKey();
-                int hops = entry.getValue();
+                var step = queue.poll();
+                var method = step.method();
+                int hops = step.hops();
                 var known = fewestHops.get(method);
                 if (known != null && known <= hops) continue;
                 fewestHops.put(method, hops);
+                if (step.callee() != null) reachedFrom.put(method, step.callee());
                 var signature = signature(method);
                 if (stops.contains(signature)) {
                     reachedStops.add(signature);
                     continue;
                 }
                 boolean isApi = api.contains(method);
-                if (isApi) readers.add(signature);
+                if (isApi) {
+                    readers.add(signature);
+                    rootReaders.add(method);
+                }
                 int next = isApi && !method.equals(root) ? hops + 1 : hops;
                 if (next > maxPublicHops) continue;
                 for (var caller : callers.getOrDefault(method, Set.of())) {
-                    queue.add(Map.entry(caller, next));
+                    queue.add(new Step(caller, method, next));
                 }
             }
+            for (var reader : rootReaders) {
+                var path = new ArrayList<String>();
+                for (var m = reachedFrom.get(reader); m != null; m = reachedFrom.get(m)) {
+                    path.add(signature(m));
+                }
+                paths.putIfAbsent(signature(reader), List.copyOf(path));
+            }
         }
-        return new Scan(readers, reachedStops);
+        return new Scan(readers, reachedStops, paths);
     }
+
+    /** A method the walk reached, the callee it was reached from, and the public methods passed. */
+    private record Step(MethodRef method, @Nullable MethodRef callee, int hops) {}
 
     private static JdkCallGraph build() throws IOException {
         var calls = new HashMap<MethodRef, Set<MethodRef>>();
@@ -252,6 +305,34 @@ final class JdkCallGraph {
             });
             return known.contains(signature.substring(signature.indexOf('#') + 1).replace('$', '.'));
         };
+    }
+
+    /**
+     * Returns the {@code --release} the library is compiled for, as the surefire configuration
+     * passes it.
+     *
+     * @return the release
+     */
+    static int compilerRelease() {
+        return Integer.parseInt(requiredProperty("raoh.release"));
+    }
+
+    /**
+     * Reads a file of the {@code forbidden-apis} directory, as the surefire configuration
+     * locates it.
+     *
+     * @param name the file name
+     * @return the file's lines
+     * @throws IOException if the file cannot be read
+     */
+    static List<String> forbiddenApisFile(String name) throws IOException {
+        return Files.readAllLines(Path.of(requiredProperty("raoh.forbiddenApisDir")).resolve(name), StandardCharsets.UTF_8);
+    }
+
+    private static String requiredProperty(String name) {
+        var value = System.getProperty(name);
+        assertNotNull(value, "system property " + name + " is set by the surefire configuration in raoh/pom.xml");
+        return value;
     }
 
     /**
