@@ -21,6 +21,13 @@ detailed from the current development cycle onward.
   lost the prefix it asked for, although its metadata carries it. This is the gap
   [#125](https://github.com/kawasima/raoh/pull/125) closed for `out_of_range`, left open for
   `invalid_format`.
+- **`Path.toJsonPointer()` escapes `~` and `/` in a segment, as RFC 6901 requires.** It joined the
+  raw segments with `/`, so a field named `a/b` and the member `b` of `a` were both reported at
+  `/a/b`, and `Issues.flatten()` and `groupByPath()`, which key their output by this string, merged
+  the two into one entry. A segment now writes `~` as `~0` and `/` as `~1`: `a/b` is `/a~1b` and
+  `~c` is `/~0c`. `segments()`, `equals()` and `format()` work on the raw names and are unchanged.
+  Callers that compare path strings for field names containing `/` or `~` see the new form
+  ([#126](https://github.com/kawasima/raoh/issues/126)).
 - **A partial locale bundle is no longer overridden by the base bundle's refined keys.**
   `ResourceBundleMessageResolver` searched `raoh.<messageKey>` and then `raoh.<code>` over the
   bundle `ResourceBundle.getBundle` returns, and that bundle answers for its parents too. With

@@ -149,11 +149,12 @@ Each error includes:
 - `message`
 - `meta`
 
-Paths use JSON Pointer-like notation, for example:
+Paths are written as RFC 6901 JSON Pointers, for example:
 
 - `/email`
 - `/address/city`
 - `/items/0/name`
+- `/a~1b` for a field named `a/b` (`~` is written `~0`, `/` is written `~1`)
 
 `Issues` can be merged, rebased, flattened, formatted, or converted to JSON-like data.
 

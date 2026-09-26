@@ -117,6 +117,44 @@ class IssuesTest {
         assertEquals(List.of("is required", "not a valid email"), email.get("_errors"));
     }
 
+    // --- keys containing '/' or '~' ---
+
+    private static final Issue A_B_REQUIRED =
+            Issue.of(Path.of("a", "b"), ErrorCodes.REQUIRED, "is required");
+    private static final Issue A_SLASH_B_REQUIRED =
+            Issue.of(Path.of("a/b"), ErrorCodes.REQUIRED, "is required");
+
+    @Test
+    void flattenKeepsSlashKeyApartFromNestedPath() {
+        var flat = Issues.EMPTY.add(A_B_REQUIRED).add(A_SLASH_B_REQUIRED).flatten();
+        assertEquals(List.of("/a/b", "/a~1b"), List.copyOf(flat.keySet()));
+    }
+
+    @Test
+    void groupByPathKeepsSlashKeyApartFromNestedPath() {
+        var grouped = Issues.EMPTY.add(A_B_REQUIRED).add(A_SLASH_B_REQUIRED).groupByPath();
+        assertEquals(List.of(A_B_REQUIRED), grouped.get("/a/b"));
+        assertEquals(List.of(A_SLASH_B_REQUIRED), grouped.get("/a~1b"));
+    }
+
+    @Test
+    void toJsonListEscapesPath() {
+        var json = Issues.EMPTY.add(A_SLASH_B_REQUIRED)
+                .add(Issue.of(Path.of("~c"), ErrorCodes.REQUIRED, "is required"))
+                .toJsonList();
+        assertEquals("/a~1b", json.get(0).get("path"));
+        assertEquals("/~0c", json.get(1).get("path"));
+    }
+
+    @Test
+    void formatUsesRawSegmentsAsKeys() {
+        // format() nests by raw segment names, so "a" -> "b" and "a/b" stay separate keys.
+        var formatted = Issues.EMPTY.add(A_B_REQUIRED).add(A_SLASH_B_REQUIRED).format();
+        var b = asMap(asMap(formatted.get("a")).get("b"));
+        assertEquals(List.of("is required"), b.get("_errors"));
+        assertEquals(List.of("is required"), asMap(formatted.get("a/b")).get("_errors"));
+    }
+
     @Test
     void emptyIssuesReportEmpty() {
         assertTrue(Issues.EMPTY.isEmpty());
