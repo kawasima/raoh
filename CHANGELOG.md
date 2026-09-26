@@ -157,10 +157,19 @@ detailed from the current development cycle onward.
   converts a finite `Double` or `Float` to the decimal its `toString()` prints, as before, and
   rejects `NaN` and infinities. Other `Number` types, such as `AtomicInteger`, `AtomicLong`,
   `LongAdder` or a custom subclass, now report `type_mismatch`; convert them to a JDK number
-  before decoding. The `JsonDecoders` numeric decoders read the node's value with
-  `numberValue()` and hand it to the `ObjectDecoders` decoder, so both routes follow the same
-  rules. `JsonDecoders.int_()` and `long_()` also accept a `BigInteger` node whose value fits,
-  and reject a fractional literal whether or not the mapper keeps it as `BigDecimal`
+  before decoding. The `JsonDecoders` numeric decoders decide which JSON numbers they admit, then
+  read the node's value with `numberValue()` and hand it to the `ObjectDecoders` decoder, so the
+  conversion to the target type follows the same rules on both routes. `JsonDecoders.int_()` and
+  `long_()` admit only an integer literal: they reject `1.0` whether or not the mapper keeps it
+  as `BigDecimal`, although `ObjectDecoders.int_()` accepts an integral `BigDecimal`. They also
+  accept a `BigInteger` node whose value fits. `StringDecoder.toInt()` and `toLong()` report a
+  well-formed integer outside the range with the same `type_mismatch.numeric_range` key, so
+  `"5000000000"` and `5000000000L` fail alike. The `JooqRecordDecoders` field decoders hand
+  jOOQ's unsigned types (`UByte`, `UShort`, `UInteger`, `ULong`, used for MySQL / MariaDB
+  `UNSIGNED` columns) to the value decoder as the `BigInteger` they hold, so `int_()` and the
+  other numeric decoders keep accepting them, and a `ULong` beyond the `long` range fails
+  instead of wrapping. A custom value decoder that matched on those jOOQ types now receives a
+  `BigInteger`
   ([#152](https://github.com/kawasima/raoh/issues/152)).
 - **String conversions accept a grammar Raoh defines, not whatever the JDK parser accepts.**
   `uuid()`, `toInt()`, `toLong()`, `toDecimal()`, `date()`, `time()`, `dateTime()`,

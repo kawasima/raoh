@@ -9,8 +9,13 @@ import net.unit8.raoh.decode.combinator.CombinePart;
 import net.unit8.raoh.decode.ObjectDecoders;
 import net.unit8.raoh.decode.combinator.*;
 
+import org.jooq.types.UByte;
+import org.jooq.types.UInteger;
+import org.jooq.types.ULong;
+import org.jooq.types.UShort;
 import org.jspecify.annotations.Nullable;
 
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -26,10 +31,37 @@ import java.util.Optional;
  *
  * <p>For primitive decoders ({@code string()}, {@code int_()}, etc.) that work on raw
  * {@code Object} values extracted from a jOOQ record, see {@link net.unit8.raoh.decode.ObjectDecoders}.
+ *
+ * <p>jOOQ's unsigned types ({@link UByte}, {@link UShort}, {@link UInteger}, {@link ULong}, used
+ * for MySQL / MariaDB {@code UNSIGNED} columns) are handed to the value decoder as the
+ * {@link java.math.BigInteger} they hold, so the {@code ObjectDecoders} numeric decoders accept
+ * them by their value. Every other column value is handed over as jOOQ returns it.
  */
 public final class JooqRecordDecoders {
 
     private JooqRecordDecoders() {}
+
+    /**
+     * Reads a column's value, turning a jOOQ unsigned number into the {@link BigInteger} it holds.
+     * The {@code ObjectDecoders} numeric decoders accept only JDK number types, so this is where
+     * the jOOQ representation is observed, as {@code JsonDecoders} observes a JSON number with
+     * {@code numberValue()}. The four types are final, so matching them by type admits no subclass;
+     * {@code UNumber} itself is abstract and open, so it is not matched.
+     *
+     * @param in the record
+     * @param name the column name
+     * @return the column value, with an unsigned number as a {@code BigInteger}
+     */
+    private static @Nullable Object value(org.jooq.Record in, String name) {
+        Object value = in.get(name);
+        return switch (value) {
+            case UByte u -> u.toBigInteger();
+            case UShort u -> u.toBigInteger();
+            case UInteger u -> u.toBigInteger();
+            case ULong u -> u.toBigInteger();
+            case null, default -> value;
+        };
+    }
 
     // --- field / optionalField / optionalNullableField ---
 
@@ -49,7 +81,7 @@ public final class JooqRecordDecoders {
             if (in.field(name) == null) {
                 return Result.fail(fieldPath, ErrorCodes.MISSING_FIELD, "field '" + name + "' not found in record");
             }
-            return dec.decode(in.get(name), fieldPath);
+            return dec.decode(value(in, name), fieldPath);
         });
     }
 
@@ -67,7 +99,7 @@ public final class JooqRecordDecoders {
             if (in == null || in.field(name) == null) {
                 return Result.ok(Optional.empty());
             }
-            return dec.decode(in.get(name), fieldPath).map(Optional::of);
+            return dec.decode(value(in, name), fieldPath).map(Optional::of);
         });
     }
 
@@ -85,7 +117,7 @@ public final class JooqRecordDecoders {
             if (in == null || in.field(name) == null) {
                 return Result.ok(new Presence.Absent<>());
             }
-            var value = in.get(name);
+            var value = value(in, name);
             if (value == null) {
                 return Result.ok(new Presence.PresentNull<>());
             }
@@ -122,7 +154,7 @@ public final class JooqRecordDecoders {
             if (in == null || in.field(name) == null) {
                 return Result.<@Nullable T>ok(null);
             }
-            var value = in.get(name);
+            var value = value(in, name);
             if (value == null) {
                 return Result.<@Nullable T>ok(null);
             }

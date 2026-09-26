@@ -495,4 +495,45 @@ class JooqDecoderTest {
         assertEquals(ErrorCodes.MISSING_FIELD, byPath.get("/age").getFirst().code());
         assertEquals(ErrorCodes.MISSING_FIELD, byPath.get("/email").getFirst().code());
     }
+
+    // -------------------------------------------------------------------------
+    // Unsigned columns
+    // -------------------------------------------------------------------------
+
+    @Test
+    void unsignedValuesDecodeByTheirValue() {
+        var r = record(
+                "b", org.jooq.types.UByte.valueOf(255),
+                "s", org.jooq.types.UShort.valueOf(65535),
+                "i", org.jooq.types.UInteger.valueOf(7),
+                "l", org.jooq.types.ULong.valueOf("18446744073709551615"));
+        assertEquals(255, decoded(field("b", int_()), r));
+        assertEquals(65535L, decoded(field("s", long_()), r));
+        assertEquals(7, decoded(field("i", int_()), r));
+        assertEquals(new BigDecimal("18446744073709551615"), decoded(field("l", decimal()), r));
+        assertEquals(Optional.of(7), decoded(optionalField("i", int_()), r));
+        assertEquals(new Presence.Present<>(7), decoded(optionalNullableField("i", int_()), r));
+        assertEquals(7, decoded(nullableField("i", int_()), r));
+    }
+
+    @Test
+    void unsignedValueOutsideTheTargetRangeFails() {
+        // ULong's maximum is 2^64 - 1, beyond long; it fails instead of wrapping to -1.
+        var r = record("l", org.jooq.types.ULong.valueOf("18446744073709551615"));
+        switch (field("l", long_()).asDecoder().decode(r)) {
+            case Ok<Long> ok -> fail("Expected Err but got: " + ok);
+            case Err<Long>(var issues) -> {
+                assertEquals(ErrorCodes.TYPE_MISMATCH, issues.asList().getFirst().code());
+                assertEquals("type_mismatch.numeric_range", issues.asList().getFirst().messageKey());
+            }
+        }
+    }
+
+    private static <T> T decoded(net.unit8.raoh.decode.combinator.CombinePart<org.jooq.Record, T> part,
+                                 org.jooq.Record r) {
+        return switch (part.asDecoder().decode(r)) {
+            case Ok<T>(var v) -> v;
+            case Err<T>(var issues) -> fail("Expected Ok but got: " + issues);
+        };
+    }
 }
