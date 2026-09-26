@@ -555,7 +555,7 @@ The `net.unit8.raoh.decode.Decoders` class provides reusable combinators.
 - `strict(...)`
   Rejects unknown fields.
 - `enumOf(...)`
-  Matches enum constants case-insensitively.
+  Matches enum constants ASCII case-insensitively.
 - `literal(...)`
   Matches one exact string value.
 
@@ -610,7 +610,7 @@ field("currency", enumOf(Currency.class))
 field("kind", literal("email"))
 ```
 
-`enumOf(...)` is case-insensitive. `literal(...)` is exact.
+`enumOf(...)` is ASCII case-insensitive. `literal(...)` is exact.
 
 ### `withDefault(...)` vs `recover(...)`
 

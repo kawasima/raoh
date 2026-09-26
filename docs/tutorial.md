@@ -224,7 +224,7 @@ string().toDecimal().decode("abc")
 // ==> Err[/: expected decimal]
 ```
 
-`toBool()` recognises common form-data representations, case-insensitively.
+`toBool()` recognises common form-data representations, ASCII case-insensitively.
 
 ```java
 string().toBool().decode("true")
@@ -660,7 +660,7 @@ profilePatchDec.decode(Map.of("nickname", "alice"))
 <!-- souther-section: enums -->
 ## 10. Decoding enum values
 
-Java enums can be decoded case-insensitively.
+Java enums can be decoded ASCII case-insensitively.
 
 ```java
 enum Role { ADMIN, MEMBER, GUEST }

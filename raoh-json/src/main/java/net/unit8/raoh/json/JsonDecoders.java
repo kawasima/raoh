@@ -482,7 +482,7 @@ public final class JsonDecoders {
     // --- enumOf / literal ---
 
     /**
-     * Decodes a JSON string into an enum constant (case-insensitive).
+     * Decodes a JSON string into an enum constant (ASCII case-insensitive; see {@link Decoders#enumOf}).
      *
      * @param <E> the enum type
      * @param cls the enum class

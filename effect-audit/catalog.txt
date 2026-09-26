@@ -65,6 +65,7 @@ java.lang.Object#<init>()
 java.lang.Object#getClass():java.lang.Class
 java.lang.Record#<init>()
 java.lang.Short#shortValue():short
+java.lang.String#<init>(char[])  -- copies the array; a char[] has no caller-supplied code
 java.lang.String#charAt(int):char
 java.lang.String#codePointAt(int):int
 java.lang.String#codePointCount(int,int):int
@@ -81,6 +82,7 @@ java.lang.String#length():int
 java.lang.String#startsWith(java.lang.String):boolean
 java.lang.String#substring(int):java.lang.String
 java.lang.String#substring(int,int):java.lang.String
+java.lang.String#toCharArray():char[]
 java.lang.String#toString():java.lang.String
 java.lang.String#trim():java.lang.String
 java.lang.String#valueOf(int):java.lang.String

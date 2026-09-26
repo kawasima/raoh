@@ -887,6 +887,17 @@ class MapDecoderTest {
     }
 
     @Test
+    void toBoolTreatsNonAsciiAsDifferentFromAscii() {
+        var dec = field("agree", string().toBool());
+        // U+212A KELVIN SIGN; U+0130 lower-cases to "i" + U+0307 under Unicode mapping
+        for (var input : new String[]{"\u0130", "on\u212A", "yeſ", "ＴＲＵＥ"}) {
+            assertInstanceOf(Err.class, dec.decode(Map.of("agree", input)), input);
+        }
+        assertTrue(assertOk(dec.decode(Map.of("agree", "TrUe"))));
+        assertFalse(assertOk(dec.decode(Map.of("agree", "oFf"))));
+    }
+
+    @Test
     void toBoolInvalid() {
         var dec = field("agree", string().toBool());
         var result = dec.decode(Map.of("agree", "maybe"));

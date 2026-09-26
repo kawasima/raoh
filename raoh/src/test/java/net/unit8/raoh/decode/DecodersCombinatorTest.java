@@ -22,7 +22,10 @@ import static net.unit8.raoh.decode.Decoders.oneOf;
 import static net.unit8.raoh.decode.Decoders.recover;
 import static net.unit8.raoh.decode.Decoders.withDefault;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -229,7 +232,7 @@ class DecodersCombinatorTest {
         }
     }
 
-    /** Constant names whose lower case is U+FF41 and U+10428, which String.compareTo orders the other way. */
+    /** Constant names outside ASCII: U+FF21 (fullwidth A) and U+10400 (Deseret), which String.compareTo orders the other way. */
     enum Wide { Ａ, 𐐀 }
 
     @Test
@@ -237,8 +240,43 @@ class DecodersCombinatorTest {
         switch (ObjectDecoders.enumOf(Wide.class).decode("x")) {
             case Ok<Wide>(var v) -> fail("expected Err, got " + v);
             case Err<Wide>(var issues) ->
-                    assertEquals(List.of("ａ", "𐐨"), issues.asList().getFirst().meta().get("allowed"));
+                    assertEquals(List.of("Ａ", "𐐀"), issues.asList().getFirst().meta().get("allowed"));
         }
+    }
+
+    @Test
+    void enumOfFoldsOnlyAscii() {
+        var dec = ObjectDecoders.enumOf(Thread.State.class);
+        assertEquals(Thread.State.BLOCKED, ok(dec.decode("BLOCKED")));
+        assertEquals(Thread.State.BLOCKED, ok(dec.decode("bLoCkEd")));
+        // U+212A KELVIN SIGN lower-cases to 'k' under Unicode case mapping; it is not ASCII.
+        assertInstanceOf(Err.class, dec.decode("blo\u212Aed"));
+    }
+
+    @Test
+    void enumOfMatchesNonAsciiNamesExactly() {
+        var dec = ObjectDecoders.enumOf(Wide.class);
+        assertEquals(Wide.Ａ, ok(dec.decode("Ａ")));
+        assertEquals(Wide.𐐀, ok(dec.decode("𐐀")));
+        assertInstanceOf(Err.class, dec.decode("ａ"));
+        assertInstanceOf(Err.class, dec.decode("𐐨"));
+    }
+
+    enum Mixed { CaféX }
+
+    @Test
+    void enumOfFoldsOnlyTheAsciiPartOfAMixedName() {
+        var dec = ObjectDecoders.enumOf(Mixed.class);
+        assertEquals(Mixed.CaféX, ok(dec.decode("cAféx")));
+        assertInstanceOf(Err.class, dec.decode("cafÉx"));
+    }
+
+    enum Clash { A, a }
+
+    @Test
+    void enumOfRejectsConstantsThatCollideAtConstruction() {
+        var e = assertThrows(IllegalArgumentException.class, () -> ObjectDecoders.enumOf(Clash.class));
+        assertTrue(e.getMessage().contains("'A'") && e.getMessage().contains("'a'"), e.getMessage());
     }
 
     // --- helpers ---
