@@ -11,6 +11,7 @@ import net.unit8.raoh.Result;
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.decode.Decoders;
 import net.unit8.raoh.decode.InputFields;
+import net.unit8.raoh.decode.ObjectDecoders;
 import net.unit8.raoh.decode.combinator.CombinePart;
 import net.unit8.raoh.decode.builtin.BoolDecoder;
 import net.unit8.raoh.decode.builtin.DecimalDecoder;
@@ -25,7 +26,6 @@ import net.unit8.raoh.decode.combinator.*;
 
 import org.jspecify.annotations.Nullable;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.exc.JsonNodeException;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -91,120 +91,114 @@ public final class JsonDecoders {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isString()) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected string",
-                        Map.of("expected", "string", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, path, "string");
             }
             return Result.ok(in.asString());
         };
     }
 
+    // --- Numeric decoders ---
+    // Each decoder works in two steps. First it decides which JSON numbers it admits: any number,
+    // or for int_() and long_() only an integer literal. That decision is JSON's own and stays
+    // here. Then it reads the admitted node's value with numberValue() and hands it to the
+    // ObjectDecoders decoder, which owns the conversion to the target type: range checks,
+    // rounding and each source-to-target rule are defined there only.
+    //
+    // int_() and long_() must not leave a fractional literal to ObjectDecoders, which accepts an
+    // integral BigDecimal: whether 1.0 arrives as a Double or a BigDecimal depends on the
+    // mapper's USE_BIG_DECIMAL_FOR_FLOATS setting, and the result must not.
+    // JsonDecoderTest#intRejectsFractionalLiteralWhateverTheMapperConfiguration guards this.
+    //
+    // Jackson's target-typed accessors (intValue(), doubleValue(), decimalValue(), ...) are not
+    // used: they decide range and rounding by Jackson's rules, and in Jackson 3 throw
+    // JsonNodeException out of decode() for a value the target cannot hold.
+
     /**
      * Creates an integer decoder.
+     *
+     * <p>Accepts a JSON integer that fits {@code int}. Returns {@code required} for {@code null}
+     * or a missing node, and {@code type_mismatch} for a number with a fraction or exponent part
+     * (even {@code 1.0}), an integer outside the {@code int} range, and any other node type.
      *
      * @return a decoder that extracts an integer value from a JSON node
      */
     public static IntDecoder<JsonNode> int_() {
+        var base = ObjectDecoders.int_();
         return new IntDecoder<>((in, path) -> {
             if (in == null || in.isNull() || in.isMissingNode()) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
-            if (!in.isInt() && !in.isLong() && !in.isShort()) {
-                if (in.isNumber()) {
-                    return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected integer",
-                            Map.of("expected", "integer"));
-                }
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected integer",
-                        Map.of("expected", "integer", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+            if (!in.isIntegralNumber()) {
+                return typeMismatch(in, path, "integer");
             }
-            return Result.ok(in.intValue());
+            return base.decode(in.numberValue(), path);
         });
     }
 
     /**
      * Creates a long integer decoder.
      *
+     * <p>Accepts a JSON integer that fits {@code long}. Returns {@code required} for {@code null}
+     * or a missing node, and {@code type_mismatch} for a number with a fraction or exponent part
+     * (even {@code 1.0}), an integer outside the {@code long} range, and any other node type.
+     *
      * @return a decoder that extracts a long value from a JSON node
      */
     public static LongDecoder<JsonNode> long_() {
+        var base = ObjectDecoders.long_();
         return new LongDecoder<>((in, path) -> {
             if (in == null || in.isNull() || in.isMissingNode()) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
-            if (!in.isInt() && !in.isLong() && !in.isShort()) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected long",
-                        Map.of("expected", "long", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+            if (!in.isIntegralNumber()) {
+                return typeMismatch(in, path, "long");
             }
-            return Result.ok(in.longValue());
+            return base.decode(in.numberValue(), path);
         });
     }
 
     /**
      * Creates a double decoder.
      *
-     * <p>Accepts any JSON number; a value that does not fit a finite {@code double}
-     * (e.g. a very large integer literal) fails with {@code type_mismatch}, mirroring how
-     * {@link #int_()} rejects a number that does not fit its target type.
+     * <p>Accepts any JSON number, rounded to the nearest {@code double} as
+     * {@link ObjectDecoders#double_()} does. Returns {@code required} for {@code null} or a
+     * missing node, and {@code type_mismatch} for a number whose magnitude is beyond the
+     * {@code double} range (e.g. {@code 1e400}) and any other node type.
      *
      * @return a decoder that extracts a double value from a JSON node
      */
     public static DoubleDecoder<JsonNode> double_() {
+        var base = ObjectDecoders.double_();
         return new DoubleDecoder<>((in, path) -> {
             if (in == null || in.isNull() || in.isMissingNode()) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isNumber()) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
-                        Map.of("expected", "double", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, path, "double");
             }
-            try {
-                double v = in.doubleValue();
-                // A very large integer node makes Jackson 3's doubleValue() throw (caught below); a
-                // large decimal node instead yields an infinity. Reject both as out-of-range rather
-                // than returning Infinity or letting the unchecked exception escape decode().
-                if (Double.isInfinite(v)) {
-                    return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
-                            Map.of("expected", "double"));
-                }
-                return Result.ok(v);
-            } catch (JsonNodeException e) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected double",
-                        Map.of("expected", "double"));
-            }
+            return base.decode(in.numberValue(), path);
         });
     }
 
     /**
      * Creates a float decoder.
      *
-     * <p>Like {@link #double_()}, but produces a primitive {@code float}; a value that does not
-     * fit a finite {@code float} (e.g. a magnitude above the {@code float} range) fails with
-     * {@code type_mismatch}.
+     * <p>Like {@link #double_()}, but rounds to the nearest {@code float} as
+     * {@link ObjectDecoders#float_()} does; a number whose magnitude is beyond the {@code float}
+     * range (e.g. {@code 1e40}) fails with {@code type_mismatch}.
      *
      * @return a decoder that extracts a float value from a JSON node
      */
     public static FloatDecoder<JsonNode> float_() {
+        var base = ObjectDecoders.float_();
         return new FloatDecoder<>((in, path) -> {
             if (in == null || in.isNull() || in.isMissingNode()) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isNumber()) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
-                        Map.of("expected", "float", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, path, "float");
             }
-            try {
-                float v = in.floatValue();
-                // Jackson 3's floatValue() throws for most out-of-range nodes (caught below), but
-                // enforce the finite contract explicitly too — a node that narrows to Infinity
-                // without throwing must still be rejected, matching double_().
-                if (Float.isInfinite(v)) {
-                    return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
-                            Map.of("expected", "float"));
-                }
-                return Result.ok(v);
-            } catch (JsonNodeException e) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected float",
-                        Map.of("expected", "float"));
-            }
+            return base.decode(in.numberValue(), path);
         });
     }
 
@@ -219,8 +213,7 @@ public final class JsonDecoders {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isBoolean()) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected boolean",
-                        Map.of("expected", "boolean", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, path, "boolean");
             }
             return Result.ok(in.booleanValue());
         });
@@ -229,19 +222,43 @@ public final class JsonDecoders {
     /**
      * Creates a decimal (BigDecimal) decoder.
      *
+     * <p>Converts a JSON number as {@link ObjectDecoders#decimal()} does. How exact the result is
+     * depends on how the node was parsed: a JSON integer is exact, and so is a fractional number
+     * when the mapper keeps it as {@code BigDecimal}
+     * ({@code DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS});
+     * otherwise Jackson has already parsed it as a {@code double}, and the result is the decimal
+     * that {@code double} prints. Returns {@code required} for {@code null} or a missing node,
+     * and {@code type_mismatch} for any other node type.
+     *
      * @return a decoder that extracts a decimal value from a JSON node
      */
     public static DecimalDecoder<JsonNode> decimal() {
+        var base = ObjectDecoders.decimal();
         return new DecimalDecoder<>((in, path) -> {
             if (in == null || in.isNull() || in.isMissingNode()) {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isNumber()) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected number",
-                        Map.of("expected", "number", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, path, "number");
             }
-            return Result.ok(in.decimalValue());
+            return base.decode(in.numberValue(), path);
         });
+    }
+
+    /**
+     * The {@code type_mismatch} failure for a node of the wrong JSON type, naming that type as
+     * {@code actual} ({@code "string"}, {@code "number"}, {@code "null"}, ...).
+     *
+     * @param in the node, or {@code null} when there is none
+     * @param path the path of the node
+     * @param expected the type the decoder expected
+     * @param <T> the decoder's value type
+     * @return a {@code type_mismatch} failure
+     */
+    private static <T> Result<T> typeMismatch(@Nullable JsonNode in, Path path, String expected) {
+        return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected " + expected,
+                Map.of("expected", expected,
+                        "actual", in == null ? "null" : in.getNodeType().name().toLowerCase(Locale.ROOT)));
     }
 
     // --- field / optionalField / nullable ---
@@ -257,9 +274,7 @@ public final class JsonDecoders {
     public static <T> CombinePart<JsonNode, T> field(String name, Decoder<JsonNode, T> dec) {
         return CombinePart.named(name, (in, fieldPath) -> {
             if (in == null || !in.isObject()) {
-                return Result.fail(fieldPath, ErrorCodes.TYPE_MISMATCH, "expected object",
-                        Map.of("expected", "object", "actual",
-                                in == null ? "null" : in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, fieldPath, "object");
             }
             var node = in.get(name);
             if (node == null) {
@@ -410,8 +425,7 @@ public final class JsonDecoders {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isArray()) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected array",
-                        Map.of("expected", "array", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, path, "array");
             }
             var issues = Issues.EMPTY;
             var results = new ArrayList<T>();
@@ -446,8 +460,7 @@ public final class JsonDecoders {
                 return Result.fail(path, ErrorCodes.REQUIRED, "is required");
             }
             if (!in.isObject()) {
-                return Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected object",
-                        Map.of("expected", "object", "actual", in.getNodeType().name().toLowerCase(Locale.ROOT)));
+                return typeMismatch(in, path, "object");
             }
             var issues = Issues.EMPTY;
             var results = new LinkedHashMap<String, V>();

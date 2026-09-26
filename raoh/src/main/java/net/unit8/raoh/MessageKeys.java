@@ -136,4 +136,12 @@ public final class MessageKeys {
      * the offending key's type ({@code "Integer"}, {@code "null"}).
      */
     public static final String TYPE_MISMATCH_STRING_KEYS = "type_mismatch.string_keys";
+
+    /**
+     * A number the numeric decoders accept by type but whose value the target type cannot hold,
+     * such as {@code 5000000000L} for {@code int_()} or {@code 1e40} for {@code float_()}.
+     * Supplies {@code expected}, the target ({@code "integer"}, {@code "long"}, {@code "double"},
+     * {@code "float"}).
+     */
+    public static final String TYPE_MISMATCH_NUMERIC_RANGE = "type_mismatch.numeric_range";
 }

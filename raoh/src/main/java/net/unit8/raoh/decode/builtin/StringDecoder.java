@@ -975,26 +975,27 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      *
      * <p>The accepted text is an optional {@code +} or {@code -} followed by one or more ASCII
      * digits {@code 0}–{@code 9}; leading zeros are allowed ({@code +5}, {@code -0}, {@code 007}).
-     * Other Unicode digits such as full-width {@code １２３}, spaces, and a value outside the
-     * {@code int} range produce {@code type_mismatch}.
+     * Other Unicode digits such as full-width {@code １２３} and spaces produce
+     * {@code type_mismatch}; a value outside the {@code int} range produces {@code type_mismatch}
+     * with the message key {@code type_mismatch.numeric_range}.
      *
      * @param message custom error message, or {@code null} for the default
      * @return an integer decoder with the parsed value
      */
     public IntDecoder<I> toInt(@Nullable String message) {
         return new IntDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            if (LexicalRules.isInteger(value)) {
-                try {
-                    return Result.ok(Integer.parseInt(value));
-                } catch (NumberFormatException e) {
-                    // The text is well-formed but outside the int range.
-                }
+            if (!LexicalRules.isInteger(value)) {
+                return Result.failWith(path, ErrorCodes.TYPE_MISMATCH, message, "expected integer",
+                        Map.of("expected", "integer"));
             }
-            return message != null
-                    ? Result.failCustom(path, ErrorCodes.TYPE_MISMATCH, message,
-                            Map.of("expected", "integer"))
-                    : Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected integer",
-                            Map.of("expected", "integer"));
+            try {
+                return Result.ok(Integer.parseInt(value));
+            } catch (NumberFormatException e) {
+                // The text is well-formed, so it failed for being outside the int range. Reported
+                // like ObjectDecoders.int_() reports a number outside the range.
+                return Result.failWith(path, ErrorCodes.TYPE_MISMATCH, MessageKeys.TYPE_MISMATCH_NUMERIC_RANGE,
+                        message, "value is outside the integer range", Map.of("expected", "integer"));
+            }
         }));
     }
 
@@ -1016,26 +1017,27 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      *
      * <p>The accepted text is an optional {@code +} or {@code -} followed by one or more ASCII
      * digits {@code 0}–{@code 9}; leading zeros are allowed ({@code +5}, {@code -0}, {@code 007}).
-     * Other Unicode digits such as full-width {@code １２３}, spaces, and a value outside the
-     * {@code long} range produce {@code type_mismatch}.
+     * Other Unicode digits such as full-width {@code １２３} and spaces produce
+     * {@code type_mismatch}; a value outside the {@code long} range produces {@code type_mismatch}
+     * with the message key {@code type_mismatch.numeric_range}.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a long decoder with the parsed value
      */
     public LongDecoder<I> toLong(@Nullable String message) {
         return new LongDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            if (LexicalRules.isInteger(value)) {
-                try {
-                    return Result.ok(Long.parseLong(value));
-                } catch (NumberFormatException e) {
-                    // The text is well-formed but outside the long range.
-                }
+            if (!LexicalRules.isInteger(value)) {
+                return Result.failWith(path, ErrorCodes.TYPE_MISMATCH, message, "expected long",
+                        Map.of("expected", "long"));
             }
-            return message != null
-                    ? Result.failCustom(path, ErrorCodes.TYPE_MISMATCH, message,
-                            Map.of("expected", "long"))
-                    : Result.fail(path, ErrorCodes.TYPE_MISMATCH, "expected long",
-                            Map.of("expected", "long"));
+            try {
+                return Result.ok(Long.parseLong(value));
+            } catch (NumberFormatException e) {
+                // The text is well-formed, so it failed for being outside the long range. Reported
+                // like ObjectDecoders.long_() reports a number outside the range.
+                return Result.failWith(path, ErrorCodes.TYPE_MISMATCH, MessageKeys.TYPE_MISMATCH_NUMERIC_RANGE,
+                        message, "value is outside the long range", Map.of("expected", "long"));
+            }
         }));
     }
 

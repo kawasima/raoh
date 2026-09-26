@@ -137,6 +137,40 @@ detailed from the current development cycle onward.
   are read, for example with `ResultSet.getObject(column, LocalDate.class)`, or with jOOQ
   fields typed as `LocalDate`, `LocalTime` and `LocalDateTime`
   ([#141](https://github.com/kawasima/raoh/issues/141)).
+- **Breaking: the numeric decoders convert by Raoh's rules and accept only JDK number types.**
+  `ObjectDecoders.int_()`, `long_()`, `double_()`, `float_()` and `decimal()` accepted any `Number`
+  and took the value from its own `intValue()`, `longValue()`, `doubleValue()`, `floatValue()` or
+  `toString()`, so `int_()` returned `Ok[705032704]` for `5_000_000_000L` and `Ok[1]` for `1.9`,
+  and `long_()` wrapped a `BigInteger` beyond the `long` range. `decimal()` threw
+  `NumberFormatException` out of `decode()` for `NaN` and infinities, and `JsonDecoders.int_()`
+  threw `JsonNodeException` for a JSON integer beyond the `int` range. The decoders now accept
+  `Byte`, `Short`, `Integer`, `Long`, `Float`, `Double`, `BigInteger` and `BigDecimal` (the last
+  two by exact class, since a subclass can override their conversions) and convert each by a
+  rule Raoh documents. `int_()` and `long_()` return only values the input holds: an integer
+  outside the target range fails with `type_mismatch` and the new message key
+  `type_mismatch.numeric_range` ("value is outside the integer range"), and a `Double`, a
+  `Float` or a `BigDecimal` with a fractional part fails with `type_mismatch`. An integral
+  `BigDecimal` such as `5.00` is accepted, so JDBC `NUMBER` / `DECIMAL` columns read as before.
+  `double_()` and `float_()` round to the nearest value by IEEE 754 (`9007199254740993L` decodes
+  to `9007199254740992.0`). A value beyond their range still fails with `type_mismatch`, now
+  under the `type_mismatch.numeric_range` key instead of the plain one. `decimal()`
+  converts a finite `Double` or `Float` to the decimal its `toString()` prints, as before, and
+  rejects `NaN` and infinities. Other `Number` types, such as `AtomicInteger`, `AtomicLong`,
+  `LongAdder` or a custom subclass, now report `type_mismatch`; convert them to a JDK number
+  before decoding. The `JsonDecoders` numeric decoders decide which JSON numbers they admit, then
+  read the node's value with `numberValue()` and hand it to the `ObjectDecoders` decoder, so the
+  conversion to the target type follows the same rules on both routes. `JsonDecoders.int_()` and
+  `long_()` admit only an integer literal: they reject `1.0` whether or not the mapper keeps it
+  as `BigDecimal`, although `ObjectDecoders.int_()` accepts an integral `BigDecimal`. They also
+  accept a `BigInteger` node whose value fits. `StringDecoder.toInt()` and `toLong()` report a
+  well-formed integer outside the range with the same `type_mismatch.numeric_range` key, so
+  `"5000000000"` and `5000000000L` fail alike. The `JooqRecordDecoders` field decoders hand
+  jOOQ's unsigned types (`UByte`, `UShort`, `UInteger`, `ULong`, used for MySQL / MariaDB
+  `UNSIGNED` columns) to the value decoder as the `BigInteger` they hold, so `int_()` and the
+  other numeric decoders keep accepting them, and a `ULong` beyond the `long` range fails
+  instead of wrapping. A custom value decoder that matched on those jOOQ types now receives a
+  `BigInteger`
+  ([#152](https://github.com/kawasima/raoh/issues/152)).
 - **String conversions accept a grammar Raoh defines, not whatever the JDK parser accepts.**
   `uuid()`, `toInt()`, `toLong()`, `toDecimal()`, `date()`, `time()`, `dateTime()`,
   `offsetDateTime()` and `iso8601()` passed the text to `UUID.fromString`, `Integer.parseInt`,
