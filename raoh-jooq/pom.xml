@@ -16,7 +16,7 @@
 
     <name>Raoh jOOQ</name>
     <description>jOOQ Record decoder for Raoh</description>
-    <url>https://github.com/kawasima/raoh</url>
+    <url>https://github.com/raoh-project/raoh-java</url>
 
     <properties>
         <jooq.version>3.20.3</jooq.version>

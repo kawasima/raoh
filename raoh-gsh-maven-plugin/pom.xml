@@ -16,7 +16,7 @@
 
     <name>Raoh GSH Maven Plugin</name>
     <description>Maven plugin for weaving domain construction guards into compiled classes</description>
-    <url>https://github.com/kawasima/raoh</url>
+    <url>https://github.com/raoh-project/raoh-java</url>
 
     <dependencies>
         <dependency>

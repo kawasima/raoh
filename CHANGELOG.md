@@ -29,7 +29,7 @@ detailed from the current development cycle onward.
   property (25 code points), written out in Raoh and pinned to Unicode 18.0.0, so a value is blank
   exactly when `trim()` leaves it empty. U+0085, U+00A0, U+2007 and U+202F are now whitespace;
   U+0000 and U+001C to U+001F are not. U+200B stays non-whitespace
-  ([#158](https://github.com/kawasima/raoh/issues/158)).
+  ([#158](https://github.com/raoh-project/raoh-java/issues/158)).
 - **`enumOf()` and `toBool()` match ASCII case-insensitively.** They compared with
   `String.toLowerCase(Locale.ROOT)`, so the JDK's Unicode case mapping decided what was accepted;
   on Java 25 `blocKed` (with U+212A KELVIN SIGN as the fifth letter) decoded to `Thread.State.BLOCKED`. Case-insensitive now
@@ -39,7 +39,7 @@ detailed from the current development cycle onward.
   `enumOf()` also throws `IllegalArgumentException` when it is built for an enum with two constants
   that are equal under this matching (`A` and `a`); one of them used to become unreachable
   silently. `StringDecoder.toLowerCase()` still uses the JDK's mapping, as it is an explicit
-  text transformation ([#147](https://github.com/kawasima/raoh/issues/147)).
+  text transformation ([#147](https://github.com/raoh-project/raoh-java/issues/147)).
 
 ### Fixed
 
@@ -52,7 +52,7 @@ detailed from the current development cycle onward.
   is kept as given, so changes made to that value later are still visible. The `net.unit8.raoh` package documentation states the general contract:
   built-in decoders acquire no ambient capability themselves, and a collection that built-in
   decoding exposes keeps the input's order or uses a deterministic one
-  ([#142](https://github.com/kawasima/raoh/issues/142)).
+  ([#142](https://github.com/raoh-project/raoh-java/issues/142)).
 - **`list()` and `map()` keep `null` values and the input's key order.** `ObjectDecoders` and
   `JsonDecoders` collected the decoded values and returned `List.copyOf` / `Map.copyOf` of them.
   Both reject `null`, so `map(nullable(string()))` on `{"a": null}` and `list(nullable(string()))`
@@ -64,7 +64,7 @@ detailed from the current development cycle onward.
   `RecordDecoder`, these factories and `Result.traverse` now read `extends @Nullable Object`, so
   the JSpecify signature admits the nullable element type the runtime already accepted.
   `ListDecoder.contains` and `containsAll` mark their elements `@NonNull`, which is what they
-  already enforced at runtime ([#143](https://github.com/kawasima/raoh/issues/143)).
+  already enforced at runtime ([#143](https://github.com/raoh-project/raoh-java/issues/143)).
 - **`iso8601()` rejects second `60` instead of returning the second before it.** It handed the
   text to `Instant.parse`, whose `ISO_INSTANT` parser reads a clock time of `23:59:60` as
   `23:59:59` (at any offset, so `2016-12-31T23:59:60+09:00` became `14:59:59Z`) and reports the
@@ -76,7 +76,7 @@ detailed from the current development cycle onward.
   which is the same instant. Along with it, the `ObjectDecoders` temporal decoders no longer parse
   a `String` themselves: they hand it to the matching `StringDecoder` conversion, so the two routes
   read text by one set of rules and report identical issues
-  ([#130](https://github.com/kawasima/raoh/issues/130)).
+  ([#130](https://github.com/raoh-project/raoh-java/issues/130)).
 - **`ipv6()` and `ip()` no longer depend on the host's network interfaces.** They checked a literal
   with `InetAddress.getByName`, which looks a zone ID up among the interfaces of the running machine,
   so `fe80::1%en0` was accepted on macOS and rejected on Linux, and `fe80::1%eth0` the other way
@@ -88,7 +88,7 @@ detailed from the current development cycle onward.
   rejected, because the JDK returns an `Inet4Address` for it, although RFC 4291 defines it as IPv6
   text. And the 45-character guard applied to the whole string, zone ID included, so a full-form
   link-local address with an interface name failed; it now applies to the address part only
-  ([#127](https://github.com/kawasima/raoh/issues/127)).
+  ([#127](https://github.com/raoh-project/raoh-java/issues/127)).
 - **Decoders no longer read the JVM default locale.** Case mapping and fallback-message
   formatting used the default locale, so under `tr-TR` `enumOf` looked `TITLE` up as `tıtle` and
   rejected the input `title`, `StringDecoder.toUpperCase()` turned `title` into `TİTLE`, and the
@@ -101,13 +101,13 @@ detailed from the current development cycle onward.
   The build now checks every external call in `raoh`, `raoh-json` and `raoh-jooq` against a
   reviewed catalog of effects, so a new call that reads the default locale, or any other ambient
   state, fails the build (see the effect audit below)
-  ([#136](https://github.com/kawasima/raoh/issues/136)).
+  ([#136](https://github.com/raoh-project/raoh-java/issues/136)).
 - **`MapDecoders.nested()` checks every key, not only the first.** It cast the map to
   `Map<String, Object>` when its first key was a `String`, so a later `Integer` key reached the inner
   decoder and surfaced as a `ClassCastException` (under `strict(...)`, for one) instead of an issue,
   and whether a mixed map was rejected at all depended on iteration order. It now reports
   `type_mismatch` at the map's path, before the inner decoder runs
-  ([#133](https://github.com/kawasima/raoh/issues/133)).
+  ([#133](https://github.com/raoh-project/raoh-java/issues/133)).
 - **A format check no longer resolves to the generic `invalid format`.** `email()`, `url()`,
   `uuid()`, `startsWith()`, `enumOf()`, the ISO-8601 parsers and the other format checks all
   report `invalid_format`, and until now they also shared `invalid_format` as their message key.
@@ -115,7 +115,7 @@ detailed from the current development cycle onward.
   into the issue, so a `ResourceBundle` applied `raoh.invalid_format` to every one of them: an email
   failure resolved to `invalid format` in English and `形式が不正です` in Japanese. `startsWith("ab")`
   lost the prefix it asked for, although its metadata carries it. This is the gap
-  [#125](https://github.com/kawasima/raoh/pull/125) closed for `out_of_range`, left open for
+  [#125](https://github.com/raoh-project/raoh-java/pull/125) closed for `out_of_range`, left open for
   `invalid_format`.
 - **`Path.toJsonPointer()` escapes `~` and `/` in a segment, as RFC 6901 requires.** It joined the
   raw segments with `/`, so a field named `a/b` and the member `b` of `a` were both reported at
@@ -123,7 +123,7 @@ detailed from the current development cycle onward.
   the two into one entry. A segment now writes `~` as `~0` and `/` as `~1`: `a/b` is `/a~1b` and
   `~c` is `/~0c`. `segments()`, `equals()` and `format()` work on the raw names and are unchanged.
   Callers that compare path strings for field names containing `/` or `~` see the new form
-  ([#126](https://github.com/kawasima/raoh/issues/126)).
+  ([#126](https://github.com/raoh-project/raoh-java/issues/126)).
 - **A partial locale bundle is no longer overridden by the base bundle's refined keys.**
   `ResourceBundleMessageResolver` searched `raoh.<messageKey>` and then `raoh.<code>` over the
   bundle `ResourceBundle.getBundle` returns, and that bundle answers for its parents too. With
@@ -132,7 +132,7 @@ detailed from the current development cycle onward.
   searches each locale's own file, most specific first, and tries both keys in one file before
   moving to the next. The same change lets a locale template whose placeholders the metadata
   cannot supply fall through to the base bundle's template for the same key, which it used to
-  hide. Present since [#125](https://github.com/kawasima/raoh/pull/125).
+  hide. Present since [#125](https://github.com/raoh-project/raoh-java/pull/125).
 
 ### Added
 
@@ -142,7 +142,7 @@ detailed from the current development cycle onward.
   `expected` = `object with string keys` and `actual` = the key's type (`Integer`, `null`), so a
   bundle that defines only `raoh.type_mismatch` still resolves it to
   `expected object with string keys` rather than `expected object`
-  ([#133](https://github.com/kawasima/raoh/issues/133)).
+  ([#133](https://github.com/raoh-project/raoh-java/issues/133)).
 - **A message key for each format check**, under the unchanged `invalid_format` code, with templates
   in both shipped locales:
   `raoh.invalid_format.{email,url,uri,uuid,ip,ipv4,ipv6,ulid,cuid,starts_with,ends_with,includes,enum,literal}`
@@ -157,7 +157,7 @@ detailed from the current development cycle onward.
   `doc_search` answers with the section that holds a term. The two languages use the same names.
   The names are part of what raoh publishes and are not renamed from here on; `ShippedDocsTest`
   checks them against the rules Souther applies when it reads the jar and against the list of
-  names already published ([#131](https://github.com/kawasima/raoh/issues/131)).
+  names already published ([#131](https://github.com/raoh-project/raoh-java/issues/131)).
 
 ### Changed
 
@@ -182,7 +182,7 @@ detailed from the current development cycle onward.
   complete, and the forbidden-apis check with its `@SuppressForbidden` exemptions: the catalog
   and the approvals are the one place each classification and each exception is recorded. The
   plugin is not published
-  ([#151](https://github.com/kawasima/raoh/issues/151)).
+  ([#151](https://github.com/raoh-project/raoh-java/issues/151)).
 
 - **Breaking: the `ObjectDecoders` temporal decoders no longer accept `java.sql` values.**
   `date()`, `time()`, `dateTime()` and `iso8601()` accepted `java.sql.Date`, `java.sql.Time` and
@@ -198,7 +198,7 @@ detailed from the current development cycle onward.
   and a `java.sql` value does not carry the zone it was built in. They now report `type_mismatch`. Convert JDBC values to `java.time` types where they
   are read, for example with `ResultSet.getObject(column, LocalDate.class)`, or with jOOQ
   fields typed as `LocalDate`, `LocalTime` and `LocalDateTime`
-  ([#141](https://github.com/kawasima/raoh/issues/141)).
+  ([#141](https://github.com/raoh-project/raoh-java/issues/141)).
 - **Breaking: the numeric decoders convert by Raoh's rules and accept only JDK number types.**
   `ObjectDecoders.int_()`, `long_()`, `double_()`, `float_()` and `decimal()` accepted any `Number`
   and took the value from its own `intValue()`, `longValue()`, `doubleValue()`, `floatValue()` or
@@ -232,7 +232,7 @@ detailed from the current development cycle onward.
   other numeric decoders keep accepting them, and a `ULong` beyond the `long` range fails
   instead of wrapping. A custom value decoder that matched on those jOOQ types now receives a
   `BigInteger`
-  ([#152](https://github.com/kawasima/raoh/issues/152)).
+  ([#152](https://github.com/raoh-project/raoh-java/issues/152)).
 - **String conversions accept a grammar Raoh defines, not whatever the JDK parser accepts.**
   `uuid()`, `toInt()`, `toLong()`, `toDecimal()`, `date()`, `time()`, `dateTime()`,
   `offsetDateTime()` and `iso8601()` passed the text to `UUID.fromString`, `Integer.parseInt`,
@@ -259,7 +259,7 @@ detailed from the current development cycle onward.
   `not a valid ISO-8601 local time (e.g., 10:30 or 10:30:45)`, because a date may have a signed
   expanded year and a time may omit its seconds. The `messages.properties` and
   `messages_ja.properties` entries changed with them
-  ([#137](https://github.com/kawasima/raoh/issues/137)).
+  ([#137](https://github.com/raoh-project/raoh-java/issues/137)).
 - **`uri()` and `url()` accept the RFC 3986 `URI` grammar that `java.net.URI` can hold, not whatever it parses.**
   Both passed the text to `URI.create`, which follows RFC 2396 and RFC 2732, and `url()` then
   required `URI.getHost()` to be non-null, which is RFC 2396's hostname rule rather than the RFC
@@ -282,23 +282,23 @@ detailed from the current development cycle onward.
   - An upper-case scheme, `HTTP://example.com/`; RFC 3986 schemes are case-insensitive.
   - Text longer than 2048 UTF-16 code units. The limit was a resource policy, not part of the
     grammar; write `string().maxLength(2048).url()` to keep it
-    ([#144](https://github.com/kawasima/raoh/issues/144)).
+    ([#144](https://github.com/raoh-project/raoh-java/issues/144)).
 - **`ipv6()` and `ip()` check the RFC 4291 text form themselves.** A successful
   `Inet6Address.ofLiteral` decided acceptance, and it accepts text outside RFC 4291 section 2.2.
   The address is now read by the RFC 3986 `IPv6address` rule, the same one `uri()` uses for an IPv6
   host, and the zone check reads the scope from the first group of that text, so the JDK is no
   longer called. Now rejected: a group of more than four digits (`::00001`) and an embedded IPv4
   address with a leading zero (`::01.2.3.4`, `::1.2.3.04`), which `ipv4()` already rejected
-  on its own ([#146](https://github.com/kawasima/raoh/issues/146)).
+  on its own ([#146](https://github.com/raoh-project/raoh-java/issues/146)).
 - **`ipv6()` and `ip()` reject a bracketed address such as `[::1]`.** The brackets belong to the host
   syntax of a URI, not to the address, and were accepted only because the JDK parser strips them
-  ([#127](https://github.com/kawasima/raoh/issues/127)).
+  ([#127](https://github.com/raoh-project/raoh-java/issues/127)).
 - **`ObjectDecoders.map()` requires `String` keys.** It converted each key with `String.valueOf`
   and used the result as the output key, so `1` and `"1"`, or `null` and `"null"`, became one key and
   one of the two values was dropped with no issue. A map with any key that is not a non-null `String`
   now fails with `type_mismatch` at the map's own path, checked before any value is decoded. A caller that relied on the conversion must turn its keys into strings itself,
   where it can decide what a collision means
-  ([#133](https://github.com/kawasima/raoh/issues/133)).
+  ([#133](https://github.com/raoh-project/raoh-java/issues/133)).
 - **Format checks carry a refined `messageKey`.** The English message stored on each issue is
   byte-identical to before (except for `date()` and `time()`, whose wording changed with #137), and `MessageResolver.DEFAULT` resolves each key to that same sentence. A
   bundle that defines only `raoh.invalid_format` still resolves these issues, because
@@ -333,10 +333,10 @@ detailed from the current development cycle onward.
   value, with the placeholder still in it. Only `range()` came out right. `TemporalDecoder.before()`,
   `after()` and `between()` were worse: their metadata carries `before`, `after`, `from` and `to`, so
   both placeholders survived, and `MessageResolver.DEFAULT` reduced all three to `out of range`
-  ([#123](https://github.com/kawasima/raoh/issues/123)).
+  ([#123](https://github.com/raoh-project/raoh-java/issues/123)).
 - **`positive()` and `nonNegative()` are described as themselves.** Both bound below and differ only
   on whether zero passes, which their metadata did not record, so a resolver had no way to tell them
-  apart ([#124](https://github.com/kawasima/raoh/issues/124)).
+  apart ([#124](https://github.com/raoh-project/raoh-java/issues/124)).
 - **`nonempty()` keeps saying `must not be empty`.** It and `minSize(1)` emit the same code and
   byte-identical metadata; resolving through a bundle rewrote the first into
   `must have at least 1 elements`.
@@ -399,7 +399,7 @@ detailed from the current development cycle onward.
   whichever raoh is on the class path is the raoh whose guides are read, and bumping the dependency
   brings the matching guides with it. For consumers this is additive — roughly 135 KB under
   `META-INF`, no API change and no new dependency
-  ([#122](https://github.com/kawasima/raoh/pull/122)).
+  ([#122](https://github.com/raoh-project/raoh-java/pull/122)).
 
 ## [0.7.0] - 2026-08-05
 
@@ -414,21 +414,21 @@ detailed from the current development cycle onward.
   it consumes, and an ordinary `Decoder` wrapper cannot take one, so it cannot quietly erase that
   declaration. Wrapping means composing inside the part; converting is deliberate, via `asDecoder()`.
   Build one with `CombinePart.named(name, decoder[, inputFields])` or `CombinePart.flat(decoder)`
-  ([#114](https://github.com/kawasima/raoh/issues/114)).
+  ([#114](https://github.com/raoh-project/raoh-java/issues/114)).
 
 - **`flat(...)`** in `MapDecoders`, `JsonDecoders` and `JooqRecordDecoders` — lifts a decoder that
   reads the same whole input into a combine component, which is how a flat JOIN row gets split
   across several decoders. This was previously the second role of `nested(...)`, documented in the
   tutorial alongside the first; the two need different types now, so `nested(...)` keeps its meaning (adapting a decoder for use as a
   field *value*) and `flat(...)` takes the other one
-  ([#114](https://github.com/kawasima/raoh/issues/114)).
+  ([#114](https://github.com/raoh-project/raoh-java/issues/114)).
 
 - **`InputFields<I>`** — enumerates the field names present in an input, so `strict` works on any
   representation rather than only on `Map`. `MapDecoders.MAP_FIELDS` and `JsonDecoders.JSON_FIELDS`
   are the built-in ones; implement it to bring `strict` to a boundary the library does not cover,
   and pass it to `Decoders.strict(dec, knownFields, inputFields)` or to
   `CombinePart.named(name, decoder, inputFields)`
-  ([#113](https://github.com/kawasima/raoh/issues/113)).
+  ([#113](https://github.com/raoh-project/raoh-java/issues/113)).
 
 - **`StringDecoder.normalize()` / `normalize(Normalizer.Form)`** — a transform that canonicalizes the
   decoded string, so the constraints written after it stop depending on how the client encoded the
@@ -443,7 +443,7 @@ detailed from the current development cycle onward.
   form: a variation sequence such as 葛 followed by U+E0101 is normalization-stable and still counts
   as two code points, and the arguments of later constraints are left alone — Java does not normalize
   string literals, so a decomposed literal passed to `oneOf` will not match a value normalized to NFC
-  ([#106](https://github.com/kawasima/raoh/issues/106)).
+  ([#106](https://github.com/raoh-project/raoh-java/issues/106)).
 
 - **Published-API diff in the build.** `japicmp` compares `raoh`, `raoh-json` and `raoh-jooq`
   against the last release during `verify`, and CI puts the per-module report in the job summary
@@ -452,7 +452,7 @@ detailed from the current development cycle onward.
   now: before 1.0 the breaks are deliberate and frequent, and a build that fails on each one turns
   the exclusion list into the thing you edit to get back to green. At 1.0 the `breakBuild*` flags
   go to true and an intentional break needs an explicit exclusion
-  ([#117](https://github.com/kawasima/raoh/issues/117)).
+  ([#117](https://github.com/raoh-project/raoh-java/issues/117)).
 
 ### Fixed
 
@@ -463,7 +463,7 @@ detailed from the current development cycle onward.
   fragility ran the other way: a new combinator on `Decoder` reintroduced the bug unless someone
   remembered to override it on `FieldDecoder`, which is why seven such overrides existed. Composition
   now happens inside a part, so there is nothing to keep in sync
-  ([#114](https://github.com/kawasima/raoh/issues/114)).
+  ([#114](https://github.com/raoh-project/raoh-java/issues/114)).
 
 - **`combine(...).strict(f)` now rejects unknown fields on the JSON boundary.** The explicit
   `JsonDecoders.strict(dec, knownFields)` always worked, but the ergonomic combiner form hardcoded
@@ -473,7 +473,7 @@ detailed from the current development cycle onward.
   binds a decoder to a field *on a particular boundary*, so it carries an `InputFields`, and
   `Combiner#strict()` recovers it from its components. The sixteen `Combiner*` records are
   untouched — their components, canonical constructors and value semantics are unchanged
-  ([#113](https://github.com/kawasima/raoh/issues/113)).
+  ([#113](https://github.com/raoh-project/raoh-java/issues/113)).
 
 - **`strict()` no longer rejects a valid field as `unknown_field`.** `Combiner#strict()` collects
   known field names by testing each sub-decoder with `instanceof FieldDecoder`, and two things
@@ -487,7 +487,7 @@ detailed from the current development cycle onward.
   compatible; the combinators reach the `FieldDecoder` overrides through their bridge methods even
   from a `Decoder`-typed reference. `list()` is deliberately not overridden: it changes the input
   type to `List<I>`, so a single field name no longer describes it
-  ([#109](https://github.com/kawasima/raoh/issues/109)).
+  ([#109](https://github.com/raoh-project/raoh-java/issues/109)).
 
 - **A refinement on a field now reports at the field's path.** `field("age", int_())` appends the
   name inside its own `decode`, so a combinator wrapped around it only saw the enclosing path: one
@@ -497,7 +497,7 @@ detailed from the current development cycle onward.
   `refine` overloads, so `field("age", int_()).refine(...)` and
   `field("age", int_().refine(...))` agree. Error **paths move** for those four combinators — code
   that keys off the old enclosing path needs updating
-  ([#109](https://github.com/kawasima/raoh/issues/109)).
+  ([#109](https://github.com/raoh-project/raoh-java/issues/109)).
 
 ### Changed
 
@@ -506,17 +506,17 @@ detailed from the current development cycle onward.
   sixteen `Combiner*` records plus `CombinerList` take `CombinePart` components. A part still decodes
   on its own — `field("age", int_()).decode(map)` — and appends its own name, so standalone and
   combined use share one path contract. Passing one where a `Decoder` is wanted needs an explicit
-  `asDecoder()` ([#114](https://github.com/kawasima/raoh/issues/114)).
+  `asDecoder()` ([#114](https://github.com/raoh-project/raoh-java/issues/114)).
 
 - **`JooqRecordDecoders.nested(...)` is renamed `flat(...)`**, matching the new distinction between
   reading a field's value and reading the same whole input
-  ([#114](https://github.com/kawasima/raoh/issues/114)).
+  ([#114](https://github.com/raoh-project/raoh-java/issues/114)).
 
 - **`Combiner#strict()` reports two failures separately.** A combiner containing a `flat(...)`
   component is refused because its declared field set is unknown; a combiner whose boundary has no
   `InputFields` — jOOQ, whose fields are named but whose `Record` has no scanner — is refused for
   that reason instead. Both happen when the strict decoder is assembled
-  ([#114](https://github.com/kawasima/raoh/issues/114)).
+  ([#114](https://github.com/raoh-project/raoh-java/issues/114)).
 
 - **`Decoders.strict(Decoder, Set)` is removed.** It was generic in the input type but only scanned
   `Map`, and that gap between what the signature promised and what the implementation did is what
@@ -527,14 +527,14 @@ detailed from the current development cycle onward.
   0.6.0 that called it will fail with `NoSuchMethodError` until recompiled against
   `MapDecoders.strict`. Kept as a deliberate break rather than a deprecated bridge, so the
   misleading signature does not survive a deprecation cycle
-  ([#113](https://github.com/kawasima/raoh/issues/113)).
+  ([#113](https://github.com/raoh-project/raoh-java/issues/113)).
 
 - **`Combiner#strict()` and `strictFlatMap()` throw `IllegalStateException`** when no component
   carries an `InputFields` — a combiner built entirely from bare decoders has no way to tell a
   known field from an unknown one. Previously that case silently accepted everything on JSON and
   rejected everything on `Map`, since the known-field set came out empty. This is an assembly error
   rather than a data error, so it surfaces when the decoder is built rather than when it runs
-  ([#113](https://github.com/kawasima/raoh/issues/113)).
+  ([#113](https://github.com/raoh-project/raoh-java/issues/113)).
 
 - **`refine()` on a builtin decoder now returns that decoder's own type**, so a refinement no
   longer has to come last in a chain: `string().refine(...).minLength(3)` compiles where it
@@ -544,7 +544,7 @@ detailed from the current development cycle onward.
   `TemporalDecoder`. Existing callers stay binary compatible through the compiler-generated bridge
   methods; a subclass that overrode `refine` would need source changes to recompile, which is moot
   now that these classes are `final` (see below)
-  ([#110](https://github.com/kawasima/raoh/issues/110)).
+  ([#110](https://github.com/raoh-project/raoh-java/issues/110)).
 
 - **The builtin decoders are `final`.** `BoolDecoder`, `DecimalDecoder`, `DoubleDecoder`,
   `FloatDecoder`, `IntDecoder`, `ListDecoder`, `LongDecoder`, `RecordDecoder`, `StringDecoder` and
@@ -554,7 +554,7 @@ detailed from the current development cycle onward.
   `refine` and nothing else, not `minLength()`, not `email()`. Composition is the supported route,
   via the public constructor each class already takes an inner decoder through, or
   `StringDecoder.from(Decoder)`. **Breaks any existing subclass**, at both compile time and link
-  time ([#115](https://github.com/kawasima/raoh/issues/115)).
+  time ([#115](https://github.com/raoh-project/raoh-java/issues/115)).
 
 - **The `ObjectDecoders` temporal decoders now accept ISO-8601 text**, the representation the
   matching `ObjectEncoders` factory writes, so a codec pair built over the neutral `Object` tree
@@ -563,7 +563,7 @@ detailed from the current development cycle onward.
   unparseable text is now `invalid_format` where it used to be `type_mismatch`. `dateTime()` also
   accepts `java.sql.Timestamp`, closing the gap against `iso8601()`. `offsetDateTime()` gets no
   `java.sql` conversion on purpose — `Timestamp` carries no offset, so converting one would mean
-  picking a zone for the caller ([#104](https://github.com/kawasima/raoh/issues/104)).
+  picking a zone for the caller ([#104](https://github.com/raoh-project/raoh-java/issues/104)).
 
 - **`StringDecoder.minLength` / `maxLength` / `fixedLength` now count Unicode code points** instead
   of UTF-16 code units, in both the comparison and the `actual` meta value. A supplementary-plane
@@ -572,7 +572,7 @@ detailed from the current development cycle onward.
   rest, `maxLength` is now more permissive and `minLength` stricter. The length guards inside
   `email()`, `url()` and `ip()` stay in UTF-16 units — they cap the size of the string before it is
   parsed or matched, and express neither a character count nor the length of the value as sent
-  ([#105](https://github.com/kawasima/raoh/issues/105)).
+  ([#105](https://github.com/raoh-project/raoh-java/issues/105)).
 
 ## [0.6.0] - 2026-07-15
 
@@ -581,19 +581,19 @@ detailed from the current development cycle onward.
 - **`MapEncoders.lazy(Supplier<Encoder>)`** — the encode counterpart of `Decoders.lazy`, for
   self-referential (recursive) encoders. Closes the last decode/encode asymmetry among the structural
   combinators: a recursive domain type (e.g. a tree) that decodes via `lazy` can now be encoded back
-  the same way ([#94](https://github.com/kawasima/raoh/issues/94)).
+  the same way ([#94](https://github.com/raoh-project/raoh-java/issues/94)).
 - **`ObjectEncoders.bytes()` / `uuid()` / `uri()`** — the encode duals of the existing decoders.
   `bytes()` passes a `byte[]` through as-is (for JDBC binary columns); `uuid()` and `uri()` emit the
   canonical string form, round-tripping `StringDecoder.uuid()` / `uri()`. Also documents in
   `comparisons.md` that `object(property(...), ...)` — not a symmetric `combine` — is the intended
   encode idiom, and how to bridge a `Map<String, Object>` to a Jackson `JsonNode`
-  ([#94](https://github.com/kawasima/raoh/issues/94)).
+  ([#94](https://github.com/raoh-project/raoh-java/issues/94)).
 - **Schema-reuse guidance** (docs) — `comparisons.md` now documents how to cover Zod's
   `.merge()`/`.extend()`/`.pick()`/`.omit()`/`.partial()` in Raoh's nominal-typed model by extracting
   each field's value decoder into a variable and reusing it across related shapes (subset `combine`
   for pick/omit, extra fragments for merge/extend, `optionalNullableField` + `Presence` for PATCH).
   Raoh has no structural schema operators today; the fragment-reuse pattern is the recommended
-  approach ([#95](https://github.com/kawasima/raoh/issues/95)).
+  approach ([#95](https://github.com/raoh-project/raoh-java/issues/95)).
 - **`Decoder.refine(...)`** — a generic predicate-based refinement combinator (three overloads: a
   `code`/`message` pair, a metadata-carrying variant, and a fully caller-controlled `onFail` variant).
   Keeps the value unchanged on success and produces an `Issue` at the current path on failure, with a
@@ -601,11 +601,11 @@ detailed from the current development cycle onward.
   the ergonomic form of the common `flatMapWithPath` "keep the value, or fail with a domain rule"
   idiom, and is the direct analogue of Zod's `.refine()`. Refinement failures accumulate with sibling
   errors through `combine`. There is no encoder-side dual: the encode side is a total function with no
-  failure channel ([#93](https://github.com/kawasima/raoh/issues/93)).
+  failure channel ([#93](https://github.com/raoh-project/raoh-java/issues/93)).
 - **jspecify `@NullMarked` nullness contract** across the `raoh` core module, extended to the
   `raoh-json` and `raoh-jooq` sibling modules. Consumers running null analysis (Eclipse JDT / ecj,
   NullAway, IntelliJ) receive precise, declared contracts instead of guessed ones
-  ([#43](https://github.com/kawasima/raoh/issues/43)).
+  ([#43](https://github.com/raoh-project/raoh-java/issues/43)).
 - **NullAway build gate** (`mvn -Pnullcheck`) that validates the core module's nullness contract.
   Requires JDK 25 (Error Prone does not yet support JDK 26).
 - **`MapEncoders.nullableProperty(...)`** — the nullable counterpart of `property(...)`, for a
@@ -614,38 +614,38 @@ detailed from the current development cycle onward.
 - **`MapEncoders.propertyWithDefault(...)`** (value and `Supplier` overloads) — encodes a default
   value when the getter returns `null`, so the map entry is never `null`.
 - **`MapEncoders.discriminate(...)`** — tagged-union encoding, mirroring the decoder side; rejects
-  duplicate discriminator tags at construction ([#44](https://github.com/kawasima/raoh/issues/44)).
+  duplicate discriminator tags at construction ([#44](https://github.com/raoh-project/raoh-java/issues/44)).
 - **`EntryEncoder<T>` abstraction plus `MapEncoders.optionalProperty(...)` / `presenceProperty(...)`.**
   `EntryEncoder` writes zero-or-more keys into the output map; `PropertyEncoder` (always one key) is a
   special case. `optionalProperty` omits the key when the getter returns `null` (the encode dual of
   decode's `optionalField` → `Optional`, distinct from `nullableProperty` which writes `key: null`);
   `presenceProperty` round-trips the tri-state `Presence` (`Absent` → omit, `PresentNull` → write
-  `null`, `Present(v)` → write the value) ([#41](https://github.com/kawasima/raoh/issues/41),
-  [#61](https://github.com/kawasima/raoh/issues/61)).
+  `null`, `Present(v)` → write the value) ([#41](https://github.com/raoh-project/raoh-java/issues/41),
+  [#61](https://github.com/raoh-project/raoh-java/issues/61)).
 - **`MapEncoders.mapOf(...)`** — encodes a homogeneous `Map<String, V>` by applying a value encoder
   to each value, the encode mirror of `ObjectDecoders.map(...)`
-  ([#63](https://github.com/kawasima/raoh/issues/63)).
+  ([#63](https://github.com/raoh-project/raoh-java/issues/63)).
 - **`nullableField(...)`** targeting `@Nullable T`, in core `MapDecoders`, `JsonDecoders`, and
-  `JooqRecordDecoders` ([#46](https://github.com/kawasima/raoh/issues/46),
-  [#53](https://github.com/kawasima/raoh/issues/53)).
+  `JooqRecordDecoders` ([#46](https://github.com/raoh-project/raoh-java/issues/46),
+  [#53](https://github.com/raoh-project/raoh-java/issues/53)).
 - **Message overloads across the numeric decoders**, with `DecimalDecoder` brought to parity
   (`min` / `max` / `range` / `multipleOf` / sign / `scale`)
-  ([#54](https://github.com/kawasima/raoh/issues/54)).
+  ([#54](https://github.com/raoh-project/raoh-java/issues/54)).
 - **Custom-message overloads on `ListDecoder` and `RecordDecoder` constraints**
   (`nonempty` / `minSize` / `maxSize` / `fixedSize` / `contains` / `unique`, and the record
   size constraints), matching the string/numeric decoders. `ListDecoder.containsAll(T...)` is
   intentionally left out, mirroring the `StringDecoder.oneOf(String...)` varargs precedent
-  ([#87](https://github.com/kawasima/raoh/issues/87)).
+  ([#87](https://github.com/raoh-project/raoh-java/issues/87)).
 - **`JsonDecoders.double_()` / `float_()`** — the JSON boundary reached floating-point parity with
   `ObjectDecoders`, giving a primitive `double`/`float` (and the `DoubleDecoder`/`FloatDecoder`
   constraint API) instead of only `decimal()` → `BigDecimal`. JSON temporals stay on the canonical
   `string().iso8601()` / `date()` / `dateTime()` path (documented, no new primitives)
-  ([#86](https://github.com/kawasima/raoh/issues/86)).
+  ([#86](https://github.com/raoh-project/raoh-java/issues/86)).
 - **Typed, cast-free `variant()` / `discriminate(field, Variant...)` on the decode side**, in core
   `Decoders` and re-exported from `MapDecoders` / `JsonDecoders` / `JooqRecordDecoders`. Mirrors the
   encoder's `variant()` / `discriminate()`, removing the per-arm up-cast the `Map`-based form
   requires; rejects duplicate tags at construction. The `Map`-based overload stays for back-compat
-  ([#82](https://github.com/kawasima/raoh/issues/82)).
+  ([#82](https://github.com/raoh-project/raoh-java/issues/82)).
 - **CI**: GitHub Actions workflow for build/test and the NullAway null-analysis gate.
 
 ### Changed
@@ -674,13 +674,13 @@ detailed from the current development cycle onward.
 - **`raoh-json` scopes Jackson as `provided`** (was `compile`), matching `raoh-jooq`. Because
   raoh-json exposes Jackson's `JsonNode` in its public API, consumers already supply Jackson 3 on
   their classpath; `provided` avoids pinning a specific Jackson 3.x version transitively
-  ([#60](https://github.com/kawasima/raoh/issues/60)).
+  ([#60](https://github.com/raoh-project/raoh-java/issues/60)).
 - `ListDecoder.toSet()` now preserves insertion order (previously unspecified via `Set.copyOf`)
-  ([#69](https://github.com/kawasima/raoh/issues/69)).
+  ([#69](https://github.com/raoh-project/raoh-java/issues/69)).
 - **`MapEncoders.object(...)` now accepts `EntryEncoder<T>...`** (was `PropertyEncoder<T>...`).
   Source-compatible — `PropertyEncoder` implements `EntryEncoder`, so `object(property(...), ...)`
   is unchanged — but binary-incompatible (the erased parameter type changed), so recompile against
-  the new version ([#41](https://github.com/kawasima/raoh/issues/41)).
+  the new version ([#41](https://github.com/raoh-project/raoh-java/issues/41)).
 
 ### Removed
 
@@ -691,23 +691,23 @@ detailed from the current development cycle onward.
   `propertyWithDefault("x", getter, enc, default)`.
 - **`StringDecoder.allowBlank()`** and the two-argument `StringDecoder(inner, base)` constructor —
   a vestige of an earlier design; `string()` accepts blank input by default
-  ([#69](https://github.com/kawasima/raoh/issues/69)).
+  ([#69](https://github.com/raoh-project/raoh-java/issues/69)).
 - **`ObjectDecoders.allowBlankString()` / `JsonDecoders.allowBlankString()`** — redundant with
   `string()`; the internal `enumOf` / `literal` / `discriminate` key readers now use `string()`
-  ([#71](https://github.com/kawasima/raoh/issues/71)).
+  ([#71](https://github.com/raoh-project/raoh-java/issues/71)).
 
 ### Fixed
 
 - Numeric decoders (`IntDecoder`, `LongDecoder`, `FloatDecoder`, `DoubleDecoder`, `DecimalDecoder`)
   reject a zero divisor and an inverted range at construction instead of failing silently
-  ([#66](https://github.com/kawasima/raoh/issues/66)).
+  ([#66](https://github.com/raoh-project/raoh-java/issues/66)).
 - Encode `discriminate` guards against a `null` variant key at tag injection
-  ([#44](https://github.com/kawasima/raoh/issues/44)).
+  ([#44](https://github.com/raoh-project/raoh-java/issues/44)).
 - `JsonDecoders.double_()` / `float_()` reject an out-of-range magnitude with `type_mismatch`
   instead of letting Jackson 3's strict `doubleValue()` / `floatValue()` throw out of `decode()`;
   `ObjectDecoders.double_()` / `float_()` were aligned to reject the same rather than silently
   returning `Infinity` (both keep `NaN` flowing through for range constraints to catch)
-  ([#86](https://github.com/kawasima/raoh/issues/86)).
+  ([#86](https://github.com/raoh-project/raoh-java/issues/86)).
 
 ### Compatibility
 
@@ -813,16 +813,16 @@ detailed from the current development cycle onward.
   `Presence`), `Map<String, Object>` decoders, error model, a Spring Boot example, and a README with
   an Elm-decoder comparison.
 
-[Unreleased]: https://github.com/kawasima/raoh/compare/v0.8.0...HEAD
-[0.8.0]: https://github.com/kawasima/raoh/compare/v0.7.2...v0.8.0
-[0.7.2]: https://github.com/kawasima/raoh/compare/v0.7.1...v0.7.2
-[0.7.1]: https://github.com/kawasima/raoh/compare/v0.7.0...v0.7.1
-[0.7.0]: https://github.com/kawasima/raoh/compare/v0.6.0...v0.7.0
-[0.6.0]: https://github.com/kawasima/raoh/compare/v0.5.0...v0.6.0
-[0.5.0]: https://github.com/kawasima/raoh/compare/v0.4.1...v0.5.0
-[0.4.1]: https://github.com/kawasima/raoh/compare/v0.4.0...v0.4.1
-[0.4.0]: https://github.com/kawasima/raoh/compare/v0.3.1...v0.4.0
-[0.3.1]: https://github.com/kawasima/raoh/compare/v0.3.0...v0.3.1
-[0.3.0]: https://github.com/kawasima/raoh/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/kawasima/raoh/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/kawasima/raoh/releases/tag/v0.1.0
+[Unreleased]: https://github.com/raoh-project/raoh-java/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/raoh-project/raoh-java/compare/v0.7.2...v0.8.0
+[0.7.2]: https://github.com/raoh-project/raoh-java/compare/v0.7.1...v0.7.2
+[0.7.1]: https://github.com/raoh-project/raoh-java/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/raoh-project/raoh-java/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/raoh-project/raoh-java/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/raoh-project/raoh-java/compare/v0.4.1...v0.5.0
+[0.4.1]: https://github.com/raoh-project/raoh-java/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/raoh-project/raoh-java/compare/v0.3.1...v0.4.0
+[0.3.1]: https://github.com/raoh-project/raoh-java/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/raoh-project/raoh-java/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/raoh-project/raoh-java/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/raoh-project/raoh-java/releases/tag/v0.1.0

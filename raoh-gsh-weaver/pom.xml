@@ -16,7 +16,7 @@
 
     <name>Raoh GSH Weaver</name>
     <description>Bytecode weaver, Java Agent, and CLI for the domain construction guard</description>
-    <url>https://github.com/kawasima/raoh</url>
+    <url>https://github.com/raoh-project/raoh-java</url>
 
     <dependencies>
         <dependency>
