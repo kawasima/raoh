@@ -5,7 +5,7 @@
 **Please do not open a public issue for a security problem.**
 
 Report it privately through GitHub's
-[private vulnerability reporting](https://github.com/kawasima/raoh/security/advisories/new) — the
+[private vulnerability reporting](https://github.com/raoh-project/raoh-java/security/advisories/new) — the
 *Report a vulnerability* button under the repository's **Security** tab. That opens a draft advisory
 visible only to the maintainers.
 

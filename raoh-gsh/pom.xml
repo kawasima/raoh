@@ -16,7 +16,7 @@
 
     <name>Raoh GSH</name>
     <description>Domain Construction Guard — detects accidental domain object construction outside of Decoder scope</description>
-    <url>https://github.com/kawasima/raoh</url>
+    <url>https://github.com/raoh-project/raoh-java</url>
 
     <dependencies>
         <dependency>

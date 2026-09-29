@@ -16,7 +16,7 @@
 
     <name>Raoh</name>
     <description>Parse don't validate - A Java decoder library</description>
-    <url>https://github.com/kawasima/raoh</url>
+    <url>https://github.com/raoh-project/raoh-java</url>
 
     <dependencies>
         <dependency>

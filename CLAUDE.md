@@ -155,8 +155,8 @@ permanent. Everything before step 5 is reversible; treat step 5 as the point of 
    fresh empty `## [Unreleased]` above it, and add the compare links at the bottom:
 
    ```
-   [Unreleased]: https://github.com/kawasima/raoh/compare/vX.Y.Z...HEAD
-   [X.Y.Z]: https://github.com/kawasima/raoh/compare/v<prev>...vX.Y.Z
+   [Unreleased]: https://github.com/raoh-project/raoh-java/compare/vX.Y.Z...HEAD
+   [X.Y.Z]: https://github.com/raoh-project/raoh-java/compare/v<prev>...vX.Y.Z
    ```
 
    Cross-check the breaking-change list against the japicmp report — the `japicmp-api-diff`

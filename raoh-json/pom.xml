@@ -16,7 +16,7 @@
 
     <name>Raoh JSON</name>
     <description>Jackson JsonNode decoder for Raoh</description>
-    <url>https://github.com/kawasima/raoh</url>
+    <url>https://github.com/raoh-project/raoh-java</url>
 
     <dependencies>
         <dependency>
