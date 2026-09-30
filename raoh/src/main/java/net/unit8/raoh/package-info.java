@@ -30,9 +30,10 @@
  * as the values a {@code refine} metadata function returns, are kept as given.
  *
  * <p>What a text means does not depend on the running Java platform version either. Case
- * conversion, normalization and whitespace follow Unicode 18.0.0, and the text forms of dates,
- * times and instants and the pattern language are decided without a JDK parser or
- * {@code java.util.regex}; all of them come from 199x-notation, which Raoh shares with Souther.
+ * conversion, normalization and whitespace follow Unicode 18.0.0, and which texts are a date, a
+ * time or an instant and which strings a pattern accepts are defined by 199x-notation, which Raoh
+ * shares with Souther, rather than by the JDK's temporal parsers or the dialect of
+ * {@code java.util.regex}.
  */
 @NullMarked
 package net.unit8.raoh;

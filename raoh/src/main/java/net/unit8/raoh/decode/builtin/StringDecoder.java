@@ -762,13 +762,34 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      */
     public StringDecoder<I> normalize(Normalizer.Form form) {
         Objects.requireNonNull(form, "form");
-        // Not a switch: javac would compile one through Normalizer.Form's ordinals.
-        var unicodeForm = form == Normalizer.Form.NFC ? Normalization.Form.NFC
-                : form == Normalizer.Form.NFD ? Normalization.Form.NFD
-                : form == Normalizer.Form.NFKC ? Normalization.Form.NFKC
-                : Normalization.Form.NFKD;
+        var unicodeForm = unicodeForm(form);
         return new StringDecoder<>((in, path) ->
                 this.decode(in, path).map(value -> Normalization.normalize(unicodeForm, value)));
+    }
+
+    /**
+     * The Unicode 18.0.0 form a {@link Normalizer.Form} names.
+     *
+     * <p>Not a switch: javac would compile one through {@code Normalizer.Form}'s ordinals.
+     *
+     * @param form the form as the JDK names it
+     * @return the same form in 199x-notation
+     * @throws IllegalArgumentException if a later JDK names a form Unicode 18.0.0 does not have
+     */
+    private static Normalization.Form unicodeForm(Normalizer.Form form) {
+        if (form == Normalizer.Form.NFC) {
+            return Normalization.Form.NFC;
+        }
+        if (form == Normalizer.Form.NFD) {
+            return Normalization.Form.NFD;
+        }
+        if (form == Normalizer.Form.NFKC) {
+            return Normalization.Form.NFKC;
+        }
+        if (form == Normalizer.Form.NFKD) {
+            return Normalization.Form.NFKD;
+        }
+        throw new IllegalArgumentException("not a Unicode 18.0.0 normalization form: " + form.name());
     }
 
     // --- Type conversions ---

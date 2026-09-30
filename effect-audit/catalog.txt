@@ -105,6 +105,7 @@ java.text.Normalizer$Form#NFC:java.text.Normalizer$Form
 java.text.Normalizer$Form#NFD:java.text.Normalizer$Form
 java.text.Normalizer$Form#NFKC:java.text.Normalizer$Form
 java.text.Normalizer$Form#NFKD:java.text.Normalizer$Form
+java.text.Normalizer$Form#name():java.lang.String
 java.time.Instant#toString():java.lang.String
 java.time.LocalDate#of(int,int,int):java.time.LocalDate
 java.time.LocalDate#toString():java.lang.String

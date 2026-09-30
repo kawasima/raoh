@@ -271,6 +271,33 @@
             <id>release</id>
             <build>
                 <plugins>
+                    <!-- A release is permanent, so it must not depend on something that can change
+                         under the same coordinates: a -SNAPSHOT dependency (199x-notation while it
+                         has no release) or a snapshot repository. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-enforcer-plugin</artifactId>
+                        <version>3.6.3</version>
+                        <executions>
+                            <execution>
+                                <id>no-snapshots-in-a-release</id>
+                                <goals>
+                                    <goal>enforce</goal>
+                                </goals>
+                                <configuration>
+                                    <rules>
+                                        <requireReleaseDeps>
+                                            <message>A release cannot depend on a -SNAPSHOT.</message>
+                                        </requireReleaseDeps>
+                                        <requireNoRepositories>
+                                            <message>A release resolves from Maven Central only; remove the snapshot repository.</message>
+                                            <allowSnapshotRepositories>false</allowSnapshotRepositories>
+                                        </requireNoRepositories>
+                                    </rules>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-source-plugin</artifactId>
