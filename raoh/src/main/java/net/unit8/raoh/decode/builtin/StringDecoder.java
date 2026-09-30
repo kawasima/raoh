@@ -3,7 +3,7 @@ package net.unit8.raoh.decode.builtin;
 import net.unit8.notation199x.CaseConversion;
 import net.unit8.notation199x.Normalization;
 import net.unit8.notation199x.ScalarValues;
-import net.unit8.notation199x.pattern.PatternImage;
+import net.unit8.notation199x.pattern.PatternMachine;
 import net.unit8.notation199x.pattern.PatternParser;
 import net.unit8.notation199x.pattern.PatternRead;
 import net.unit8.notation199x.pattern.StringPattern;
@@ -243,7 +243,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      *
      * @param pattern the pattern, in the pattern language of the Raoh Specification
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value does not match
-     * @throws IllegalArgumentException if {@code pattern} is not a pattern of the language
+     * @throws IllegalArgumentException if {@code pattern} is not a pattern of the language, or is
+     *                                  past one of the limits on an admissible pattern
      */
     public StringDecoder<I> pattern(String pattern) {
         return pattern(pattern, ErrorCodes.INVALID_FORMAT, null);
@@ -258,7 +259,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * @param pattern the pattern, in the pattern language of the Raoh Specification
      * @param code    the error code to use on failure
      * @return a new decoder that fails with the specified error code if the value does not match
-     * @throws IllegalArgumentException if {@code pattern} is not a pattern of the language
+     * @throws IllegalArgumentException if {@code pattern} is not a pattern of the language, or is
+     *                                  past one of the limits on an admissible pattern
      */
     public StringDecoder<I> pattern(String pattern, String code) {
         return pattern(pattern, code, null);
@@ -276,6 +278,15 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * built: a back reference, a lookaround, a named or flag group, a property class such as
      * {@code \p{L}}, a boundary such as {@code \b}, a possessive repetition. There are no flags.
      *
+     * <p>A pattern is admitted within three limits, the same in every implementation of the
+     * specification and each decided from the text: a count of at most 134217727, groups nested
+     * at most 200 deep, and at most 250000 states once its repetitions are written out, counted
+     * on the pattern as written (a set of characters or an anchor is one, a choice of {@code n}
+     * alternatives is one plus one more than each, {@code A{n,m}} is {@code m} times {@code A}
+     * plus one, {@code A{n,}} is {@code n + 1} times {@code A} plus one, and the pattern is one
+     * more). So {@code a{249998}} is admitted and {@code a{249999}} is not. A pattern past a limit
+     * is refused when the decoder is built, with a message that names the limit.
+     *
      * <p>The value is matched by the set of strings the pattern means and not by
      * {@code java.util.regex}. A match reads each character of the value once, so the time it
      * takes is linear in the length of the value whatever the pattern, and the result does not
@@ -286,9 +297,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * @param code    the error code to use on failure
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with the specified error code if the value does not match
-     * @throws IllegalArgumentException if {@code pattern} is not a pattern of the language, is
-     *                                  nested deeper than the reader reads, or means a machine
-     *                                  larger than is built
+     * @throws IllegalArgumentException if {@code pattern} is not a pattern of the language, or is
+     *                                  past one of the limits on an admissible pattern
      */
     public StringDecoder<I> pattern(String pattern, String code, @Nullable String message) {
         Objects.requireNonNull(pattern, "pattern");
@@ -307,9 +317,13 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Reads a pattern and builds what values are matched against.
      *
+     * <p>Every pattern the reader admits has a machine, so the only refusals are the reader's: text
+     * that is no pattern, and a pattern past one of the limits. They are told apart in the message,
+     * since what an author does about them differs.
+     *
      * @param pattern the pattern text
      * @return the machine the pattern means
-     * @throws IllegalArgumentException if the text is not a pattern, or one too large to build
+     * @throws IllegalArgumentException if the text is not a pattern, or is past a limit
      */
     private static StringPattern compile(String pattern) {
         var read = PatternParser.read(pattern);
@@ -318,16 +332,31 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
                     + pattern + "\" (" + refused.why().name() + " at index " + refused.from()
                     + (refused.construct().isEmpty() ? "" : ": \"" + refused.construct() + "\"") + ")");
         }
-        if (read instanceof PatternRead.TooDeep tooDeep) {
-            throw new IllegalArgumentException("pattern is nested deeper than " + tooDeep.deepest()
-                    + " levels: \"" + pattern + "\"");
+        if (read instanceof PatternRead.Beyond beyond) {
+            throw new IllegalArgumentException("pattern \"" + pattern + "\" is past the limit of "
+                    + beyond.limit().most() + " " + limitName(beyond.limit())
+                    + (beyond.from() == 0 && beyond.construct().equals(pattern)
+                            ? "" : " at index " + beyond.from() + ": \"" + beyond.construct() + "\""));
         }
-        var image = PatternImage.of(((PatternRead.Read) read).meaning());
-        if (image instanceof PatternImage.Written written) {
-            return written.pattern();
+        return PatternMachine.of(((PatternRead.Read) read).meaning()).pattern();
+    }
+
+    /**
+     * What a limit on an admissible pattern counts, for a message.
+     *
+     * <p>Not a switch: javac would compile one through the enum's ordinals.
+     *
+     * @param limit the limit
+     * @return the thing it counts
+     */
+    private static String limitName(PatternRead.Limit limit) {
+        if (limit == PatternRead.Limit.REPETITION_COUNT) {
+            return "on a repetition count";
         }
-        throw new IllegalArgumentException("pattern is too large to build a matcher for: \""
-                + pattern + "\"");
+        if (limit == PatternRead.Limit.NESTING_DEPTH) {
+            return "on groups nested one inside another";
+        }
+        return "states once its repetitions are written out";
     }
 
     /**
@@ -897,9 +926,10 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      *
      * <p>A clock time of {@code 23:59:60}, at any offset, is rejected with {@code invalid_format}:
      * a leap second is a moment {@link Instant} cannot name. An end of day {@code 24:00:00} is
-     * accepted as the start of the next day, the same instant, only with nothing after it:
-     * {@code 24:00:01} and {@code 24:00:00.5} are rejected. {@link #offsetDateTime(String)} reads
-     * a different form, a clock's date and time beside an offset, and rejects hour {@code 24}.
+     * accepted as the start of the next day, the same instant, only with no fraction:
+     * {@code 24:00:01}, {@code 24:00:00.5} and {@code 24:00:00.0} are rejected.
+     * {@link #offsetDateTime(String)} reads a different form, a clock's date and time beside an
+     * offset, and rejects hour {@code 24}.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link Instant}

@@ -76,7 +76,7 @@ final class TemporalText {
     /**
      * Reads the form of {@link #offsetDateTime(String)} with the seconds required, as the moment
      * it names. The year may reach the {@link Instant} range, beyond {@link LocalDate}'s.
-     * {@code 24:00:00} with nothing after it is the start of the next day; second {@code 60} is
+     * {@code 24:00:00} with no fraction is the start of the next day; second {@code 60} is
      * rejected.
      *
      * @param text the text to read

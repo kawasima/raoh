@@ -10,8 +10,9 @@ detailed from the current development cycle onward.
 
 ## [Unreleased]
 
-> **Read the Breaking entry under Changed before upgrading.** `pattern()` takes the pattern text
-> instead of a `java.util.regex.Pattern`.
+> **Read the Breaking entries under Changed before upgrading.** `pattern()` takes the pattern text
+> instead of a `java.util.regex.Pattern`, and refuses a pattern past the limits the Raoh
+> Specification 0.9.0 sets. `iso8601()` no longer accepts `24:00:00` with a fraction.
 
 ### Changed
 
@@ -29,6 +30,21 @@ detailed from the current development cycle onward.
   `Pattern.compile`; a pattern that relied on a flag or on one of the refused constructs has to be
   rewritten or moved to `refine()`
   ([#171](https://github.com/raoh-project/raoh-java/issues/171)).
+- **Breaking: a pattern is admitted within three limits.** The Raoh Specification 0.9.0 sets the
+  limits every implementation holds to, counted from the pattern text: a repetition count of at
+  most 134217727, groups nested at most 200 deep, and at most 250000 states once the repetitions
+  are written out (a set of characters or an anchor is one, a choice of n alternatives is one plus
+  one more than each, `A{n,m}` is m times `A` plus one, `A{n,}` is n + 1 times `A` plus one, and
+  the pattern is one more). `a{249998}` is admitted and `a{249999}` and `(a{500}){500}` are not. A
+  pattern past a limit throws `IllegalArgumentException` when the decoder is built, with a message
+  that names the limit and does not call it "not a pattern". Every pattern within the limits is
+  admitted; the matcher no longer refuses one for its own size
+  ([#171](https://github.com/raoh-project/raoh-java/issues/171)).
+- **Breaking: `iso8601()` reads `24:00:00` only with no fraction.** 0.8.0 accepted an all-zero
+  fraction (`2024-01-15T24:00:00.0Z`, `24:00:00.000000000+09:00`) as the start of the next day,
+  because `DateTimeFormatter.ISO_INSTANT` did. The Raoh Specification 0.9.0 and Souther refuse
+  hour 24 with any fraction, and these are now `invalid_format`
+  ([#160](https://github.com/raoh-project/raoh-java/issues/160)).
 - **`toLowerCase()`, `toUpperCase()` and `normalize()` follow Unicode 18.0.0 on every JDK.** They
   used `String.toLowerCase(Locale.ROOT)`, `String.toUpperCase(Locale.ROOT)` and
   `java.text.Normalizer`, so the result followed the Unicode version of the running JDK (16.0 on
@@ -43,9 +59,10 @@ detailed from the current development cycle onward.
   case conversion, normalization, the `White_Space` set, order and length in scalar values, the
   temporal grammar and the pattern language. Raoh's own copies of the `White_Space` set and of
   the temporal regular expressions are gone. `iso8601()` no longer builds its value with
-  `DateTimeFormatter.ISO_INSTANT`: the shared grammar decides that `24:00:00` with nothing after
-  it is the start of the next day and that second `60` is refused, and `offsetDateTime()` reads a
-  separate form in which hour `24` is not a time. What each decoder accepts is unchanged
+  `DateTimeFormatter.ISO_INSTANT`: the shared grammar decides that `24:00:00` with no fraction is
+  the start of the next day and that second `60` is refused, and `offsetDateTime()` reads a
+  separate form in which hour `24` is not a time. Apart from the fraction after `24:00:00` above, what the
+  temporal decoders accept is unchanged
   ([#160](https://github.com/raoh-project/raoh-java/issues/160)).
 - **`CodePointOrder.compare` places an unpaired surrogate above every character of the basic
   multilingual plane.** It compared an unpaired surrogate as the code point of its own value. The

@@ -164,15 +164,20 @@ net.unit8.notation199x.TemporalText$Kind#INSTANT:net.unit8.notation199x.Temporal
 net.unit8.notation199x.TemporalText$Kind#OFFSET_DATETIME:net.unit8.notation199x.TemporalText$Kind
 net.unit8.notation199x.TemporalText$Kind#TIME:net.unit8.notation199x.TemporalText$Kind
 net.unit8.notation199x.WhiteSpace#contains(int):boolean
-net.unit8.notation199x.pattern.PatternImage#of(net.unit8.notation199x.pattern.PatternMeaning):net.unit8.notation199x.pattern.PatternImage  -- the argument is what PatternParser read: a sealed type whose cases are 199x-notation's own records
-net.unit8.notation199x.pattern.PatternImage$Written#pattern():net.unit8.notation199x.pattern.StringPattern
+net.unit8.notation199x.pattern.PatternMachine#of(net.unit8.notation199x.pattern.PatternMeaning):net.unit8.notation199x.pattern.PatternMachine  -- the argument is what PatternParser read: a sealed type whose cases are 199x-notation's own records
+net.unit8.notation199x.pattern.PatternMachine#pattern():net.unit8.notation199x.pattern.StringPattern
 net.unit8.notation199x.pattern.PatternParser#read(java.lang.String):net.unit8.notation199x.pattern.PatternRead
+net.unit8.notation199x.pattern.PatternRead$Beyond#construct():java.lang.String
+net.unit8.notation199x.pattern.PatternRead$Beyond#from():int
+net.unit8.notation199x.pattern.PatternRead$Beyond#limit():net.unit8.notation199x.pattern.PatternRead$Limit
+net.unit8.notation199x.pattern.PatternRead$Limit#NESTING_DEPTH:net.unit8.notation199x.pattern.PatternRead$Limit
+net.unit8.notation199x.pattern.PatternRead$Limit#REPETITION_COUNT:net.unit8.notation199x.pattern.PatternRead$Limit
+net.unit8.notation199x.pattern.PatternRead$Limit#most():int
 net.unit8.notation199x.pattern.PatternRead$Read#meaning():net.unit8.notation199x.pattern.PatternMeaning
 net.unit8.notation199x.pattern.PatternRead$Refusal#name():java.lang.String
 net.unit8.notation199x.pattern.PatternRead$Refused#construct():java.lang.String
 net.unit8.notation199x.pattern.PatternRead$Refused#from():int
 net.unit8.notation199x.pattern.PatternRead$Refused#why():net.unit8.notation199x.pattern.PatternRead$Refusal
-net.unit8.notation199x.pattern.PatternRead$TooDeep#deepest():int
 net.unit8.notation199x.pattern.StringPattern#matches(java.lang.String):boolean
 org.jooq.types.UByte#toBigInteger():java.math.BigInteger
 org.jooq.types.UInteger#toBigInteger():java.math.BigInteger

@@ -11,12 +11,14 @@ import java.net.URI;
 import java.text.Normalizer;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import static net.unit8.raoh.decode.ObjectDecoders.string;
 import static net.unit8.raoh.decode.builtin.BuiltinTestSupport.decodeErr;
 import static net.unit8.raoh.decode.builtin.BuiltinTestSupport.decodeOk;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -183,7 +185,7 @@ class StringDecoderTest {
         // U+1F600 is a surrogate pair starting at U+D83D, so String.compareTo puts it before
         // U+FF21; by code point it comes after.
         var issue = decodeErr(string().oneOf("\ud83d\ude00", "\uff21", "a"), "z");
-        assertEquals(java.util.List.of("a", "\uff21", "\ud83d\ude00"), issue.meta().get("allowed"));
+        assertEquals(List.of("a", "\uff21", "\ud83d\ude00"), issue.meta().get("allowed"));
         assertEquals("must be one of [a, \uff21, \ud83d\ude00]", issue.message());
     }
 
@@ -222,6 +224,35 @@ class StringDecoderTest {
     void patternRefusesTextOutsideThePatternLanguageWhenBuilt(String text) {
         var e = assertThrows(IllegalArgumentException.class, () -> string().pattern(text));
         assertTrue(e.getMessage().contains(text), e.getMessage());
+    }
+
+    /**
+     * The limits on an admissible pattern are counted from the text, the same in every
+     * implementation, and a pattern past one is refused as that and not as text that is no
+     * pattern: {@code a{249998}} is 250000 states and {@code a{249999}} is one more.
+     */
+    @Test
+    void patternAdmitsEveryPatternWithinTheLimits() {
+        assertEquals("aaa", decodeOk(string().pattern("a{0,249998}"), "aaa"));
+        assertEquals("a".repeat(249_998), decodeOk(string().pattern("a{249998}"), "a".repeat(249_998)));
+        var twoHundredDeep = "(?:".repeat(200) + "a" + ")".repeat(200);
+        assertEquals("a", decodeOk(string().pattern(twoHundredDeep), "a"));
+    }
+
+    @Test
+    void patternPastALimitIsRefusedNamingTheLimit() {
+        var states = assertThrows(IllegalArgumentException.class, () -> string().pattern("a{249999}"));
+        assertTrue(states.getMessage().contains("250000 states"), states.getMessage());
+        var nested = assertThrows(IllegalArgumentException.class, () -> string().pattern("(a{500}){500}"));
+        assertTrue(nested.getMessage().contains("250000 states"), nested.getMessage());
+        var count = assertThrows(IllegalArgumentException.class, () -> string().pattern("a{134217728}"));
+        assertTrue(count.getMessage().contains("134217727 on a repetition count"), count.getMessage());
+        var deep = assertThrows(IllegalArgumentException.class,
+                () -> string().pattern("(?:".repeat(201) + "a" + ")".repeat(201)));
+        assertTrue(deep.getMessage().contains("200 on groups nested"), deep.getMessage());
+        for (var e : List.of(states, nested, count, deep)) {
+            assertFalse(e.getMessage().startsWith("not a pattern"), e.getMessage());
+        }
     }
 
     /** {@code \\d} is the ten ASCII digits, whatever the JDK's Unicode data says is a digit. */
