@@ -12,12 +12,12 @@ import java.text.Normalizer;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.UUID;
-import java.util.regex.Pattern;
 
 import static net.unit8.raoh.decode.ObjectDecoders.string;
 import static net.unit8.raoh.decode.builtin.BuiltinTestSupport.decodeErr;
 import static net.unit8.raoh.decode.builtin.BuiltinTestSupport.decodeOk;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -191,23 +191,61 @@ class StringDecoderTest {
 
     @Test
     void patternAcceptsMatchRejectsMismatch() {
-        var p = Pattern.compile("\\d+");
-        assertEquals("123", decodeOk(string().pattern(p), "123"));
-        var issue = decodeErr(string().pattern(p), "12a");
+        assertEquals("123", decodeOk(string().pattern("\\d+"), "123"));
+        var issue = decodeErr(string().pattern("\\d+"), "12a");
         assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
         assertEquals("invalid format", issue.message());
         assertEquals("\\d+", issue.meta().get("pattern"));
     }
 
+    /** A pattern matches the whole value, anchored or not, as {@code Matcher.matches} did. */
+    @Test
+    void patternMatchesTheWholeValue() {
+        assertEquals(ErrorCodes.INVALID_FORMAT, decodeErr(string().pattern("\\d+"), "a123b").code());
+        assertEquals("123", decodeOk(string().pattern("^\\d+$"), "123"));
+    }
+
+    /**
+     * Text that is a regular expression to {@code java.util.regex} and not a pattern of the
+     * specification's language is refused when the decoder is built (#171).
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "(a)\\1",       // back reference
+            "(?=a).*",      // lookaround
+            "(?i)a",        // flag group
+            "\\p{L}+",      // property class: would follow the JDK's Unicode data
+            "\\bword\\b",   // boundary
+            "a++",          // possessive repetition
+            "[a-z"          // unclosed
+    })
+    void patternRefusesTextOutsideThePatternLanguageWhenBuilt(String text) {
+        var e = assertThrows(IllegalArgumentException.class, () -> string().pattern(text));
+        assertTrue(e.getMessage().contains(text), e.getMessage());
+    }
+
+    /** {@code \\d} is the ten ASCII digits, whatever the JDK's Unicode data says is a digit. */
+    @Test
+    void patternShorthandsAreAscii() {
+        assertEquals(ErrorCodes.INVALID_FORMAT, decodeErr(string().pattern("\\d+"), "\uFF11\uFF12").code());
+    }
+
+    /** A value with half a surrogate pair is not text, so no pattern accepts it. */
+    @Test
+    void patternAcceptsNoValueWithAnUnpairedSurrogate() {
+        assertEquals(ErrorCodes.INVALID_FORMAT, decodeErr(string().pattern("[^a]"), "\uD83D").code());
+        assertEquals("\uD83D\uDE00", decodeOk(string().pattern("[^a]"), "\uD83D\uDE00"));
+    }
+
     @Test
     void patternUsesCustomCode() {
-        var issue = decodeErr(string().pattern(Pattern.compile("\\d+"), "must_be_digits"), "x");
+        var issue = decodeErr(string().pattern("\\d+", "must_be_digits"), "x");
         assertEquals("must_be_digits", issue.code());
     }
 
     @Test
     void patternUsesCustomCodeAndMessage() {
-        var issue = decodeErr(string().pattern(Pattern.compile("\\d+"), "must_be_digits", "digits only"), "x");
+        var issue = decodeErr(string().pattern("\\d+", "must_be_digits", "digits only"), "x");
         assertEquals("must_be_digits", issue.code());
         assertEquals("digits only", issue.message());
         assertTrue(issue.customMessage());
@@ -402,6 +440,24 @@ class StringDecoderTest {
         assertEquals("abc", decodeOk(string().toLowerCase(), "ABC"));
     }
 
+    /**
+     * Unicode's Final_Sigma condition skips only Case_Ignorable characters, where the JDK looks
+     * for a word boundary (#166; Raoh Specification cases R000843 and R000844).
+     */
+    @Test
+    void toLowerCaseDecidesFinalSigmaByUnicodesCondition() {
+        assertEquals("\u03B1\u03C2", decodeOk(string().toLowerCase(), "\u0391\u03A3"));
+        assertEquals("\u03B11\u03C3", decodeOk(string().toLowerCase(), "\u03911\u03A3"));
+        assertEquals("\u03B1-\u03C3", decodeOk(string().toLowerCase(), "\u0391-\u03A3"));
+        assertEquals("\u03B1.\u03C2", decodeOk(string().toLowerCase(), "\u0391.\u03A3"));
+    }
+
+    @Test
+    void caseConversionIsTheFullUntailoredMapping() {
+        assertEquals("STRASSE", decodeOk(string().toUpperCase(), "stra\u00DFe"));
+        assertEquals("i\u0307", decodeOk(string().toLowerCase(), "\u0130"));
+    }
+
     @Test
     void toUpperCaseUppercasesValue() {
         assertEquals("ABC", decodeOk(string().toUpperCase(), "abc"));
@@ -474,6 +530,14 @@ class StringDecoderTest {
     @Test
     void normalizeWithNfkcFoldsCompatibilityCharacters() {
         assertEquals("\u30A2", decodeOk(string().normalize(Normalizer.Form.NFKC), HALFWIDTH_A));
+    }
+
+    @Test
+    void normalizeAnswersEveryForm() {
+        assertEquals(NFD_GA, decodeOk(string().normalize(Normalizer.Form.NFD), NFC_GA));
+        assertEquals(NFC_GA, decodeOk(string().normalize(Normalizer.Form.NFC), NFD_GA));
+        assertEquals("\u30AB\u3099", decodeOk(string().normalize(Normalizer.Form.NFKD), "\uFF76\uFF9E"));
+        assertEquals("\u30AC", decodeOk(string().normalize(Normalizer.Form.NFKC), "\uFF76\uFF9E"));
     }
 
     // --- type conversions ---

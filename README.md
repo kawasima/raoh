@@ -594,7 +594,7 @@ var contact = oneOf(
         ).map((kind, value) -> new EmailContact(value)),
         combine(
                 field("kind", literal("phone")),
-                field("value", string().pattern(Pattern.compile("^\\d+$")))
+                field("value", string().pattern("^\\d+$"))
         ).map((kind, value) -> new PhoneContact(value))
 );
 ```

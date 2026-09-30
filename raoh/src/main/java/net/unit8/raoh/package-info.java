@@ -29,8 +29,10 @@
  * {@link net.unit8.raoh.Issue#meta()} orders its keys. Collection values supplied by callers, such
  * as the values a {@code refine} metadata function returns, are kept as given.
  *
- * <p>The running Java platform version is not ambient state for these guarantees. Behavior that
- * depends on the platform release, such as Unicode data or a JDK parser, may change with it.
+ * <p>What a text means does not depend on the running Java platform version either. Case
+ * conversion, normalization and whitespace follow Unicode 18.0.0, and the text forms of dates,
+ * times and instants and the pattern language are decided without a JDK parser or
+ * {@code java.util.regex}; all of them come from 199x-notation, which Raoh shares with Souther.
  */
 @NullMarked
 package net.unit8.raoh;

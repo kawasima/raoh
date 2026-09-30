@@ -102,6 +102,9 @@ java.math.BigInteger#ZERO:java.math.BigInteger
 java.net.URI#create(java.lang.String):java.net.URI
 java.net.URI#toString():java.lang.String
 java.text.Normalizer$Form#NFC:java.text.Normalizer$Form
+java.text.Normalizer$Form#NFD:java.text.Normalizer$Form
+java.text.Normalizer$Form#NFKC:java.text.Normalizer$Form
+java.text.Normalizer$Form#NFKD:java.text.Normalizer$Form
 java.time.Instant#toString():java.lang.String
 java.time.LocalDate#of(int,int,int):java.time.LocalDate
 java.time.LocalDate#toString():java.lang.String
@@ -112,9 +115,6 @@ java.time.LocalTime#toString():java.lang.String
 java.time.OffsetDateTime#of(java.time.LocalDateTime,java.time.ZoneOffset):java.time.OffsetDateTime
 java.time.OffsetDateTime#toString():java.lang.String
 java.time.ZoneOffset#UTC:java.time.ZoneOffset
-java.time.ZoneOffset#ofHoursMinutesSeconds(int,int,int):java.time.ZoneOffset
-java.time.format.DateTimeFormatter#ISO_INSTANT:java.time.format.DateTimeFormatter
-java.time.format.DateTimeFormatter#parsedLeapSecond():java.time.temporal.TemporalQuery
 java.util.ArrayList#<init>()
 java.util.ArrayList#<init>(int)
 java.util.Collections#unmodifiableList(java.util.List):java.util.List  -- wraps the list; checks its class and calls none of its methods
@@ -136,6 +136,7 @@ java.util.Map#of():java.util.Map
 java.util.Objects#requireNonNull(java.lang.Object):java.lang.Object  -- null-checks; calls nothing on the argument
 java.util.Objects#requireNonNull(java.lang.Object,java.lang.String):java.lang.Object  -- null-checks; calls nothing on the argument
 java.util.Optional#empty():java.util.Optional
+java.util.Optional#isEmpty():boolean
 java.util.Optional#of(java.lang.Object):java.util.Optional  -- stores the value; calls nothing on it
 java.util.Optional#orElse(java.lang.Object):java.lang.Object  -- returns the value or the argument; calls nothing on either
 java.util.ResourceBundle$Control#FORMAT_PROPERTIES:java.util.List
@@ -146,6 +147,32 @@ java.util.regex.Matcher#quoteReplacement(java.lang.String):java.lang.String
 java.util.regex.Pattern#compile(java.lang.String):java.util.regex.Pattern
 java.util.regex.Pattern#pattern():java.lang.String
 java.util.stream.Collectors#toList():java.util.stream.Collector
+net.unit8.notation199x.CaseConversion#lowercase(java.lang.String):java.lang.String
+net.unit8.notation199x.CaseConversion#uppercase(java.lang.String):java.lang.String
+net.unit8.notation199x.Normalization#normalize(net.unit8.notation199x.Normalization$Form,java.lang.String):java.lang.String
+net.unit8.notation199x.Normalization$Form#NFC:net.unit8.notation199x.Normalization$Form
+net.unit8.notation199x.Normalization$Form#NFD:net.unit8.notation199x.Normalization$Form
+net.unit8.notation199x.Normalization$Form#NFKC:net.unit8.notation199x.Normalization$Form
+net.unit8.notation199x.Normalization$Form#NFKD:net.unit8.notation199x.Normalization$Form
+net.unit8.notation199x.ScalarValues#compare(java.lang.String,java.lang.String):int
+net.unit8.notation199x.ScalarValues#count(java.lang.String):long
+net.unit8.notation199x.TemporalText#refusal(net.unit8.notation199x.TemporalText$Kind,java.lang.String):java.util.Optional
+net.unit8.notation199x.TemporalText$Kind#DATE:net.unit8.notation199x.TemporalText$Kind
+net.unit8.notation199x.TemporalText$Kind#DATETIME:net.unit8.notation199x.TemporalText$Kind
+net.unit8.notation199x.TemporalText$Kind#INSTANT:net.unit8.notation199x.TemporalText$Kind
+net.unit8.notation199x.TemporalText$Kind#OFFSET_DATETIME:net.unit8.notation199x.TemporalText$Kind
+net.unit8.notation199x.TemporalText$Kind#TIME:net.unit8.notation199x.TemporalText$Kind
+net.unit8.notation199x.WhiteSpace#contains(int):boolean
+net.unit8.notation199x.pattern.PatternImage#of(net.unit8.notation199x.pattern.PatternMeaning):net.unit8.notation199x.pattern.PatternImage  -- the argument is what PatternParser read: a sealed type whose cases are 199x-notation's own records
+net.unit8.notation199x.pattern.PatternImage$Written#pattern():net.unit8.notation199x.pattern.StringPattern
+net.unit8.notation199x.pattern.PatternParser#read(java.lang.String):net.unit8.notation199x.pattern.PatternRead
+net.unit8.notation199x.pattern.PatternRead$Read#meaning():net.unit8.notation199x.pattern.PatternMeaning
+net.unit8.notation199x.pattern.PatternRead$Refusal#name():java.lang.String
+net.unit8.notation199x.pattern.PatternRead$Refused#construct():java.lang.String
+net.unit8.notation199x.pattern.PatternRead$Refused#from():int
+net.unit8.notation199x.pattern.PatternRead$Refused#why():net.unit8.notation199x.pattern.PatternRead$Refusal
+net.unit8.notation199x.pattern.PatternRead$TooDeep#deepest():int
+net.unit8.notation199x.pattern.StringPattern#matches(java.lang.String):boolean
 org.jooq.types.UByte#toBigInteger():java.math.BigInteger
 org.jooq.types.UInteger#toBigInteger():java.math.BigInteger
 org.jooq.types.ULong#toBigInteger():java.math.BigInteger
@@ -155,7 +182,6 @@ tools.jackson.databind.node.MissingNode#getInstance():tools.jackson.databind.nod
 
 [EXPLICIT]
 java.lang.String#toLowerCase(java.util.Locale):java.lang.String
-java.lang.String#toUpperCase(java.util.Locale):java.lang.String
 
 [DELEGATED]
 java.lang.Class#getEnumConstants():java.lang.Object[]  -- initializes the enum class it is called on
@@ -183,10 +209,11 @@ java.math.BigInteger#doubleValue():double
 java.math.BigInteger#floatValue():float
 java.math.BigInteger#intValue():int
 java.math.BigInteger#longValue():long
-java.text.Normalizer#normalize(java.lang.CharSequence,java.text.Normalizer$Form):java.lang.String  -- reads the CharSequence argument
-java.time.Instant#from(java.time.temporal.TemporalAccessor):java.time.Instant  -- converts the argument through its own getLong() and query()
-java.time.format.DateTimeFormatter#parse(java.lang.CharSequence):java.time.temporal.TemporalAccessor  -- reads the CharSequence argument
-java.time.temporal.TemporalAccessor#query(java.time.temporal.TemporalQuery):java.lang.Object
+java.time.Instant#parse(java.lang.CharSequence):java.time.Instant  -- reads the CharSequence argument
+java.time.LocalDate#parse(java.lang.CharSequence):java.time.LocalDate  -- reads the CharSequence argument
+java.time.LocalDateTime#parse(java.lang.CharSequence):java.time.LocalDateTime  -- reads the CharSequence argument
+java.time.LocalTime#parse(java.lang.CharSequence):java.time.LocalTime  -- reads the CharSequence argument
+java.time.OffsetDateTime#parse(java.lang.CharSequence):java.time.OffsetDateTime  -- reads the CharSequence argument
 java.util.ArrayList#<init>(java.util.Collection)  -- calls the argument's toArray()
 java.util.ArrayList#add(java.lang.Object):boolean
 java.util.ArrayList#addAll(java.util.Collection):boolean
@@ -266,7 +293,6 @@ java.util.regex.Matcher#appendTail(java.lang.StringBuilder):java.lang.StringBuil
 java.util.regex.Matcher#find():boolean  -- reads the CharSequence the matcher was made for
 java.util.regex.Matcher#group():java.lang.String  -- reads the CharSequence the matcher was made for
 java.util.regex.Matcher#group(int):java.lang.String  -- reads the CharSequence the matcher was made for
-java.util.regex.Matcher#group(java.lang.String):java.lang.String  -- reads the CharSequence the matcher was made for
 java.util.regex.Matcher#matches():boolean  -- reads the CharSequence the matcher was made for
 java.util.regex.Pattern#matcher(java.lang.CharSequence):java.util.regex.Matcher  -- reads the CharSequence argument
 java.util.stream.Collectors#groupingBy(java.util.function.Function,java.util.function.Supplier,java.util.stream.Collector):java.util.stream.Collector  -- calls the downstream Collector's supplier() and accumulator() when it is built

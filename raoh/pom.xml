@@ -19,6 +19,14 @@
     <url>https://github.com/raoh-project/raoh-java</url>
 
     <dependencies>
+        <!-- The text rules Raoh shares with Souther: case conversion, normalization, White_Space,
+             scalar-value order, temporal grammar and the pattern language. -->
+        <dependency>
+            <groupId>net.unit8.199x</groupId>
+            <artifactId>199x-notation</artifactId>
+            <version>${notation199x.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>org.jspecify</groupId>
             <artifactId>jspecify</artifactId>

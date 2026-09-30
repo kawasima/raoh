@@ -1,5 +1,7 @@
 package net.unit8.raoh;
 
+import net.unit8.notation199x.ScalarValues;
+
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
@@ -28,7 +30,8 @@ public final class CodePointOrder {
 
     /**
      * Compares {@code a} and {@code b} code point by code point; a string that is a prefix of
-     * the other comes first. An unpaired surrogate compares as the code point of its own value.
+     * the other comes first. An unpaired surrogate is not a code point a text holds; it is placed
+     * above every character of the basic multilingual plane.
      *
      * @param a the first string
      * @param b the second string
@@ -36,18 +39,7 @@ public final class CodePointOrder {
      *         after {@code b}
      */
     public static int compare(String a, String b) {
-        int i = 0;
-        int j = 0;
-        while (i < a.length() && j < b.length()) {
-            int ca = a.codePointAt(i);
-            int cb = b.codePointAt(j);
-            if (ca != cb) {
-                return Integer.compare(ca, cb);
-            }
-            i += Character.charCount(ca);
-            j += Character.charCount(cb);
-        }
-        return Boolean.compare(i < a.length(), j < b.length());
+        return ScalarValues.compare(a, b);
     }
 
     /**

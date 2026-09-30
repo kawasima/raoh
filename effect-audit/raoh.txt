@@ -135,8 +135,6 @@ net.unit8.raoh.decode.builtin.ListDecoder#unique -> java.util.HashSet#add(java.l
 net.unit8.raoh.decode.builtin.ListDecoder#unique -> java.util.LinkedHashSet#add(java.lang.Object):boolean
 net.unit8.raoh.decode.builtin.LongDecoder#oneOf -> java.util.Set#contains(java.lang.Object):boolean
 net.unit8.raoh.decode.builtin.StringDecoder#oneOf -> java.util.Set#contains(java.lang.Object):boolean
-net.unit8.raoh.decode.builtin.TemporalText#instant -> java.time.Instant#from(java.time.temporal.TemporalAccessor):java.time.Instant
-net.unit8.raoh.decode.builtin.TemporalText#instant -> java.time.temporal.TemporalAccessor#query(java.time.temporal.TemporalQuery):java.lang.Object
 net.unit8.raoh.decode.combinator.CombinerList#flatMap -> java.util.List#get(int):java.lang.Object
 net.unit8.raoh.decode.combinator.CombinerList#flatMap -> java.util.List#size():int
 net.unit8.raoh.decode.combinator.CombinerList#map -> java.util.List#get(int):java.lang.Object
@@ -431,26 +429,13 @@ net.unit8.raoh.decode.builtin.StringDecoder#cuid -> java.util.regex.Pattern#matc
 net.unit8.raoh.decode.builtin.StringDecoder#email -> java.util.regex.Matcher#matches():boolean
 net.unit8.raoh.decode.builtin.StringDecoder#email -> java.util.regex.Pattern#matcher(java.lang.CharSequence):java.util.regex.Matcher
 net.unit8.raoh.decode.builtin.StringDecoder#includes -> java.lang.String#contains(java.lang.CharSequence):boolean
-net.unit8.raoh.decode.builtin.StringDecoder#normalize -> java.text.Normalizer#normalize(java.lang.CharSequence,java.text.Normalizer$Form):java.lang.String
-net.unit8.raoh.decode.builtin.StringDecoder#pattern -> java.util.regex.Matcher#matches():boolean
-net.unit8.raoh.decode.builtin.StringDecoder#pattern -> java.util.regex.Pattern#matcher(java.lang.CharSequence):java.util.regex.Matcher
 net.unit8.raoh.decode.builtin.StringDecoder#ulid -> java.util.regex.Matcher#matches():boolean
 net.unit8.raoh.decode.builtin.StringDecoder#ulid -> java.util.regex.Pattern#matcher(java.lang.CharSequence):java.util.regex.Matcher
-net.unit8.raoh.decode.builtin.TemporalText#date -> java.util.regex.Matcher#group(java.lang.String):java.lang.String
-net.unit8.raoh.decode.builtin.TemporalText#date -> java.util.regex.Matcher#matches():boolean
-net.unit8.raoh.decode.builtin.TemporalText#date -> java.util.regex.Pattern#matcher(java.lang.CharSequence):java.util.regex.Matcher
-net.unit8.raoh.decode.builtin.TemporalText#dateTime -> java.util.regex.Matcher#matches():boolean
-net.unit8.raoh.decode.builtin.TemporalText#dateTime -> java.util.regex.Pattern#matcher(java.lang.CharSequence):java.util.regex.Matcher
-net.unit8.raoh.decode.builtin.TemporalText#instant -> java.time.format.DateTimeFormatter#parse(java.lang.CharSequence):java.time.temporal.TemporalAccessor
-net.unit8.raoh.decode.builtin.TemporalText#instant -> java.util.regex.Matcher#matches():boolean
-net.unit8.raoh.decode.builtin.TemporalText#instant -> java.util.regex.Pattern#matcher(java.lang.CharSequence):java.util.regex.Matcher
-net.unit8.raoh.decode.builtin.TemporalText#nano -> java.util.regex.Matcher#group(java.lang.String):java.lang.String
-net.unit8.raoh.decode.builtin.TemporalText#offset -> java.util.regex.Matcher#group(java.lang.String):java.lang.String
-net.unit8.raoh.decode.builtin.TemporalText#offsetDateTime -> java.util.regex.Matcher#matches():boolean
-net.unit8.raoh.decode.builtin.TemporalText#offsetDateTime -> java.util.regex.Pattern#matcher(java.lang.CharSequence):java.util.regex.Matcher
-net.unit8.raoh.decode.builtin.TemporalText#time -> java.util.regex.Matcher#group(java.lang.String):java.lang.String
-net.unit8.raoh.decode.builtin.TemporalText#time -> java.util.regex.Matcher#matches():boolean
-net.unit8.raoh.decode.builtin.TemporalText#time -> java.util.regex.Pattern#matcher(java.lang.CharSequence):java.util.regex.Matcher
+net.unit8.raoh.decode.builtin.TemporalText#date -> java.time.LocalDate#parse(java.lang.CharSequence):java.time.LocalDate
+net.unit8.raoh.decode.builtin.TemporalText#dateTime -> java.time.LocalDateTime#parse(java.lang.CharSequence):java.time.LocalDateTime
+net.unit8.raoh.decode.builtin.TemporalText#instant -> java.time.Instant#parse(java.lang.CharSequence):java.time.Instant
+net.unit8.raoh.decode.builtin.TemporalText#offsetDateTime -> java.time.OffsetDateTime#parse(java.lang.CharSequence):java.time.OffsetDateTime
+net.unit8.raoh.decode.builtin.TemporalText#time -> java.time.LocalTime#parse(java.lang.CharSequence):java.time.LocalTime
 
 [an issue copies the metadata map it is given into key order; it reads the entries, and the keys are Strings, so ordering them runs no caller-defined comparison]
 net.unit8.raoh.Issue#<init> -> java.util.TreeMap#<init>(java.util.Map)

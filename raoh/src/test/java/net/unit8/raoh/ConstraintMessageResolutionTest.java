@@ -11,7 +11,6 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Pattern;
 
 import static net.unit8.raoh.decode.ObjectDecoders.date;
 import static net.unit8.raoh.decode.ObjectDecoders.dateTime;
@@ -449,16 +448,16 @@ class ConstraintMessageResolutionTest {
     /** {@code pattern()} keeps the plain key; its stored message is already the generic one. */
     @Test
     void patternKeepsThePlainInvalidFormatKey() {
-        var issue = firstIssue(string().pattern(Pattern.compile("[a-z]+")).decode("123", Path.ROOT));
+        var issue = firstIssue(string().pattern("[a-z]+").decode("123", Path.ROOT));
         assertEquals(ErrorCodes.INVALID_FORMAT, issue.messageKey());
-        assertEquals("invalid format", en(string().pattern(Pattern.compile("[a-z]+")).decode("123", Path.ROOT)));
-        assertEquals("形式が不正です", ja(string().pattern(Pattern.compile("[a-z]+")).decode("123", Path.ROOT)));
+        assertEquals("invalid format", en(string().pattern("[a-z]+").decode("123", Path.ROOT)));
+        assertEquals("形式が不正です", ja(string().pattern("[a-z]+").decode("123", Path.ROOT)));
     }
 
     /** A pattern with a caller-supplied code reports that code as its key, as before. */
     @Test
     void patternWithCustomCodeKeepsThatCode() {
-        var issue = firstIssue(string().pattern(Pattern.compile("[a-z]+"), "lowercase_only").decode("123", Path.ROOT));
+        var issue = firstIssue(string().pattern("[a-z]+", "lowercase_only").decode("123", Path.ROOT));
         assertEquals("lowercase_only", issue.code());
         assertEquals("lowercase_only", issue.messageKey());
     }

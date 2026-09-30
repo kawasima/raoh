@@ -1,5 +1,12 @@
 package net.unit8.raoh.decode.builtin;
 
+import net.unit8.notation199x.CaseConversion;
+import net.unit8.notation199x.Normalization;
+import net.unit8.notation199x.ScalarValues;
+import net.unit8.notation199x.pattern.PatternImage;
+import net.unit8.notation199x.pattern.PatternParser;
+import net.unit8.notation199x.pattern.PatternRead;
+import net.unit8.notation199x.pattern.StringPattern;
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.CodePointOrder;
 import net.unit8.raoh.ErrorCodes;
@@ -230,44 +237,97 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     }
 
     /**
-     * Validates the string against the given regular expression pattern.
+     * Requires the whole string to be one of the strings the pattern accepts.
      *
-     * @param p the pattern to match against
+     * <p>See {@link #pattern(String, String, String)} for the pattern language.
+     *
+     * @param pattern the pattern, in the pattern language of the Raoh Specification
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value does not match
+     * @throws IllegalArgumentException if {@code pattern} is not a pattern of the language
      */
-    public StringDecoder<I> pattern(Pattern p) {
-        return pattern(p, ErrorCodes.INVALID_FORMAT, null);
+    public StringDecoder<I> pattern(String pattern) {
+        return pattern(pattern, ErrorCodes.INVALID_FORMAT, null);
     }
 
     /**
-     * Validates the string against the given regular expression pattern with a custom error code.
+     * Requires the whole string to be one of the strings the pattern accepts, with a custom error
+     * code.
      *
-     * @param p    the pattern to match against
-     * @param code the error code to use on failure
+     * <p>See {@link #pattern(String, String, String)} for the pattern language.
+     *
+     * @param pattern the pattern, in the pattern language of the Raoh Specification
+     * @param code    the error code to use on failure
      * @return a new decoder that fails with the specified error code if the value does not match
+     * @throws IllegalArgumentException if {@code pattern} is not a pattern of the language
      */
-    public StringDecoder<I> pattern(Pattern p, String code) {
-        return pattern(p, code, null);
+    public StringDecoder<I> pattern(String pattern, String code) {
+        return pattern(pattern, code, null);
     }
 
     /**
-     * Validates the string against the given regular expression pattern with a custom error code and message.
+     * Requires the whole string to be one of the strings the pattern accepts, with a custom error
+     * code and message.
      *
-     * @param p       the pattern to match against
+     * <p>The pattern is text in the pattern language of the Raoh Specification, the one Souther
+     * uses: literals, classes, {@code .}, the shorthands {@code \d}, {@code \w} and {@code \s}
+     * over ASCII, groups, alternation, counted repetition, and {@code ^} and {@code $} at the ends.
+     * It always matches the whole value, so the anchors may be left out. Text that is a regular
+     * expression elsewhere and not a pattern of this language is refused when the decoder is
+     * built: a back reference, a lookaround, a named or flag group, a property class such as
+     * {@code \p{L}}, a boundary such as {@code \b}, a possessive repetition. There are no flags.
+     *
+     * <p>The value is matched by the set of strings the pattern means and not by
+     * {@code java.util.regex}. A match reads each character of the value once, so the time it
+     * takes is linear in the length of the value whatever the pattern, and the result does not
+     * depend on the Unicode data of the running JDK. A value holding an unpaired surrogate matches
+     * no pattern.
+     *
+     * @param pattern the pattern, in the pattern language of the Raoh Specification
      * @param code    the error code to use on failure
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with the specified error code if the value does not match
+     * @throws IllegalArgumentException if {@code pattern} is not a pattern of the language, is
+     *                                  nested deeper than the reader reads, or means a machine
+     *                                  larger than is built
      */
-    public StringDecoder<I> pattern(Pattern p, String code, @Nullable String message) {
+    public StringDecoder<I> pattern(String pattern, String code, @Nullable String message) {
+        Objects.requireNonNull(pattern, "pattern");
+        var compiled = compile(pattern);
         return chain((value, path) -> {
-            if (!p.matcher(value).matches()) {
-                var meta = Map.<String, Object>of("pattern", p.pattern());
+            if (!compiled.matches(value)) {
+                var meta = Map.<String, Object>of("pattern", pattern);
                 return message != null
                         ? Result.failCustom(path, code, message, meta)
                         : Result.fail(path, code, "invalid format", meta);
             }
             return Result.ok(value);
         });
+    }
+
+    /**
+     * Reads a pattern and builds what values are matched against.
+     *
+     * @param pattern the pattern text
+     * @return the machine the pattern means
+     * @throws IllegalArgumentException if the text is not a pattern, or one too large to build
+     */
+    private static StringPattern compile(String pattern) {
+        var read = PatternParser.read(pattern);
+        if (read instanceof PatternRead.Refused refused) {
+            throw new IllegalArgumentException("not a pattern of the Raoh pattern language: \""
+                    + pattern + "\" (" + refused.why().name() + " at index " + refused.from()
+                    + (refused.construct().isEmpty() ? "" : ": \"" + refused.construct() + "\"") + ")");
+        }
+        if (read instanceof PatternRead.TooDeep tooDeep) {
+            throw new IllegalArgumentException("pattern is nested deeper than " + tooDeep.deepest()
+                    + " levels: \"" + pattern + "\"");
+        }
+        var image = PatternImage.of(((PatternRead.Read) read).meaning());
+        if (image instanceof PatternImage.Written written) {
+            return written.pattern();
+        }
+        throw new IllegalArgumentException("pattern is too large to build a matcher for: \""
+                + pattern + "\"");
     }
 
     /**
@@ -623,31 +683,37 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     }
 
     /**
-     * Converts the decoded string to lower case using the rules of {@link Locale#ROOT}.
+     * Converts the decoded string to lower case with Unicode 18.0.0's default case conversion.
      *
-     * <p>The JVM default locale is never consulted, so {@code "TITLE"} becomes {@code "title"}
-     * even when the default locale is Turkish. For a locale-specific case mapping, use
+     * <p>The mapping is the full one of {@code UnicodeData.txt} and {@code SpecialCasing.txt}
+     * with no locale or language tailoring, so {@code "TITLE"} becomes {@code "title"} whatever
+     * the JVM default locale is. A Greek capital sigma becomes the final form {@code ς} by
+     * Unicode's {@code Final_Sigma} condition: {@code "ΟΣ"} becomes {@code "ος"}, and
+     * {@code "Α1Σ"} becomes {@code "α1σ"} because a digit is not case-ignorable. The result does
+     * not depend on the Unicode version of the running JDK, which
+     * {@link String#toLowerCase(Locale)} follows. For a locale-specific case mapping, use
      * {@code map(s -> s.toLowerCase(locale))} instead.
      *
-     * @return a new decoder that applies {@link String#toLowerCase(Locale)} with
-     *         {@link Locale#ROOT} to the value
+     * @return a new decoder that converts the value to lower case
      */
     public StringDecoder<I> toLowerCase() {
-        return new StringDecoder<>((in, path) -> this.decode(in, path).map(s -> s.toLowerCase(Locale.ROOT)));
+        return new StringDecoder<>((in, path) -> this.decode(in, path).map(CaseConversion::lowercase));
     }
 
     /**
-     * Converts the decoded string to upper case using the rules of {@link Locale#ROOT}.
+     * Converts the decoded string to upper case with Unicode 18.0.0's default case conversion.
      *
-     * <p>The JVM default locale is never consulted, so {@code "title"} becomes {@code "TITLE"}
-     * even when the default locale is Turkish. For a locale-specific case mapping, use
+     * <p>The mapping is the full one of {@code UnicodeData.txt} and {@code SpecialCasing.txt}
+     * with no locale or language tailoring, so {@code "title"} becomes {@code "TITLE"} whatever
+     * the JVM default locale is, and one character can become several ({@code "straße"} becomes
+     * {@code "STRASSE"}). The result does not depend on the Unicode version of the running JDK,
+     * which {@link String#toUpperCase(Locale)} follows. For a locale-specific case mapping, use
      * {@code map(s -> s.toUpperCase(locale))} instead.
      *
-     * @return a new decoder that applies {@link String#toUpperCase(Locale)} with
-     *         {@link Locale#ROOT} to the value
+     * @return a new decoder that converts the value to upper case
      */
     public StringDecoder<I> toUpperCase() {
-        return new StringDecoder<>((in, path) -> this.decode(in, path).map(s -> s.toUpperCase(Locale.ROOT)));
+        return new StringDecoder<>((in, path) -> this.decode(in, path).map(CaseConversion::uppercase));
     }
 
     /**
@@ -673,6 +739,9 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * ㍿ and 株式会社. That suits a search key and discards information a stored name is meant to
      * keep, which is why {@link #normalize()} is NFC.
      *
+     * <p>Every form is Unicode 18.0.0 normalization, whatever Unicode version the running JDK's
+     * {@link Normalizer} has. {@link Normalizer.Form} only names the form here.
+     *
      * <p>Normalization is a transform, not a constraint, and it composes in the order it is
      * written: {@code string().normalize().maxLength(20)} counts the normalized value, whereas
      * {@code string().maxLength(20).normalize()} checks the length of the input as it arrived.
@@ -693,8 +762,13 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      */
     public StringDecoder<I> normalize(Normalizer.Form form) {
         Objects.requireNonNull(form, "form");
+        // Not a switch: javac would compile one through Normalizer.Form's ordinals.
+        var unicodeForm = form == Normalizer.Form.NFC ? Normalization.Form.NFC
+                : form == Normalizer.Form.NFD ? Normalization.Form.NFD
+                : form == Normalizer.Form.NFKC ? Normalization.Form.NFKC
+                : Normalization.Form.NFKD;
         return new StringDecoder<>((in, path) ->
-                this.decode(in, path).map(value -> Normalizer.normalize(value, form)));
+                this.decode(in, path).map(value -> Normalization.normalize(unicodeForm, value)));
     }
 
     // --- Type conversions ---
@@ -801,9 +875,10 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * The offset is applied, so the result is the moment the text names.
      *
      * <p>A clock time of {@code 23:59:60}, at any offset, is rejected with {@code invalid_format}:
-     * the JDK parser reads it as {@code 23:59:59}, so accepting it would return a moment the text
-     * does not name. An end of day {@code 24:00:00} is accepted as the start of the next day, the
-     * same instant.
+     * a leap second is a moment {@link Instant} cannot name. An end of day {@code 24:00:00} is
+     * accepted as the start of the next day, the same instant, only with nothing after it:
+     * {@code 24:00:01} and {@code 24:00:00.5} are rejected. {@link #offsetDateTime(String)} reads
+     * a different form, a clock's date and time beside an offset, and rejects hour {@code 24}.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link Instant}
@@ -1061,7 +1136,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * signed integer ({@code 1e3}, {@code 2.5E-4}). Other Unicode digits such as full-width
      * {@code １２}, spaces, {@code NaN} and {@code Infinity} produce {@code type_mismatch}, as does
      * an exponent that {@link BigDecimal} cannot represent. To restrict the form further, for
-     * example to amounts without an exponent, apply {@link #pattern(Pattern)} before this
+     * example to amounts without an exponent, apply {@link #pattern(String)} before this
      * conversion.
      *
      * <p>The time {@link BigDecimal} takes to read a string grows faster than linearly with its
@@ -1163,7 +1238,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * Unicode segmentation and is not what a stored-length constraint is about.
      */
     private static int codePointLength(String s) {
-        return s.codePointCount(0, s.length());
+        // Never more than s.length(), so it fits an int.
+        return (int) ScalarValues.count(s);
     }
 
 

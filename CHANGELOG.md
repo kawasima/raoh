@@ -10,6 +10,47 @@ detailed from the current development cycle onward.
 
 ## [Unreleased]
 
+> **Read the Breaking entry under Changed before upgrading.** `pattern()` takes the pattern text
+> instead of a `java.util.regex.Pattern`.
+
+### Changed
+
+- **Breaking: `StringDecoder.pattern()` takes a pattern of the specification's language, as text.**
+  `pattern(Pattern)`, `pattern(Pattern, String)` and `pattern(Pattern, String, String)` are removed;
+  `pattern(String)`, `pattern(String, String)` and `pattern(String, String, String)` replace them.
+  The Raoh Specification defines the argument as a pattern of one fixed language, the one Souther
+  uses, and `java.util.regex.Pattern` accepts more than that: back references, lookarounds,
+  property classes such as `\p{L}` that follow the JDK's Unicode data, and flags carried beside
+  the text. Text outside the language is now refused with `IllegalArgumentException` when the
+  decoder is built. A value is matched against the set of strings the pattern means, in one pass
+  over the value, so matching takes time linear in the length of the value and no pattern
+  backtracks. `\d`, `\w` and `\s` are ASCII. The match is still of the whole value, and the
+  `pattern` metadata is still the pattern text. To migrate, pass the text that was given to
+  `Pattern.compile`; a pattern that relied on a flag or on one of the refused constructs has to be
+  rewritten or moved to `refine()`
+  ([#171](https://github.com/raoh-project/raoh-java/issues/171)).
+- **`toLowerCase()`, `toUpperCase()` and `normalize()` follow Unicode 18.0.0 on every JDK.** They
+  used `String.toLowerCase(Locale.ROOT)`, `String.toUpperCase(Locale.ROOT)` and
+  `java.text.Normalizer`, so the result followed the Unicode version of the running JDK (16.0 on
+  JDK 25), and a final sigma was decided by the JDK's word boundaries instead of Unicode's
+  `Final_Sigma` condition: `Α1Σ` became `α1ς` where Unicode gives `α1σ`. Both now apply the
+  Unicode 18.0.0 default case conversion, with no language tailoring, and Unicode 18.0.0
+  normalization in all four forms. `normalize(Normalizer.Form)` keeps its signature; the
+  argument only names the form
+  ([#166](https://github.com/raoh-project/raoh-java/issues/166)).
+- **The text rules come from 199x-notation.** `raoh` now depends on
+  `net.unit8.199x:199x-notation`, the implementation of the text rules Raoh and Souther share:
+  case conversion, normalization, the `White_Space` set, order and length in scalar values, the
+  temporal grammar and the pattern language. Raoh's own copies of the `White_Space` set and of
+  the temporal regular expressions are gone. `iso8601()` no longer builds its value with
+  `DateTimeFormatter.ISO_INSTANT`: the shared grammar decides that `24:00:00` with nothing after
+  it is the start of the next day and that second `60` is refused, and `offsetDateTime()` reads a
+  separate form in which hour `24` is not a time. What each decoder accepts is unchanged
+  ([#160](https://github.com/raoh-project/raoh-java/issues/160)).
+- **`CodePointOrder.compare` places an unpaired surrogate above every character of the basic
+  multilingual plane.** It compared an unpaired surrogate as the code point of its own value. The
+  order of strings that hold no unpaired surrogate is unchanged.
+
 ## [0.8.0] - 2026-09-27
 
 > **Read the two Breaking entries under Changed before upgrading.** The `java.sql` temporal inputs
