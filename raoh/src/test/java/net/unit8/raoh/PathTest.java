@@ -100,4 +100,13 @@ class PathTest {
         }
         return tokens;
     }
+
+    /** CandidateFailures tells an empty prefix by identity with ROOT, so no other path is empty. */
+    @Test
+    void rootIsTheOnlyEmptyPath() {
+        assertSame(Path.ROOT, Path.ROOT.append(Path.ROOT));
+        assertFalse(Path.of("a").segments().isEmpty());
+        assertFalse(Path.ROOT.append("").segments().isEmpty());
+        assertNotSame(Path.ROOT, Path.ROOT.append(""));
+    }
 }

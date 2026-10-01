@@ -207,7 +207,6 @@ net.unit8.raoh.internal.CandidateFailures#children -> java.util.ArrayList#add(ja
 net.unit8.raoh.internal.CandidateFailures#children -> java.util.Iterator#hasNext():boolean
 net.unit8.raoh.internal.CandidateFailures#children -> java.util.Iterator#next():java.lang.Object
 net.unit8.raoh.internal.CandidateFailures#children -> java.util.List#copyOf(java.util.Collection):java.util.List
-net.unit8.raoh.internal.CandidateFailures#children -> java.util.List#isEmpty():boolean
 net.unit8.raoh.internal.CandidateFailures#children -> java.util.List#iterator():java.util.Iterator
 net.unit8.raoh.internal.CandidateFailures#children -> java.util.List#size():int
 net.unit8.raoh.internal.CandidateFailures#get -> java.util.List#get(int):java.lang.Object

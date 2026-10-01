@@ -59,7 +59,9 @@ public final class CandidateFailures extends AbstractList<Map<String, Object>>
     public List<Issues> children() {
         List<Issues> children = failures;
         if (children == null) {
-            if (prefix.segments().isEmpty()) {
+            // Path.ROOT is the only empty path; comparing with it avoids building the prefix's
+            // segments, which takes time in its length.
+            if (prefix == Path.ROOT) {
                 children = given;
             } else {
                 // One level: an issue below that holds issues of its own records the prefix in
