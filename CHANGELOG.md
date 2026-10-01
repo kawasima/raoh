@@ -35,8 +35,46 @@ detailed from the current development cycle onward.
   token. Containers are kept on a stack of their own, so the nesting depth does not reach the call
   stack. The decoders still accept a mapper's tree, with the numbers the mapper made
   ([#170](https://github.com/raoh-project/raoh-java/issues/170)).
+- **Every constraint that reports an issue takes a message.** The Raoh Specification 0.9.0 gives
+  every such operation an optional message, which replaces the message of that operation's own
+  issues. The overloads raoh-java lacked are added: `positive(String)`, `negative(String)`,
+  `nonNegative(String)` and `nonPositive(String)` on `FloatDecoder` and `DoubleDecoder`,
+  `StringDecoder.nonBlank(String)`, `Decoders.enumOf(Class, Decoder, String)` and
+  `Decoders.literal(String, Decoder, String)` with the `enumOf(Class, String)` and
+  `literal(String, String)` conveniences of `ObjectDecoders` and `JsonDecoders`, and
+  `oneOf(Collection, String)` on `StringDecoder`, `IntDecoder`, `LongDecoder`, `FloatDecoder` and
+  `DoubleDecoder`, since a message cannot follow varargs. The message never reaches the issues of
+  the decoder before: `enumOf(Color.class, "pick a color")` still gives `type_mismatch` with its own
+  message for a number, and `nonBlank("...")` gives `required` with its own for a missing value.
+  `oneOf(Collection, String)` copies the collection and, like the varargs form, refuses a value
+  given twice ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
+- **`TemporalDecoder(Decoder, Comparator)`.** A temporal decoder holds the order its `before`,
+  `after` and `between` compare by, and keeps it through every constraint and `refine` chained on
+  it. The one-argument constructor keeps the natural ordering
+  ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
 
 ### Changed
+
+- **Offset date-times compare by instant alone.** `before`, `after` and `between` on
+  `StringDecoder.offsetDateTime()` and `ObjectDecoders.offsetDateTime()`, and `between`'s check
+  that its bounds are ordered, used `OffsetDateTime.compareTo`, which orders two values at the same
+  instant by their local date-time. So `before(10:00+01:00)` accepted `09:00Z`, the same instant,
+  and `between(10:00+01:00, 09:00Z)` was refused as reversed. They now use
+  `OffsetDateTime.timeLineOrder()`, as the Raoh Specification 0.9.0 says: neither of two values at
+  one instant is before the other, so `before(10:00+01:00)` refuses `09:00Z` and
+  `between(10:00+01:00, 10:00+01:00)` accepts it. The decoded value keeps the offset it was written
+  with ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
+- **`email()` accepts an ASCII profile of RFC 5321's Mailbox.** It used a regular expression that
+  required a top-level label of two or more letters and allowed only `.`, `_`, `%`, `+` and `-`
+  besides letters and digits in the local part, with no rule on where the dots go. It now accepts
+  `Dot-string "@" Domain` as the Raoh Specification 0.9.0 defines it: a local part of RFC 5322
+  `atext` atoms joined by single dots, at most 64 octets; labels that start and end with a letter
+  or digit, at most 63 octets each; at most 254 octets in all. Newly accepted are a single-label or
+  all-digit domain (`a@localhost`, `a@123`) and the other `atext` symbols (`o'brien@example.com`).
+  Newly refused are a dot at either end of the local part or two in a row (`.a@b.co`, `a..b@b.co`),
+  a label that starts or ends with a hyphen (`a@-b.co`) and an empty label (`a@b..co`). A trailing
+  dot after the domain, a quoted local part, an address literal and non-ASCII characters stay
+  refused ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
 
 - **Breaking: `StringDecoder.pattern()` takes a pattern of the specification's language, as text.**
   `pattern(Pattern)`, `pattern(Pattern, String)` and `pattern(Pattern, String, String)` are removed;

@@ -319,14 +319,50 @@ class StringDecoderTest {
         assertEquals("not a valid email", issue.message());
     }
 
-    @Test
-    void emailRejectsTooLongValue() {
-        // Matches the email pattern but exceeds the 254-character maximum, so only the
-        // length guard rejects it — exercising that branch independently of the pattern.
-        var tooLong = "a".repeat(64) + "@" + "b".repeat(250) + ".co";
-        var issue = decodeErr(string().email(), tooLong);
+    /** The profile of RFC 5321's Mailbox the Raoh Specification defines (R000880–R000885). */
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "o'brien@example.com",
+            "a!#$%&'*+-/=?^_`{|}~z@example.com",
+            "a@localhost",
+            "a@123",
+            "A.B@Example.COM",
+            "a@x-1.example",
+    })
+    void emailAcceptsTheMailboxProfile(String value) {
+        assertEquals(value, decodeOk(string().email(), value));
+    }
+
+    /** What the profile leaves out (R000886–R000899). */
+    @ParameterizedTest
+    @ValueSource(strings = {
+            ".a@b.co", "a.@b.co", "a..b@b.co",
+            "a@-b.co", "a@b-.co", "a@b..co", "a@example.com.",
+            "a@[127.0.0.1]", "\"a b\"@example.com",
+            "a@", "@b.co", "a@b@c.co", "a b@c.co", "a@b_c.co",
+            "\u00e4@b.co",
+    })
+    void emailRejectsWhatTheProfileLeavesOut(String value) {
+        var issue = decodeErr(string().email(), value);
         assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
-        assertEquals("not a valid email", issue.message());
+        assertEquals(MessageKeys.INVALID_FORMAT_EMAIL, issue.messageKey());
+    }
+
+    /** The three length limits, each at its boundary (R000900–R000905). */
+    @Test
+    void emailHoldsTheLocalPartLabelAndMailboxLimits() {
+        assertEquals(64 + 5, decodeOk(string().email(), "a".repeat(64) + "@b.co").length());
+        decodeErr(string().email(), "a".repeat(65) + "@b.co");
+
+        assertEquals(2 + 63 + 3, decodeOk(string().email(), "a@" + "b".repeat(63) + ".co").length());
+        decodeErr(string().email(), "a@" + "b".repeat(64) + ".co");
+
+        var local = "a".repeat(64) + "@";
+        var mailbox254 = local + "c".repeat(62) + "." + "c".repeat(62) + "." + "c".repeat(63);
+        assertEquals(254, decodeOk(string().email(), mailbox254).length());
+        var mailbox255 = local + "c".repeat(63) + "." + "c".repeat(62) + "." + "c".repeat(63);
+        assertEquals(255, mailbox255.length());
+        decodeErr(string().email(), mailbox255);
     }
 
     @Test
