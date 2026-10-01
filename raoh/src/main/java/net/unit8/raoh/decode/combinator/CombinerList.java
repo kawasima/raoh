@@ -35,6 +35,17 @@ import java.util.function.Function;
 public record CombinerList<I>(List<CombinePart<I, ?>> parts) {
 
     /**
+     * Creates the combiner, copying {@code parts}, so changing the list passed in afterwards does
+     * not change what the combiner decodes.
+     *
+     * @param parts the components to combine
+     * @throws NullPointerException if {@code parts} or one of its components is {@code null}
+     */
+    public CombinerList {
+        parts = List.copyOf(parts);
+    }
+
+    /**
      * Applies a constructor function to the decoded values.
      *
      * <p>All decoders run independently; errors are accumulated rather than short-circuited.

@@ -117,6 +117,37 @@ detailed from the current development cycle onward.
   `string().maxLength(40).toDecimal()`. That is the policy #161 asked for: a conversion's cost is
   kept from growing pathologically, and how many digits are valid stays the caller's to say
   ([#161](https://github.com/raoh-project/raoh-java/issues/161)).
+- **The size constraints of a map decoder say "elements", as the catalogue does.**
+  `RecordDecoder.minSize()`, `maxSize()` and `fixedSize()` wrote "must have at least 2 entries"
+  where `messages.properties` and `MessageResolver.DEFAULT` say "must have at least 2 elements",
+  so a caller who never resolved read text the catalogue does not have. A test now checks, for
+  every constraint of every built-in decoder class (each class and method on its own), that the
+  stored message is what resolving gives, and fails when a new public method has no case
+  ([#167](https://github.com/raoh-project/raoh-java/issues/167)).
+- **`resolve()` reaches the issues listed under `one_of_failed`'s `candidates`.** `oneOf` turned
+  each candidate's issues into maps when it failed, which dropped their message key and whether
+  their message was custom, so `Issues.resolve(...)` and `Issue.resolve(...)` left them in English
+  and could not have resolved them correctly. The candidates' issues are now kept as issues and
+  resolved with the one that holds them, before it, at every level of nested `oneOf`; a custom
+  message among them is kept. `meta().get("candidates")` reads as before, and `toJsonList()`
+  still writes plain lists and maps. Two issues whose candidates differ only in a message key or
+  in whether a message is custom are equal, as they were
+  ([#167](https://github.com/raoh-project/raoh-java/issues/167)).
+- **`rebase()` reaches the issues listed under `one_of_failed`'s `candidates`.** Their paths are
+  of the same input as the issue that holds them, but `rebase()` changed only the outer path, so
+  a `oneOf` run inside `flatMap` reported its candidates at paths missing the prefix. They are
+  now rebased with it ([#167](https://github.com/raoh-project/raoh-java/issues/167)).
+- **What is built from a collection or array keeps its own copy.** `Issues` is documented as
+  immutable but kept the list it was given, so changing that list afterwards changed it; once
+  `oneOf` started keeping its candidates' `Issues` to resolve them, the `candidates` metadata
+  would have read whatever the list held when it was first read. The same held for the arrays
+  and collections given to `Decoders.oneOf`, `strict` (the known fields), `discriminate` with a
+  map of variants, `combine` with a list of parts (`CombinerList`), and `MapEncoders.object`:
+  changing them after building the decoder or encoder changed what it did. Each now copies what it
+  is given when it is made. `new Issues(list)` and `new CombinerList(parts)` now throw
+  `NullPointerException` for a `null` element, as `oneOf` and `object` do for a `null` candidate
+  or entry, when they are made rather than when used
+  ([#167](https://github.com/raoh-project/raoh-java/issues/167)).
 
 ## [0.8.0] - 2026-09-27
 

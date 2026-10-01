@@ -11,7 +11,8 @@ import java.util.List;
  * Used for error reporting in validation issues.
  *
  * <p>Internally stored as a persistent cons-list so that {@link #append(String)} is O(1).
- * The flat {@link #segments()} list is materialised lazily on first access.
+ * {@link #segments()} builds the flat list on each call, in time proportional to the depth.
+ * {@link #ROOT} is the only path with no segments.
  */
 public final class Path {
     /** The root path (empty segments). */

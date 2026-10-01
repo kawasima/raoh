@@ -8,12 +8,14 @@ import net.unit8.raoh.Issues;
 import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.Result;
+import net.unit8.raoh.internal.CandidateFailures;
 
 import net.unit8.raoh.decode.combinator.*;
 
 import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -629,11 +631,12 @@ public final class Decoders {
      */
     @SafeVarargs
     public static <I extends @Nullable Object, T> Decoder<I, T> oneOf(Decoder<I, ? extends T>... candidates) {
+        // A copy, so changing the array passed in afterwards does not change the candidates.
+        List<Decoder<I, ? extends T>> tried = List.of(candidates);
         return (in, path) -> {
-            // Accumulate raw Issues; defer toJsonList() until the caller accesses meta.
-            var failedIssues = new java.util.ArrayList<Issues>(candidates.length);
-            for (int i = 0; i < candidates.length; i++) {
-                var r = candidates[i].decode(in, path);
+            var failedIssues = new java.util.ArrayList<Issues>(tried.size());
+            for (Decoder<I, ? extends T> candidate : tried) {
+                var r = candidate.decode(in, path);
                 if (r instanceof Ok<?>) {
                     @SuppressWarnings("unchecked")
                     var ok = (Result<T>) r;
@@ -643,13 +646,10 @@ public final class Decoders {
                     failedIssues.add(err.issues());
                 }
             }
-            // Build the meta lazily at error construction time (once, not per candidate).
-            var candidateMeta = new java.util.ArrayList<Map<String, Object>>(failedIssues.size());
-            for (int i = 0; i < failedIssues.size(); i++) {
-                candidateMeta.add(Map.of("candidate", i, "issues", failedIssues.get(i).toJsonList()));
-            }
+            // The candidates' issues stay Issues, so resolve() and rebase() reach them; they are
+            // written out as maps only when the metadata is read or serialized.
             return Result.fail(path, ErrorCodes.ONE_OF_FAILED, "no variant matched",
-                    Map.of("candidates", List.copyOf(candidateMeta)));
+                    Map.of("candidates", new CandidateFailures(failedIssues)));
         };
     }
 
@@ -675,10 +675,12 @@ public final class Decoders {
      */
     public static <I extends @Nullable Object, T> Decoder<I, T> strict(
             Decoder<I, T> dec, Set<String> knownFields, InputFields<I> inputFields) {
+        // A copy, so changing the set passed in afterwards does not change which fields are known.
+        Set<String> known = new HashSet<>(knownFields);
         return (in, path) -> {
             var issues = Issues.EMPTY;
             for (var name : inputFields.fieldNames(in)) {
-                if (!knownFields.contains(name)) {
+                if (!known.contains(name)) {
                     issues = issues.add(Issue.of(path.append(name), ErrorCodes.UNKNOWN_FIELD,
                             "unknown field", Map.of("field", name)));
                 }
@@ -785,14 +787,16 @@ public final class Decoders {
             String fieldName,
             Decoder<I, String> tagDec,
             Map<String, Decoder<I, ? extends T>> variants) {
+        // A copy, so changing the map passed in afterwards does not change the variants.
+        Map<String, Decoder<I, ? extends T>> byTag = new HashMap<>(variants);
         return (in, path) -> {
             var tag = tagDec.decode(in, path);
             return switch (tag) {
                 case Err<String> err -> err.coerce();
                 case Ok<String> ok -> {
-                    var dec = variants.get(ok.value());
+                    var dec = byTag.get(ok.value());
                     if (dec == null) {
-                        var allowed = CodePointOrder.sorted(variants.keySet());
+                        var allowed = CodePointOrder.sorted(byTag.keySet());
                         yield Result.fail(path.append(fieldName),
                                 ErrorCodes.NOT_ALLOWED, "must be one of " + allowed,
                                 Map.of("allowed", allowed));

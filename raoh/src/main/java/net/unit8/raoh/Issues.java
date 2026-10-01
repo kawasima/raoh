@@ -10,9 +10,22 @@ import java.util.stream.Collectors;
 /**
  * An immutable collection of {@link Issue}s accumulated during decoding.
  *
+ * <p>The list is copied when the {@code Issues} is created, so changing the list passed in
+ * afterwards does not change it.
+ *
  * @param asList the list of issues
  */
 public record Issues(List<Issue> asList) {
+
+    /**
+     * Creates the issues, copying {@code asList}.
+     *
+     * @param asList the list of issues
+     * @throws NullPointerException if {@code asList} or one of its issues is {@code null}
+     */
+    public Issues {
+        asList = List.copyOf(asList);
+    }
 
     /** An empty issues instance. */
     public static final Issues EMPTY = new Issues(List.of());
@@ -55,31 +68,28 @@ public record Issues(List<Issue> asList) {
     }
 
     /**
-     * Rebases all issue paths by prepending the given prefix.
+     * Rebases all issue paths by prepending the given prefix, the paths of the issues their
+     * metadata holds included (see {@link Issue#rebase(Path)}).
      *
      * @param prefix the path prefix
      * @return a new issues instance with rebased paths
      */
     public Issues rebase(Path prefix) {
-        return new Issues(
-                asList.stream()
-                        .map(i -> i.rebase(prefix))
-                        .toList()
-        );
+        return new Issues(asList.stream().map(i -> i.rebase(prefix)).toList());
     }
 
     /**
-     * Resolves all issue messages using the given resolver.
+     * Resolves all issue messages using the given resolver, the issues their metadata holds
+     * included (see {@link Issue#resolve(MessageResolver)}).
      *
      * @param resolver the message resolver
      * @return a new issues instance with resolved messages
      */
     public Issues resolve(MessageResolver resolver) {
-        return new Issues(
-                asList.stream()
-                        .map(i -> i.resolve(resolver))
-                        .toList()
-        );
+        if (!IssueTree.anyHoldsIssues(asList)) {
+            return new Issues(asList.stream().map(i -> i.resolvedAlone(resolver)).toList());
+        }
+        return IssueTree.map(this, i -> i.resolvedAlone(resolver));
     }
 
     /**
@@ -90,11 +100,10 @@ public record Issues(List<Issue> asList) {
      * @return a new issues instance with resolved messages
      */
     public Issues resolve(MessageResolver resolver, Locale locale) {
-        return new Issues(
-                asList.stream()
-                        .map(i -> i.resolve(resolver, locale))
-                        .toList()
-        );
+        if (!IssueTree.anyHoldsIssues(asList)) {
+            return new Issues(asList.stream().map(i -> i.resolvedAlone(resolver, locale)).toList());
+        }
+        return IssueTree.map(this, i -> i.resolvedAlone(resolver, locale));
     }
 
     /**
@@ -160,6 +169,10 @@ public record Issues(List<Issue> asList) {
      * Converts issues to a list of maps suitable for JSON serialization.
      * Each map contains {@code path}, {@code code}, {@code message}, and {@code meta}.
      *
+     * <p>An issue that holds other issues in its metadata, such as a {@code one_of_failed}
+     * issue's {@code candidates}, has them written the same way inside its {@code meta}, so the
+     * result is made of lists, maps and scalars only, however deep the issues go.
+     *
      * <p><strong>Security note:</strong> The {@code meta} map may contain raw user-supplied
      * values (e.g., {@code "actual"} from type-mismatch or literal errors). Filter or omit
      * {@code meta} before returning this list in an HTTP response to avoid unintentional
@@ -168,16 +181,7 @@ public record Issues(List<Issue> asList) {
      * @return a list of issue maps
      */
     public List<Map<String, Object>> toJsonList() {
-        return asList.stream()
-                .map(i -> {
-                    var m = new LinkedHashMap<String, Object>();
-                    m.put("path", i.path().toJsonPointer());
-                    m.put("code", i.code());
-                    m.put("message", i.message());
-                    m.put("meta", i.meta());
-                    return (Map<String, Object>) m;
-                })
-                .toList();
+        return IssueTree.project(this);
     }
 
     /**
