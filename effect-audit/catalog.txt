@@ -61,6 +61,7 @@ java.lang.Long#longValue():long
 java.lang.Long#parseLong(java.lang.String):long
 java.lang.Long#valueOf(long):java.lang.Long
 java.lang.MatchException#<init>(java.lang.String,java.lang.Throwable)  -- stores the cause; calls nothing on it
+java.lang.Math#min(long,long):long
 java.lang.Object#<init>()
 java.lang.Object#getClass():java.lang.Class
 java.lang.Record#<init>()
@@ -98,6 +99,7 @@ java.math.BigDecimal#<init>(java.lang.String)
 java.math.BigDecimal#ZERO:java.math.BigDecimal
 java.math.BigDecimal#valueOf(double):java.math.BigDecimal
 java.math.BigDecimal#valueOf(long):java.math.BigDecimal
+java.math.BigInteger#<init>(java.lang.String)
 java.math.BigInteger#TEN:java.math.BigInteger
 java.math.BigInteger#ZERO:java.math.BigInteger
 java.math.BigInteger#valueOf(long):java.math.BigInteger
@@ -205,6 +207,7 @@ java.lang.String#replace(java.lang.CharSequence,java.lang.CharSequence):java.lan
 java.lang.String#valueOf(java.lang.Object):java.lang.String  -- converts the argument with its toString()
 java.lang.Throwable#toString():java.lang.String
 java.math.BigDecimal#<init>(java.math.BigInteger)  -- reads a BigInteger, whose methods a subclass can override
+java.math.BigDecimal#<init>(java.math.BigInteger,int)  -- reads a BigInteger, whose methods a subclass can override
 java.math.BigDecimal#compareTo(java.math.BigDecimal):int
 java.math.BigDecimal#doubleValue():double
 java.math.BigDecimal#floatValue():float
@@ -215,6 +218,7 @@ java.math.BigDecimal#stripTrailingZeros():java.math.BigDecimal
 java.math.BigDecimal#toBigInteger():java.math.BigInteger
 java.math.BigDecimal#unscaledValue():java.math.BigInteger
 java.math.BigInteger#abs():java.math.BigInteger
+java.math.BigInteger#add(java.math.BigInteger):java.math.BigInteger  -- calls the argument's methods, which a subclass can override
 java.math.BigInteger#bitLength():int
 java.math.BigInteger#divide(java.math.BigInteger):java.math.BigInteger  -- calls the argument's methods, which a subclass can override
 java.math.BigInteger#doubleValue():double
@@ -224,6 +228,7 @@ java.math.BigInteger#longValue():long
 java.math.BigInteger#mod(java.math.BigInteger):java.math.BigInteger  -- calls the argument's methods, which a subclass can override
 java.math.BigInteger#modPow(java.math.BigInteger,java.math.BigInteger):java.math.BigInteger  -- calls the arguments' methods, which a subclass can override
 java.math.BigInteger#multiply(java.math.BigInteger):java.math.BigInteger  -- calls the argument's methods, which a subclass can override
+java.math.BigInteger#negate():java.math.BigInteger
 java.math.BigInteger#pow(int):java.math.BigInteger
 java.math.BigInteger#signum():int
 java.time.Instant#parse(java.lang.CharSequence):java.time.Instant  -- reads the CharSequence argument

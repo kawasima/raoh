@@ -9,6 +9,7 @@ import net.unit8.notation199x.pattern.PatternRead;
 import net.unit8.notation199x.pattern.StringPattern;
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.CodePointOrder;
+import net.unit8.raoh.DecimalText;
 import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Path;
@@ -1209,9 +1210,11 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * example to amounts without an exponent, apply {@link #pattern(String)} before this
      * conversion.
      *
-     * <p>The time {@link BigDecimal} takes to read a string grows faster than linearly with its
-     * number of digits, and the decoder sets no limit of its own, since how many digits are valid
-     * is up to the caller. For input from an untrusted source, bound the length first, as in
+     * <p>The text is read by {@link DecimalText}, which gives the same value as
+     * {@link BigDecimal#BigDecimal(String)} in time that grows about as a large multiplication does,
+     * not with the square of the number of digits. It still grows faster than linearly, and the
+     * decoder sets no limit of its own, since how many digits are valid is up to the caller. For
+     * input from an untrusted source, bound the length first, as in
      * {@code string().maxLength(40).toDecimal()}.
      *
      * @param message custom error message, or {@code null} for the default
@@ -1219,12 +1222,11 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      */
     public DecimalDecoder<I> toDecimal(@Nullable String message) {
         return new DecimalDecoder<>((in, path) -> this.decode(in, path).flatMap(value -> {
-            if (LexicalRules.isDecimal(value)) {
-                try {
-                    return Result.ok(new BigDecimal(value));
-                } catch (NumberFormatException e) {
-                    // The text is well-formed but an exponent outside the int range, which BigDecimal cannot scale.
-                }
+            // Null for text outside the form, and for an exponent that puts the scale outside the
+            // int range, which no BigDecimal holds.
+            var parsed = DecimalText.read(value);
+            if (parsed != null) {
+                return Result.ok(parsed);
             }
             return message != null
                     ? Result.failCustom(path, ErrorCodes.TYPE_MISMATCH, message,

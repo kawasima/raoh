@@ -14,6 +14,14 @@ detailed from the current development cycle onward.
 > instead of a `java.util.regex.Pattern`, and refuses a pattern past the limits the Raoh
 > Specification 0.9.0 sets. `iso8601()` no longer accepts `24:00:00` with a fraction.
 
+### Added
+
+- **`DecimalText`**, the reader of decimal text that `StringDecoder.toDecimal()` uses: it decides
+  the form toDecimal() accepts and gives the value `new BigDecimal(String)` gives, scale
+  included, in one pass and without a regular expression. It is public so that an input model,
+  such as raoh-json reading a JSON number as written, reads numbers the same way
+  ([#161](https://github.com/raoh-project/raoh-java/issues/161)).
+
 ### Changed
 
 - **Breaking: `StringDecoder.pattern()` takes a pattern of the specification's language, as text.**
@@ -84,6 +92,16 @@ detailed from the current development cycle onward.
   value's exponent is the larger, and by counting the value's trailing zeros when it is the
   smaller. The answer is the same wherever `remainder` gave one
   ([#168](https://github.com/raoh-project/raoh-java/issues/168)).
+- **`toDecimal()` reads long digit strings without quadratic time.** `new BigDecimal(String)` folds
+  the digits into the magnitude a group at a time, each fold going over the whole magnitude, so
+  400,000 digits took over two seconds and four million several minutes. `DecimalText` splits the
+  digits in halves and joins them as `high × 10^k + low` with the powers of ten worked out once:
+  400,000 digits now take tens of milliseconds and four million about a second. The cost still
+  grows faster than linearly, and the decoder still sets no limit of its own: bound the length
+  of untrusted input first, as in `string().maxLength(40).toDecimal()`. That is the policy #161
+  asked for: a conversion's cost is kept from growing pathologically, and how many digits are
+  valid stays the caller's to say
+  ([#161](https://github.com/raoh-project/raoh-java/issues/161)).
 
 ## [0.8.0] - 2026-09-27
 
