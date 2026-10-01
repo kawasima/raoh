@@ -52,8 +52,10 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
             "^[a-zA-Z0-9._%+\\-]{1,64}@[a-zA-Z0-9.\\-]{1,255}\\.[a-zA-Z]{2,}$");
     private static final Pattern CUID_PATTERN = Pattern.compile(
             "^c[a-z0-9]{24}$");
+    // Crockford's base 32 in either case. 26 characters hold 130 bits, and a ULID is 128: the first
+    // character carries the top 3 bits, so it is at most 7.
     private static final Pattern ULID_PATTERN = Pattern.compile(
-            "^[0-9A-HJKMNP-TV-Z]{26}$");
+            "^[0-7][0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{25}$");
 
     private final Decoder<I, String> inner;
 
@@ -681,6 +683,11 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     /**
      * Validates that the string is a valid ULID.
      *
+     * <p>A ULID is 26 characters of Crockford's base 32 ({@code 0}-{@code 9} and the letters but
+     * {@code I}, {@code L}, {@code O} and {@code U}), in either case, whose value fits in 128 bits:
+     * the first character is {@code 0} to {@code 7}, so {@code 7ZZZZZZZZZZZZZZZZZZZZZZZZZ} is the
+     * largest. The string is given unchanged, not converted to upper case.
+     *
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid ULID
      */
     public StringDecoder<I> ulid() {
@@ -689,6 +696,11 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
 
     /**
      * Validates that the string is a valid ULID.
+     *
+     * <p>A ULID is 26 characters of Crockford's base 32 ({@code 0}-{@code 9} and the letters but
+     * {@code I}, {@code L}, {@code O} and {@code U}), in either case, whose value fits in 128 bits:
+     * the first character is {@code 0} to {@code 7}, so {@code 7ZZZZZZZZZZZZZZZZZZZZZZZZZ} is the
+     * largest. The string is given unchanged, not converted to upper case.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid ULID

@@ -451,6 +451,34 @@ class StringDecoderTest {
         assertEquals("not a valid CUID", issue.message());
     }
 
+    /** Crockford's base 32 is case-insensitive, and the value is given as it was written (R000840). */
+    @Test
+    void ulidAcceptsEitherCaseUnchanged() {
+        assertEquals("01arz3ndektsv4rrffq69g5fav", decodeOk(string().ulid(), "01arz3ndektsv4rrffq69g5fav"));
+        assertEquals("01ArZ3NdEkTsV4RrFfQ69G5fAv", decodeOk(string().ulid(), "01ArZ3NdEkTsV4RrFfQ69G5fAv"));
+    }
+
+    /** A ULID is 128 bits, so the first of its 26 characters is at most 7 (R000841, R000842). */
+    @Test
+    void ulidHoldsAtMost128Bits() {
+        assertEquals("7ZZZZZZZZZZZZZZZZZZZZZZZZZ", decodeOk(string().ulid(), "7ZZZZZZZZZZZZZZZZZZZZZZZZZ"));
+        assertEquals("7zzzzzzzzzzzzzzzzzzzzzzzzz", decodeOk(string().ulid(), "7zzzzzzzzzzzzzzzzzzzzzzzzz"));
+        for (var past : List.of("80000000000000000000000000", "ZZZZZZZZZZZZZZZZZZZZZZZZZZ", "z0000000000000000000000000")) {
+            var issue = decodeErr(string().ulid(), past);
+            assertEquals(ErrorCodes.INVALID_FORMAT, issue.code(), past);
+            assertEquals(MessageKeys.INVALID_FORMAT_ULID, issue.messageKey(), past);
+        }
+    }
+
+    /** The letters Crockford's base 32 leaves out are refused in either case. */
+    @Test
+    void ulidRefusesTheLettersCrockfordLeavesOut() {
+        for (var c : List.of("I", "L", "O", "U", "i", "l", "o", "u")) {
+            var text = "01ARZ3NDEKTSV4RRFFQ69G5FA" + c;
+            assertEquals(ErrorCodes.INVALID_FORMAT, decodeErr(string().ulid(), text).code(), text);
+        }
+    }
+
     @Test
     void ulidAcceptsValidRejectsInvalid() {
         assertEquals("01ARZ3NDEKTSV4RRFFQ69G5FAV", decodeOk(string().ulid(), "01ARZ3NDEKTSV4RRFFQ69G5FAV"));

@@ -68,6 +68,15 @@ detailed from the current development cycle onward.
   multilingual plane.** It compared an unpaired surrogate as the code point of its own value. The
   order of strings that hold no unpaired surrogate is unchanged.
 
+### Fixed
+
+- **`ulid()` accepts either case and refuses a value past 128 bits.** It matched
+  `[0-9A-HJKMNP-TV-Z]{26}`, so a lower-case ULID was refused although Crockford's base 32 is
+  case-insensitive, and `80000000000000000000000000`, which needs 130 bits, was accepted. It now
+  takes Crockford's base 32 in either case with a first character of `0` to `7`, so
+  `7ZZZZZZZZZZZZZZZZZZZZZZZZZ` is the largest. The string is given unchanged
+  ([#165](https://github.com/raoh-project/raoh-java/issues/165)).
+
 ## [0.8.0] - 2026-09-27
 
 > **Read the two Breaking entries under Changed before upgrading.** The `java.sql` temporal inputs
