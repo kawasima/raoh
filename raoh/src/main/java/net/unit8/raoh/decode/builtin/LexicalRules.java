@@ -5,6 +5,9 @@ import java.util.regex.Pattern;
 /**
  * The lexical languages Raoh accepts for its string conversions.
  *
+ * <p>Decimal text is decided and converted together by
+ * {@code net.unit8.raoh.internal.DecimalConversion}.
+ *
  * <p>Each rule decides on its own whether a string is accepted. The JDK parser that runs afterwards
  * only builds the value and reports what the target type cannot represent (an {@code int}
  * overflow, for example); its own leniency, such as reading non-ASCII digits, never widens the
@@ -16,8 +19,6 @@ final class LexicalRules {
     private static final Pattern UUID = Pattern.compile(
             "[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}");
     private static final Pattern INTEGER = Pattern.compile("[+-]?[0-9]+");
-    private static final Pattern DECIMAL = Pattern.compile(
-            "[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?");
 
     private LexicalRules() {
     }
@@ -42,17 +43,5 @@ final class LexicalRules {
      */
     static boolean isInteger(String value) {
         return INTEGER.matcher(value).matches();
-    }
-
-    /**
-     * Returns whether the value is a decimal number: an optional sign, ASCII digits with an
-     * optional {@code .} (at least one digit on either side of it), and an optional exponent
-     * {@code e} or {@code E} with an optionally signed integer.
-     *
-     * @param value the text to check
-     * @return {@code true} if the value is accepted
-     */
-    static boolean isDecimal(String value) {
-        return DECIMAL.matcher(value).matches();
     }
 }

@@ -138,6 +138,10 @@
                             <ignoreMissingClassesByRegularExpressions>
                                 <ignoreMissingClassesByRegularExpression>net\.unit8\.raoh\..*</ignoreMissingClassesByRegularExpression>
                             </ignoreMissingClassesByRegularExpressions>
+                            <!-- Shared between Raoh's modules and not part of the API (its package-info). -->
+                            <excludes>
+                                <exclude>net.unit8.raoh.internal</exclude>
+                            </excludes>
                             <breakBuildOnBinaryIncompatibleModifications>false</breakBuildOnBinaryIncompatibleModifications>
                             <breakBuildOnSourceIncompatibleModifications>false</breakBuildOnSourceIncompatibleModifications>
                         </parameter>
@@ -299,6 +303,8 @@
                         <version>3.11.2</version>
                         <configuration>
                             <doclint>all</doclint>
+                            <!-- Shared between Raoh's modules and not part of the API. -->
+                            <excludePackageNames>net.unit8.raoh.internal</excludePackageNames>
                         </configuration>
                         <executions>
                             <execution>
