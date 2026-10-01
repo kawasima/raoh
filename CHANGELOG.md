@@ -89,6 +89,18 @@ detailed from the current development cycle onward.
 - **`CodePointOrder.compare` places an unpaired surrogate above every character of the basic
   multilingual plane.** It compared an unpaired surrogate as the code point of its own value. The
   order of strings that hold no unpaired surrogate is unchanged.
+- **Breaking: `MapEncoders.object(...)` takes `PropertyEncoder<T>...`, and `EntryEncoder` is
+  removed.** `EntryEncoder` let a part of an object write any number of keys into the shared map,
+  so `object` could not tell which keys its parts own, while the Raoh Specification's `object`
+  encoder is a list of properties of one member each. A `PropertyEncoder` now owns one key and
+  writes it at most once, writing the encoded value, writing `null`, or leaving the key out.
+  `optionalProperty(...)` and `presenceProperty(...)` return `PropertyEncoder<T>` instead of
+  `EntryEncoder<T>`. `PropertyEncoder.encode(T)` is removed, since a value cannot say that the key
+  is left out, and `PropertyEncoder.key()` and `encodeTo(...)` are no longer public. An
+  `EntryEncoder` written by hand that wrote a fixed set of keys becomes one property per key; one
+  that wrote keys decided by the value becomes an `Encoder<T, Map<String, Object>>` of its own, or
+  `mapOf(...)`, rather than part of an `object`
+  ([#169](https://github.com/raoh-project/raoh-java/issues/169)).
 
 ### Fixed
 
@@ -157,8 +169,14 @@ detailed from the current development cycle onward.
   changing them after building the decoder or encoder changed what it did. Each now copies what it
   is given when it is made. `new Issues(list)` and `new CombinerList(parts)` now throw
   `NullPointerException` for a `null` element, as `oneOf` and `object` do for a `null` candidate
-  or entry, when they are made rather than when used
+  or property, when they are made rather than when used
   ([#167](https://github.com/raoh-project/raoh-java/issues/167)).
+- **`MapEncoders.object(...)` refuses two properties that own the same key.** It accepted them,
+  and at encode time the later property's value replaced the earlier one's in the earlier one's
+  position. It now throws `IllegalArgumentException` when the encoder is built, naming the key and
+  the positions of the two properties, whatever kind each property is and whether or not either
+  would leave the key out for a given value
+  ([#169](https://github.com/raoh-project/raoh-java/issues/169)).
 
 ## [0.8.0] - 2026-09-27
 

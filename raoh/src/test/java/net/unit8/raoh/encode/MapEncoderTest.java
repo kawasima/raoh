@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
 
 import static net.unit8.raoh.encode.MapEncoders.*;
 import static net.unit8.raoh.encode.ObjectEncoders.*;
@@ -82,7 +83,9 @@ class MapEncoderTest {
     void nullablePropertyWritesNullWhenGetterReturnsNull() {
         record Row(@Nullable String note) {}
         var enc = object(nullableProperty("note", Row::note, string()));
-        assertNull(enc.encode(new Row(null)).get("note"));
+        var out = enc.encode(new Row(null));
+        assertTrue(out.containsKey("note"));
+        assertNull(out.get("note"));
     }
 
     @Test
@@ -370,6 +373,52 @@ class MapEncoderTest {
 
         var sparse = enc.encode(new User(2L, null, new Presence.Absent<>()));
         assertEquals(List.of("id"), sparse.keySet().stream().toList()); // bio + nickname omitted
+    }
+
+    // --- distinct keys (#169) ---
+
+    record Pair(@Nullable String a, Presence<String> b) {}
+
+    @Test
+    void objectRejectsTwoPropertiesOwningTheSameKey() {
+        var e = assertThrows(IllegalArgumentException.class, () -> object(
+                property("a", Item::name, string()),
+                property("b", Item::name, string()),
+                property("a", Item::name, string())));
+        assertEquals("object key 'a' is owned by properties 0 and 2", e.getMessage());
+    }
+
+    @Test
+    void objectRejectsTheSameKeyWhicheverPropertyKindsOwnIt() {
+        // Rejected when the encoder is built, before any value could leave the key out: owning a
+        // key is part of the definition, not of the value encoded.
+        Function<Pair, @Nullable String> neverCalled = p -> fail("getter must not run");
+        assertThrows(IllegalArgumentException.class, () -> object(
+                optionalProperty("a", neverCalled, string()),
+                property("a", neverCalled, string())));
+        assertThrows(IllegalArgumentException.class, () -> object(
+                optionalProperty("a", Pair::a, string()),
+                presenceProperty("a", Pair::b, string())));
+        assertThrows(IllegalArgumentException.class, () -> object(
+                nullableProperty("a", Pair::a, string()),
+                propertyWithDefault("a", Pair::a, string(), "-")));
+    }
+
+    @Test
+    void objectKeepsDeclarationOrderAroundAnOmittedKey() {
+        record Row(int x, @Nullable String y, int z) {}
+        Encoder<Row, Map<String, @Nullable Object>> enc = object(
+                property("z", Row::z, int_()),
+                optionalProperty("y", Row::y, string()),
+                property("x", Row::x, int_()));
+        assertEquals(List.of("z", "y", "x"), enc.encode(new Row(1, "s", 3)).keySet().stream().toList());
+        assertEquals(List.of("z", "x"), enc.encode(new Row(1, null, 3)).keySet().stream().toList());
+    }
+
+    @Test
+    void objectWithNoPropertiesEncodesAnEmptyMap() {
+        Encoder<Item, Map<String, @Nullable Object>> enc = object();
+        assertTrue(enc.encode(new Item(new ItemId(1L), "A", BigDecimal.ONE)).isEmpty());
     }
 
     // --- mapOf (#63) ---

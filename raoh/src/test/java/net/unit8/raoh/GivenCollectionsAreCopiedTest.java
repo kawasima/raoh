@@ -4,9 +4,9 @@ import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.decode.Decoders;
 import net.unit8.raoh.decode.combinator.CombinePart;
 import net.unit8.raoh.decode.map.MapDecoders;
-import net.unit8.raoh.encode.EntryEncoder;
 import net.unit8.raoh.encode.MapEncoders;
 import net.unit8.raoh.encode.ObjectEncoders;
+import net.unit8.raoh.encode.PropertyEncoder;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -99,12 +99,15 @@ class GivenCollectionsAreCopiedTest {
     record Point(int x, int y) {}
 
     @Test
-    void objectEncoderKeepsItsOwnEntries() {
+    void objectEncoderKeepsItsOwnProperties() {
         @SuppressWarnings("unchecked")
-        EntryEncoder<Point>[] entries = new EntryEncoder[]{
-                MapEncoders.property("x", Point::x, ObjectEncoders.int_())};
-        var encoder = MapEncoders.object(entries);
-        entries[0] = MapEncoders.property("y", Point::y, ObjectEncoders.int_());
-        assertEquals(Map.of("x", 1), encoder.encode(new Point(1, 2)));
+        PropertyEncoder<Point>[] properties = new PropertyEncoder[]{
+                MapEncoders.property("x", Point::x, ObjectEncoders.int_()),
+                MapEncoders.property("y", Point::y, ObjectEncoders.int_())};
+        var encoder = MapEncoders.object(properties);
+        // Changing the array afterwards, even into two properties owning "x", changes nothing:
+        // the encoder runs the properties it checked.
+        properties[1] = MapEncoders.property("x", Point::y, ObjectEncoders.int_());
+        assertEquals(Map.of("x", 1, "y", 2), encoder.encode(new Point(1, 2)));
     }
 }
