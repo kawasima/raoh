@@ -62,7 +62,6 @@ net.unit8.raoh.CodePointOrder#sorted -> java.util.stream.Stream#sorted(java.util
 net.unit8.raoh.CodePointOrder#sorted -> java.util.stream.Stream#toList():java.util.List
 net.unit8.raoh.DecimalText#magnitude -> java.math.BigInteger#add(java.math.BigInteger):java.math.BigInteger
 net.unit8.raoh.DecimalText#magnitude -> java.math.BigInteger#multiply(java.math.BigInteger):java.math.BigInteger
-net.unit8.raoh.DecimalText#magnitude -> java.math.BigInteger#pow(int):java.math.BigInteger
 net.unit8.raoh.DecimalText#read -> java.math.BigDecimal#<init>(java.math.BigInteger,int)
 net.unit8.raoh.DecimalText#read -> java.math.BigInteger#negate():java.math.BigInteger
 net.unit8.raoh.Err#toString -> java.util.List#stream():java.util.stream.Stream
@@ -161,6 +160,7 @@ net.unit8.raoh.encode.MapEncoders#presenceProperty -> java.util.Map#put(java.lan
 net.unit8.raoh.encode.PropertyEncoder#encodeTo -> java.util.Map#put(java.lang.Object,java.lang.Object):java.lang.Object
 
 [the receiver is a JDK constant such as BigInteger.TEN, so its class is exactly the JDK class; the arguments are numbers Raoh built or took from the decoded value and the configured bound]
+net.unit8.raoh.DecimalText#magnitude -> java.math.BigInteger#pow(int):java.math.BigInteger
 net.unit8.raoh.decode.builtin.DecimalDecoder#isMultiple -> java.math.BigInteger#modPow(java.math.BigInteger,java.math.BigInteger):java.math.BigInteger
 net.unit8.raoh.decode.builtin.DecimalDecoder#isMultiple -> java.math.BigInteger#pow(int):java.math.BigInteger
 
