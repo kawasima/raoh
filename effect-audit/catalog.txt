@@ -61,6 +61,7 @@ java.lang.Long#longValue():long
 java.lang.Long#parseLong(java.lang.String):long
 java.lang.Long#valueOf(long):java.lang.Long
 java.lang.MatchException#<init>(java.lang.String,java.lang.Throwable)  -- stores the cause; calls nothing on it
+java.lang.Math#max(int,int):int
 java.lang.Math#min(long,long):long
 java.lang.Object#<init>()
 java.lang.Object#getClass():java.lang.Class
@@ -90,6 +91,7 @@ java.lang.StringBuilder#<init>()
 java.lang.StringBuilder#append(char):java.lang.StringBuilder
 java.lang.StringBuilder#append(java.lang.String):java.lang.StringBuilder
 java.lang.StringBuilder#toString():java.lang.String
+java.lang.System#arraycopy(java.lang.Object,int,java.lang.Object,int,int):void  -- copies array elements; calls none of their methods
 java.lang.Throwable#addSuppressed(java.lang.Throwable):void  -- final; stores the exception and calls nothing on it
 java.lang.invoke.ConstantBootstraps#nullConstant(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.Class):java.lang.Object
 java.lang.invoke.LambdaMetafactory#metafactory(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.MethodType,java.lang.invoke.MethodType,java.lang.invoke.MethodHandle,java.lang.invoke.MethodType):java.lang.invoke.CallSite  -- bootstrap; its arguments are class file constants, and the scanner records the handle it links
@@ -143,6 +145,7 @@ java.util.List#of(java.lang.Object[]):java.util.List  -- copies the array and nu
 java.util.Locale#ROOT:java.util.Locale
 java.util.Locale#equals(java.lang.Object):boolean  -- checks instanceof Locale before reading the argument
 java.util.Map#of():java.util.Map
+java.util.Objects#checkIndex(int,int):int
 java.util.Objects#requireNonNull(java.lang.Object):java.lang.Object  -- null-checks; calls nothing on the argument
 java.util.Objects#requireNonNull(java.lang.Object,java.lang.String):java.lang.Object  -- null-checks; calls nothing on the argument
 java.util.Optional#empty():java.util.Optional
@@ -153,6 +156,8 @@ java.util.ResourceBundle$Control#FORMAT_PROPERTIES:java.util.List
 java.util.Set#of():java.util.Set
 java.util.UUID#fromString(java.lang.String):java.util.UUID
 java.util.UUID#toString():java.lang.String
+java.util.concurrent.atomic.AtomicInteger#<init>(int)
+java.util.concurrent.atomic.AtomicInteger#compareAndSet(int,int):boolean  -- final
 java.util.regex.Matcher#quoteReplacement(java.lang.String):java.lang.String
 java.util.regex.Pattern#compile(java.lang.String):java.util.regex.Pattern
 java.util.regex.Pattern#pattern():java.lang.String
