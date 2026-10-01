@@ -604,7 +604,7 @@ var contact = oneOf(
 );
 ```
 
-If all candidates fail, Raoh returns `one_of_failed` and keeps candidate-specific errors in `meta.candidates`.
+If all candidates fail, Raoh returns `one_of_failed` and keeps candidate-specific errors in `meta.candidates`. `resolve()` and `rebase()` reach those errors too, so a resolved `one_of_failed` lists its candidates' errors in the same language.
 
 ### `enumOf(...)` and `literal(...)`
 

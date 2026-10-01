@@ -122,6 +122,7 @@ java.time.LocalTime#toString():java.lang.String
 java.time.OffsetDateTime#of(java.time.LocalDateTime,java.time.ZoneOffset):java.time.OffsetDateTime
 java.time.OffsetDateTime#toString():java.lang.String
 java.time.ZoneOffset#UTC:java.time.ZoneOffset
+java.util.AbstractList#<init>()
 java.util.ArrayDeque#<init>()
 java.util.ArrayList#<init>()
 java.util.ArrayList#<init>(int)
@@ -137,6 +138,7 @@ java.util.LinkedHashMap#<init>(int)
 java.util.LinkedHashMap#newLinkedHashMap(int):java.util.LinkedHashMap
 java.util.LinkedHashSet#<init>()
 java.util.List#of():java.util.List
+java.util.List#of(java.lang.Object):java.util.List  -- stores the element; calls nothing on it
 java.util.List#of(java.lang.Object[]):java.util.List  -- copies the array and null-checks the elements; calls none of their methods
 java.util.Locale#ROOT:java.util.Locale
 java.util.Locale#equals(java.lang.Object):boolean  -- checks instanceof Locale before reading the argument
@@ -294,6 +296,7 @@ java.util.HashSet#addAll(java.util.Collection):boolean
 java.util.HashSet#contains(java.lang.Object):boolean
 java.util.Iterator#hasNext():boolean
 java.util.Iterator#next():java.lang.Object
+java.util.LinkedHashMap#<init>(java.util.Map)  -- iterates the argument's entries
 java.util.LinkedHashMap#get(java.lang.Object):java.lang.Object
 java.util.LinkedHashMap#keySet():java.util.Set
 java.util.LinkedHashMap#put(java.lang.Object,java.lang.Object):java.lang.Object
@@ -324,6 +327,7 @@ java.util.Map#of(java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Ob
 java.util.Map#put(java.lang.Object,java.lang.Object):java.lang.Object
 java.util.Map#size():int
 java.util.Map#toString():java.lang.String
+java.util.Map#values():java.util.Collection
 java.util.Map$Entry#getKey():java.lang.Object
 java.util.Map$Entry#getValue():java.lang.Object
 java.util.Optional#equals(java.lang.Object):boolean  -- calls the value's equals()

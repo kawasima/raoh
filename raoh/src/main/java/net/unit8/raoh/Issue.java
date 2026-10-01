@@ -22,6 +22,12 @@ import java.util.TreeMap;
  * top-level map is copied and ordered: a value that is itself a collection or map, such as one a
  * {@code refine} metadata function returns, is kept as given.
  *
+ * <p>An issue can hold other issues in its metadata: a {@code one_of_failed} issue's
+ * {@code candidates} lists the issues each candidate failed with. They read as maps, the form
+ * {@link Issues#toJsonList()} writes, but keep everything an issue has, so {@link #resolve} and
+ * {@link #rebase} reach them too. Equality compares them as they read, so two issues whose nested
+ * issues differ only in their message key or in whether their message is custom are equal.
+ *
  * @param path          the location in the input structure where the issue occurred
  * @param code          a machine-readable error code (e.g., {@code "required"}, {@code "out_of_range"})
  * @param messageKey    the key identifying which message describes this issue; defaults to {@code code}
@@ -115,34 +121,63 @@ public record Issue(Path path, String code, String messageKey, String message,
      * <p>A resolver that cannot describe this issue returns {@link #message()} unchanged,
      * so the message stored at decode time is never replaced by a worse one.
      *
+     * <p>The issues this issue's metadata holds, such as each candidate's issues under a
+     * {@code one_of_failed} issue's {@code candidates}, are resolved first, the same way and
+     * whether or not this issue's own message is custom; the resolver then sees this issue with
+     * them already resolved.
+     *
      * @param resolver the message resolver
-     * @return a new issue with the resolved message, or this issue if already custom
+     * @return a new issue with the resolved message, or this issue if there is nothing to resolve
      */
     public Issue resolve(MessageResolver resolver) {
-        return customMessage ? this
-                : new Issue(path, code, messageKey, resolver.resolve(this), meta, true);
+        return IssueTree.holdsIssues(this) ? IssueTree.map(this, i -> i.resolvedAlone(resolver))
+                : resolvedAlone(resolver);
     }
 
     /**
      * Resolves this issue's message using the given resolver and locale,
      * unless it has a custom message.
      *
+     * <p>The issues this issue's metadata holds are resolved first, as
+     * {@link #resolve(MessageResolver)} says.
+     *
      * @param resolver the message resolver
      * @param locale   the target locale for the message
-     * @return a new issue with the resolved message, or this issue if already custom
+     * @return a new issue with the resolved message, or this issue if there is nothing to resolve
      */
     public Issue resolve(MessageResolver resolver, Locale locale) {
-        return customMessage ? this
-                : new Issue(path, code, messageKey, resolver.resolve(this, locale), meta, true);
+        return IssueTree.holdsIssues(this) ? IssueTree.map(this, i -> i.resolvedAlone(resolver, locale))
+                : resolvedAlone(resolver, locale);
     }
 
     /**
      * Returns a copy of this issue with its path prepended by the given prefix.
      *
+     * <p>The issues this issue's metadata holds, such as each candidate's issues under a
+     * {@code one_of_failed} issue's {@code candidates}, are at paths of the same input, so their
+     * paths are prepended too.
+     *
      * @param prefix the path prefix
      * @return a new issue with the rebased path
      */
     public Issue rebase(Path prefix) {
+        return IssueTree.holdsIssues(this) ? IssueTree.map(this, i -> i.rebasedAlone(prefix))
+                : rebasedAlone(prefix);
+    }
+
+    // The steps below change this issue alone and leave the issues its metadata holds as they
+    // are; IssueTree applies them to every issue of the tree, the ones below first.
+
+    Issue resolvedAlone(MessageResolver resolver) {
+        return customMessage ? this : new Issue(path, code, messageKey, resolver.resolve(this), meta, true);
+    }
+
+    Issue resolvedAlone(MessageResolver resolver, Locale locale) {
+        return customMessage ? this
+                : new Issue(path, code, messageKey, resolver.resolve(this, locale), meta, true);
+    }
+
+    Issue rebasedAlone(Path prefix) {
         return new Issue(prefix.append(path), code, messageKey, message, meta, customMessage);
     }
 }

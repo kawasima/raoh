@@ -8,6 +8,7 @@ import net.unit8.raoh.Issues;
 import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.Result;
+import net.unit8.raoh.internal.CandidateFailures;
 
 import net.unit8.raoh.decode.combinator.*;
 
@@ -630,7 +631,6 @@ public final class Decoders {
     @SafeVarargs
     public static <I extends @Nullable Object, T> Decoder<I, T> oneOf(Decoder<I, ? extends T>... candidates) {
         return (in, path) -> {
-            // Accumulate raw Issues; defer toJsonList() until the caller accesses meta.
             var failedIssues = new java.util.ArrayList<Issues>(candidates.length);
             for (int i = 0; i < candidates.length; i++) {
                 var r = candidates[i].decode(in, path);
@@ -643,13 +643,10 @@ public final class Decoders {
                     failedIssues.add(err.issues());
                 }
             }
-            // Build the meta lazily at error construction time (once, not per candidate).
-            var candidateMeta = new java.util.ArrayList<Map<String, Object>>(failedIssues.size());
-            for (int i = 0; i < failedIssues.size(); i++) {
-                candidateMeta.add(Map.of("candidate", i, "issues", failedIssues.get(i).toJsonList()));
-            }
+            // The candidates' issues stay Issues, so resolve() and rebase() reach them; they are
+            // written out as maps only when the metadata is read or serialized.
             return Result.fail(path, ErrorCodes.ONE_OF_FAILED, "no variant matched",
-                    Map.of("candidates", List.copyOf(candidateMeta)));
+                    Map.of("candidates", new CandidateFailures(failedIssues)));
         };
     }
 

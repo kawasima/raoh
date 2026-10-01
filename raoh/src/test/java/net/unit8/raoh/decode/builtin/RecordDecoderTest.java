@@ -32,7 +32,7 @@ class RecordDecoderTest {
         assertEquals(Map.of("a", 1, "b", 2), decodeOk(map(int_()).minSize(2), Map.of("a", 1, "b", 2)));
         var issue = decodeErr(map(int_()).minSize(2), Map.of("a", 1));
         assertEquals(ErrorCodes.TOO_SMALL, issue.code());
-        assertEquals("must have at least 2 entries", issue.message());
+        assertEquals("must have at least 2 elements", issue.message());
         assertEquals(2, issue.meta().get("min"));
         assertEquals(1, issue.meta().get("actual"));
     }
@@ -42,7 +42,7 @@ class RecordDecoderTest {
         assertEquals(Map.of("a", 1, "b", 2), decodeOk(map(int_()).maxSize(2), Map.of("a", 1, "b", 2)));
         var issue = decodeErr(map(int_()).maxSize(2), Map.of("a", 1, "b", 2, "c", 3));
         assertEquals(ErrorCodes.TOO_BIG, issue.code());
-        assertEquals("must have at most 2 entries", issue.message());
+        assertEquals("must have at most 2 elements", issue.message());
     }
 
     @Test
@@ -50,7 +50,7 @@ class RecordDecoderTest {
         assertEquals(Map.of("a", 1, "b", 2), decodeOk(map(int_()).fixedSize(2), Map.of("a", 1, "b", 2)));
         var issue = decodeErr(map(int_()).fixedSize(2), Map.of("a", 1, "b", 2, "c", 3));
         assertEquals(ErrorCodes.INVALID_SIZE, issue.code());
-        assertEquals("must have exactly 2 entries", issue.message());
+        assertEquals("must have exactly 2 elements", issue.message());
     }
 
     // --- custom messages ---
@@ -95,7 +95,7 @@ class RecordDecoderTest {
     void nullCustomMessageFallsBackToDefault() {
         // A null message keeps the built-in default and leaves customMessage() false.
         var issue = decodeErr(map(int_()).minSize(2, null), Map.of("a", 1));
-        assertEquals("must have at least 2 entries", issue.message());
+        assertEquals("must have at least 2 elements", issue.message());
         assertFalse(issue.customMessage());
     }
 

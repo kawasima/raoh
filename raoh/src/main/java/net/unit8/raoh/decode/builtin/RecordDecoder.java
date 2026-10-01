@@ -84,7 +84,7 @@ public final class RecordDecoder<I extends @Nullable Object, V extends @Nullable
         return chain((value, path) -> {
             if (value.size() < n) {
                 return Result.failWith(path, ErrorCodes.TOO_SMALL, message,
-                        String.format(Locale.ROOT, "must have at least %d entries", n),
+                        String.format(Locale.ROOT, "must have at least %d elements", n),
                         Map.of("min", n, "actual", value.size()));
             }
             return Result.ok(value);
@@ -112,7 +112,7 @@ public final class RecordDecoder<I extends @Nullable Object, V extends @Nullable
         return chain((value, path) -> {
             if (value.size() > n) {
                 return Result.failWith(path, ErrorCodes.TOO_BIG, message,
-                        String.format(Locale.ROOT, "must have at most %d entries", n),
+                        String.format(Locale.ROOT, "must have at most %d elements", n),
                         Map.of("max", n, "actual", value.size()));
             }
             return Result.ok(value);
@@ -140,7 +140,7 @@ public final class RecordDecoder<I extends @Nullable Object, V extends @Nullable
         return chain((value, path) -> {
             if (value.size() != n) {
                 return Result.failWith(path, ErrorCodes.INVALID_SIZE, message,
-                        String.format(Locale.ROOT, "must have exactly %d entries", n),
+                        String.format(Locale.ROOT, "must have exactly %d elements", n),
                         Map.of("expected", n, "actual", value.size()));
             }
             return Result.ok(value);
