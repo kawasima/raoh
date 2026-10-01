@@ -12,7 +12,8 @@ import java.util.Map;
 
 /**
  * The walk over issues and the issues their metadata holds ({@link IssueBearingMeta}), used by
- * every operation that has to reach them all: resolving, rebasing and serializing.
+ * the operations that have to reach them all: resolving and serializing. Rebasing does not walk;
+ * see {@link IssueBearingMeta#rebased}.
  *
  * <p>The walk is a left-to-right post-order: the issues of a list in order, and before an issue
  * itself the issues its metadata holds, value by value in key order and each value's issues in
@@ -133,41 +134,49 @@ final class IssueTree {
     /** An issue, and what was made of the lists of issues its metadata holds, so far. */
     private static final class IssueFrame<B> {
         final Issue issue;
-        /** The keys whose values hold issues, in key order. */
-        final List<String> keys = new ArrayList<>();
-        /** For each key done or under way, what was made of each of its lists. */
-        final Map<String, List<B>> below = new LinkedHashMap<>();
-        int key;
+        /** The keys whose values hold issues, in key order, and those values' lists. */
+        final List<String> keys = new ArrayList<>(1);
+        final List<List<Issues>> children = new ArrayList<>(1);
+        /** What was made of each list, key by key; the last entry is the key under way. */
+        final List<List<B>> made = new ArrayList<>(1);
 
         IssueFrame(Issue issue) {
             this.issue = issue;
             issue.meta().forEach((k, v) -> {
-                if (v instanceof IssueBearingMeta) {
+                if (v instanceof IssueBearingMeta nested) {
                     keys.add(k);
+                    children.add(nested.children());
                 }
             });
         }
 
         /** The next list of issues to walk, or {@code null} when every list below is done. */
         @Nullable Issues next() {
-            while (key < keys.size()) {
-                String k = keys.get(key);
-                List<Issues> children = ((IssueBearingMeta) issue.meta().get(k)).children();
-                List<B> made = below.get(k);
-                if (made == null) {
-                    made = new ArrayList<>(children.size());
-                    below.put(k, made);
+            while (made.size() <= keys.size()) {
+                if (made.isEmpty() || made.get(made.size() - 1).size() == children.get(made.size() - 1).size()) {
+                    if (made.size() == keys.size()) {
+                        return null;
+                    }
+                    made.add(new ArrayList<>(children.get(made.size()).size()));
+                    continue;
                 }
-                if (made.size() < children.size()) {
-                    return children.get(made.size());
-                }
-                key++;
+                int key = made.size() - 1;
+                return children.get(key).get(made.get(key).size());
             }
             return null;
         }
 
-        void add(B made) {
-            below.get(keys.get(key)).add(made);
+        void add(B result) {
+            made.get(made.size() - 1).add(result);
+        }
+
+        /** What was made below, by key. */
+        Map<String, List<B>> below() {
+            var below = new LinkedHashMap<String, List<B>>();
+            for (int i = 0; i < keys.size(); i++) {
+                below.put(keys.get(i), made.get(i));
+            }
+            return below;
         }
     }
 
@@ -234,11 +243,21 @@ final class IssueTree {
                 var frame = (IssueFrame<B>) top;
                 Issues next = frame.next();
                 if (next != null) {
-                    stack.push(new ListFrame<A>(next));
+                    if (anyHoldsIssues(next.asList())) {
+                        stack.push(new ListFrame<A>(next));
+                    } else {
+                        // A list of leaves, as a candidate's issues usually are: no frame for it.
+                        List<Issue> leaves = next.asList();
+                        var made = new ArrayList<A>(leaves.size());
+                        for (Issue leaf : leaves) {
+                            made.add(fold.issue(leaf, Map.of()));
+                        }
+                        frame.add(fold.issues(next, made));
+                    }
                     continue;
                 }
                 stack.pop();
-                A made = fold.issue(frame.issue, frame.below);
+                A made = fold.issue(frame.issue, frame.below());
                 ((ListFrame<A>) stack.element()).done.add(made);
             }
         }

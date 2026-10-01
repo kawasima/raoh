@@ -1,5 +1,7 @@
 package net.unit8.raoh;
 
+import net.unit8.raoh.internal.IssueBearingMeta;
+
 import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
@@ -161,8 +163,15 @@ public record Issue(Path path, String code, String messageKey, String message,
      * @return a new issue with the rebased path
      */
     public Issue rebase(Path prefix) {
-        return IssueTree.holdsIssues(this) ? IssueTree.map(this, i -> i.rebasedAlone(prefix))
-                : rebasedAlone(prefix);
+        if (!IssueTree.holdsIssues(this)) {
+            return rebasedAlone(prefix);
+        }
+        // The issues below record the prefix and apply it when read: rebasing runs once per level
+        // a failure is passed up, and rebuilding the whole tree each time would be quadratic.
+        var rebasedMeta = new java.util.LinkedHashMap<String, Object>();
+        meta.forEach((key, value) -> rebasedMeta.put(key,
+                value instanceof IssueBearingMeta nested ? nested.rebased(prefix) : value));
+        return new Issue(prefix.append(path), code, messageKey, message, rebasedMeta, customMessage);
     }
 
     // The steps below change this issue alone and leave the issues its metadata holds as they

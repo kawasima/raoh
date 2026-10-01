@@ -62,12 +62,7 @@ public record Issues(List<Issue> asList) {
      * @return a new issues instance with rebased paths
      */
     public Issues rebase(Path prefix) {
-        // Each operation keeps its own loop for a flat list: rebase runs on every failure a
-        // combiner passes up, and one loop shared by every operation would be slower for all.
-        if (!IssueTree.anyHoldsIssues(asList)) {
-            return new Issues(asList.stream().map(i -> i.rebasedAlone(prefix)).toList());
-        }
-        return IssueTree.map(this, i -> i.rebasedAlone(prefix));
+        return new Issues(asList.stream().map(i -> i.rebase(prefix)).toList());
     }
 
     /**

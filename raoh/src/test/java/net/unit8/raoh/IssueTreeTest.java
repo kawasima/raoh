@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -134,6 +135,38 @@ class IssueTreeTest {
 
         Issues viaIssues = new Issues(List.of(failed)).rebase(Path.of("order"));
         assertEquals("/order", candidate(viaIssues.asList().get(0), 0).get(0).get("path"));
+    }
+
+    @Test
+    void rebasesComposeOutermostFirst() {
+        Issue failed = only(Decoders.oneOf(map(int_()).minSize(2), int_()).decode(Map.of("a", 1), Path.of("x")));
+        Issue twice = failed.rebase(Path.of("inner")).rebase(Path.of("outer"));
+        assertEquals("/outer/inner/x", twice.path().toJsonPointer());
+        assertEquals("/outer/inner/x", candidate(twice, 0).get(0).get("path"));
+        // Resolving and serializing after a rebase see the rebased paths.
+        Issue resolved = twice.resolve(BUNDLE, Locale.JAPANESE);
+        assertEquals("/outer/inner/x", candidate(resolved, 0).get(0).get("path"));
+        @SuppressWarnings("unchecked")
+        var serialized = (List<Map<String, Object>>) ((List<Map<String, Object>>) ((Map<String, Object>)
+                new Issues(List.of(twice)).toJsonList().get(0).get("meta")).get("candidates")).get(0).get("issues");
+        assertEquals("/outer/inner/x", serialized.get(0).get("path"));
+    }
+
+    @Test
+    void rebasingDoesNotRebuildTheTreeBelow() {
+        // A failure DEPTH levels deep passed up LEVELS times, each rebasing it, as nested flatMaps
+        // do. Rebuilding the tree below each time would copy LEVELS × DEPTH issues; recording the
+        // prefix copies none of them. The limit is far above the second and far below the first.
+        int levels = 1_000;
+        Issues tree = deep();
+        Issues rebased = assertTimeoutPreemptively(java.time.Duration.ofSeconds(10), () -> {
+            Issues current = tree;
+            for (int i = 0; i < levels; i++) {
+                current = current.rebase(Path.of("l"));
+            }
+            return current;
+        });
+        assertEquals("/" + "l/".repeat(levels - 1) + "l", bottom(rebased).path().toJsonPointer());
     }
 
     @Test

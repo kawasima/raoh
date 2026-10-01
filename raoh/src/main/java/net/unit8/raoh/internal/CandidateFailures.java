@@ -1,6 +1,7 @@
 package net.unit8.raoh.internal;
 
 import net.unit8.raoh.Issues;
+import net.unit8.raoh.Path;
 import org.jspecify.annotations.Nullable;
 
 import java.util.AbstractList;
@@ -28,7 +29,14 @@ import java.util.RandomAccess;
 public final class CandidateFailures extends AbstractList<Map<String, Object>>
         implements IssueBearingMeta, RandomAccess {
 
-    private final List<Issues> failures;
+    /** The issues as given, before {@link #prefix} is applied. */
+    private final List<Issues> given;
+
+    /** The prefix {@link #rebased(Path)} recorded, not yet applied to {@link #given}. */
+    private final Path prefix;
+
+    /** {@link #given} with {@link #prefix} applied, worked out the first time it is read. */
+    private @Nullable List<Issues> failures;
 
     /** The list as read, built the first time it is read. */
     private @Nullable List<Map<String, Object>> projected;
@@ -39,19 +47,44 @@ public final class CandidateFailures extends AbstractList<Map<String, Object>>
      * @param failures the issues of each candidate, in candidate order
      */
     public CandidateFailures(List<Issues> failures) {
-        this.failures = List.copyOf(failures);
+        this(List.copyOf(failures), Path.ROOT);
+    }
+
+    private CandidateFailures(List<Issues> given, Path prefix) {
+        this.given = given;
+        this.prefix = prefix;
     }
 
     @Override
     public List<Issues> children() {
-        return failures;
+        List<Issues> children = failures;
+        if (children == null) {
+            if (prefix.segments().isEmpty()) {
+                children = given;
+            } else {
+                // One level: an issue below that holds issues of its own records the prefix in
+                // turn, so reading this level costs its own issues only.
+                var rebased = new ArrayList<Issues>(given.size());
+                for (Issues failure : given) {
+                    rebased.add(failure.rebase(prefix));
+                }
+                children = List.copyOf(rebased);
+            }
+            failures = children;
+        }
+        return children;
+    }
+
+    @Override
+    public CandidateFailures rebased(Path prefix) {
+        return new CandidateFailures(given, prefix.append(this.prefix));
     }
 
     @Override
     public CandidateFailures withChildren(List<Issues> children) {
-        if (children.size() != failures.size()) {
+        if (children.size() != given.size()) {
             throw new IllegalArgumentException(
-                    "expected " + failures.size() + " candidates, got " + children.size());
+                    "expected " + given.size() + " candidates, got " + children.size());
         }
         return new CandidateFailures(children);
     }
@@ -72,12 +105,13 @@ public final class CandidateFailures extends AbstractList<Map<String, Object>>
 
     @Override
     public int size() {
-        return failures.size();
+        return given.size();
     }
 
     private List<Map<String, Object>> read() {
         List<Map<String, Object>> read = projected;
         if (read == null) {
+            List<Issues> failures = children();
             var children = new ArrayList<List<Map<String, Object>>>(failures.size());
             for (Issues failure : failures) {
                 children.add(failure.toJsonList());
