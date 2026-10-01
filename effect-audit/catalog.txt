@@ -170,9 +170,11 @@ net.unit8.notation199x.pattern.PatternParser#read(java.lang.String):net.unit8.no
 net.unit8.notation199x.pattern.PatternRead$Beyond#construct():java.lang.String
 net.unit8.notation199x.pattern.PatternRead$Beyond#from():int
 net.unit8.notation199x.pattern.PatternRead$Beyond#limit():net.unit8.notation199x.pattern.PatternRead$Limit
+net.unit8.notation199x.pattern.PatternRead$Limit#MACHINE_STATES:net.unit8.notation199x.pattern.PatternRead$Limit
 net.unit8.notation199x.pattern.PatternRead$Limit#NESTING_DEPTH:net.unit8.notation199x.pattern.PatternRead$Limit
 net.unit8.notation199x.pattern.PatternRead$Limit#REPETITION_COUNT:net.unit8.notation199x.pattern.PatternRead$Limit
 net.unit8.notation199x.pattern.PatternRead$Limit#most():int
+net.unit8.notation199x.pattern.PatternRead$Limit#name():java.lang.String
 net.unit8.notation199x.pattern.PatternRead$Read#meaning():net.unit8.notation199x.pattern.PatternMeaning
 net.unit8.notation199x.pattern.PatternRead$Refusal#name():java.lang.String
 net.unit8.notation199x.pattern.PatternRead$Refused#construct():java.lang.String

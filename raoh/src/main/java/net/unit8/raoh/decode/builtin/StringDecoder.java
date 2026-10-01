@@ -348,6 +348,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      *
      * @param limit the limit
      * @return the thing it counts
+     * @throws IllegalStateException if the limit is one this Raoh does not know
      */
     private static String limitName(PatternRead.Limit limit) {
         if (limit == PatternRead.Limit.REPETITION_COUNT) {
@@ -356,7 +357,13 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
         if (limit == PatternRead.Limit.NESTING_DEPTH) {
             return "on groups nested one inside another";
         }
-        return "states once its repetitions are written out";
+        if (limit == PatternRead.Limit.MACHINE_STATES) {
+            return "states once its repetitions are written out";
+        }
+        // A limit added to 199x-notation after this was written: a version this Raoh was not built
+        // against, and not something wrong with the caller's pattern.
+        throw new IllegalStateException("199x-notation reports a pattern limit this Raoh does not know: "
+                + limit.name());
     }
 
     /**
