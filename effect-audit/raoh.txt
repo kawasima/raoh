@@ -189,11 +189,12 @@ net.unit8.raoh.encode.MapEncoders#discriminate -> java.util.stream.Stream#map(ja
 net.unit8.raoh.encode.MapEncoders#discriminate -> java.util.stream.Stream#sorted():java.util.stream.Stream
 net.unit8.raoh.encode.MapEncoders#discriminate -> java.util.stream.Stream#toList():java.util.List
 net.unit8.raoh.encode.MapEncoders#mapOf -> java.util.LinkedHashMap#put(java.lang.Object,java.lang.Object):java.lang.Object
+net.unit8.raoh.encode.MapEncoders#object -> java.util.HashMap#put(java.lang.Object,java.lang.Object):java.lang.Object
 net.unit8.raoh.encode.MapEncoders#object -> java.util.Iterator#hasNext():boolean
 net.unit8.raoh.encode.MapEncoders#object -> java.util.Iterator#next():java.lang.Object
+net.unit8.raoh.encode.MapEncoders#object -> java.util.List#get(int):java.lang.Object
 net.unit8.raoh.encode.MapEncoders#object -> java.util.List#iterator():java.util.Iterator
-net.unit8.raoh.encode.MapEncoders#optionalProperty -> java.util.Map#put(java.lang.Object,java.lang.Object):java.lang.Object
-net.unit8.raoh.encode.MapEncoders#presenceProperty -> java.util.Map#put(java.lang.Object,java.lang.Object):java.lang.Object
+net.unit8.raoh.encode.MapEncoders#object -> java.util.List#size():int
 net.unit8.raoh.encode.PropertyEncoder#encodeTo -> java.util.Map#put(java.lang.Object,java.lang.Object):java.lang.Object
 net.unit8.raoh.internal.CandidateFailures#<init> -> java.util.List#copyOf(java.util.Collection):java.util.List
 net.unit8.raoh.internal.CandidateFailures#children -> java.util.ArrayList#add(java.lang.Object):boolean
@@ -340,13 +341,13 @@ net.unit8.raoh.decode.combinator.Validated#accumulate -> java.util.function.Func
 net.unit8.raoh.decode.combinator.Validated#combine -> java.util.function.BiFunction#apply(java.lang.Object,java.lang.Object):java.lang.Object
 net.unit8.raoh.encode.Encoder#contramap -> java.util.function.Function#apply(java.lang.Object):java.lang.Object
 net.unit8.raoh.encode.MapEncoders#lazy -> java.util.function.Supplier#get():java.lang.Object
-net.unit8.raoh.encode.MapEncoders#optionalProperty -> java.util.function.Function#apply(java.lang.Object):java.lang.Object
-net.unit8.raoh.encode.MapEncoders#presenceProperty -> java.util.function.Function#apply(java.lang.Object):java.lang.Object
-net.unit8.raoh.encode.PropertyEncoder#encode -> java.util.function.Function#apply(java.lang.Object):java.lang.Object
+net.unit8.raoh.encode.PropertyEncoder#encodeTo -> java.util.function.Function#apply(java.lang.Object):java.lang.Object
 net.unit8.raoh.encode.PropertyEncoder#of -> java.util.function.Function#apply(java.lang.Object):java.lang.Object
 net.unit8.raoh.encode.PropertyEncoder#ofDefault -> java.util.function.Function#apply(java.lang.Object):java.lang.Object
 net.unit8.raoh.encode.PropertyEncoder#ofDefault -> java.util.function.Supplier#get():java.lang.Object
 net.unit8.raoh.encode.PropertyEncoder#ofNullable -> java.util.function.Function#apply(java.lang.Object):java.lang.Object
+net.unit8.raoh.encode.PropertyEncoder#ofOptional -> java.util.function.Function#apply(java.lang.Object):java.lang.Object
+net.unit8.raoh.encode.PropertyEncoder#ofPresence -> java.util.function.Function#apply(java.lang.Object):java.lang.Object
 
 [turns configured bounds and decoded values into message text]
 net.unit8.raoh.MessageResolver#<initializer> -> java.lang.String#format(java.util.Locale,java.lang.String,java.lang.Object[]):java.lang.String

@@ -4,6 +4,7 @@ import net.unit8.raoh.Presence;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -81,7 +82,7 @@ public final class MapEncoders {
      * @param key          the output map key (e.g., column name)
      * @param getter       extracts the property value from the domain object
      * @param valueEncoder encodes the extracted value to {@code Object}
-     * @return a property encoder for use with {@link #object(EntryEncoder[])}
+     * @return a property encoder for use with {@link #object(PropertyEncoder[])}
      */
     public static <T, V> PropertyEncoder<T> property(
             String key,
@@ -105,7 +106,7 @@ public final class MapEncoders {
      * @param key          the output map key (e.g., column name)
      * @param getter       extracts the property value, which may be {@code null}
      * @param valueEncoder encodes the extracted value (only invoked when non-null) to {@code Object}
-     * @return a property encoder for use with {@link #object(EntryEncoder[])}
+     * @return a property encoder for use with {@link #object(PropertyEncoder[])}
      */
     public static <T, V> PropertyEncoder<T> nullableProperty(
             String key,
@@ -130,7 +131,7 @@ public final class MapEncoders {
      * @param getter       extracts the property value, which may be {@code null}
      * @param valueEncoder encodes the value (or the default) to {@code Object}
      * @param defaultValue the value to encode when the getter returns {@code null}
-     * @return a property encoder for use with {@link #object(EntryEncoder[])}
+     * @return a property encoder for use with {@link #object(PropertyEncoder[])}
      */
     public static <T, V> PropertyEncoder<T> propertyWithDefault(
             String key,
@@ -154,7 +155,7 @@ public final class MapEncoders {
      * @param getter       extracts the property value, which may be {@code null}
      * @param valueEncoder encodes the value (or the supplied default) to {@code Object}
      * @param defaultValue supplies the value to encode when the getter returns {@code null}
-     * @return a property encoder for use with {@link #object(EntryEncoder[])}
+     * @return a property encoder for use with {@link #object(PropertyEncoder[])}
      */
     public static <T, V> PropertyEncoder<T> propertyWithDefault(
             String key,
@@ -165,7 +166,7 @@ public final class MapEncoders {
     }
 
     /**
-     * Creates an entry encoder that omits the key entirely when the getter returns {@code null}.
+     * Creates a property encoder that omits the key entirely when the getter returns {@code null}.
      *
      * <p>This is the encode counterpart of
      * {@link net.unit8.raoh.decode.map.MapDecoders#optionalField optionalField} (which produces
@@ -177,22 +178,17 @@ public final class MapEncoders {
      * @param key          the output map key
      * @param getter       extracts the property value; when it returns {@code null} the key is omitted
      * @param valueEncoder encodes the extracted value (only invoked when non-null) to {@code Object}
-     * @return an entry encoder that writes zero or one entry
+     * @return a property encoder that writes its key zero or one times
      */
-    public static <T, V> EntryEncoder<T> optionalProperty(
+    public static <T, V> PropertyEncoder<T> optionalProperty(
             String key,
             Function<? super T, ? extends @Nullable V> getter,
             Encoder<V, Object> valueEncoder) {
-        return (value, out) -> {
-            @Nullable V v = getter.apply(value);
-            if (v != null) {
-                out.put(key, valueEncoder.encode(v));
-            }
-        };
+        return PropertyEncoder.ofOptional(key, getter, valueEncoder);
     }
 
     /**
-     * Creates an entry encoder that round-trips a tri-state {@link Presence} value:
+     * Creates a property encoder that round-trips a tri-state {@link Presence} value:
      *
      * <ul>
      *   <li>{@link Presence.Absent} — the key is omitted entirely;</li>
@@ -211,48 +207,55 @@ public final class MapEncoders {
      * @param key          the output map key
      * @param getter       extracts the {@link Presence} field from the domain object
      * @param valueEncoder encodes the present value (only invoked for {@link Presence.Present}) to {@code Object}
-     * @return an entry encoder that writes zero or one (possibly {@code null}-valued) entry
+     * @return a property encoder that writes its key, possibly with a {@code null} value, zero or one times
      */
-    public static <T, V> EntryEncoder<T> presenceProperty(
+    public static <T, V> PropertyEncoder<T> presenceProperty(
             String key,
             Function<? super T, ? extends Presence<V>> getter,
             Encoder<V, Object> valueEncoder) {
-        return (value, out) -> {
-            Presence<V> p = getter.apply(value);
-            switch (p) {
-                case Presence.Absent<V> _ -> { }
-                case Presence.PresentNull<V> _ -> out.put(key, null);
-                case Presence.Present<V> present -> {
-                    @Nullable V v = present.value();
-                    out.put(key, v == null ? null : valueEncoder.encode(v));
-                }
-            }
-        };
+        return PropertyEncoder.ofPresence(key, getter, valueEncoder);
     }
 
     /**
      * Creates an encoder that builds a {@code Map<String, Object>} from a domain object by applying
-     * each entry encoder in order to a shared output map.
+     * each property encoder in order.
      *
-     * <p>Each {@link EntryEncoder} may write zero, one, or (via {@link #presenceProperty}) a
-     * {@code null}-valued entry; a plain {@link #property} always writes exactly one. The resulting
-     * map preserves insertion order (backed by {@link LinkedHashMap}). Corresponds to
-     * {@code combine(...).map(Constructor::new)} on the decoder side.
+     * <p>Each property owns one key and writes it at most once: a plain {@link #property} always
+     * writes it, {@link #optionalProperty} and {@link #presenceProperty} may leave it out. The
+     * resulting map preserves the order the properties are given in (backed by
+     * {@link LinkedHashMap}). Corresponds to {@code combine(...).map(Constructor::new)} on the
+     * decoder side.
      *
-     * @param <T>     the domain type to encode
-     * @param entries the entry encoders that define the output map entries
+     * <p>Two properties may not own the same key. That is a mistake in the definition, whatever
+     * the values turn out to be, so it is rejected here rather than letting the later property's
+     * value replace the earlier one's at encode time.
+     *
+     * @param <T>        the domain type to encode
+     * @param properties the property encoders that define the output map entries
      * @return an encoder producing {@code Map<String, Object>}
+     * @throws IllegalArgumentException if two properties own the same key
      */
     @SafeVarargs
-    public static <T> Encoder<T, Map<String, @Nullable Object>> object(EntryEncoder<T>... entries) {
-        // A copy, so changing the array passed in afterwards does not change the encoder.
-        List<EntryEncoder<T>> written = List.of(entries);
+    public static <T> Encoder<T, Map<String, @Nullable Object>> object(PropertyEncoder<T>... properties) {
+        // A copy, so changing the array passed in afterwards does not change the encoder, and the
+        // properties checked below are the ones that run.
+        List<PropertyEncoder<T>> owned = List.of(properties);
+        var firstByKey = HashMap.<String, Integer>newHashMap(owned.size());
+        for (int i = 0; i < owned.size(); i++) {
+            String key = owned.get(i).key();
+            Integer previous = firstByKey.put(key, i);
+            if (previous != null) {
+                int first = previous;
+                throw new IllegalArgumentException("object key '" + key + "' is owned by properties "
+                        + first + " and " + i);
+            }
+        }
+        int size = owned.size();
         return value -> {
-            // No pre-size: an EntryEncoder may write zero or many keys, so the entry count is not a
-            // reliable bound on the output size.
-            var map = new LinkedHashMap<String, @Nullable Object>();
-            for (var entry : written) {
-                entry.encodeTo(value, map);
+            // Each property writes at most one key, so the property count bounds the output size.
+            var map = LinkedHashMap.<String, @Nullable Object>newLinkedHashMap(size);
+            for (var property : owned) {
+                property.encodeTo(value, map);
             }
             return map;
         };
@@ -409,7 +412,7 @@ public final class MapEncoders {
      *
      * <p>The tag is placed first in the resulting {@link LinkedHashMap} and is authoritative: if a
      * variant encoder also emits the discriminator key, that entry is discarded in favour of the
-     * injected tag. The return type matches {@link #object(EntryEncoder[])}, so the result can be
+     * injected tag. The return type matches {@link #object(PropertyEncoder[])}, so the result can be
      * embedded via {@link #nested(Encoder)} or used as a top-level encoder.
      *
      * <p><strong>Exact-class dispatch.</strong> Variants are matched against
