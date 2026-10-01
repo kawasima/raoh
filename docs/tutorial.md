@@ -1065,14 +1065,14 @@ userRegDec.decode(Map.of(
 // ==> Err[/email: not a valid email, /password: must be at least 8 characters, /contacts/0/value: not a valid email]
 ```
 
-For Spring MVC controllers receiving JSON input, swap in `JsonDecoders` (reference):
+For Spring MVC controllers receiving JSON input, swap in `JsonDecoders` (reference). Take the body as text and read it with `readTree`: binding it to `JsonNode` lets Spring's `ObjectMapper` turn every number with a fraction into a `double` first. `readTree` throws a Jackson `StreamReadException` for a body that is not JSON; `examples/spring` maps it to 400.
 
 ```java
 // import static net.unit8.raoh.json.JsonDecoders.*;
 //
 // @PostMapping("/users")
-// ResponseEntity<?> register(@RequestBody JsonNode body) {
-//     return switch (userRegDec.decode(body)) {
+// ResponseEntity<?> register(@RequestBody String body) {
+//     return switch (userRegDec.decode(readTree(body))) {
 //         case Ok(var reg) -> ResponseEntity.status(201).body(userService.register(reg));
 //         case Err(var issues) -> ResponseEntity.badRequest().body(issues.toJsonList());
 //     };

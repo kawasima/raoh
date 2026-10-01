@@ -1067,14 +1067,14 @@ userRegDec.decode(Map.of(
 // ==> Err[/email: not a valid email, /password: must be at least 8 characters, /contacts/0/value: not a valid email]
 ```
 
-Spring MVC Controller でJSON入力を受け取る場合は `JsonDecoders` に差し替えます（参考コード）。
+Spring MVC Controller でJSON入力を受け取る場合は `JsonDecoders` に差し替えます（参考コード）。ボディは文字列で受け取り、`readTree` で読みます。`JsonNode` にバインドすると、Spring の `ObjectMapper` が小数部のある数値を先に `double` へ変換してしまうからです。JSON でないボディに対して `readTree` は Jackson の `StreamReadException` を投げます。`examples/spring` ではそれを 400 にしています。
 
 ```java
 // import static net.unit8.raoh.json.JsonDecoders.*;
 //
 // @PostMapping("/users")
-// ResponseEntity<?> register(@RequestBody JsonNode body) {
-//     return switch (userRegDec.decode(body)) {
+// ResponseEntity<?> register(@RequestBody String body) {
+//     return switch (userRegDec.decode(readTree(body))) {
 //         case Ok(var reg) -> ResponseEntity.status(201).body(userService.register(reg));
 //         case Err(var issues) -> ResponseEntity.badRequest().body(issues.toJsonList());
 //     };

@@ -14,6 +14,28 @@ detailed from the current development cycle onward.
 > instead of a `java.util.regex.Pattern`, and refuses a pattern past the limits the Raoh
 > Specification 0.9.0 sets. `iso8601()` no longer accepts `24:00:00` with a fraction.
 
+### Added
+
+- **`JsonDecoders.readTree` reads JSON with each number as written.** A tree from Jackson's
+  `ObjectMapper` has its numbers converted before a decoder sees them: a number with a fraction or
+  an exponent becomes a `double`, so `decimal()` read `0.0001` as `0.00010`, kept 17 digits and
+  refused `1e400`, `float_()` rounded twice and read `1.000000059604644775390625000000001` as
+  `1.0`, and `-0` gave `+0.0`. `readTree(String)`, `readTree(Reader)`, `readTree(InputStream)` and
+  `readTree(JsonParser)` build the tree from the text the parser holds for each number, never from
+  a value it converted: an integer becomes an integer node, any other number a `DecimalNode` with
+  the exact value and scale it writes, and a zero written with a minus sign keeps its sign, so
+  `double_()` and `float_()` give `-0.0` for `-0`, `-0.0` and `-0.000e10` while `int_()` reads
+  `-0` as `0`, as the Raoh Specification 0.9.0 says. What the tree cannot hold is refused with a
+  Jackson exception instead of dropped: a member name that occurs twice in an object, whatever the
+  parser's `STRICT_DUPLICATE_DETECTION`, and a number whose exponent is beyond what a `BigDecimal`
+  holds. The text overloads read one complete document, use Jackson's built-in
+  `StreamReadConstraints` (which `overrideDefaultStreamReadConstraints` does not change) and leave
+  the caller's `Reader` or `InputStream` open; the `JsonParser` overload reads one value under the
+  caller's parser settings, from its current token, and leaves the parser on the value's last
+  token. Containers are kept on a stack of their own, so the nesting depth does not reach the call
+  stack. The decoders still accept a mapper's tree, with the numbers the mapper made
+  ([#170](https://github.com/raoh-project/raoh-java/issues/170)).
+
 ### Changed
 
 - **Breaking: `StringDecoder.pattern()` takes a pattern of the specification's language, as text.**

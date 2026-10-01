@@ -70,6 +70,28 @@ class MembershipTest {
     }
 
     @Test
+    void rejectMalformedJson() throws Exception {
+        // The controller reads the body itself; text that is not JSON never reaches the decoder.
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ \"name\": "))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").exists());
+    }
+
+    @Test
+    void rejectDuplicateMemberName() throws Exception {
+        // A JsonNode has room for one "email"; readTree refuses the body rather than keep the last.
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "name": "Dave", "email": "bad", "email": "dave@example.com" }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value(org.hamcrest.Matchers.startsWith("Duplicate member name")));
+    }
+
+    @Test
     void createGroupAndAddMember() throws Exception {
         // Create a user — capture the generated id
         var userBody = mockMvc.perform(post("/users")

@@ -7,7 +7,7 @@ import net.unit8.raoh.Ok;
 import net.unit8.raoh.examples.spring.SpringMessageResolver;
 import net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.CreateUserCommand;
 import static net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.CREATE_USER;
-import tools.jackson.databind.JsonNode;
+import static net.unit8.raoh.json.JsonDecoders.readTree;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -46,18 +46,21 @@ public class UserController {
     /**
      * Creates a new user from a JSON request body.
      *
-     * <p>The {@code locale} parameter is automatically injected by Spring from
-     * the {@code Accept-Language} header, enabling locale-aware error messages.
+     * <p>The body is taken as text and read with {@code readTree}, not bound to a
+     * {@code JsonNode} by Spring: Spring's {@code ObjectMapper} would turn each number with a
+     * fraction into a {@code double} before any decoder saw it. The {@code locale} parameter is
+     * automatically injected by Spring from the {@code Accept-Language} header, enabling
+     * locale-aware error messages.
      *
-     * @param body   the raw JSON input
+     * @param body   the raw JSON text
      * @param locale the client's locale from the {@code Accept-Language} header
      * @return 201 with the created user, or 400 with validation issues
      */
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody JsonNode body, Locale locale) {
+    public ResponseEntity<?> create(@RequestBody String body, Locale locale) {
         // Decode returns a sealed Result: Ok (valid command) or Err (accumulated issues).
         // Pattern matching on the sealed type ensures both cases are handled at compile time.
-        return switch (CREATE_USER.decode(body)) {
+        return switch (CREATE_USER.decode(readTree(body))) {
             case Ok<CreateUserCommand>(var cmd) -> {
                 // The decoded command is handed straight to the repository, which encodes it into
                 // the INSERT columns — decode at the HTTP boundary, encode at the JDBC one.

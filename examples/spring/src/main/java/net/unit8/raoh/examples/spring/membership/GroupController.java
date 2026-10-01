@@ -11,7 +11,7 @@ import net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.AddMembe
 import net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.CreateGroupCommand;
 import static net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.ADD_MEMBER;
 import static net.unit8.raoh.examples.spring.membership.JsonMembershipDecoders.CREATE_GROUP;
-import tools.jackson.databind.JsonNode;
+import static net.unit8.raoh.json.JsonDecoders.readTree;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -50,14 +50,14 @@ public class GroupController {
     /**
      * Creates a new group from a JSON request body.
      *
-     * @param body   the raw JSON input
+     * @param body   the raw JSON text
      * @param locale the client's locale from the {@code Accept-Language} header
      * @return 201 with the created group, or 400 with validation issues
      */
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody JsonNode body, Locale locale) {
+    public ResponseEntity<?> create(@RequestBody String body, Locale locale) {
         // Same sealed-type pattern matching as UserController.create().
-        return switch (CREATE_GROUP.decode(body)) {
+        return switch (CREATE_GROUP.decode(readTree(body))) {
             case Ok<CreateGroupCommand>(var cmd) -> {
                 GroupId id = groups.insert(cmd.name(), cmd.description());
                 yield ResponseEntity.status(HttpStatus.CREATED)
@@ -111,13 +111,14 @@ public class GroupController {
      * <p>The request body is decoded by {@link JsonMembershipDecoders#ADD_MEMBER}.
      * If the role is omitted, it defaults to {@link MembershipRole#MEMBER}.
      *
-     * @param id   the group ID
-     * @param body the raw JSON input
+     * @param id     the group ID
+     * @param body   the raw JSON text
+     * @param locale the client's locale from the {@code Accept-Language} header
      * @return 201 with the updated member list, or 400/404 on failure
      */
     @PostMapping("/{id}/members")
-    public ResponseEntity<?> addMember(@PathVariable long id, @RequestBody JsonNode body, Locale locale) {
-        return switch (ADD_MEMBER.decode(body)) {
+    public ResponseEntity<?> addMember(@PathVariable long id, @RequestBody String body, Locale locale) {
+        return switch (ADD_MEMBER.decode(readTree(body))) {
             case Ok<AddMemberCommand>(var cmd) -> {
                 if (groups.findById(id).isEmpty()) {
                     yield ResponseEntity.notFound().build();
