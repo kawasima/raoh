@@ -13,6 +13,7 @@ import tools.jackson.core.JsonParser;
 import tools.jackson.core.JsonToken;
 import tools.jackson.core.ObjectReadContext;
 import tools.jackson.core.StreamReadConstraints;
+import tools.jackson.core.StreamReadFeature;
 import tools.jackson.core.exc.StreamReadException;
 import tools.jackson.core.json.JsonFactory;
 import tools.jackson.databind.JsonNode;
@@ -37,6 +38,21 @@ import static org.junit.jupiter.api.Assertions.*;
 class ReadTreeTest {
 
     private static final JsonFactory FACTORY = JsonFactory.builder().build();
+
+    /**
+     * Every way into the reader: the text overloads, the stream overload with two encodings, and a
+     * caller's parser that leaves duplicate detection off, as Jackson does by default.
+     */
+    private static final List<Function<String, JsonNode>> OVERLOADS = List.of(
+            JsonDecoders::readTree,
+            json -> readTree(new StringReader(json)),
+            json -> readTree(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))),
+            json -> readTree(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_16))),
+            json -> {
+                try (JsonParser parser = FACTORY.createParser(ObjectReadContext.empty(), json)) {
+                    return readTree(parser);
+                }
+            });
 
     private static <T> T ok(Decoder<JsonNode, T> decoder, String json) {
         Result<T> result = decoder.decode(readTree(json));
@@ -192,6 +208,14 @@ class ReadTreeTest {
     }
 
     @Test
+    void decimalReadsMagnitudesNoDoubleHolds() {
+        // Through a double these were Infinity (type_mismatch) and 0.0.
+        assertEquals(new BigDecimal("1E+400"), ok(decimal(), "1e400"));
+        assertEquals(new BigDecimal("-1E+400"), ok(decimal(), "-1e400"));
+        assertEquals(new BigDecimal("1E-400"), ok(decimal(), "1e-400"));
+    }
+
+    @Test
     void anExponentBeyondWhatABigDecimalHoldsIsRefused() {
         var e = assertThrows(StreamReadException.class, () -> readTree("1e3000000000"));
         assertTrue(e.getMessage().contains("1e3000000000"), e.getMessage());
@@ -256,19 +280,18 @@ class ReadTreeTest {
 
     @Test
     void aDuplicateMemberNameIsRefusedByEveryOverload() {
-        List<Function<String, JsonNode>> overloads = List.of(
-                JsonDecoders::readTree,
-                json -> readTree(new StringReader(json)),
-                json -> readTree(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))),
-                json -> {
-                    // The caller's parser leaves duplicate detection off, as Jackson does by default.
-                    try (JsonParser parser = FACTORY.createParser(ObjectReadContext.empty(), json)) {
-                        return readTree(parser);
-                    }
-                });
-        for (Function<String, JsonNode> read : overloads) {
+        for (Function<String, JsonNode> read : OVERLOADS) {
             var e = assertThrows(StreamReadException.class, () -> read.apply(DUPLICATE));
             assertTrue(e.getMessage().startsWith("Duplicate member name \"x\""), e.getMessage());
+        }
+    }
+
+    @Test
+    void aCallersParserThatDetectsDuplicatesRefusesThemItself() {
+        // The parser throws before the name reaches the reader, so the message is Jackson's.
+        JsonFactory strict = JsonFactory.builder().enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION).build();
+        try (JsonParser parser = strict.createParser(ObjectReadContext.empty(), DUPLICATE)) {
+            assertThrows(StreamReadException.class, () -> readTree(parser));
         }
     }
 
@@ -295,11 +318,18 @@ class ReadTreeTest {
 
     @Test
     void theOverloadsReadTheSameTree() {
-        String json = "{\"n\":-0.000e10,\"m\":[1,2.50,\"s\",null,true,false],\"o\":{}}";
+        String json = "{\"n\":-0.000e10,\"i\":-0,\"m\":[1,2.50,\"s\",null,true,false],\"o\":{}}";
         JsonNode expected = readTree(json);
-        assertEquals(expected, readTree(new StringReader(json)));
-        assertEquals(expected, readTree(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8))));
-        assertEquals(expected, readTree(new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_16))));
+        for (Function<String, JsonNode> read : OVERLOADS) {
+            JsonNode node = read.apply(json);
+            assertEquals(expected, node);
+            // JsonNode.equals takes a negative zero for the zero and 2.50 for 2.5, so check them.
+            assertTrue(isNegativeZero(double_().decode(node.get("n")).getOrThrow()));
+            assertTrue(isNegativeZero(float_().decode(node.get("i")).getOrThrow()));
+            assertEquals(0, int_().decode(node.get("i")).getOrThrow());
+            assertEquals(new BigDecimal("0E+7"), decimal().decode(node.get("n")).getOrThrow());
+            assertEquals(new BigDecimal("2.50"), decimal().decode(node.get("m").get(1)).getOrThrow());
+        }
     }
 
     @Test
