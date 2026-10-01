@@ -68,6 +68,18 @@ public final class JooqRecordDecoders {
     /**
      * Extracts a named field from a {@link org.jooq.Record} and decodes it.
      *
+     * <p>A column the record does not have is refused with {@code missing_field} before
+     * {@code dec} runs: that is the record's structure, not the column's value. A column that holds
+     * SQL {@code NULL} passes {@code null} to {@code dec}, so
+     * {@code field("currency", withDefault(string(), "JPY"))} gives {@code "JPY"} for SQL
+     * {@code NULL} and still refuses a record without the column; see
+     * {@link net.unit8.raoh.decode.ObjectDecoders#withDefault(Decoder, Object)
+     * ObjectDecoders.withDefault}. To default both a missing column and SQL {@code NULL}, use
+     * {@link #optionalField} for the column and {@code withDefault} for the value:
+     * {@code optionalField("currency", withDefault(string(), "JPY")).map(c -> c.orElse("JPY"))}.
+     * {@code optionalField} alone passes SQL {@code NULL} to {@code string()}, which refuses it with
+     * {@code required}.
+     *
      * @param <T>  the decoded value type
      * @param name the column name (case-insensitive per jOOQ convention)
      * @param dec  decoder for the column value, with a jOOQ unsigned number as a

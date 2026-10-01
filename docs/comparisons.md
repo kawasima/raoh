@@ -176,7 +176,7 @@ The most important differences are:
 If you know Elm, this Raoh code should feel familiar:
 
 ```java
-JsonDecoder<User> user() {
+Decoder<JsonNode, User> user() {
     return combine(
             field("id", string().uuid().map(UserId::new)),
             field("email", string().trim().toLowerCase().email().map(Email::new)),

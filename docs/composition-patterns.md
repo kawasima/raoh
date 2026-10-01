@@ -21,6 +21,8 @@ If `name` and `age` are both invalid, you get both errors back.
 Use this when the next step depends on a previous result, or when domain rules must run after structure has been decoded.
 
 ```java
+enum Currency { JPY, USD }
+
 record Money(BigDecimal amount, Currency currency) {
     static Result<Money> parse(BigDecimal amount, Currency currency) {
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -30,7 +32,7 @@ record Money(BigDecimal amount, Currency currency) {
     }
 }
 
-JsonDecoder<Money> money = combine(
+Decoder<JsonNode, Money> money = combine(
         field("amount", decimal()),
         field("currency", enumOf(Currency.class))
 ).flatMap(Money::parse);

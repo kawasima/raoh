@@ -10,7 +10,7 @@ into a single current domain model, without a data migration.
 | --- | --- |
 | `MapDecoders.discriminate(field, variants)` | `ORDER_ROW` dispatches on the `schema_version` column |
 | `combine` + `field` + `map` | Version-specific row decoders (`ORDER_V1` / `V2` / `V3`) |
-| `Decoders.withDefault` | Missing `currency` column defaults to `"JPY"`, so V2 and V3 share one `MONEY` decoder |
+| `ObjectDecoders.withDefault` | Missing `currency` column defaults to `"JPY"`, so V2 and V3 share one `MONEY` decoder |
 | Shared decoder building blocks | `SPLIT_NAME` and `MONEY` are reused across versions |
 | Sealed `Result` pattern matching | `OrderController` switches on `Ok` / `Err` instead of throwing |
 | `Issues.resolve(...)` | A row with an unknown version becomes a structured `not_allowed` error |

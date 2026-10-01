@@ -1,7 +1,6 @@
 package net.unit8.raoh.examples.versioning.order;
 
 import net.unit8.raoh.decode.Decoder;
-import net.unit8.raoh.decode.Decoders;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -32,7 +31,7 @@ import static net.unit8.raoh.decode.map.MapDecoders.*;
  * <p><strong>Composability:</strong> Decoders are immutable values and can be
  * shared across versions. {@link #SPLIT_NAME} and {@link #MONEY} demonstrate
  * how common building blocks are extracted and reused. In particular,
- * {@link Decoders#withDefault(Decoder, Object) withDefault()} absorbs the
+ * {@link net.unit8.raoh.decode.ObjectDecoders#withDefault(Decoder, Object) withDefault()} absorbs the
  * V2-to-V3 difference (missing {@code currency} column defaults to "JPY"),
  * which allows V2 and V3 to share the same {@link #MONEY} decoder.
  */
@@ -55,13 +54,13 @@ public final class OrderDecoders {
     /**
      * Decodes {@code amount} and {@code currency} into a {@link Money}.
      * When the {@code currency} column is absent (V1/V2 rows), it defaults to "JPY"
-     * via {@link Decoders#withDefault(Decoder, Object) withDefault()}.
+     * via {@link net.unit8.raoh.decode.ObjectDecoders#withDefault(Decoder, Object) withDefault()}.
      * This lets V2 and V3 share a single decoder for monetary values.
      */
     static final Decoder<Map<String, Object>, Money> MONEY =
             combine(
                     field("amount", long_()),
-                    field("currency", Decoders.withDefault(string(), "JPY"))
+                    field("currency", withDefault(string(), "JPY"))
             ).map((a, c) -> new Money(BigDecimal.valueOf(a), c));
 
     // -- Version-specific decoders --
@@ -98,7 +97,7 @@ public final class OrderDecoders {
      *
      * <p>Note that V3 is structurally identical to V2 because
      * {@link #MONEY} absorbs the currency-column difference via
-     * {@link Decoders#withDefault(Decoder, Object) withDefault()}.
+     * {@link net.unit8.raoh.decode.ObjectDecoders#withDefault(Decoder, Object) withDefault()}.
      * They are kept as separate entries in the discriminate map to make
      * the version dispatch explicit and to allow future divergence.
      */

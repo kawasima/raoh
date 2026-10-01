@@ -20,7 +20,7 @@ import java.util.function.Supplier;
  * {@code Encoder<T, O>}) and so does not produce a map itself. It lives here deliberately: there is
  * no encode-side counterpart to the decoder's boundary-agnostic
  * {@link net.unit8.raoh.decode.Decoders Decoders} class, and there is no reason to add one. Most of
- * what fills {@code Decoders} — {@code withDefault}, {@code recover}, {@code oneOf}, {@code strict} —
+ * what fills {@code Decoders} — {@code recover}, {@code oneOf}, {@code strict} —
  * exists to handle failure, and an encoder is a total function that cannot fail; the value-mapping
  * operations ({@link Encoder#contramap contramap}, {@link Encoder#andThen andThen}) live on the
  * interface. An {@code Encoders} class would therefore hold {@code lazy} and nothing else. Since
@@ -120,8 +120,8 @@ public final class MapEncoders {
      * returns {@code null}, then encodes the result. The map entry is therefore never {@code null}.
      *
      * <p>This is the encoder-side counterpart of
-     * {@link net.unit8.raoh.decode.Decoders#withDefault(net.unit8.raoh.decode.Decoder, Object)
-     * Decoders.withDefault}. Like {@link #property}, the value encoder is a plain
+     * {@link net.unit8.raoh.decode.ObjectDecoders#withDefault(net.unit8.raoh.decode.Decoder, Object)
+     * ObjectDecoders.withDefault}. Like {@link #property}, the value encoder is a plain
      * {@code Encoder<V, Object>}; the {@code null}-to-default substitution happens in this property
      * layer rather than inside the encoder.
      *

@@ -197,7 +197,7 @@ That means the "happy path" looks like object construction, while the failure pa
 ```java
 import tools.jackson.databind.JsonNode;
 
-import net.unit8.raoh.json.JsonDecoder;
+import net.unit8.raoh.decode.Decoder;
 
 import static net.unit8.raoh.json.JsonDecoders.*;
 
@@ -205,15 +205,15 @@ record Email(String value) {}
 record Age(int value) {}
 record User(Email email, Age age) {}
 
-JsonDecoder<Email> email() {
+Decoder<JsonNode, Email> email() {
     return string().trim().toLowerCase().email().map(Email::new);
 }
 
-JsonDecoder<Age> age() {
+Decoder<JsonNode, Age> age() {
     return int_().range(0, 150).map(Age::new);
 }
 
-JsonDecoder<User> user() {
+Decoder<JsonNode, User> user() {
     return combine(
             field("email", email()),
             field("age", age())
@@ -262,13 +262,13 @@ Example failure shape:
 ```java
 import java.util.Map;
 
-import net.unit8.raoh.decode.map.MapDecoder;
+import net.unit8.raoh.decode.Decoder;
 
 import static net.unit8.raoh.decode.map.MapDecoders.*;
 
 record Config(String host, int port) {}
 
-MapDecoder<Config> config() {
+Decoder<Map<String, Object>, Config> config() {
     return combine(
             field("host", string().nonBlank()),
             field("port", int_().range(1, 65535))
@@ -335,7 +335,7 @@ Other:
 - `iso8601()`
 - `date()`
 - `time()`
-- `localDateTime()`
+- `dateTime()`
 - `offsetDateTime()`
 - `toInt()`
 - `toLong()`
@@ -343,15 +343,14 @@ Other:
 - `toBool()`
 - `StringDecoder.from(...)`
 
-Temporal decoders (`iso8601()`, `date()`, `time()`, `localDateTime()`, `offsetDateTime()`) return a `TemporalDecoder` that supports:
+Temporal decoders (`iso8601()`, `date()`, `time()`, `dateTime()`, `offsetDateTime()`) return a `TemporalDecoder` that supports:
 
 - `before(...)`
 - `after(...)`
 - `between(...)`
-- `past()`
-- `future()`
-- `pastOrPresent()`
-- `futureOrPresent()`
+
+There is no `past()` or `future()`: a decoder does not read the clock. Compare with a time you pass
+in, such as `iso8601().before(now)` built where `now` is known.
 
 ### Numeric Capabilities
 
@@ -459,7 +458,7 @@ import java.math.BigDecimal;
 
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
-import net.unit8.raoh.json.JsonDecoder;
+import net.unit8.raoh.decode.Decoder;
 
 import static net.unit8.raoh.json.JsonDecoders.*;
 
@@ -478,22 +477,22 @@ record Money(BigDecimal amount, Currency currency) {
 
 record User(UserId id, Email email, Money balance) {}
 
-JsonDecoder<Email> email() {
+Decoder<JsonNode, Email> email() {
     return string().trim().toLowerCase().email().map(Email::new);
 }
 
-JsonDecoder<UserId> userId() {
+Decoder<JsonNode, UserId> userId() {
     return string().uuid().map(UserId::new);
 }
 
-JsonDecoder<Money> money() {
+Decoder<JsonNode, Money> money() {
     return combine(
             field("amount", decimal()),
             field("currency", enumOf(Currency.class))
     ).flatMap(Money::parse);
 }
 
-JsonDecoder<User> user() {
+Decoder<JsonNode, User> user() {
     return combine(
             field("id", userId()),
             field("email", email()),
@@ -551,8 +550,6 @@ The `net.unit8.raoh.decode.Decoders` class provides reusable combinators.
 
 - `lazy(...)`
   For recursive decoders.
-- `withDefault(...)`
-  Uses a fallback when decoding fails only with `required` errors.
 - `recover(...)`
   Uses a fallback for any decoding error.
 - `oneOf(...)`
@@ -573,6 +570,10 @@ var dec = combine(
 ).strict(Person::new);
 ```
 
+`withDefault(...)` is not among them: whether a value is null or absent depends on the input, so it
+comes from the boundary module (`JsonDecoders.withDefault`, or `ObjectDecoders.withDefault` for maps
+and jOOQ records). See [`withDefault(...)` vs `recover(...)`](#withdefault-vs-recover).
+
 ### `lazy(...)`
 
 Use `lazy(...)` for recursive structures:
@@ -580,10 +581,11 @@ Use `lazy(...)` for recursive structures:
 ```java
 record Comment(String body, List<Comment> replies) {}
 
-JsonDecoder<Comment>[] self = new JsonDecoder[1];
+@SuppressWarnings("unchecked")
+Decoder<JsonNode, Comment>[] self = new Decoder[1];
 self[0] = combine(
         field("body", string().nonBlank()),
-        withDefault(field("replies", list(lazy(() -> self[0]))), List.of())
+        field("replies", withDefault(list(lazy(() -> self[0])), List.of()))
 ).map(Comment::new);
 ```
 
@@ -619,21 +621,35 @@ field("kind", literal("email"))
 
 ### `withDefault(...)` vs `recover(...)`
 
-These two are similar in shape but different in intent.
+These two are similar in shape but look at different things. `withDefault(...)` looks at the input
+before decoding it; `recover(...)` looks at the result after.
 
-Use `withDefault(...)` when a value is conceptually optional and you want a fallback for missing/null-like cases:
+Use `withDefault(...)` when a value is optional: it gives the default for a null or absent value and
+otherwise returns what the inner decoder gives, failure included, without looking at it. Put it
+inside the field, where the value is the member's:
 
 ```java
 field("role", withDefault(enumOf(Role.class), Role.MEMBER))
 ```
 
+In JSON a null is a JSON `null` and an absent value is a member the object does not have
+(`JsonDecoders.withDefault`). In a map both are `null` (`ObjectDecoders.withDefault`). In a jOOQ
+record a column holding SQL `NULL` is `null`, but a column the record does not have is refused with
+`missing_field` by `field(...)` before the value decoder runs. To default both a missing column and
+SQL `NULL`, write `optionalField("role", withDefault(enumOf(Role.class), Role.MEMBER)).map(r -> r.orElse(Role.MEMBER))`;
+`optionalField` alone passes SQL `NULL` to the value decoder, which refuses it with `required`.
+
+A `field(...)` is a `CombinePart`, not a `Decoder`, so `withDefault` cannot wrap it. To default a
+whole input, wrap a decoder of the whole input: `withDefault(combine(...).map(...), fallback)` gives
+`fallback` for a null input, and an object with missing members still fails with their `required`.
+
 Use `recover(...)` when you want to tolerate any decoding failure:
 
 ```java
-recover(field("pageSize", int_().range(1, 100)), 20)
+field("pageSize", recover(int_().range(1, 100), 20))
 ```
 
-`recover(...)` is more permissive. `withDefault(...)` is stricter.
+`recover(...)` gives the fallback for an invalid value too. `withDefault(...)` never does.
 
 ## Boundary Modules
 
@@ -727,10 +743,11 @@ combine(
 - cross-field validation
 
 ```java
+// Range.parse(int start, int end) returns Result<Range>, failing when start > end
 combine(
         field("start", int_()),
         field("end", int_())
-).flatMap(Period::parse);
+).flatMap(Range::parse);
 ```
 
 - defaults

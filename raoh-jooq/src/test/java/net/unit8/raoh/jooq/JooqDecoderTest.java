@@ -88,6 +88,34 @@ class JooqDecoderTest {
         assertEquals("missing_field", issue.code());
     }
 
+    // A column has three states: missing from the record, SQL NULL, and a value (#164). These pin
+    // what the field Javadoc says each composition does with them.
+
+    @Test
+    void withDefaultInsideFieldDefaultsSqlNullButNotAMissingColumn() {
+        var dec = field("currency", withDefault(string(), "JPY"));
+        assertEquals("USD", ((Ok<String>) dec.decode(record("currency", "USD"))).value());
+        assertEquals("JPY", ((Ok<String>) dec.decode(record("currency", null))).value());
+        var missing = ((Err<String>) dec.decode(record("amount", 1))).issues().asList();
+        assertEquals("missing_field", missing.getFirst().code());
+    }
+
+    @Test
+    void optionalFieldAloneDefaultsAMissingColumnButRefusesSqlNull() {
+        var dec = optionalField("currency", string()).map(c -> c.orElse("JPY"));
+        assertEquals("JPY", ((Ok<String>) dec.decode(record("amount", 1))).value());
+        var sqlNull = ((Err<String>) dec.decode(record("currency", null))).issues().asList();
+        assertEquals(ErrorCodes.REQUIRED, sqlNull.getFirst().code());
+    }
+
+    @Test
+    void optionalFieldAroundWithDefaultDefaultsBothAMissingColumnAndSqlNull() {
+        var dec = optionalField("currency", withDefault(string(), "JPY")).map(c -> c.orElse("JPY"));
+        assertEquals("USD", ((Ok<String>) dec.decode(record("currency", "USD"))).value());
+        assertEquals("JPY", ((Ok<String>) dec.decode(record("currency", null))).value());
+        assertEquals("JPY", ((Ok<String>) dec.decode(record("amount", 1))).value());
+    }
+
     @Test
     void nullFieldReturnsError() {
         var rec = record("name", (Object) null);

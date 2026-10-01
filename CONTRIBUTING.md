@@ -109,7 +109,7 @@ come up often enough to be worth stating:
 
 - **A decoder may fail; an encoder may not.** `Encoder<T, O>` is a total function with no failure
   channel. Anything on the decode side that exists to handle failure — `combine`'s error
-  accumulation, `withDefault`, `recover`, `oneOf`, `strict` — therefore has no encode dual, and the
+  accumulation, `recover`, `oneOf`, `strict` — therefore has no encode dual, and the
   resulting asymmetry is deliberate rather than a gap. When proposing an encode-side mirror of a
   decoder feature, the first question is "is this a failure-handling feature?"
 - **Encoding targets the `Map<String, Object>` boundary by design.** JSON is reached by encoding to

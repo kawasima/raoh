@@ -77,7 +77,7 @@ float_().decode(2.5f)
 // ==> Ok[2.5]
 
 bytes().decode(new byte[]{1, 2, 3})
-// ==> Ok[[1, 2, 3]]
+// ==> Ok[[B@...]  （渡した byte[] がそのまま返る）
 ```
 
 各メソッドは `Decoder<Object, T>` を返します。期待する型でなければ `type_mismatch` エラーになります。
@@ -190,12 +190,14 @@ date().before(LocalDate.of(2030, 1, 1)).decode(LocalDate.of(2035, 1, 1))
 
 date().between(LocalDate.of(2020, 1, 1), LocalDate.of(2030, 12, 31)).decode(LocalDate.of(2025, 6, 15))
 // ==> Ok[2025-06-15]
+```
 
-iso8601().past().decode(Instant.now().minusSeconds(3600))
-// ==> Ok[...]
+`past()` や `future()` はありません。デコーダーは時計を読まないので、同じ入力はいつも同じ結果になります。現在時刻と比べたいときは、リクエストを処理する場所で時刻を取得し、境界値として渡します。
 
-iso8601().future().decode(Instant.now().minusSeconds(3600))
-// ==> Err[/: must be in the future]
+```java
+var now = Instant.parse("2025-06-15T12:00:00Z"); // 例: リクエストを処理する場所で clock.instant()
+iso8601().before(now).decode(Instant.parse("2025-06-15T11:00:00Z"))
+// ==> Ok[2025-06-15T11:00:00Z]
 ```
 
 <!-- souther-section: coerce -->
@@ -351,7 +353,7 @@ customerDec.decode(Map.of(
         "name", "",
         "address", Map.of("city", "", "zip", "bad")
 ))
-// ==> Err[/name: is required, /address/city: is required, /address/zip: ...]
+// ==> Err[/name: must not be blank, /address/city: must not be blank, /address/zip: invalid format]
 ```
 
 ---
@@ -518,7 +520,7 @@ orderItemsDec.decode(Map.of("items", List.of(
         Map.of("productId", "A001", "quantity", 3),
         Map.of("productId", "", "quantity", -1)
 )))
-// ==> Err[/items/1/productId: is required, /items/1/quantity: must be positive]
+// ==> Err[/items/1/productId: must not be blank, /items/1/quantity: must be positive]
 ```
 
 `nonempty()` 以外のリスト制約:
@@ -528,10 +530,10 @@ field("tags", list(string()).minSize(1).maxSize(10)).decode(Map.of("tags", List.
 // ==> Ok[[a, b]]
 
 field("tags", list(string()).unique()).decode(Map.of("tags", List.of("a", "b", "a")))
-// ==> Err[/tags: contains duplicates: [a]]
+// ==> Err[/tags: must not contain duplicates: [a]]
 
 field("codes", list(string()).fixedSize(3)).decode(Map.of("codes", List.of("X", "Y")))
-// ==> Err[/codes: size must be exactly 3]
+// ==> Err[/codes: must have exactly 3 elements]
 ```
 
 リスト制約（`nonempty` / `minSize` / `maxSize` / `fixedSize` / `contains` / `unique`）とレコードのサイズ制約は、末尾に任意のカスタムメッセージを取る overload を持ちます（数値・文字列の制約と同様）。マルチセレクトのフォーム検証などで有用です:
@@ -723,7 +725,7 @@ record Circle(double radius) implements Shape {}
 record Rect(double width, double height) implements Shape {}
 
 Decoder<Map<String, Object>, Shape> shapeDec = discriminate("type",
-        variant("circle", field("radius", double_().positive()).map(Circle::new)),
+        variant("circle", field("radius", double_().positive()).map(Circle::new).asDecoder()),
         variant("rect", combine(
                 field("width", double_().positive()),
                 field("height", double_().positive())
@@ -740,6 +742,8 @@ shapeDec.decode(Map.of("type", "hexagon"))
 ```
 
 `discriminate()` はフィールド値を先に読み取り、一致するデコーダーにディスパッチします。`oneOf()` のようにすべての候補を試すわけではないため、より効率的でエラーメッセージも明確です。同じタグが2つあると構築時に `IllegalArgumentException` になります。
+
+`variant` は `Decoder` を受け取ります。`combine(...).map(...)` はそのまま渡せますが、`field(...)` 単体は `CombinePart` なので、circle のアームでは `asDecoder()` で `Decoder` に変換しています。
 
 バリアントの集合を実行時に組み立てたい場合は、`Map` を取る `discriminate("type", Map.of(...))` 形式も使えます（この場合は各アームをスーパータイプへキャストする必要があります）。エンコード側の `MapEncoders.variant(...)` / `discriminate(...)` と対称です。
 
@@ -864,7 +868,7 @@ var rows = List.<Map<String, Object>>of(
 );
 
 Result.traverse(rows, orderDec::decode, Path.of("orders"))
-// ==> Err[/orders/1/order_id: is required, /orders/1/total: must be non-negative]
+// ==> Err[/orders/1/order_id: must not be blank, /orders/1/total: must be non-negative]
 ```
 
 インデックス付きのパス（`/orders/1/order_id` など）でどの行が失敗したかわかります。
@@ -877,7 +881,7 @@ Result.traverse(rows, orderDec::decode, Path.of("orders"))
 <!-- souther-section: with-default -->
 ### withDefault — 欠損時のフォールバック
 
-フィールドが存在しないか `null` のときだけデフォルト値を適用します。値があって不正な場合はエラーになります。
+値が存在しないか `null` のときだけデフォルト値を適用します。値があるときはそれをデコードし、結果をそのまま返します。値があって不正な場合はエラーになります。
 
 ```java
 field("role", withDefault(enumOf(Role.class), Role.MEMBER)).decode(Map.of())
@@ -890,16 +894,20 @@ field("role", withDefault(enumOf(Role.class), Role.MEMBER)).decode(Map.of("role"
 // ==> Err[/role: ...]
 ```
 
+`withDefault` は内側のデコーダーを呼ぶ前に、受け取った値を見ます。内側のデコーダーが返した結果は見ません。そのため `field(...)` の内側に置いて、メンバーの値を見せてください。`field(...)` は `Decoder` ではなく `CombinePart` なので、`withDefault` で包むことはできません。入力全体にデフォルト値を与えたいときは、`withDefault(nested(combine(...).map(...)), fallback)` のように入力全体のデコーダーを包みます。`null` なら `fallback` になり、メンバーが欠けた Map はそれぞれの `required` で失敗します。
+
+Map では、キーがないときも値が `null` のときも `null` が渡ります。`withDefault` は `ObjectDecoders` のものを使います。JSON では `JsonDecoders.withDefault` を使い、JSON の `null` とメンバーの欠落の両方にデフォルト値を適用します。jOOQ のレコードでは、SQL の `NULL` が入った列にはデフォルト値が適用されますが、レコードに列そのものがない場合は、値のデコーダーを呼ぶ前に `field(...)` が `missing_field` で拒否します。列がない場合と SQL の `NULL` の両方にデフォルト値を与えたいときは、`optionalField("role", withDefault(enumOf(Role.class), Role.MEMBER)).map(r -> r.orElse(Role.MEMBER))` と書きます。`optionalField` だけだと SQL の `NULL` は値のデコーダーに渡り、`required` で拒否されます。
+
 <!-- souther-section: recover -->
 ### recover — あらゆる失敗からのフォールバック
 
 値が不正な場合も含め、あらゆるデコード失敗をフォールバック値で吸収します。
 
 ```java
-recover(field("pageSize", int_().range(1, 100)), 20).decode(Map.of("pageSize", 999))
+field("pageSize", recover(int_().range(1, 100), 20)).decode(Map.of("pageSize", 999))
 // ==> Ok[20]
 
-recover(field("pageSize", int_().range(1, 100)), 20).decode(Map.of())
+field("pageSize", recover(int_().range(1, 100), 20)).decode(Map.of())
 // ==> Ok[20]
 ```
 
@@ -924,7 +932,7 @@ apiRequestDec.decode(Map.of("action", "transfer", "amount", 100))
 // ==> Ok[ApiRequest[action=transfer, amount=100]]
 
 apiRequestDec.decode(Map.of("action", "transfer", "amount", 100, "extra", true))
-// ==> Err[/extra: unknown_field]
+// ==> Err[/extra: unknown field]
 ```
 
 ---
@@ -937,10 +945,11 @@ apiRequestDec.decode(Map.of("action", "transfer", "amount", 100, "extra", true))
 ```java
 record Comment(String body, List<Comment> replies) {}
 
-Decoder[] self = new Decoder[1];
+@SuppressWarnings("unchecked")
+Decoder<Map<String, Object>, Comment>[] self = new Decoder[1];
 self[0] = combine(
         field("body", string().nonBlank()),
-        withDefault(field("replies", list(lazy(() -> self[0]))), List.of())
+        field("replies", withDefault(list(nested(lazy(() -> self[0]))), List.of()))
 ).map(Comment::new);
 var commentDec = self[0];
 
@@ -967,7 +976,7 @@ Raohのエラーは構造化されており、用途に応じて複数の表現�
 var checkDec = combine(
         field("email", string().email()),
         field("age", int_().range(0, 150))
-).map((email, age) -> Map.of("email", email, "age", age));
+).map((email, age) -> Map.<String, Object>of("email", email, "age", age));
 
 var result = checkDec.decode(Map.of("email", "bad", "age", 300));
 ```
@@ -1040,7 +1049,7 @@ var userRegDec = combine(
         field("email", string().trim().toLowerCase().email().map(Email::new)),
         field("password", string().minLength(8).maxLength(128).map(Password::new)),
         field("role", withDefault(enumOf(Role.class), Role.MEMBER)),
-        field("contacts", list(contactMethodDec).nonempty())
+        field("contacts", list(nested(contactMethodDec)).nonempty())
 ).map(UserRegistration::new);
 
 userRegDec.decode(Map.of(
@@ -1064,7 +1073,7 @@ userRegDec.decode(Map.of(
                 Map.of("kind", "email", "value", "not-email")
         )
 ))
-// ==> Err[/email: not a valid email, /password: must be at least 8 characters, /contacts/0/value: not a valid email]
+// ==> Err[/email: not a valid email, /password: must be at least 8 characters, /contacts/0: no variant matched]
 ```
 
 Spring MVC Controller でJSON入力を受け取る場合は `JsonDecoders` に差し替えます（参考コード）。ボディは文字列で受け取り、`readTree` で読みます。`JsonNode` にバインドすると、Spring の `ObjectMapper` が小数部のある数値を先に `double` へ変換してしまうからです。JSON でないボディに対して `readTree` は Jackson の `StreamReadException` を投げます。`examples/spring` ではそれを 400 にしています。
@@ -1229,11 +1238,11 @@ record PageRequest(int page, int size, SortOrder order) {}
 
 var pageRequestDec = combine(
         // page: 省略時は0だが、負数は明示的にエラー
-        withDefault(field("page", int_().range(0, Integer.MAX_VALUE)), 0),
-        // size: 省略時・壊れた値どちらも20にフォールバック
-        recover(withDefault(field("size", int_().range(1, 100)), 20), 20),
+        field("page", withDefault(int_().range(0, Integer.MAX_VALUE), 0)),
+        // size: 省略時・不正な値どちらも20にフォールバック
+        field("size", recover(withDefault(int_().range(1, 100), 20), 20)),
         // order: 省略時・不正値どちらもASCにフォールバック
-        recover(withDefault(field("sort", enumOf(SortOrder.class)), SortOrder.ASC), SortOrder.ASC)
+        field("sort", recover(withDefault(enumOf(SortOrder.class), SortOrder.ASC), SortOrder.ASC))
 ).map(PageRequest::new);
 
 // 通常リクエスト
@@ -1346,23 +1355,22 @@ record AppConfig(DbConfig db, CacheConfig cache, String logLevel) {}
 
 var dbConfigDec = combine(
         field("host",     string().nonBlank()),
-        withDefault(field("port", int_().range(1, 65535)), 5432),
+        field("port",     withDefault(int_().range(1, 65535), 5432)),
         field("database", string().nonBlank())
 ).map(DbConfig::new);
 
 var cacheConfigDec = combine(
-        withDefault(field("host",       string().nonBlank()), "localhost"),
-        withDefault(field("port",       int_().range(1, 65535)), 6379),
-        withDefault(field("ttlSeconds", int_().positive()), 300)
+        field("host",       withDefault(string().nonBlank(), "localhost")),
+        field("port",       withDefault(int_().range(1, 65535), 6379)),
+        field("ttlSeconds", withDefault(int_().positive(), 300))
 ).map(CacheConfig::new);
 
 var appConfigDec = combine(
         field("db",    nested(dbConfigDec)),
         // cache セクション自体が省略可能 — なければデフォルト設定を使う
-        withDefault(
-                field("cache", nested(cacheConfigDec)),
-                new CacheConfig("localhost", 6379, 300)),
-        withDefault(field("logLevel", string().nonBlank()), "INFO")
+        field("cache", withDefault(nested(cacheConfigDec),
+                new CacheConfig("localhost", 6379, 300))),
+        field("logLevel", withDefault(string().nonBlank(), "INFO"))
 ).map(AppConfig::new);
 
 // db のみ指定 — その他はデフォルト
@@ -1377,7 +1385,7 @@ appConfigDec.decode(Map.of(
 appConfigDec.decode(Map.of(
         "db", Map.of("host", "", "database", "myapp")
 ))
-// ==> Err[/db/host: is required]
+// ==> Err[/db/host: must not be blank]
 ```
 
 設定デコーダーをアプリ起動時に実行することで、環境変数の設定漏れや型ミスを本番コードに入る前に検出できます。

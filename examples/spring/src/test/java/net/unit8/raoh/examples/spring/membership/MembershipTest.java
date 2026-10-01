@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  *   <li>Successful user and group creation with valid JSON</li>
  *   <li>Rejection of invalid input with per-field error paths</li>
  *   <li>Optional field defaults ({@code description} defaults to empty,
- *       {@code role} defaults to MEMBER) via {@code Decoders.withDefault}</li>
+ *       {@code role} defaults to MEMBER) via {@code JsonDecoders.withDefault}</li>
  *   <li>Group membership lifecycle (add, fetch user-with-groups, remove)</li>
  *   <li>Business-level validation (non-existent user ID)</li>
  * </ul>

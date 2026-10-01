@@ -12,7 +12,7 @@ and the **JDBC boundary** (row decoding with `MapDecoders`, and row *encoding* w
 | `MapEncoders.object` + `property` | JDBC row encoding in `MapMembershipEncoders` |
 | `Decoder#list()` | Decoding a variable-length list of rows from `JdbcClient` |
 | `Result.map2` | Combining user + group-memberships from two queries |
-| `Decoders.withDefault` | Optional fields with defaults (`description`, `role`) |
+| `JsonDecoders.withDefault` | Optional fields with defaults (`description`, `role`) |
 | `StringDecoder` chain | `.trim().nonBlank().maxLength()`, `.toLowerCase().email()` |
 
 The write path shows the symmetry directly: `UserController` decodes the request body into a

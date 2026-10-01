@@ -33,6 +33,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Factory of primitive decoders for raw {@code Object} input.
@@ -481,6 +482,50 @@ public final class ObjectDecoders {
             }
             return dec.decode(in, path);
         };
+    }
+
+    /**
+     * Gives {@code fallback} when the value is {@code null}, and decodes any other value with
+     * {@code dec}, returning its result unchanged.
+     *
+     * <p>The value is looked at before {@code dec} runs, and {@code dec}'s result is never looked
+     * at: a failure of {@code dec} is returned as it is, whatever its issues are. Use
+     * {@link Decoders#recover(Decoder, Object) recover} to give a value instead of a failure.
+     * Because the value is looked at first, {@code withDefault(nullable(dec), x)} gives {@code x}
+     * for {@code null}.
+     *
+     * <p>A {@code Map} field passes {@code null} both for a key that is absent and for a key mapped
+     * to {@code null}, so {@code field("role", withDefault(enumOf(Role.class), Role.MEMBER))} gives
+     * the default in both cases. A jOOQ column that holds SQL {@code NULL} likewise gives the
+     * default. A column missing from the record is a different thing: it is the record's structure,
+     * not the column's value, and {@code JooqRecordDecoders.field} refuses it with
+     * {@code missing_field} before the value decoder runs. To default both a missing column and
+     * SQL {@code NULL}, write
+     * {@code optionalField("currency", withDefault(string(), "JPY")).map(c -> c.orElse("JPY"))}:
+     * {@code optionalField} gives the default for the missing column, and {@code withDefault} for
+     * {@code NULL}, which {@code optionalField} alone passes to {@code string()} as {@code null}.
+     *
+     * @param <T>      the decoded value type
+     * @param dec      the decoder for a value that is not {@code null}
+     * @param fallback the value to give for {@code null}
+     * @return a decoder that gives {@code fallback} for {@code null}
+     */
+    public static <T> Decoder<@Nullable Object, T> withDefault(Decoder<@Nullable Object, T> dec, T fallback) {
+        return (in, path) -> in == null ? Result.ok(fallback) : dec.decode(in, path);
+    }
+
+    /**
+     * Like {@link #withDefault(Decoder, Object)}, but the default is computed by {@code fallback},
+     * which is called once for each {@code null} value and never otherwise.
+     *
+     * @param <T>      the decoded value type
+     * @param dec      the decoder for a value that is not {@code null}
+     * @param fallback supplies the value to give for {@code null}
+     * @return a decoder that gives the supplied value for {@code null}
+     */
+    public static <T> Decoder<@Nullable Object, T> withDefault(Decoder<@Nullable Object, T> dec,
+                                                               Supplier<? extends T> fallback) {
+        return (in, path) -> in == null ? Result.ok(fallback.get()) : dec.decode(in, path);
     }
 
     /**

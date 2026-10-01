@@ -6,7 +6,7 @@
  *   <li>{@link net.unit8.raoh.decode.Decoder} — transforms and validates input data</li>
  *   <li>{@link net.unit8.raoh.Result} — the outcome of decoding ({@link net.unit8.raoh.Ok} or {@link net.unit8.raoh.Err})</li>
  *   <li>{@link net.unit8.raoh.Issue} / {@link net.unit8.raoh.Issues} — accumulated validation errors</li>
- *   <li>{@link net.unit8.raoh.decode.Decoders} — core combinators (combine, oneOf, withDefault, etc.)</li>
+ *   <li>{@link net.unit8.raoh.decode.Decoders} — core combinators (combine, oneOf, recover, etc.)</li>
  * </ul>
  *
  * <p>For input-specific factories, see:

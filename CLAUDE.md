@@ -107,6 +107,7 @@ import net.unit8.raoh.*;
 import net.unit8.raoh.decode.*;
 import net.unit8.raoh.decode.map.*;
 import net.unit8.raoh.decode.builtin.*;
+import static net.unit8.raoh.decode.ObjectDecoders.*;
 import static net.unit8.raoh.decode.map.MapDecoders.*;
 import static net.unit8.raoh.decode.Decoders.*;
 import java.util.stream.*;
@@ -116,17 +117,21 @@ import java.time.*;
 Notes:
 
 - `/classpath` takes one path per line — glob expansion does not work across `:` separators.
-- Do **not** `import static net.unit8.raoh.decode.ObjectDecoders.*` alongside `MapDecoders.*`; both define `string()` and the import becomes ambiguous. `MapDecoders` re-exports everything needed for `Map`-based decoding.
+- `MapDecoders` holds the structure (`field`, `nested`, `combine`, ...) and `ObjectDecoders` the value decoders (`string()`, `int_()`, `withDefault`, ...), so a `Map` script imports both, as the tutorial does. Do not add `JsonDecoders.*` to the same script: it defines `string()` too and the call becomes ambiguous.
+- Strip a snippet's own `import` lines when the template already covers them: a single-type import such as `import net.unit8.raoh.decode.Decoder;` after the wildcard makes jetshell reject later declarations.
+- `var x = ...` fails when the type is not denotable (e.g. `Map.of("a", "s", "b", 1)` infers an intersection type). Give the type, e.g. `Map.<String, Object>of(...)`.
 
 ### Known gotchas
 
 - **Root-path errors** print as `Err[/: message]` (root path is shown as `/`).
-- **`nonBlank()`** currently returns error code `required` / message `is required` (not `must not be blank`). See issue #16.
+- **`nonBlank()`** fails with message `must not be blank`.
 - **`Presence` toString**: `Present[value=hello]`, `PresentNull[]`, `Absent[]`.
 - **`optionalField` absent** → `Ok[Optional.empty]`, not `Ok[null]`.
 - **`oneOf` failure** → `Err[/: no variant matched]`.
 - **`field("x", subDec)`** where `subDec: Decoder<Map<String,Object>,T>` requires `nested(subDec)`. See issue #17.
 - **`list(subDec)`** where `subDec: Decoder<Map<String,Object>,T>` requires `list(nested(subDec))`.
+- **`field(...)` is a `CombinePart`, not a `Decoder`** (#114). Put `withDefault` / `recover` inside it (`field("x", withDefault(dec, v))`), and call `.asDecoder()` where a `Decoder` is required, such as a single-field `variant(...)`.
+- **`combine(...).map(...)` is a `Decoder<I, T>`, not a `JsonDecoder<T>` / `MapDecoder<T>`.** Declare it as `Decoder<JsonNode, T>`, or adapt with `::decode`.
 - **`Decoder.fail()`** does not exist — use `(in, path) -> Result.fail(path, code, message)` (one-line lambda; closed as low-value convenience).
 - **`flatMap` returning `Decoder`** does not work — `flatMap` expects `Function<T, Result<U>>`, not `Function<T, Decoder<I,U>>`. Use a full `Decoder<I,T>` lambda instead.
 - **`sealed interface`** works as-is on jetshell 1.0.2+ (a contiguous `sealed` type plus its permitted subtypes in one script compiles like normal Java source). On 1.0.1 and earlier it failed unless you used a plain `interface`; that workaround is no longer needed. See [jetshell#17](https://github.com/kawasima/jetshell/issues/17).
