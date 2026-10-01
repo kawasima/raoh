@@ -35,6 +35,8 @@ net.unit8.raoh.json.JsonDecoders#int_ -> tools.jackson.databind.JsonNode#isInteg
 net.unit8.raoh.json.JsonDecoders#int_ -> tools.jackson.databind.JsonNode#isMissingNode():boolean
 net.unit8.raoh.json.JsonDecoders#int_ -> tools.jackson.databind.JsonNode#isNull():boolean
 net.unit8.raoh.json.JsonDecoders#int_ -> tools.jackson.databind.JsonNode#numberValue():java.lang.Number
+net.unit8.raoh.json.JsonDecoders#isNullOrAbsent -> tools.jackson.databind.JsonNode#isMissingNode():boolean
+net.unit8.raoh.json.JsonDecoders#isNullOrAbsent -> tools.jackson.databind.JsonNode#isNull():boolean
 net.unit8.raoh.json.JsonDecoders#list -> tools.jackson.databind.JsonNode#get(int):tools.jackson.databind.JsonNode
 net.unit8.raoh.json.JsonDecoders#list -> tools.jackson.databind.JsonNode#isArray():boolean
 net.unit8.raoh.json.JsonDecoders#list -> tools.jackson.databind.JsonNode#isMissingNode():boolean
@@ -111,3 +113,6 @@ net.unit8.raoh.json.JsonTreeReader#read -> tools.jackson.core.json.JsonFactory#c
 net.unit8.raoh.json.JsonTreeReader#readValue -> tools.jackson.databind.node.ArrayNode#add(tools.jackson.databind.JsonNode):tools.jackson.databind.node.ArrayNode
 net.unit8.raoh.json.JsonTreeReader#readValue -> tools.jackson.databind.node.ObjectNode#has(java.lang.String):boolean
 net.unit8.raoh.json.JsonTreeReader#readValue -> tools.jackson.databind.node.ObjectNode#set(java.lang.String,tools.jackson.databind.JsonNode):tools.jackson.databind.node.ObjectNode
+
+[runs a function, predicate or supplier the caller configured]
+net.unit8.raoh.json.JsonDecoders#withDefault -> java.util.function.Supplier#get():java.lang.Object

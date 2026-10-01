@@ -1,7 +1,6 @@
 package net.unit8.raoh.examples.spring.membership;
 
 import net.unit8.raoh.decode.Decoder;
-import net.unit8.raoh.decode.Decoders;
 import net.unit8.raoh.json.JsonDecoder;
 import net.unit8.raoh.json.JsonDecoders;
 import tools.jackson.databind.JsonNode;
@@ -41,13 +40,14 @@ public final class JsonMembershipDecoders {
      * <pre>{@code { "name": "Engineering", "description": "..." } }</pre>
      */
     // withDefault() makes the "description" field optional: if the field is missing from
-    // the JSON, the decoder produces "" instead of failing. This is different from
+    // the JSON or is null, the decoder produces "" instead of failing. A description that is
+    // present is still checked, so a 600-character one fails. This is different from
     // nullable — the result is always a non-null String.
     public static final JsonDecoder<CreateGroupCommand> CREATE_GROUP = wrapJson(
             combine(
                     field("name", string().trim().nonBlank().maxLength(100)),
                     field("description",
-                            Decoders.withDefault(string().maxLength(500), ""))
+                            withDefault(string().maxLength(500), ""))
             ).map(CreateGroupCommand::new));
 
     /**
@@ -55,13 +55,13 @@ public final class JsonMembershipDecoders {
      * <pre>{@code { "userId": 1, "role": "ADMIN" } }</pre>
      */
     // enumOf() decodes a string into an enum constant (ASCII case-insensitive).
-    // withDefault() supplies MEMBER when the "role" field is absent, making it optional.
+    // withDefault() supplies MEMBER when the "role" field is absent or null, making it optional.
     public static final JsonDecoder<AddMemberCommand> ADD_MEMBER = wrapJson(
             combine(
                     // long_() parses a JSON number as long; map wraps it in UserId.
                     field("userId", long_().map(UserId::new)),
                     field("role",
-                            Decoders.withDefault(enumOf(MembershipRole.class), MembershipRole.MEMBER))
+                            withDefault(enumOf(MembershipRole.class), MembershipRole.MEMBER))
             ).map(AddMemberCommand::new));
 
     // ── Command records ─────────────────────────────────────────────

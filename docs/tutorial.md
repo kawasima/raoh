@@ -875,7 +875,7 @@ Index-tagged paths (like `/orders/1/order_id`) tell you exactly which row failed
 <!-- souther-section: with-default -->
 ### withDefault — fallback when missing
 
-Applies a default value only when the field is absent or `null`. When the field is present but invalid, an error is returned.
+Applies a default value only when the value is absent or `null`. When the value is present, it is decoded and the result is returned as it is: a present but invalid value is an error.
 
 ```java
 field("role", withDefault(enumOf(Role.class), Role.MEMBER)).decode(Map.of())
@@ -888,16 +888,20 @@ field("role", withDefault(enumOf(Role.class), Role.MEMBER)).decode(Map.of("role"
 // ==> Err[/role: ...]
 ```
 
+`withDefault` looks at the value it is given before the inner decoder runs, and never looks at what the inner decoder returns. Put it inside `field(...)`, where the value is the member's. Written outside, as `withDefault(field("role", ...), Role.MEMBER)`, the value it looks at is the whole map, so a missing `role` is not defaulted.
+
+For a map, absent and `null` both arrive as `null`, and `withDefault` comes from `ObjectDecoders`. For JSON, use `JsonDecoders.withDefault`, which takes a JSON `null` and a missing member. For a jOOQ record, a column holding SQL `NULL` is defaulted, but a column the record does not have is refused with `missing_field` by `field(...)` before the value decoder runs; use `optionalField("role", ...).map(r -> r.orElse(Role.MEMBER))` to accept a record without the column.
+
 <!-- souther-section: recover -->
 ### recover — fallback from any failure
 
 Absorbs any decoding failure, including invalid values, with a fallback value.
 
 ```java
-recover(field("pageSize", int_().range(1, 100)), 20).decode(Map.of("pageSize", 999))
+field("pageSize", recover(int_().range(1, 100), 20)).decode(Map.of("pageSize", 999))
 // ==> Ok[20]
 
-recover(field("pageSize", int_().range(1, 100)), 20).decode(Map.of())
+field("pageSize", recover(int_().range(1, 100), 20)).decode(Map.of())
 // ==> Ok[20]
 ```
 
@@ -935,10 +939,11 @@ When a type references itself, use `lazy` to resolve the circular reference.
 ```java
 record Comment(String body, List<Comment> replies) {}
 
-Decoder[] self = new Decoder[1];
+@SuppressWarnings("unchecked")
+Decoder<Map<String, Object>, Comment>[] self = new Decoder[1];
 self[0] = combine(
         field("body", string().nonBlank()),
-        withDefault(field("replies", list(lazy(() -> self[0]))), List.of())
+        field("replies", withDefault(list(nested(lazy(() -> self[0]))), List.of()))
 ).map(Comment::new);
 var commentDec = self[0];
 
@@ -1227,11 +1232,11 @@ record PageRequest(int page, int size, SortOrder order) {}
 
 var pageRequestDec = combine(
         // page: default 0 when absent, but negative is an explicit error
-        withDefault(field("page", int_().range(0, Integer.MAX_VALUE)), 0),
+        field("page", withDefault(int_().range(0, Integer.MAX_VALUE), 0)),
         // size: both absent and malformed fall back to 20
-        recover(withDefault(field("size", int_().range(1, 100)), 20), 20),
+        field("size", recover(withDefault(int_().range(1, 100), 20), 20)),
         // order: both absent and invalid fall back to ASC
-        recover(withDefault(field("sort", enumOf(SortOrder.class)), SortOrder.ASC), SortOrder.ASC)
+        field("sort", recover(withDefault(enumOf(SortOrder.class), SortOrder.ASC), SortOrder.ASC))
 ).map(PageRequest::new);
 
 // Normal request
@@ -1344,23 +1349,22 @@ record AppConfig(DbConfig db, CacheConfig cache, String logLevel) {}
 
 var dbConfigDec = combine(
         field("host",     string().nonBlank()),
-        withDefault(field("port", int_().range(1, 65535)), 5432),
+        field("port",     withDefault(int_().range(1, 65535), 5432)),
         field("database", string().nonBlank())
 ).map(DbConfig::new);
 
 var cacheConfigDec = combine(
-        withDefault(field("host",       string().nonBlank()), "localhost"),
-        withDefault(field("port",       int_().range(1, 65535)), 6379),
-        withDefault(field("ttlSeconds", int_().positive()), 300)
+        field("host",       withDefault(string().nonBlank(), "localhost")),
+        field("port",       withDefault(int_().range(1, 65535), 6379)),
+        field("ttlSeconds", withDefault(int_().positive(), 300))
 ).map(CacheConfig::new);
 
 var appConfigDec = combine(
         field("db",    nested(dbConfigDec)),
         // cache section itself is optional — use default config if absent
-        withDefault(
-                field("cache", nested(cacheConfigDec)),
-                new CacheConfig("localhost", 6379, 300)),
-        withDefault(field("logLevel", string().nonBlank()), "INFO")
+        field("cache", withDefault(nested(cacheConfigDec),
+                new CacheConfig("localhost", 6379, 300))),
+        field("logLevel", withDefault(string().nonBlank(), "INFO"))
 ).map(AppConfig::new);
 
 // Only db specified — others use defaults
@@ -1375,7 +1379,7 @@ appConfigDec.decode(Map.of(
 appConfigDec.decode(Map.of(
         "db", Map.of("host", "", "database", "myapp")
 ))
-// ==> Err[/db/host: is required]
+// ==> Err[/db/host: must not be blank]
 ```
 
 Running the configuration decoder at application startup lets you catch missing environment variables and type mismatches before they reach production code.

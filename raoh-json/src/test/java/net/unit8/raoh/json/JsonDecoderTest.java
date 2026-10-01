@@ -1,6 +1,7 @@
 package net.unit8.raoh.json;
 
 import net.unit8.raoh.Err;
+import net.unit8.raoh.ErrorCodes;
 import net.unit8.raoh.Issue;
 import net.unit8.raoh.Issues;
 import net.unit8.raoh.MessageResolver;
@@ -13,6 +14,7 @@ import net.unit8.raoh.decode.combinator.CombinePart;
 import net.unit8.raoh.decode.Decoders;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.MissingNode;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -20,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static net.unit8.raoh.json.JsonDecoders.*;
@@ -469,7 +473,7 @@ class JsonDecoderTest {
 
     @Test
     void withDefaultCombinator() {
-        var dec = field("role", Decoders.withDefault(
+        var dec = field("role", withDefault(
                 enumOf(Prefecture.class), Prefecture.TOKYO));
         assertEquals(Prefecture.TOKYO, assertOk(dec.decode(parse("{}"))));
         assertEquals(Prefecture.TOKYO, assertOk(dec.decode(parse("{\"role\":null}"))));
@@ -484,7 +488,7 @@ class JsonDecoderTest {
         Decoder<JsonNode, Comment>[] holder = new Decoder[1];
         holder[0] = combine(
                 field("body", string()),
-                field("replies", Decoders.withDefault(list(Decoders.lazy(() -> holder[0])), List.of()))
+                field("replies", withDefault(list(Decoders.lazy(() -> holder[0])), List.of()))
         ).map(Comment::new);
 
         var json = parse("""
@@ -762,6 +766,108 @@ class JsonDecoderTest {
         )).map(args -> args[0] + "-" + args[1] + "-" + args[2]);
 
         assertEquals("x-y-z", assertOk(dec.decode(parse("{\"a\":\"x\",\"b\":\"y\",\"c\":\"z\"}"))));
+    }
+
+    // --- withDefault (#164): a JSON null or an absent value takes the default; nothing else does.
+    // The cases follow the Raoh Specification's R000824–R000830 and R000836–R000839.
+
+    private static final Decoder<JsonNode, List<Integer>> ID_AND_PAGE = combine(
+            field("id", withDefault(int_(), 7)),
+            field("page", withDefault(int_(), 8))
+    ).map((id, page) -> List.of(id, page));
+
+    private static final Decoder<JsonNode, List<Integer>> A_AND_B = combine(
+            field("a", int_()),
+            field("b", int_())
+    ).map((a, b) -> List.of(a, b));
+
+    @Test
+    void withDefaultTakesAbsentAndNullMembers() {
+        // R000827, R000828, R000824, R000825
+        assertEquals(List.of(7, 8), assertOk(ID_AND_PAGE.decode(readTree("{}"))));
+        assertEquals(List.of(7, 8), assertOk(ID_AND_PAGE.decode(readTree("{\"id\":null,\"page\":null}"))));
+        assertEquals(List.of(7, 8), assertOk(ID_AND_PAGE.decode(readTree("{\"page\":null}"))));
+    }
+
+    @Test
+    void withDefaultDecodesPresentMembers() {
+        // R000829, R000826, R000830
+        assertEquals(List.of(3, 4), assertOk(ID_AND_PAGE.decode(readTree("{\"id\":3,\"page\":4}"))));
+        var page = assertSingleIssue(ID_AND_PAGE.decode(readTree("{\"page\":\"x\"}")));
+        assertEquals(List.of("/page", ErrorCodes.TYPE_MISMATCH), List.of(page.path().toString(), page.code()));
+        var id = assertSingleIssue(ID_AND_PAGE.decode(readTree("{\"id\":\"x\"}")));
+        assertEquals(List.of("/id", ErrorCodes.TYPE_MISMATCH), List.of(id.path().toString(), id.code()));
+    }
+
+    @Test
+    void withDefaultKeepsTheIssuesOfAnObjectMissingItsMembers() {
+        // R000836, R000837: the object is there, so its missing members are its own failure.
+        var dec = withDefault(A_AND_B, List.of(0, 0));
+        switch (dec.decode(readTree("{}"))) {
+            case Ok<?> ok -> fail("Expected Err, got Ok: " + ok);
+            case Err<?>(var issues) -> {
+                assertEquals(List.of("/a", "/b"), issues.asList().stream().map(i -> i.path().toString()).toList());
+                assertEquals(List.of(ErrorCodes.REQUIRED, ErrorCodes.REQUIRED),
+                        issues.asList().stream().map(Issue::code).toList());
+            }
+        }
+        var b = assertSingleIssue(dec.decode(readTree("{\"a\":1}")));
+        assertEquals(List.of("/b", ErrorCodes.REQUIRED), List.of(b.path().toString(), b.code()));
+    }
+
+    @Test
+    void withDefaultTakesANullObjectAndAnAbsentOne() {
+        // R000838, and the absent value a field passes on
+        var dec = withDefault(A_AND_B, List.of(0, 0));
+        assertEquals(List.of(0, 0), assertOk(dec.decode(readTree("null"))));
+        assertEquals(List.of(0, 0), assertOk(dec.decode(MissingNode.getInstance())));
+        assertEquals(List.of(0, 0), assertOk(dec.decode(null, Path.ROOT)));
+    }
+
+    @Test
+    void withDefaultIsTakenBeforeAnInnerNullable() {
+        // R000839
+        assertEquals(42, assertOk(withDefault(nullable(int_()), 42).decode(readTree("null"))));
+    }
+
+    @Test
+    void nullableLeavesAnAbsentValueToItsDecoder() {
+        // nullable takes a JSON null only; withDefault takes an absent value too.
+        var nullable = field("n", nullable(int_()));
+        assertNull(assertOk(nullable.decode(readTree("{\"n\":null}"))));
+        assertEquals(ErrorCodes.REQUIRED, assertSingleIssue(nullable.decode(readTree("{}"))).code());
+    }
+
+    @Test
+    void withDefaultReturnsAnInnerFailureAsItIs() {
+        Result<Integer> failure = Result.fail(Path.ROOT.append("x"), ErrorCodes.REQUIRED, "is required");
+        Decoder<JsonNode, Integer> inner = (in, path) -> failure;
+        assertSame(failure, withDefault(inner, 42).decode(readTree("{}")));
+    }
+
+    @Test
+    void withDefaultRunsTheInnerDecoderOnlyForAPresentValueAndTheSupplierOnlyForAnAbsentOne() {
+        var innerCalls = new AtomicInteger();
+        var supplierCalls = new AtomicInteger();
+        Decoder<JsonNode, String> inner = (in, path) -> {
+            innerCalls.incrementAndGet();
+            return in.isString() ? Result.ok(in.asString()) : Result.fail(path, ErrorCodes.TYPE_MISMATCH, "no");
+        };
+        Supplier<String> fallback = () -> {
+            supplierCalls.incrementAndGet();
+            return "fallback";
+        };
+        var dec = withDefault(inner, fallback);
+
+        assertEquals("fallback", assertOk(dec.decode(readTree("null"))));
+        assertEquals("fallback", assertOk(dec.decode(MissingNode.getInstance())));
+        assertEquals(List.of(0, 2), List.of(innerCalls.get(), supplierCalls.get()));
+
+        assertEquals("s", assertOk(dec.decode(readTree("\"s\""))));
+        assertEquals(List.of(1, 2), List.of(innerCalls.get(), supplierCalls.get()));
+
+        assertErr(dec.decode(readTree("1")));
+        assertEquals(List.of(2, 2), List.of(innerCalls.get(), supplierCalls.get()));
     }
 
     // --- Helpers ---

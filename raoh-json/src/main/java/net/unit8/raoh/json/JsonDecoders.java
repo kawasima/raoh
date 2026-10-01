@@ -39,6 +39,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 
 /**
  * Factory methods for creating decoders that operate on Jackson {@link JsonNode} input.
@@ -437,8 +438,12 @@ public final class JsonDecoders {
     /**
      * Wraps a decoder to accept {@code null} JSON values, returning {@code null} instead of an error.
      *
-     * <p><strong>Note:</strong> The returned decoder produces {@code Ok(null)} when the input is
-     * absent or JSON null. Callers must handle the {@code null} value explicitly; the type system
+     * <p>The returned decoder produces {@code Ok(null)} for a JSON {@code null} (a
+     * {@code NullNode}) or a Java {@code null}. An absent value, the {@code MissingNode} that
+     * {@link #field} passes for a member the object does not have, is not {@code null}: it goes to
+     * {@code dec}, which for a built-in decoder gives {@code required}. Compare
+     * {@link #withDefault(Decoder, Object) withDefault}, which takes both a JSON {@code null} and an
+     * absent value. Callers must handle the {@code null} value explicitly; the type system
      * cannot enforce non-nullness here. Prefer {@link #optionalField} for optional semantics.
      *
      * @param <T> the decoded type
@@ -456,6 +461,50 @@ public final class JsonDecoders {
             }
             return dec.decode(in, path);
         };
+    }
+
+    /**
+     * Gives {@code fallback} for a JSON {@code null} or an absent value, and decodes any other value
+     * with {@code dec}, returning its result unchanged.
+     *
+     * <p>A JSON {@code null} is a {@code NullNode}; an absent value is the {@code MissingNode}
+     * that {@link #field} passes for a member the object does not have. A Java {@code null} is
+     * taken as absent too. The value is looked at before {@code dec} runs, and {@code dec}'s result
+     * is never looked at: a failure of {@code dec} is returned as it is, whatever its issues are,
+     * so an object whose own members are missing is not given the default. Use
+     * {@link net.unit8.raoh.decode.Decoders#recover(Decoder, Object) recover} to give a value
+     * instead of a failure. Because the value is looked at first,
+     * {@code withDefault(nullable(dec), x)} gives {@code x} for a JSON {@code null}.
+     *
+     * <p>To default a member, put this inside the field:
+     * {@code field("role", withDefault(enumOf(Role.class), Role.MEMBER))}. Outside it, as in
+     * {@code withDefault(field("role", ...), ...)}, the value looked at is the enclosing object,
+     * not the member.
+     *
+     * @param <T>      the decoded value type
+     * @param dec      the decoder for a value that is neither JSON {@code null} nor absent
+     * @param fallback the value to give for a JSON {@code null} or an absent value
+     * @return a decoder that gives {@code fallback} for a JSON {@code null} or an absent value
+     */
+    public static <T> Decoder<JsonNode, T> withDefault(Decoder<JsonNode, T> dec, T fallback) {
+        return (in, path) -> isNullOrAbsent(in) ? Result.ok(fallback) : dec.decode(in, path);
+    }
+
+    /**
+     * Like {@link #withDefault(Decoder, Object)}, but the default is computed by {@code fallback},
+     * which is called once for each JSON {@code null} or absent value and never otherwise.
+     *
+     * @param <T>      the decoded value type
+     * @param dec      the decoder for a value that is neither JSON {@code null} nor absent
+     * @param fallback supplies the value to give for a JSON {@code null} or an absent value
+     * @return a decoder that gives the supplied value for a JSON {@code null} or an absent value
+     */
+    public static <T> Decoder<JsonNode, T> withDefault(Decoder<JsonNode, T> dec, Supplier<? extends T> fallback) {
+        return (in, path) -> isNullOrAbsent(in) ? Result.ok(fallback.get()) : dec.decode(in, path);
+    }
+
+    private static boolean isNullOrAbsent(@Nullable JsonNode in) {
+        return in == null || in.isNull() || in.isMissingNode();
     }
 
     /**

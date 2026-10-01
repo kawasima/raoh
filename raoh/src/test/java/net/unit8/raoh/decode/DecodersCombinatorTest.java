@@ -2,7 +2,6 @@ package net.unit8.raoh.decode;
 
 import net.unit8.raoh.Err;
 import net.unit8.raoh.ErrorCodes;
-import net.unit8.raoh.Issue;
 import net.unit8.raoh.Issues;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.Result;
@@ -14,13 +13,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import static net.unit8.raoh.decode.Decoders.combine;
 import static net.unit8.raoh.decode.Decoders.lazy;
 import static net.unit8.raoh.decode.Decoders.oneOf;
 import static net.unit8.raoh.decode.Decoders.recover;
-import static net.unit8.raoh.decode.Decoders.withDefault;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -30,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * Direct unit tests for the {@link Decoders} utility combinators that previously lacked dedicated
- * coverage: {@code oneOf}, {@code withDefault}, {@code recover}, {@code lazy}, and
+ * coverage: {@code oneOf}, {@code recover}, {@code lazy}, and
  * {@link ObjectDecoders#enumOf(Class)}.
  *
  * <p>Each test asserts the documented contract (Javadoc), not the current implementation shape:
@@ -48,62 +45,6 @@ class DecodersCombinatorTest {
     /** A stub decoder that always fails with a single issue carrying the given code. */
     private static Decoder<Object, String> failWith(String code) {
         return (in, path) -> Result.fail(path, code, code + " failed");
-    }
-
-    // --- withDefault: default applies ONLY when every issue is "required" ---
-
-    @Test
-    void withDefaultSubstitutesDefaultWhenAllIssuesAreRequired() {
-        // Spec: default kicks in when the field is absent, i.e. all issues are `required`.
-        var dec = withDefault(failWith(ErrorCodes.REQUIRED), "fallback");
-        assertEquals("fallback", ok(dec.decode(null)));
-    }
-
-    @Test
-    void withDefaultPreservesNonRequiredError() {
-        // Spec: "If the decoder fails with a non-required error, the error is preserved."
-        var dec = withDefault(failWith(ErrorCodes.TYPE_MISMATCH), "fallback");
-        assertEquals(ErrorCodes.TYPE_MISMATCH, firstCode(dec.decode(null)));
-    }
-
-    @Test
-    void withDefaultPreservesErrorWhenRequiredIsMixedWithAnotherCode() {
-        // Boundary: shouldUseDefault requires *every* issue to be `required`. A single non-required
-        // sibling issue must keep the whole result an error (allMatch, not anyMatch).
-        Decoder<Object, String> mixed = (in, path) -> Result.err(
-                Issues.EMPTY
-                        .add(Issue.of(path, ErrorCodes.REQUIRED, "required"))
-                        .add(Issue.of(path, ErrorCodes.TYPE_MISMATCH, "wrong type")));
-        var dec = withDefault(mixed, "fallback");
-        assertEquals(2, issueCount(dec.decode(null)));
-    }
-
-    @Test
-    void withDefaultPassesSuccessThrough() {
-        var dec = withDefault(succeed("value"), "fallback");
-        assertEquals("value", ok(dec.decode(null)));
-    }
-
-    @Test
-    void withDefaultSupplierIsNotCalledOnSuccess() {
-        var calls = new AtomicInteger();
-        var dec = withDefault(succeed("value"), (Supplier<String>) () -> {
-            calls.incrementAndGet();
-            return "fallback";
-        });
-        assertEquals("value", ok(dec.decode(null)));
-        assertEquals(0, calls.get(), "supplier must not run when the decoder succeeds");
-    }
-
-    @Test
-    void withDefaultSupplierIsCalledOnRequiredFailure() {
-        var calls = new AtomicInteger();
-        var dec = withDefault(failWith(ErrorCodes.REQUIRED), (Supplier<String>) () -> {
-            calls.incrementAndGet();
-            return "fallback";
-        });
-        assertEquals("fallback", ok(dec.decode(null)));
-        assertEquals(1, calls.get());
     }
 
     // --- recover: recovers from ANY error ---
@@ -286,20 +227,6 @@ class DecodersCombinatorTest {
         return switch (result) {
             case Ok<T>(var value) -> value;
             case Err<T>(var issues) -> fail("expected Ok, got Err: " + issues);
-        };
-    }
-
-    private static String firstCode(Result<?> result) {
-        return switch (result) {
-            case Ok<?> _ -> fail("expected Err, got Ok");
-            case Err<?>(var issues) -> issues.asList().getFirst().code();
-        };
-    }
-
-    private static int issueCount(Result<?> result) {
-        return switch (result) {
-            case Ok<?> _ -> fail("expected Err, got Ok");
-            case Err<?>(var issues) -> issues.asList().size();
         };
     }
 }

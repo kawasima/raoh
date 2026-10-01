@@ -676,7 +676,7 @@ class MapDecoderTest {
 
     @Test
     void withDefaultCombinator() {
-        var dec = field("role", Decoders.withDefault(
+        var dec = field("role", withDefault(
                 enumOf(Prefecture.class), Prefecture.TOKYO));
         assertEquals(Prefecture.TOKYO, assertOk(dec.decode(Map.of())));
 

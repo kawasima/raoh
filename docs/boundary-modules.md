@@ -18,7 +18,9 @@ Supported helpers include:
 - `string()`, `int_()`, `long_()`, `double_()`, `float_()`, `bool()`, `decimal()`
 - `field(...)`
 - `optionalField(...)`
-- `nullable(...)`
+- `nullable(...)` — `null` for a JSON `null`; a missing member still goes to the inner decoder
+- `withDefault(...)` — the default for a JSON `null` or a missing member; anything else goes to the
+  inner decoder, and its result is returned as it is
 - `optionalNullableField(...)`
 - `list(...)`
 - `map(...)`
@@ -47,6 +49,7 @@ Supported helpers include:
 - `field(...)`
 - `optionalField(...)`
 - `nullable(...)`
+- `withDefault(...)` (from `ObjectDecoders`) — the default for a column holding SQL `NULL`
 - `optionalNullableField(...)`
 - `nested(...)`
 - `enumOf(...)`
@@ -90,6 +93,15 @@ var presence = optionalNullableField("dept_name", string()).decode(rec);
 
 This returns `Presence.Absent`, `Presence.PresentNull`, or `Presence.Present`, which is useful when a SQL NULL means "no row joined" rather than "explicitly set to null".
 
+A column the record does not have is a different thing from a column holding SQL `NULL`. `field(...)`
+refuses a missing column with `missing_field` before the value decoder runs, so
+`field("currency", withDefault(string(), "JPY"))` defaults a SQL `NULL` but not a missing column. To
+accept a record without the column, say so with `optionalField`:
+
+```java
+optionalField("currency", string()).map(c -> c.orElse("JPY"))
+```
+
 ## `MapDecoders`
 
 `net.unit8.raoh.decode.map.MapDecoders` works with `Map<String, Object>`.
@@ -100,6 +112,7 @@ Supported helpers include:
 - `field(...)`
 - `optionalField(...)`
 - `nullable(...)`
+- `withDefault(...)` (from `ObjectDecoders`) — the default for an absent key or a `null` value
 - `optionalNullableField(...)`
 - `nested(...)`
 - `list(...)`

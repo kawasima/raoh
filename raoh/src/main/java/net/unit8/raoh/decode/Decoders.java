@@ -540,49 +540,6 @@ public final class Decoders {
     }
 
     /**
-     * Wraps a decoder to use a default value when the field is absent (i.e., all issues are "required").
-     * If the decoder fails with a non-required error, the error is preserved.
-     *
-     * @param <I>      the input type
-     * @param <T>      the output type
-     * @param dec      the underlying decoder
-     * @param fallback the default value
-     * @return a decoder with default-value behavior
-     */
-    public static <I extends @Nullable Object, T> Decoder<I, T> withDefault(Decoder<I, T> dec, T fallback) {
-        return (in, path) -> {
-            var r = dec.decode(in, path);
-            return switch (r) {
-                case Ok<T> ok -> ok;
-                case Err<T> err -> shouldUseDefault(err.issues())
-                        ? Result.ok(fallback)
-                        : err.coerce();
-            };
-        };
-    }
-
-    /**
-     * Like {@link #withDefault(Decoder, Object)}, but the default is lazily computed.
-     *
-     * @param <I>      the input type
-     * @param <T>      the output type
-     * @param dec      the underlying decoder
-     * @param fallback supplier for the default value
-     * @return a decoder with default-value behavior
-     */
-    public static <I extends @Nullable Object, T> Decoder<I, T> withDefault(Decoder<I, T> dec, Supplier<T> fallback) {
-        return (in, path) -> {
-            var r = dec.decode(in, path);
-            return switch (r) {
-                case Ok<T> ok -> ok;
-                case Err<T> err -> shouldUseDefault(err.issues())
-                        ? Result.ok(fallback.get())
-                        : err.coerce();
-            };
-        };
-    }
-
-    /**
      * Wraps a decoder to recover from any error with a fixed fallback value.
      *
      * @param <I>      the input type
@@ -907,10 +864,5 @@ public final class Decoders {
                 }
             };
         };
-    }
-
-    private static boolean shouldUseDefault(Issues issues) {
-        return !issues.isEmpty()
-                && issues.asList().stream().allMatch(issue -> issue.code().equals(ErrorCodes.REQUIRED));
     }
 }

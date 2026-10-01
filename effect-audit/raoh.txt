@@ -156,8 +156,6 @@ net.unit8.raoh.decode.Decoders#oneOf -> java.util.Iterator#hasNext():boolean
 net.unit8.raoh.decode.Decoders#oneOf -> java.util.Iterator#next():java.lang.Object
 net.unit8.raoh.decode.Decoders#oneOf -> java.util.List#iterator():java.util.Iterator
 net.unit8.raoh.decode.Decoders#oneOf -> java.util.List#size():int
-net.unit8.raoh.decode.Decoders#shouldUseDefault -> java.util.List#stream():java.util.stream.Stream
-net.unit8.raoh.decode.Decoders#shouldUseDefault -> java.util.stream.Stream#allMatch(java.util.function.Predicate):boolean
 net.unit8.raoh.decode.Decoders#strict -> java.util.Set#contains(java.lang.Object):boolean
 net.unit8.raoh.decode.ObjectDecoders#list -> java.util.ArrayList#add(java.lang.Object):boolean
 net.unit8.raoh.decode.ObjectDecoders#map -> java.util.LinkedHashMap#put(java.lang.Object,java.lang.Object):java.lang.Object
@@ -304,7 +302,7 @@ net.unit8.raoh.decode.Decoder#refine -> java.util.function.Function#apply(java.l
 net.unit8.raoh.decode.Decoder#refine -> java.util.function.Predicate#test(java.lang.Object):boolean
 net.unit8.raoh.decode.Decoders#lazy -> java.util.function.Supplier#get():java.lang.Object
 net.unit8.raoh.decode.Decoders#recover -> java.util.function.Function#apply(java.lang.Object):java.lang.Object
-net.unit8.raoh.decode.Decoders#withDefault -> java.util.function.Supplier#get():java.lang.Object
+net.unit8.raoh.decode.ObjectDecoders#withDefault -> java.util.function.Supplier#get():java.lang.Object
 net.unit8.raoh.decode.builtin.BoolDecoder#refine -> java.util.function.BiFunction#apply(java.lang.Object,java.lang.Object):java.lang.Object
 net.unit8.raoh.decode.builtin.BoolDecoder#refine -> java.util.function.Function#apply(java.lang.Object):java.lang.Object
 net.unit8.raoh.decode.builtin.BoolDecoder#refine -> java.util.function.Predicate#test(java.lang.Object):boolean

@@ -7,7 +7,7 @@
  * <ul>
  *   <li>{@link net.unit8.raoh.decode.Decoder} — the core decoding interface</li>
  *   <li>{@link net.unit8.raoh.decode.Decoders} — reusable combinators
- *       ({@code combine}, {@code oneOf}, {@code withDefault}, etc.)</li>
+ *       ({@code combine}, {@code oneOf}, {@code recover}, etc.)</li>
  *   <li>{@link net.unit8.raoh.decode.ObjectDecoders} — primitive value decoders
  *       ({@code string()}, {@code int_()}, {@code decimal()}, etc.)</li>
  *   <li>{@link net.unit8.raoh.decode.combinator.CombinePart} — a named or flat component of a combine schema</li>

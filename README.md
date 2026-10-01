@@ -551,8 +551,6 @@ The `net.unit8.raoh.decode.Decoders` class provides reusable combinators.
 
 - `lazy(...)`
   For recursive decoders.
-- `withDefault(...)`
-  Uses a fallback when decoding fails only with `required` errors.
 - `recover(...)`
   Uses a fallback for any decoding error.
 - `oneOf(...)`
@@ -573,6 +571,10 @@ var dec = combine(
 ).strict(Person::new);
 ```
 
+`withDefault(...)` is not among them: whether a value is null or absent depends on the input, so it
+comes from the boundary module (`JsonDecoders.withDefault`, or `ObjectDecoders.withDefault` for maps
+and jOOQ records). See [`withDefault(...)` vs `recover(...)`](#withdefault-vs-recover).
+
 ### `lazy(...)`
 
 Use `lazy(...)` for recursive structures:
@@ -583,7 +585,7 @@ record Comment(String body, List<Comment> replies) {}
 JsonDecoder<Comment>[] self = new JsonDecoder[1];
 self[0] = combine(
         field("body", string().nonBlank()),
-        withDefault(field("replies", list(lazy(() -> self[0]))), List.of())
+        field("replies", withDefault(list(lazy(() -> self[0])), List.of()))
 ).map(Comment::new);
 ```
 
@@ -619,21 +621,33 @@ field("kind", literal("email"))
 
 ### `withDefault(...)` vs `recover(...)`
 
-These two are similar in shape but different in intent.
+These two are similar in shape but look at different things. `withDefault(...)` looks at the input
+before decoding it; `recover(...)` looks at the result after.
 
-Use `withDefault(...)` when a value is conceptually optional and you want a fallback for missing/null-like cases:
+Use `withDefault(...)` when a value is optional: it gives the default for a null or absent value and
+otherwise returns what the inner decoder gives, failure included, without looking at it. Put it
+inside the field, where the value is the member's:
 
 ```java
 field("role", withDefault(enumOf(Role.class), Role.MEMBER))
 ```
 
+In JSON a null is a JSON `null` and an absent value is a member the object does not have
+(`JsonDecoders.withDefault`). In a map both are `null` (`ObjectDecoders.withDefault`). In a jOOQ
+record a column holding SQL `NULL` is `null`, but a column the record does not have is refused with
+`missing_field` by `field(...)` before the value decoder runs; to accept a record without the column,
+use `optionalField("role", ...).map(r -> r.orElse(Role.MEMBER))`.
+
+Written outside the field, as `withDefault(field("role", ...), ...)`, the value it looks at is the
+enclosing object, so a missing `role` is not defaulted.
+
 Use `recover(...)` when you want to tolerate any decoding failure:
 
 ```java
-recover(field("pageSize", int_().range(1, 100)), 20)
+field("pageSize", recover(int_().range(1, 100), 20))
 ```
 
-`recover(...)` is more permissive. `withDefault(...)` is stricter.
+`recover(...)` gives the fallback for an invalid value too. `withDefault(...)` never does.
 
 ## Boundary Modules
 

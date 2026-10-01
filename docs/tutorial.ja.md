@@ -877,7 +877,7 @@ Result.traverse(rows, orderDec::decode, Path.of("orders"))
 <!-- souther-section: with-default -->
 ### withDefault — 欠損時のフォールバック
 
-フィールドが存在しないか `null` のときだけデフォルト値を適用します。値があって不正な場合はエラーになります。
+値が存在しないか `null` のときだけデフォルト値を適用します。値があるときはそれをデコードし、結果をそのまま返します。値があって不正な場合はエラーになります。
 
 ```java
 field("role", withDefault(enumOf(Role.class), Role.MEMBER)).decode(Map.of())
@@ -890,16 +890,20 @@ field("role", withDefault(enumOf(Role.class), Role.MEMBER)).decode(Map.of("role"
 // ==> Err[/role: ...]
 ```
 
+`withDefault` は内側のデコーダーを呼ぶ前に、受け取った値を見ます。内側のデコーダーが返した結果は見ません。そのため `field(...)` の内側に置いて、メンバーの値を見せてください。`withDefault(field("role", ...), Role.MEMBER)` のように外側に書くと、見るのは Map 全体になるので、`role` がなくてもデフォルト値は使われません。
+
+Map では、キーがないときも値が `null` のときも `null` が渡ります。`withDefault` は `ObjectDecoders` のものを使います。JSON では `JsonDecoders.withDefault` を使い、JSON の `null` とメンバーの欠落の両方にデフォルト値を適用します。jOOQ のレコードでは、SQL の `NULL` が入った列にはデフォルト値が適用されますが、レコードに列そのものがない場合は、値のデコーダーを呼ぶ前に `field(...)` が `missing_field` で拒否します。列がないレコードも受け付けたいときは `optionalField("role", ...).map(r -> r.orElse(Role.MEMBER))` を使います。
+
 <!-- souther-section: recover -->
 ### recover — あらゆる失敗からのフォールバック
 
 値が不正な場合も含め、あらゆるデコード失敗をフォールバック値で吸収します。
 
 ```java
-recover(field("pageSize", int_().range(1, 100)), 20).decode(Map.of("pageSize", 999))
+field("pageSize", recover(int_().range(1, 100), 20)).decode(Map.of("pageSize", 999))
 // ==> Ok[20]
 
-recover(field("pageSize", int_().range(1, 100)), 20).decode(Map.of())
+field("pageSize", recover(int_().range(1, 100), 20)).decode(Map.of())
 // ==> Ok[20]
 ```
 
@@ -937,10 +941,11 @@ apiRequestDec.decode(Map.of("action", "transfer", "amount", 100, "extra", true))
 ```java
 record Comment(String body, List<Comment> replies) {}
 
-Decoder[] self = new Decoder[1];
+@SuppressWarnings("unchecked")
+Decoder<Map<String, Object>, Comment>[] self = new Decoder[1];
 self[0] = combine(
         field("body", string().nonBlank()),
-        withDefault(field("replies", list(lazy(() -> self[0]))), List.of())
+        field("replies", withDefault(list(nested(lazy(() -> self[0]))), List.of()))
 ).map(Comment::new);
 var commentDec = self[0];
 
@@ -1229,11 +1234,11 @@ record PageRequest(int page, int size, SortOrder order) {}
 
 var pageRequestDec = combine(
         // page: 省略時は0だが、負数は明示的にエラー
-        withDefault(field("page", int_().range(0, Integer.MAX_VALUE)), 0),
-        // size: 省略時・壊れた値どちらも20にフォールバック
-        recover(withDefault(field("size", int_().range(1, 100)), 20), 20),
+        field("page", withDefault(int_().range(0, Integer.MAX_VALUE), 0)),
+        // size: 省略時・不正な値どちらも20にフォールバック
+        field("size", recover(withDefault(int_().range(1, 100), 20), 20)),
         // order: 省略時・不正値どちらもASCにフォールバック
-        recover(withDefault(field("sort", enumOf(SortOrder.class)), SortOrder.ASC), SortOrder.ASC)
+        field("sort", recover(withDefault(enumOf(SortOrder.class), SortOrder.ASC), SortOrder.ASC))
 ).map(PageRequest::new);
 
 // 通常リクエスト
@@ -1346,23 +1351,22 @@ record AppConfig(DbConfig db, CacheConfig cache, String logLevel) {}
 
 var dbConfigDec = combine(
         field("host",     string().nonBlank()),
-        withDefault(field("port", int_().range(1, 65535)), 5432),
+        field("port",     withDefault(int_().range(1, 65535), 5432)),
         field("database", string().nonBlank())
 ).map(DbConfig::new);
 
 var cacheConfigDec = combine(
-        withDefault(field("host",       string().nonBlank()), "localhost"),
-        withDefault(field("port",       int_().range(1, 65535)), 6379),
-        withDefault(field("ttlSeconds", int_().positive()), 300)
+        field("host",       withDefault(string().nonBlank(), "localhost")),
+        field("port",       withDefault(int_().range(1, 65535), 6379)),
+        field("ttlSeconds", withDefault(int_().positive(), 300))
 ).map(CacheConfig::new);
 
 var appConfigDec = combine(
         field("db",    nested(dbConfigDec)),
         // cache セクション自体が省略可能 — なければデフォルト設定を使う
-        withDefault(
-                field("cache", nested(cacheConfigDec)),
-                new CacheConfig("localhost", 6379, 300)),
-        withDefault(field("logLevel", string().nonBlank()), "INFO")
+        field("cache", withDefault(nested(cacheConfigDec),
+                new CacheConfig("localhost", 6379, 300))),
+        field("logLevel", withDefault(string().nonBlank(), "INFO"))
 ).map(AppConfig::new);
 
 // db のみ指定 — その他はデフォルト
@@ -1377,7 +1381,7 @@ appConfigDec.decode(Map.of(
 appConfigDec.decode(Map.of(
         "db", Map.of("host", "", "database", "myapp")
 ))
-// ==> Err[/db/host: is required]
+// ==> Err[/db/host: must not be blank]
 ```
 
 設定デコーダーをアプリ起動時に実行することで、環境変数の設定漏れや型ミスを本番コードに入る前に検出できます。

@@ -101,6 +101,24 @@ detailed from the current development cycle onward.
   that wrote keys decided by the value becomes an `Encoder<T, Map<String, Object>>` of its own, or
   `mapOf(...)`, rather than part of an `object`
   ([#169](https://github.com/raoh-project/raoh-java/issues/169)).
+- **Breaking: `withDefault` gives the default for a null or absent value, and comes from the
+  boundary module.** `Decoders.withDefault(dec, x)` ran `dec` first and gave `x` when every issue
+  it returned was `required`, wherever those issues were. So an object with a missing member was
+  given the default as a whole (`{"a":1}` gave the default for `object(a, b)` instead of `required`
+  at `/b`), a JSON `null` handed to an object decoder was not defaulted because it failed with
+  `type_mismatch`, and `withDefault(nullable(dec), x)` gave `null`. The Raoh Specification defines
+  `withDefault` by its input, and only the boundary knows what null and absent are, so
+  `Decoders.withDefault` (both overloads) is removed. `ObjectDecoders.withDefault` gives the
+  default for a Java `null`, which is what a `Map` field passes for an absent key and for a `null`
+  value, and what a jOOQ column holding SQL `NULL` gives. `JsonDecoders.withDefault` gives it for
+  a JSON `null` or a missing member. Both look at the value before `dec` runs and return `dec`'s
+  result unchanged otherwise, failure included, and the `Supplier` overloads call the supplier
+  only for the default. A jOOQ column the record does not have is still `missing_field` from
+  `field(...)`; use `optionalField(...).map(o -> o.orElse(x))` to accept a record without it. To
+  migrate, move the default inside the field: `withDefault(field("page", int_()), 0)` becomes
+  `field("page", withDefault(int_(), 0))`. Outside the field, the value it looks at is the
+  enclosing object, so a missing member is no longer defaulted
+  ([#164](https://github.com/raoh-project/raoh-java/issues/164)).
 
 ### Fixed
 
