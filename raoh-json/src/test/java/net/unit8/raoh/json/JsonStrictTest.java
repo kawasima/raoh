@@ -8,9 +8,14 @@ import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import net.unit8.raoh.decode.Decoder;
+
 import static net.unit8.raoh.json.JsonDecoders.combine;
+import static net.unit8.raoh.json.JsonDecoders.discriminate;
 import static net.unit8.raoh.json.JsonDecoders.field;
 import static net.unit8.raoh.json.JsonDecoders.int_;
 import static net.unit8.raoh.json.JsonDecoders.optionalField;
@@ -132,5 +137,67 @@ class JsonStrictTest {
                     issues.asList().stream().filter(i -> i.code().equals(ErrorCodes.UNKNOWN_FIELD)).count(),
                     "an array has no fields to report as unknown: " + issues.asList());
         }
+    }
+
+    // --- Nested strict: a field is reported once, by the innermost strict that does not know it ---
+    // The cases follow the Raoh Specification's R000862–R000866.
+
+    /** The issues as {@code "<pointer> <code>"}, in order. */
+    private static List<String> issues(Result<?> result) {
+        return switch (result) {
+            case Ok(var v) -> fail("Expected Err, got Ok: " + v);
+            case Err(var issues) -> issues.asList().stream()
+                    .map(i -> i.path().toJsonPointer() + " " + i.code())
+                    .toList();
+        };
+    }
+
+    @Test
+    void aStrictInsideADiscriminatedVariantIsNotRepeatedByTheOuterOne() {
+        // R000862
+        Decoder<JsonNode, Integer> square = strict(field("side", int_()).asDecoder(), Set.of("kind", "side"));
+        Decoder<JsonNode, Integer> rect = strict(
+                combine(field("w", int_()), field("h", int_())).map((w, h) -> w * h),
+                Set.of("kind", "w", "h"));
+        var dec = strict(
+                discriminate("kind", Map.<String, Decoder<JsonNode, ? extends Integer>>of("square", square, "rect", rect)),
+                Set.of("kind", "side", "w", "h"));
+
+        assertEquals(List.of("/w type_mismatch", "/extra unknown_field"),
+                issues(dec.decode(json("{\"kind\":\"rect\",\"w\":\"2\",\"extra\":1,\"h\":3}"))));
+    }
+
+    @Test
+    void aFieldNeitherStrictKnowsIsReportedOnce() {
+        // R000863
+        var dec = strict(strict(field("a", int_()).asDecoder(), Set.of("a")), Set.of("a"));
+
+        assertEquals(List.of("/b unknown_field"), issues(dec.decode(json("{\"a\":1,\"b\":2}"))));
+    }
+
+    @Test
+    void theOuterStrictReportsWhatOnlyItDoesNotKnow() {
+        // R000864
+        var dec = strict(
+                strict(combine(field("a", int_()), field("b", int_())).map(Integer::sum), Set.of("a", "b")),
+                Set.of("a"));
+
+        assertEquals(List.of("/b unknown_field"), issues(dec.decode(json("{\"a\":1,\"b\":2}"))));
+    }
+
+    @Test
+    void theInnerStrictReportsWhatOnlyItDoesNotKnow() {
+        // R000865
+        var dec = strict(strict(field("a", int_()).asDecoder(), Set.of("a")), Set.of("a", "b"));
+
+        assertEquals(List.of("/b unknown_field"), issues(dec.decode(json("{\"a\":1,\"b\":2}"))));
+    }
+
+    @Test
+    void anIssueOfAnotherCodeAtTheFieldDoesNotKeepItFromBeingReported() {
+        // R000866
+        var dec = strict(field("b", int_()).asDecoder(), Set.of("a"));
+
+        assertEquals(List.of("/b type_mismatch", "/b unknown_field"), issues(dec.decode(json("{\"b\":\"x\"}"))));
     }
 }

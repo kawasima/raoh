@@ -95,7 +95,7 @@ final class IssueTree {
 
             @Override
             public Issues issues(Issues list, List<Issue> each) {
-                return new Issues(List.copyOf(each));
+                return new Issues(((IssueList) list.asList()).replacedBy(each));
             }
         });
     }

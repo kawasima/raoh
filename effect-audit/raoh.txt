@@ -65,6 +65,8 @@ net.unit8.raoh.Err#toString -> java.util.stream.Stream#collect(java.util.stream.
 net.unit8.raoh.Err#toString -> java.util.stream.Stream#map(java.util.function.Function):java.util.stream.Stream
 net.unit8.raoh.Issue#rebase -> java.util.LinkedHashMap#put(java.lang.Object,java.lang.Object):java.lang.Object
 net.unit8.raoh.Issue#rebase -> java.util.Map#forEach(java.util.function.BiConsumer):void
+net.unit8.raoh.IssueList#replacedBy -> java.util.List#get(int):java.lang.Object
+net.unit8.raoh.IssueList#replacedBy -> java.util.List#size():int
 net.unit8.raoh.IssueTree#anyHoldsIssues -> java.util.Iterator#hasNext():boolean
 net.unit8.raoh.IssueTree#anyHoldsIssues -> java.util.Iterator#next():java.lang.Object
 net.unit8.raoh.IssueTree#anyHoldsIssues -> java.util.List#iterator():java.util.Iterator
@@ -83,7 +85,6 @@ net.unit8.raoh.IssueTree#holdsIssues -> java.util.Collection#iterator():java.uti
 net.unit8.raoh.IssueTree#holdsIssues -> java.util.Iterator#hasNext():boolean
 net.unit8.raoh.IssueTree#holdsIssues -> java.util.Iterator#next():java.lang.Object
 net.unit8.raoh.IssueTree#holdsIssues -> java.util.Map#values():java.util.Collection
-net.unit8.raoh.IssueTree#map -> java.util.List#copyOf(java.util.Collection):java.util.List
 net.unit8.raoh.IssueTree#map -> java.util.List#get(int):java.lang.Object
 net.unit8.raoh.IssueTree#map -> java.util.List#isEmpty():boolean
 net.unit8.raoh.IssueTree#project -> java.util.Iterator#hasNext():boolean
@@ -156,7 +157,12 @@ net.unit8.raoh.decode.Decoders#oneOf -> java.util.Iterator#hasNext():boolean
 net.unit8.raoh.decode.Decoders#oneOf -> java.util.Iterator#next():java.lang.Object
 net.unit8.raoh.decode.Decoders#oneOf -> java.util.List#iterator():java.util.Iterator
 net.unit8.raoh.decode.Decoders#oneOf -> java.util.List#size():int
+net.unit8.raoh.decode.Decoders#strict -> java.util.ArrayList#add(java.lang.Object):boolean
+net.unit8.raoh.decode.Decoders#strict -> java.util.ArrayList#isEmpty():boolean
 net.unit8.raoh.decode.Decoders#strict -> java.util.Set#contains(java.lang.Object):boolean
+net.unit8.raoh.decode.Decoders#unknownFieldsReported -> java.util.HashSet#add(java.lang.Object):boolean
+net.unit8.raoh.decode.Decoders#unknownFieldsReported -> java.util.List#get(int):java.lang.Object
+net.unit8.raoh.decode.Decoders#unknownFieldsReported -> java.util.List#size():int
 net.unit8.raoh.decode.ObjectDecoders#list -> java.util.ArrayList#add(java.lang.Object):boolean
 net.unit8.raoh.decode.ObjectDecoders#map -> java.util.LinkedHashMap#put(java.lang.Object,java.lang.Object):java.lang.Object
 net.unit8.raoh.decode.builtin.DoubleDecoder#oneOf -> java.util.Set#contains(java.lang.Object):boolean
@@ -217,6 +223,9 @@ net.unit8.raoh.internal.DecimalConversion#magnitude -> java.math.BigInteger#add(
 net.unit8.raoh.internal.DecimalConversion#magnitude -> java.math.BigInteger#multiply(java.math.BigInteger):java.math.BigInteger
 net.unit8.raoh.internal.DecimalConversion#toBigDecimal -> java.math.BigDecimal#<init>(java.math.BigInteger,int)
 net.unit8.raoh.internal.DecimalConversion#toBigDecimal -> java.math.BigInteger#negate():java.math.BigInteger
+net.unit8.raoh.internal.IssueProvenance$UnknownMembers#fromUnknownMembers -> java.util.List#size():int
+net.unit8.raoh.internal.IssueProvenance$UnknownMembers#get -> java.util.List#get(int):java.lang.Object
+net.unit8.raoh.internal.IssueProvenance$UnknownMembers#size -> java.util.List#size():int
 
 [the receiver is a JDK constant such as BigInteger.TEN, so its class is exactly the JDK class; the arguments are numbers Raoh built or took from the decoded value and the configured bound]
 net.unit8.raoh.decode.builtin.DecimalDecoder#isMultiple -> java.math.BigInteger#modPow(java.math.BigInteger,java.math.BigInteger):java.math.BigInteger
@@ -651,3 +660,4 @@ net.unit8.raoh.IssueList#copyOf -> java.util.List#size():int
 net.unit8.raoh.decode.Decoders#discriminate -> java.util.HashMap#<init>(java.util.Map)
 net.unit8.raoh.decode.Decoders#strict -> java.util.HashSet#<init>(java.util.Collection)
 net.unit8.raoh.decode.combinator.CombinerList#<init> -> java.util.List#copyOf(java.util.Collection):java.util.List
+net.unit8.raoh.internal.IssueProvenance#unknownMembers -> java.util.List#copyOf(java.util.Collection):java.util.List

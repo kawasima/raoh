@@ -1,5 +1,7 @@
 package net.unit8.raoh;
 
+import net.unit8.raoh.internal.IssueProvenance;
+
 import java.util.AbstractList;
 import java.util.List;
 import java.util.Objects;
@@ -28,8 +30,16 @@ import java.util.concurrent.atomic.AtomicInteger;
  * ({@link Buffer#published}, read before the claim and written after the elements): the appending
  * thread then has all earlier writes happen before it makes the new list, whose array and size are
  * final fields, and the rules for final fields carry them to any thread that reads the list.
+ *
+ * <p>The list also records which of its issues an unknown-members check made
+ * ({@link IssueProvenance}). A slot holds such an issue inside a {@link FromUnknownMembers}, so the
+ * other issues cost nothing for it, and appending copies the mark along with the slot.
  */
-final class IssueList extends AbstractList<Issue> implements RandomAccess {
+final class IssueList extends AbstractList<Issue> implements IssueProvenance, RandomAccess {
+
+    /** A slot's issue that an unknown-members check made. */
+    private record FromUnknownMembers(Issue issue) {
+    }
 
     /**
      * The array lists share; its value is how much of the array some list has claimed. It is the
@@ -37,12 +47,13 @@ final class IssueList extends AbstractList<Issue> implements RandomAccess {
      */
     @SuppressWarnings("serial")
     private static final class Buffer extends AtomicInteger {
-        final Issue[] slots;
+        /** Each an {@link Issue} or a {@link FromUnknownMembers}. */
+        final Object[] slots;
 
         /** How much of the array has been written, by appends that have finished. */
         volatile int published;
 
-        Buffer(Issue[] slots, int used) {
+        Buffer(Object[] slots, int used) {
             super(used);
             this.slots = slots;
             this.published = used;
@@ -50,7 +61,7 @@ final class IssueList extends AbstractList<Issue> implements RandomAccess {
     }
 
     /** The empty list. Its array has no room, so appending to it always starts a new array. */
-    static final IssueList EMPTY = new IssueList(new Buffer(new Issue[0], 0), 0);
+    static final IssueList EMPTY = new IssueList(new Buffer(new Object[0], 0), 0);
 
     private final Buffer buffer;
     private final int size;
@@ -61,7 +72,8 @@ final class IssueList extends AbstractList<Issue> implements RandomAccess {
     }
 
     /**
-     * {@code list} as an {@code IssueList}: itself when it is one, a copy otherwise.
+     * {@code list} as an {@code IssueList}: itself when it is one, a copy otherwise. A copy keeps
+     * the marks of a list that is an {@link IssueProvenance}.
      *
      * @param list the issues
      * @return the issues as an {@code IssueList}
@@ -75,13 +87,41 @@ final class IssueList extends AbstractList<Issue> implements RandomAccess {
         if (n == 0) {
             return EMPTY;
         }
-        var slots = new Issue[n];
+        var slots = new Object[n];
+        var provenance = list instanceof IssueProvenance p ? p : null;
         int i = 0;
         for (Issue issue : list) {
-            slots[i++] = Objects.requireNonNull(issue, "issue");
+            Objects.requireNonNull(issue, "issue");
+            slots[i] = provenance != null && provenance.fromUnknownMembers(i) ? new FromUnknownMembers(issue) : issue;
+            i++;
         }
         if (i != n) {
             throw new IllegalStateException("the list changed while it was being copied");
+        }
+        return new IssueList(new Buffer(slots, n), n);
+    }
+
+    /**
+     * {@code replacements} in place of this list's issues, each marked as the issue it replaces.
+     * For the steps that change each issue and keep what it is, such as rebasing and resolving.
+     *
+     * @param replacements the issues, one for each of this list's, in the same order
+     * @return the replacements as an {@code IssueList}
+     * @throws IllegalArgumentException if there are not as many replacements as issues
+     * @throws NullPointerException     if one of the replacements is {@code null}
+     */
+    IssueList replacedBy(List<Issue> replacements) {
+        int n = size;
+        if (replacements.size() != n) {
+            throw new IllegalArgumentException("expected " + n + " issues, got " + replacements.size());
+        }
+        if (n == 0) {
+            return EMPTY;
+        }
+        var slots = new Object[n];
+        for (int i = 0; i < n; i++) {
+            Issue issue = Objects.requireNonNull(replacements.get(i), "issue");
+            slots[i] = fromUnknownMembers(i) ? new FromUnknownMembers(issue) : issue;
         }
         return new IssueList(new Buffer(slots, n), n);
     }
@@ -98,13 +138,13 @@ final class IssueList extends AbstractList<Issue> implements RandomAccess {
             return this;
         }
         int n = size;
-        Issue[] slots = buffer.slots;
+        Object[] slots = buffer.slots;
         if (n + k <= slots.length && buffer.published == n && buffer.compareAndSet(n, n + k)) {
             System.arraycopy(more.buffer.slots, 0, slots, n, k);
             buffer.published = n + k;
             return new IssueList(buffer, n + k);
         }
-        var grown = new Issue[Math.max(n + k, 2 * n)];
+        var grown = new Object[Math.max(n + k, 2 * n)];
         System.arraycopy(slots, 0, grown, 0, n);
         System.arraycopy(more.buffer.slots, 0, grown, n, k);
         return new IssueList(new Buffer(grown, n + k), n + k);
@@ -119,13 +159,13 @@ final class IssueList extends AbstractList<Issue> implements RandomAccess {
     IssueList append(Issue issue) {
         Objects.requireNonNull(issue, "issue");
         int n = size;
-        Issue[] slots = buffer.slots;
+        Object[] slots = buffer.slots;
         if (n < slots.length && buffer.published == n && buffer.compareAndSet(n, n + 1)) {
             slots[n] = issue;
             buffer.published = n + 1;
             return new IssueList(buffer, n + 1);
         }
-        var grown = new Issue[Math.max(n + 1, 2 * n)];
+        var grown = new Object[Math.max(n + 1, 2 * n)];
         System.arraycopy(slots, 0, grown, 0, n);
         grown[n] = issue;
         return new IssueList(new Buffer(grown, n + 1), n + 1);
@@ -146,7 +186,14 @@ final class IssueList extends AbstractList<Issue> implements RandomAccess {
     @Override
     public Issue get(int index) {
         Objects.checkIndex(index, size);
-        return buffer.slots[index];
+        Object slot = buffer.slots[index];
+        return slot instanceof FromUnknownMembers marked ? marked.issue() : (Issue) slot;
+    }
+
+    @Override
+    public boolean fromUnknownMembers(int index) {
+        Objects.checkIndex(index, size);
+        return buffer.slots[index] instanceof FromUnknownMembers;
     }
 
     @Override

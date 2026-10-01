@@ -124,6 +124,16 @@ detailed from the current development cycle onward.
 
 ### Fixed
 
+- **A `strict` inside a `strict` reports an unknown field once.** Each `strict` reported every
+  field it did not know, so `strict(strict(d, Set.of("a")), Set.of("a"))` gave `unknown_field` at
+  `/b` twice for `{"a":1,"b":2}`, and so did a `strict` around a `discriminate` whose variants are
+  `strict`. A field is now reported by the innermost `strict` that does not know it, and nested
+  `strict`s still accept only fields every one of them knows, as the Raoh Specification 0.9.0 says.
+  Only an issue a `strict` made keeps the field from being reported again: an `unknown_field` that
+  a decoder of your own returns, an issue of another code at the field's path, and the issues
+  inside a `one_of_failed` issue's candidates do not. `Issue` is unchanged; the list of an `Issues`
+  records which issues a `strict` made, and equality and serialization ignore it
+  ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
 - **`ulid()` accepts either case and refuses a value past 128 bits.** It matched
   `[0-9A-HJKMNP-TV-Z]{26}`, so a lower-case ULID was refused although Crockford's base 32 is
   case-insensitive, and `80000000000000000000000000`, which needs 130 bits, was accepted. It now
