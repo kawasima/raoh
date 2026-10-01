@@ -477,9 +477,10 @@ public final class JsonDecoders {
      * {@code withDefault(nullable(dec), x)} gives {@code x} for a JSON {@code null}.
      *
      * <p>To default a member, put this inside the field:
-     * {@code field("role", withDefault(enumOf(Role.class), Role.MEMBER))}. Outside it, as in
-     * {@code withDefault(field("role", ...), ...)}, the value looked at is the enclosing object,
-     * not the member.
+     * {@code field("role", withDefault(enumOf(Role.class), Role.MEMBER))}. A {@code field(...)} is a
+     * {@code CombinePart}, not a {@code Decoder}, so it cannot be wrapped. To default a whole input,
+     * wrap a decoder of the whole input, such as {@code withDefault(combine(...).map(...), x)}; it
+     * gives {@code x} for a JSON {@code null} input, and an object with missing members still fails.
      *
      * @param <T>      the decoded value type
      * @param dec      the decoder for a value that is neither JSON {@code null} nor absent

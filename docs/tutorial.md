@@ -888,9 +888,9 @@ field("role", withDefault(enumOf(Role.class), Role.MEMBER)).decode(Map.of("role"
 // ==> Err[/role: ...]
 ```
 
-`withDefault` looks at the value it is given before the inner decoder runs, and never looks at what the inner decoder returns. Put it inside `field(...)`, where the value is the member's. Written outside, as `withDefault(field("role", ...), Role.MEMBER)`, the value it looks at is the whole map, so a missing `role` is not defaulted.
+`withDefault` looks at the value it is given before the inner decoder runs, and never looks at what the inner decoder returns. Put it inside `field(...)`, where the value is the member's. A `field(...)` is a `CombinePart`, not a `Decoder`, so `withDefault` cannot wrap it. To default a whole input, wrap a decoder of the whole input, such as `withDefault(nested(combine(...).map(...)), fallback)`: a `null` gives `fallback`, and a map with missing members still fails with their `required`.
 
-For a map, absent and `null` both arrive as `null`, and `withDefault` comes from `ObjectDecoders`. For JSON, use `JsonDecoders.withDefault`, which takes a JSON `null` and a missing member. For a jOOQ record, a column holding SQL `NULL` is defaulted, but a column the record does not have is refused with `missing_field` by `field(...)` before the value decoder runs; use `optionalField("role", ...).map(r -> r.orElse(Role.MEMBER))` to accept a record without the column.
+For a map, absent and `null` both arrive as `null`, and `withDefault` comes from `ObjectDecoders`. For JSON, use `JsonDecoders.withDefault`, which takes a JSON `null` and a missing member. For a jOOQ record, a column holding SQL `NULL` is defaulted, but a column the record does not have is refused with `missing_field` by `field(...)` before the value decoder runs; to default both a missing column and SQL `NULL`, write `optionalField("role", withDefault(enumOf(Role.class), Role.MEMBER)).map(r -> r.orElse(Role.MEMBER))`. `optionalField` alone passes SQL `NULL` to the value decoder, which refuses it with `required`.
 
 <!-- souther-section: recover -->
 ### recover — fallback from any failure

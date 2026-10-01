@@ -771,10 +771,18 @@ class JsonDecoderTest {
     // --- withDefault (#164): a JSON null or an absent value takes the default; nothing else does.
     // The cases follow the Raoh Specification's R000824–R000830 and R000836–R000839.
 
-    private static final Decoder<JsonNode, List<Integer>> ID_AND_PAGE = combine(
-            field("id", withDefault(int_(), 7)),
-            field("page", withDefault(int_(), 8))
-    ).map((id, page) -> List.of(id, page));
+    /** object([id: withDefault(int, 0), page: withDefault(int, 1)]) of R000824–R000826. */
+    private static final Decoder<JsonNode, List<Integer>> DEFAULTS_0_1 = idAndPage(0, 1);
+
+    /** object([id: withDefault(int, 7), page: withDefault(int, 8)]) of R000827–R000830. */
+    private static final Decoder<JsonNode, List<Integer>> DEFAULTS_7_8 = idAndPage(7, 8);
+
+    private static Decoder<JsonNode, List<Integer>> idAndPage(int id, int page) {
+        return combine(
+                field("id", withDefault(int_(), id)),
+                field("page", withDefault(int_(), page))
+        ).map((i, p) -> List.of(i, p));
+    }
 
     private static final Decoder<JsonNode, List<Integer>> A_AND_B = combine(
             field("a", int_()),
@@ -782,21 +790,20 @@ class JsonDecoderTest {
     ).map((a, b) -> List.of(a, b));
 
     @Test
-    void withDefaultTakesAbsentAndNullMembers() {
-        // R000827, R000828, R000824, R000825
-        assertEquals(List.of(7, 8), assertOk(ID_AND_PAGE.decode(readTree("{}"))));
-        assertEquals(List.of(7, 8), assertOk(ID_AND_PAGE.decode(readTree("{\"id\":null,\"page\":null}"))));
-        assertEquals(List.of(7, 8), assertOk(ID_AND_PAGE.decode(readTree("{\"page\":null}"))));
+    void withDefaultSpecCasesR000824ToR000830() {
+        assertEquals(List.of(0, 1), assertOk(DEFAULTS_0_1.decode(readTree("{}"))));                      // R000824
+        assertEquals(List.of(0, 1), assertOk(DEFAULTS_0_1.decode(readTree("{\"page\":null}"))));         // R000825
+        assertIssueAt(DEFAULTS_0_1.decode(readTree("{\"page\":\"x\"}")), "/page", ErrorCodes.TYPE_MISMATCH); // R000826
+        assertEquals(List.of(7, 8), assertOk(DEFAULTS_7_8.decode(readTree("{}"))));                      // R000827
+        assertEquals(List.of(7, 8),
+                assertOk(DEFAULTS_7_8.decode(readTree("{\"id\":null,\"page\":null}"))));               // R000828
+        assertEquals(List.of(3, 4), assertOk(DEFAULTS_7_8.decode(readTree("{\"id\":3,\"page\":4}"))));  // R000829
+        assertIssueAt(DEFAULTS_7_8.decode(readTree("{\"id\":\"x\"}")), "/id", ErrorCodes.TYPE_MISMATCH);     // R000830
     }
 
-    @Test
-    void withDefaultDecodesPresentMembers() {
-        // R000829, R000826, R000830
-        assertEquals(List.of(3, 4), assertOk(ID_AND_PAGE.decode(readTree("{\"id\":3,\"page\":4}"))));
-        var page = assertSingleIssue(ID_AND_PAGE.decode(readTree("{\"page\":\"x\"}")));
-        assertEquals(List.of("/page", ErrorCodes.TYPE_MISMATCH), List.of(page.path().toString(), page.code()));
-        var id = assertSingleIssue(ID_AND_PAGE.decode(readTree("{\"id\":\"x\"}")));
-        assertEquals(List.of("/id", ErrorCodes.TYPE_MISMATCH), List.of(id.path().toString(), id.code()));
+    private static void assertIssueAt(Result<?> result, String path, String code) {
+        var issue = assertSingleIssue(result);
+        assertEquals(List.of(path, code), List.of(issue.path().toString(), issue.code()));
     }
 
     @Test

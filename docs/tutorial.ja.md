@@ -890,9 +890,9 @@ field("role", withDefault(enumOf(Role.class), Role.MEMBER)).decode(Map.of("role"
 // ==> Err[/role: ...]
 ```
 
-`withDefault` は内側のデコーダーを呼ぶ前に、受け取った値を見ます。内側のデコーダーが返した結果は見ません。そのため `field(...)` の内側に置いて、メンバーの値を見せてください。`withDefault(field("role", ...), Role.MEMBER)` のように外側に書くと、見るのは Map 全体になるので、`role` がなくてもデフォルト値は使われません。
+`withDefault` は内側のデコーダーを呼ぶ前に、受け取った値を見ます。内側のデコーダーが返した結果は見ません。そのため `field(...)` の内側に置いて、メンバーの値を見せてください。`field(...)` は `Decoder` ではなく `CombinePart` なので、`withDefault` で包むことはできません。入力全体にデフォルト値を与えたいときは、`withDefault(nested(combine(...).map(...)), fallback)` のように入力全体のデコーダーを包みます。`null` なら `fallback` になり、メンバーが欠けた Map はそれぞれの `required` で失敗します。
 
-Map では、キーがないときも値が `null` のときも `null` が渡ります。`withDefault` は `ObjectDecoders` のものを使います。JSON では `JsonDecoders.withDefault` を使い、JSON の `null` とメンバーの欠落の両方にデフォルト値を適用します。jOOQ のレコードでは、SQL の `NULL` が入った列にはデフォルト値が適用されますが、レコードに列そのものがない場合は、値のデコーダーを呼ぶ前に `field(...)` が `missing_field` で拒否します。列がないレコードも受け付けたいときは `optionalField("role", ...).map(r -> r.orElse(Role.MEMBER))` を使います。
+Map では、キーがないときも値が `null` のときも `null` が渡ります。`withDefault` は `ObjectDecoders` のものを使います。JSON では `JsonDecoders.withDefault` を使い、JSON の `null` とメンバーの欠落の両方にデフォルト値を適用します。jOOQ のレコードでは、SQL の `NULL` が入った列にはデフォルト値が適用されますが、レコードに列そのものがない場合は、値のデコーダーを呼ぶ前に `field(...)` が `missing_field` で拒否します。列がない場合と SQL の `NULL` の両方にデフォルト値を与えたいときは、`optionalField("role", withDefault(enumOf(Role.class), Role.MEMBER)).map(r -> r.orElse(Role.MEMBER))` と書きます。`optionalField` だけだと SQL の `NULL` は値のデコーダーに渡り、`required` で拒否されます。
 
 <!-- souther-section: recover -->
 ### recover — あらゆる失敗からのフォールバック

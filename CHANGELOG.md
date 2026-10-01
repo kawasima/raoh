@@ -114,10 +114,12 @@ detailed from the current development cycle onward.
   a JSON `null` or a missing member. Both look at the value before `dec` runs and return `dec`'s
   result unchanged otherwise, failure included, and the `Supplier` overloads call the supplier
   only for the default. A jOOQ column the record does not have is still `missing_field` from
-  `field(...)`; use `optionalField(...).map(o -> o.orElse(x))` to accept a record without it. To
-  migrate, move the default inside the field: `withDefault(field("page", int_()), 0)` becomes
-  `field("page", withDefault(int_(), 0))`. Outside the field, the value it looks at is the
-  enclosing object, so a missing member is no longer defaulted
+  `field(...)`; `optionalField("c", withDefault(dec, x)).map(o -> o.orElse(x))` defaults both a
+  missing column and SQL `NULL`. To migrate, import `withDefault` from `JsonDecoders` or
+  `ObjectDecoders` instead of `Decoders`: `field("page", Decoders.withDefault(int_(), 0))` becomes
+  `field("page", withDefault(int_(), 0))` and means the same for a member. A `withDefault` around a
+  whole-object decoder now gives the default only for a null or absent input, and an object with
+  missing members fails with their `required`
   ([#164](https://github.com/raoh-project/raoh-java/issues/164)).
 
 ### Fixed

@@ -635,11 +635,13 @@ field("role", withDefault(enumOf(Role.class), Role.MEMBER))
 In JSON a null is a JSON `null` and an absent value is a member the object does not have
 (`JsonDecoders.withDefault`). In a map both are `null` (`ObjectDecoders.withDefault`). In a jOOQ
 record a column holding SQL `NULL` is `null`, but a column the record does not have is refused with
-`missing_field` by `field(...)` before the value decoder runs; to accept a record without the column,
-use `optionalField("role", ...).map(r -> r.orElse(Role.MEMBER))`.
+`missing_field` by `field(...)` before the value decoder runs. To default both a missing column and
+SQL `NULL`, write `optionalField("role", withDefault(enumOf(Role.class), Role.MEMBER)).map(r -> r.orElse(Role.MEMBER))`;
+`optionalField` alone passes SQL `NULL` to the value decoder, which refuses it with `required`.
 
-Written outside the field, as `withDefault(field("role", ...), ...)`, the value it looks at is the
-enclosing object, so a missing `role` is not defaulted.
+A `field(...)` is a `CombinePart`, not a `Decoder`, so `withDefault` cannot wrap it. To default a
+whole input, wrap a decoder of the whole input: `withDefault(combine(...).map(...), fallback)` gives
+`fallback` for a null input, and an object with missing members still fails with their `required`.
 
 Use `recover(...)` when you want to tolerate any decoding failure:
 

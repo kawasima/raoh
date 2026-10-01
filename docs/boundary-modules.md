@@ -96,11 +96,14 @@ This returns `Presence.Absent`, `Presence.PresentNull`, or `Presence.Present`, w
 A column the record does not have is a different thing from a column holding SQL `NULL`. `field(...)`
 refuses a missing column with `missing_field` before the value decoder runs, so
 `field("currency", withDefault(string(), "JPY"))` defaults a SQL `NULL` but not a missing column. To
-accept a record without the column, say so with `optionalField`:
+default both, use `optionalField` for the column and `withDefault` for the value:
 
 ```java
-optionalField("currency", string()).map(c -> c.orElse("JPY"))
+optionalField("currency", withDefault(string(), "JPY")).map(c -> c.orElse("JPY"))
 ```
+
+`optionalField("currency", string())` alone passes SQL `NULL` to `string()`, which refuses it with
+`required`.
 
 ## `MapDecoders`
 

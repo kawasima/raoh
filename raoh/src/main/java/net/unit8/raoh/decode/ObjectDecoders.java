@@ -499,8 +499,11 @@ public final class ObjectDecoders {
      * the default in both cases. A jOOQ column that holds SQL {@code NULL} likewise gives the
      * default. A column missing from the record is a different thing: it is the record's structure,
      * not the column's value, and {@code JooqRecordDecoders.field} refuses it with
-     * {@code missing_field} before the value decoder runs. To accept a record without the column,
-     * say so with {@code optionalField("currency", string()).map(c -> c.orElse("JPY"))}.
+     * {@code missing_field} before the value decoder runs. To default both a missing column and
+     * SQL {@code NULL}, write
+     * {@code optionalField("currency", withDefault(string(), "JPY")).map(c -> c.orElse("JPY"))}:
+     * {@code optionalField} gives the default for the missing column, and {@code withDefault} for
+     * {@code NULL}, which {@code optionalField} alone passes to {@code string()} as {@code null}.
      *
      * @param <T>      the decoded value type
      * @param dec      the decoder for a value that is not {@code null}

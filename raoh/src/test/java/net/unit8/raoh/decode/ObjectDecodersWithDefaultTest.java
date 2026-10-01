@@ -32,10 +32,18 @@ import static org.junit.jupiter.api.Assertions.fail;
  */
 class ObjectDecodersWithDefaultTest {
 
-    private static final Decoder<Map<String, Object>, List<Integer>> ID_AND_PAGE = combine(
-            field("id", withDefault(int_(), 0)),
-            field("page", withDefault(int_(), 1))
-    ).map((id, page) -> List.of(id, page));
+    /** object([id: withDefault(int, 0), page: withDefault(int, 1)]) of R000824–R000826. */
+    private static final Decoder<Map<String, Object>, List<Integer>> DEFAULTS_0_1 = idAndPage(0, 1);
+
+    /** object([id: withDefault(int, 7), page: withDefault(int, 8)]) of R000827–R000830. */
+    private static final Decoder<Map<String, Object>, List<Integer>> DEFAULTS_7_8 = idAndPage(7, 8);
+
+    private static Decoder<Map<String, Object>, List<Integer>> idAndPage(int id, int page) {
+        return combine(
+                field("id", withDefault(int_(), id)),
+                field("page", withDefault(int_(), page))
+        ).map((i, p) -> List.of(i, p));
+    }
 
     private static final Decoder<Map<String, Object>, List<Integer>> A_AND_B = combine(
             field("a", int_()),
@@ -53,29 +61,38 @@ class ObjectDecodersWithDefaultTest {
     // --- a default inside a field: an absent key and a null value both take it ---
 
     @Test
-    void anAbsentKeyTakesTheDefault() {
-        // R000824
-        assertEquals(List.of(0, 1), ok(ID_AND_PAGE.decode(Map.of())));
+    void r000824AnAbsentKeyTakesTheDefault() {
+        assertEquals(List.of(0, 1), ok(DEFAULTS_0_1.decode(Map.of())));
     }
 
     @Test
-    void aNullValueTakesTheDefault() {
-        // R000825, R000828
-        assertEquals(List.of(0, 1), ok(ID_AND_PAGE.decode(mapOf("page", null))));
-        assertEquals(List.of(0, 1), ok(ID_AND_PAGE.decode(mapOf("id", null, "page", null))));
+    void r000825ANullValueTakesTheDefault() {
+        assertEquals(List.of(0, 1), ok(DEFAULTS_0_1.decode(mapOf("page", null))));
     }
 
     @Test
-    void aPresentValueIsDecoded() {
-        // R000829
-        assertEquals(List.of(3, 4), ok(ID_AND_PAGE.decode(Map.of("id", 3, "page", 4))));
+    void r000826APresentValueOfTheWrongTypeFails() {
+        assertIssue(DEFAULTS_0_1.decode(Map.of("page", "x")), "/page", ErrorCodes.TYPE_MISMATCH);
     }
 
     @Test
-    void aPresentValueOfTheWrongTypeFails() {
-        // R000826, R000830
-        assertIssue(ID_AND_PAGE.decode(Map.of("page", "x")), "/page", ErrorCodes.TYPE_MISMATCH);
-        assertIssue(ID_AND_PAGE.decode(Map.of("id", "x")), "/id", ErrorCodes.TYPE_MISMATCH);
+    void r000827AbsentKeysTakeTheirDefaults() {
+        assertEquals(List.of(7, 8), ok(DEFAULTS_7_8.decode(Map.of())));
+    }
+
+    @Test
+    void r000828NullValuesTakeTheirDefaults() {
+        assertEquals(List.of(7, 8), ok(DEFAULTS_7_8.decode(mapOf("id", null, "page", null))));
+    }
+
+    @Test
+    void r000829PresentValuesAreDecoded() {
+        assertEquals(List.of(3, 4), ok(DEFAULTS_7_8.decode(Map.of("id", 3, "page", 4))));
+    }
+
+    @Test
+    void r000830APresentValueOfTheWrongTypeFails() {
+        assertIssue(DEFAULTS_7_8.decode(Map.of("id", "x")), "/id", ErrorCodes.TYPE_MISMATCH);
     }
 
     // --- a default around an object: only a null object takes it ---
