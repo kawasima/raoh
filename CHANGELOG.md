@@ -76,6 +76,14 @@ detailed from the current development cycle onward.
   takes Crockford's base 32 in either case with a first character of `0` to `7`, so
   `7ZZZZZZZZZZZZZZZZZZZZZZZZZ` is the largest. The string is given unchanged
   ([#165](https://github.com/raoh-project/raoh-java/issues/165)).
+- **`DecimalDecoder.multipleOf()` decides any two scales instead of throwing.** It tested
+  `value.remainder(n)`, which aligns the two scales by building a power of ten as large as their
+  difference, so `1E+100` against `7E-2147483647`, or `1E+2147483647` against `3` or `0.1`, threw
+  `ArithmeticException` at decode time. Divisibility is now decided from the unscaled values and
+  the difference of the scales, taken as a `long`: by modular exponentiation of ten when the
+  value's exponent is the larger, and by counting the value's trailing zeros when it is the
+  smaller. The answer is the same wherever `remainder` gave one
+  ([#168](https://github.com/raoh-project/raoh-java/issues/168)).
 
 ## [0.8.0] - 2026-09-27
 

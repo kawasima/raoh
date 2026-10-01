@@ -98,7 +98,9 @@ java.math.BigDecimal#<init>(java.lang.String)
 java.math.BigDecimal#ZERO:java.math.BigDecimal
 java.math.BigDecimal#valueOf(double):java.math.BigDecimal
 java.math.BigDecimal#valueOf(long):java.math.BigDecimal
+java.math.BigInteger#TEN:java.math.BigInteger
 java.math.BigInteger#ZERO:java.math.BigInteger
+java.math.BigInteger#valueOf(long):java.math.BigInteger
 java.net.URI#create(java.lang.String):java.net.URI
 java.net.URI#toString():java.lang.String
 java.text.Normalizer$Form#NFC:java.text.Normalizer$Form
@@ -207,16 +209,23 @@ java.math.BigDecimal#compareTo(java.math.BigDecimal):int
 java.math.BigDecimal#doubleValue():double
 java.math.BigDecimal#floatValue():float
 java.math.BigDecimal#precision():int
-java.math.BigDecimal#remainder(java.math.BigDecimal):java.math.BigDecimal
 java.math.BigDecimal#scale():int
 java.math.BigDecimal#signum():int
 java.math.BigDecimal#stripTrailingZeros():java.math.BigDecimal
 java.math.BigDecimal#toBigInteger():java.math.BigInteger
+java.math.BigDecimal#unscaledValue():java.math.BigInteger
+java.math.BigInteger#abs():java.math.BigInteger
 java.math.BigInteger#bitLength():int
+java.math.BigInteger#divide(java.math.BigInteger):java.math.BigInteger  -- calls the argument's methods, which a subclass can override
 java.math.BigInteger#doubleValue():double
 java.math.BigInteger#floatValue():float
 java.math.BigInteger#intValue():int
 java.math.BigInteger#longValue():long
+java.math.BigInteger#mod(java.math.BigInteger):java.math.BigInteger  -- calls the argument's methods, which a subclass can override
+java.math.BigInteger#modPow(java.math.BigInteger,java.math.BigInteger):java.math.BigInteger  -- calls the arguments' methods, which a subclass can override
+java.math.BigInteger#multiply(java.math.BigInteger):java.math.BigInteger  -- calls the argument's methods, which a subclass can override
+java.math.BigInteger#pow(int):java.math.BigInteger
+java.math.BigInteger#signum():int
 java.time.Instant#parse(java.lang.CharSequence):java.time.Instant  -- reads the CharSequence argument
 java.time.LocalDate#parse(java.lang.CharSequence):java.time.LocalDate  -- reads the CharSequence argument
 java.time.LocalDateTime#parse(java.lang.CharSequence):java.time.LocalDateTime  -- reads the CharSequence argument
