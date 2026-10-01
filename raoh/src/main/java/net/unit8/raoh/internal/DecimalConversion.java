@@ -1,4 +1,4 @@
-package net.unit8.raoh;
+package net.unit8.raoh.internal;
 
 import org.jspecify.annotations.Nullable;
 
@@ -6,23 +6,32 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 
 /**
- * Decimal text as Raoh reads it: the number it writes, with the scale it is written with.
+ * Decimal text converted to the exact {@link BigDecimal} it writes.
  *
  * <p>The text is an optional {@code +} or {@code -}, ASCII digits with an optional decimal point
  * that has a digit on at least one side ({@code 12}, {@code 12.5}, {@code 5.}, {@code .5}), and an
  * optional exponent: {@code e} or {@code E} followed by an optionally signed integer
- * ({@code 1e3}, {@code 2.5E-4}). Its value is the {@link BigDecimal} that
+ * ({@code 1e3}, {@code 2.5E-4}). The result is the {@link BigDecimal} that
  * {@link BigDecimal#BigDecimal(String)} gives for the same text, the scale included, so
- * {@code 1.50} reads as {@code 1.50} and {@code 1e3} as {@code 1E+3}.
+ * {@code 1.50} gives {@code 1.50} and {@code 1e3} gives {@code 1E+3}.
  *
- * <p>Not {@code new BigDecimal(String)} itself, which takes time that grows with the square of the
- * number of digits: it folds the digits into the magnitude a group at a time, each fold going over
- * the whole magnitude. Here the digits are split in halves and joined as
- * {@code high × 10^k + low}, with the powers of ten worked out once, so the time grows about as a
- * large multiplication does. It still grows faster than linearly; a caller reading text from an
- * untrusted source bounds its length first.
+ * <p>A value conversion and nothing more. It keeps what a {@code BigDecimal} holds, and so loses
+ * what one cannot: {@code -0} and {@code 0} give the same value, as do {@code -0.0} and
+ * {@code 0.0}. A reader that has to tell more of the text apart than its value, such as whether a
+ * number was written as an integer or with a negative zero, keeps the text and asks this only for
+ * the value.
+ *
+ * <p>{@code new BigDecimal(String)} folds the digits into the magnitude a group at a time, each
+ * fold a multiply-add over the whole magnitude, so its time grows with the square of the number of
+ * digits. Here that repeated full-width multiply-add is replaced by divide and conquer: the digits
+ * are split in halves and joined as {@code high × 10^k + low}, with each power of ten worked out
+ * once. The time still grows faster than linearly with the digits, so a caller reading text from
+ * an untrusted source bounds its length first.
+ *
+ * <p>Not part of Raoh's API. It is public only so that Raoh's other modules can call it, and it
+ * may change or go in any release.
  */
-public final class DecimalText {
+public final class DecimalConversion {
 
     /**
      * Digits read by {@link BigInteger#BigInteger(String)} directly, below which splitting costs
@@ -30,17 +39,17 @@ public final class DecimalText {
      */
     private static final int DIRECT = 1024;
 
-    private DecimalText() {
+    private DecimalConversion() {
     }
 
     /**
-     * Reads {@code text} as a decimal number.
+     * Converts {@code text} to the exact {@link BigDecimal} it writes.
      *
-     * @param text the text to read
-     * @return the number, with the scale it is written with, or {@code null} if the text is not
-     *         in the form or its exponent puts the scale outside the {@code int} range
+     * @param text the text to convert
+     * @return the value, with the scale the text is written with, or {@code null} if the text is
+     *         not in the form or its exponent puts the scale outside the {@code int} range
      */
-    public static @Nullable BigDecimal read(String text) {
+    public static @Nullable BigDecimal toBigDecimal(String text) {
         int at = 0;
         int length = text.length();
         boolean negative = false;

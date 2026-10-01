@@ -1,4 +1,4 @@
-package net.unit8.raoh;
+package net.unit8.raoh.internal;
 
 import org.junit.jupiter.api.Test;
 
@@ -13,9 +13,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
-class DecimalTextTest {
+class DecimalConversionTest {
 
-    /** The form toDecimal() accepted before DecimalText, as the regular expression it was. */
+    /** The form toDecimal() accepted before DecimalConversion, as the regular expression it was. */
     private static final Pattern FORM = Pattern.compile(
             "[+-]?(?:[0-9]+(?:\\.[0-9]*)?|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?");
 
@@ -90,16 +90,24 @@ class DecimalTextTest {
         assertEquals(List.of(), wrong);
     }
 
+    /** A value conversion: the sign of a zero is not a BigDecimal's to keep. */
+    @Test
+    void aNegativeZeroGivesTheValueZero() {
+        assertEquals(new BigDecimal("0"), DecimalConversion.toBigDecimal("-0"));
+        assertEquals(new BigDecimal("0.0"), DecimalConversion.toBigDecimal("-0.0"));
+        assertEquals(new BigDecimal("0E+7"), DecimalConversion.toBigDecimal("-0.000e10"));
+    }
+
     @Test
     void anExponentThatPutsTheScaleOutsideTheIntRangeGivesNothing() {
-        assertNull(DecimalText.read("1e2147483649"));
-        assertNull(DecimalText.read("1e-2147483648"));
-        assertNull(DecimalText.read("1.5e-2147483647"));
-        assertNull(DecimalText.read("1e99999999999999999999"));
+        assertNull(DecimalConversion.toBigDecimal("1e2147483649"));
+        assertNull(DecimalConversion.toBigDecimal("1e-2147483648"));
+        assertNull(DecimalConversion.toBigDecimal("1.5e-2147483647"));
+        assertNull(DecimalConversion.toBigDecimal("1e99999999999999999999"));
         // The int range takes both of its ends as a scale, Integer.MIN_VALUE included.
-        assertEquals(new BigDecimal("1e2147483648"), DecimalText.read("1e2147483648"));
-        assertEquals(new BigDecimal("1e-2147483647"), DecimalText.read("1e-2147483647"));
-        assertEquals(new BigDecimal("0.1e2147483649"), DecimalText.read("0.1e2147483649"));
+        assertEquals(new BigDecimal("1e2147483648"), DecimalConversion.toBigDecimal("1e2147483648"));
+        assertEquals(new BigDecimal("1e-2147483647"), DecimalConversion.toBigDecimal("1e-2147483647"));
+        assertEquals(new BigDecimal("0.1e2147483649"), DecimalConversion.toBigDecimal("0.1e2147483649"));
     }
 
     /**
@@ -110,14 +118,14 @@ class DecimalTextTest {
     void millionsOfDigitsAreNotReadInQuadraticTime() {
         var random = new Random(4);
         var text = "1" + digits(random, 3_999_999);
-        var read = assertTimeoutPreemptively(Duration.ofSeconds(60), () -> DecimalText.read(text));
+        var read = assertTimeoutPreemptively(Duration.ofSeconds(60), () -> DecimalConversion.toBigDecimal(text));
         assertEquals(4_000_000, read.precision(), "every digit is held");
         assertEquals(0, read.scale());
     }
 
     private static void check(List<String> wrong, String text) {
         var expected = expected(text);
-        var actual = DecimalText.read(text);
+        var actual = DecimalConversion.toBigDecimal(text);
         // equals, not compareTo: the scale is part of the value.
         if (expected == null ? actual != null : !expected.equals(actual)) {
             wrong.add('"' + (text.length() > 60 ? text.substring(0, 60) + "…" : text) + "\": expected "

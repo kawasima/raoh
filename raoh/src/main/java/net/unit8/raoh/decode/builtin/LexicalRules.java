@@ -5,8 +5,8 @@ import java.util.regex.Pattern;
 /**
  * The lexical languages Raoh accepts for its string conversions.
  *
- * <p>Decimal text has a reader of its own, {@link net.unit8.raoh.DecimalText}, which decides the form
- * and builds the value in one pass.
+ * <p>Decimal text is decided and converted together by
+ * {@code net.unit8.raoh.internal.DecimalConversion}.
  *
  * <p>Each rule decides on its own whether a string is accepted. The JDK parser that runs afterwards
  * only builds the value and reports what the target type cannot represent (an {@code int}
