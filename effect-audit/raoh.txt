@@ -155,6 +155,10 @@ net.unit8.raoh.encode.MapEncoders#optionalProperty -> java.util.Map#put(java.lan
 net.unit8.raoh.encode.MapEncoders#presenceProperty -> java.util.Map#put(java.lang.Object,java.lang.Object):java.lang.Object
 net.unit8.raoh.encode.PropertyEncoder#encodeTo -> java.util.Map#put(java.lang.Object,java.lang.Object):java.lang.Object
 
+[the receiver is a JDK constant such as BigInteger.TEN, so its class is exactly the JDK class; the arguments are numbers Raoh built or took from the decoded value and the configured bound]
+net.unit8.raoh.decode.builtin.DecimalDecoder#isMultiple -> java.math.BigInteger#modPow(java.math.BigInteger,java.math.BigInteger):java.math.BigInteger
+net.unit8.raoh.decode.builtin.DecimalDecoder#isMultiple -> java.math.BigInteger#pow(int):java.math.BigInteger
+
 [inspects a value an upstream decoder produced: its size, its elements, or its order against a configured bound]
 net.unit8.raoh.decode.builtin.DecimalDecoder#isMultiple -> java.math.BigDecimal#<init>(java.math.BigInteger)
 net.unit8.raoh.decode.builtin.DecimalDecoder#isMultiple -> java.math.BigDecimal#scale():int
@@ -163,9 +167,7 @@ net.unit8.raoh.decode.builtin.DecimalDecoder#isMultiple -> java.math.BigDecimal#
 net.unit8.raoh.decode.builtin.DecimalDecoder#isMultiple -> java.math.BigInteger#abs():java.math.BigInteger
 net.unit8.raoh.decode.builtin.DecimalDecoder#isMultiple -> java.math.BigInteger#divide(java.math.BigInteger):java.math.BigInteger
 net.unit8.raoh.decode.builtin.DecimalDecoder#isMultiple -> java.math.BigInteger#mod(java.math.BigInteger):java.math.BigInteger
-net.unit8.raoh.decode.builtin.DecimalDecoder#isMultiple -> java.math.BigInteger#modPow(java.math.BigInteger,java.math.BigInteger):java.math.BigInteger
 net.unit8.raoh.decode.builtin.DecimalDecoder#isMultiple -> java.math.BigInteger#multiply(java.math.BigInteger):java.math.BigInteger
-net.unit8.raoh.decode.builtin.DecimalDecoder#isMultiple -> java.math.BigInteger#pow(int):java.math.BigInteger
 net.unit8.raoh.decode.builtin.DecimalDecoder#isMultiple -> java.math.BigInteger#signum():int
 net.unit8.raoh.decode.builtin.DecimalDecoder#max -> java.math.BigDecimal#compareTo(java.math.BigDecimal):int
 net.unit8.raoh.decode.builtin.DecimalDecoder#min -> java.math.BigDecimal#compareTo(java.math.BigDecimal):int
