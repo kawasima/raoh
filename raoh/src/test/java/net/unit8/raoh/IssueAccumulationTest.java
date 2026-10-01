@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -18,10 +19,12 @@ import java.util.concurrent.Future;
 import static net.unit8.raoh.decode.ObjectDecoders.int_;
 import static net.unit8.raoh.decode.ObjectDecoders.list;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Accumulating issues takes time in the number of issues, and what is accumulated stays an
@@ -88,30 +91,98 @@ class IssueAccumulationTest {
 
     // --- Immutable, whoever appends ---
 
-    @Test
-    void appendingTwiceToTheSameIssuesGivesTwoListsThatDoNotSeeEachOther() {
-        Issues base = Issues.EMPTY.add(issue(0)).add(issue(1));
-        Issues left = base.add(issue(2));
-        Issues right = base.add(issue(3));
-        Issues longer = left.merge(new Issues(List.of(issue(4))));
+    /** Three issues: an array of four, so one more append fits in place. */
+    private static Issues baseWithRoom() {
+        Issues base = Issues.EMPTY.add(issue(-3)).add(issue(-2)).add(issue(-1));
+        assertEquals(3, base.asList().size());
+        return base;
+    }
 
-        assertEquals(List.of(issue(0), issue(1)), base.asList());
-        assertEquals(List.of(issue(0), issue(1), issue(2)), left.asList());
-        assertEquals(List.of(issue(0), issue(1), issue(3)), right.asList());
-        assertEquals(List.of(issue(0), issue(1), issue(2), issue(4)), longer.asList());
+    private static boolean shareArray(Issues a, Issues b) {
+        return ((IssueList) a.asList()).sharesArrayWith((IssueList) b.asList());
     }
 
     @Test
-    void threadsAppendingToTheSameIssuesEachGetTheirOwn() throws Exception {
-        Issues base = Issues.EMPTY.add(issue(-1));
+    void appendingTwiceToTheSameIssuesExtendsInPlaceOnceAndCopiesOnce() {
+        Issues base = baseWithRoom();
+        Issues left = base.add(issue(0));
+        Issues right = base.add(issue(1));
+
+        // The first append claims the free slot; the second finds it claimed and copies.
+        assertTrue(shareArray(base, left), "the first append extends the array in place");
+        assertFalse(shareArray(base, right), "the second append copies");
+        assertEquals(List.of(issue(-3), issue(-2), issue(-1)), base.asList());
+        assertEquals(List.of(issue(-3), issue(-2), issue(-1), issue(0)), left.asList());
+        assertEquals(List.of(issue(-3), issue(-2), issue(-1), issue(1)), right.asList());
+
+        // Each goes on independently: the copy has room of its own, the original array is full.
+        Issues rightLonger = right.add(issue(2));
+        Issues leftLonger = left.add(issue(3));
+        assertTrue(shareArray(right, rightLonger));
+        assertFalse(shareArray(left, leftLonger));
+        assertEquals(List.of(issue(-3), issue(-2), issue(-1), issue(1), issue(2)), rightLonger.asList());
+        assertEquals(List.of(issue(-3), issue(-2), issue(-1), issue(0), issue(3)), leftLonger.asList());
+        assertEquals(List.of(issue(-3), issue(-2), issue(-1), issue(0)), left.asList());
+    }
+
+    @Test
+    void mergingTwiceIntoTheSameIssuesExtendsInPlaceOnceAndCopiesOnce() {
+        // Five issues: an array of eight, room for three.
+        Issues base = Issues.EMPTY.add(issue(-4)).add(issue(-3)).add(issue(-2)).add(issue(-1)).add(issue(0));
+        Issues first = base.merge(new Issues(List.of(issue(1), issue(2))));
+        Issues second = base.merge(new Issues(List.of(issue(3))));
+        assertTrue(shareArray(base, first));
+        assertFalse(shareArray(base, second));
+        assertEquals(List.of(issue(-4), issue(-3), issue(-2), issue(-1), issue(0), issue(1), issue(2)), first.asList());
+        assertEquals(List.of(issue(-4), issue(-3), issue(-2), issue(-1), issue(0), issue(3)), second.asList());
+        assertEquals(5, base.asList().size());
+    }
+
+    @Test
+    void threadsAppendingToTheSameIssuesRaceForTheFreeSlotAndEachGetTheirOwn() throws Exception {
+        int threads = 8;
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        try {
+            for (int round = 0; round < 200; round++) {
+                Issues base = baseWithRoom();
+                var start = new CyclicBarrier(threads);
+                var futures = new ArrayList<Future<Issues>>();
+                for (int t = 0; t < threads; t++) {
+                    int own = t;
+                    futures.add(pool.submit(() -> {
+                        start.await();
+                        return base.add(issue(own));
+                    }));
+                }
+                int inPlace = 0;
+                for (int t = 0; t < threads; t++) {
+                    Issues got = futures.get(t).get();
+                    assertEquals(List.of(issue(-3), issue(-2), issue(-1), issue(t)), got.asList());
+                    if (shareArray(base, got)) {
+                        inPlace++;
+                    }
+                }
+                assertEquals(1, inPlace, "exactly one thread claims the free slot; the others copy");
+                assertEquals(List.of(issue(-3), issue(-2), issue(-1)), base.asList());
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void threadsKeepAppendingFromTheSameIssuesIndependently() throws Exception {
+        Issues base = baseWithRoom();
         int threads = 8;
         int each = 10_000;
         ExecutorService pool = Executors.newFixedThreadPool(threads);
         try {
+            var start = new CyclicBarrier(threads);
             var futures = new ArrayList<Future<Issues>>();
             for (int t = 0; t < threads; t++) {
                 int offset = t * each;
                 futures.add(pool.submit(() -> {
+                    start.await();
                     Issues current = base;
                     for (int i = 0; i < each; i++) {
                         current = current.add(issue(offset + i));
@@ -121,16 +192,32 @@ class IssueAccumulationTest {
             }
             for (int t = 0; t < threads; t++) {
                 List<Issue> got = futures.get(t).get().asList();
-                assertEquals(each + 1, got.size());
-                assertEquals(issue(-1), got.get(0));
+                assertEquals(each + 3, got.size());
+                assertEquals(List.of(issue(-3), issue(-2), issue(-1)), got.subList(0, 3));
                 for (int i = 0; i < each; i++) {
-                    assertEquals(issue(t * each + i), got.get(i + 1));
+                    assertEquals(issue(t * each + i), got.get(i + 3));
                 }
             }
         } finally {
             pool.shutdownNow();
         }
-        assertEquals(List.of(issue(-1)), base.asList());
+        assertEquals(List.of(issue(-3), issue(-2), issue(-1)), base.asList());
+    }
+
+    @Test
+    void aFoldExtendsOneArrayUntilItIsFull() {
+        // Amortized constant time, checked by structure rather than by the clock: a fold of n adds
+        // starts a new array only when the last one is full, doubling it, so about log2(n) times.
+        Issues current = Issues.EMPTY;
+        int arrays = 0;
+        for (int i = 0; i < MANY; i++) {
+            Issues next = current.add(issue(i));
+            if (!shareArray(current, next)) {
+                arrays++;
+            }
+            current = next;
+        }
+        assertTrue(arrays <= 1 + 32 - Integer.numberOfLeadingZeros(MANY), "arrays started: " + arrays);
     }
 
     @Test

@@ -20,10 +20,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>So appending costs time in the issues appended, amortized over a fold, and reading an element
  * costs constant time, at any point of the fold.
  *
- * <p>The array and the size are final and the elements are written before the list that holds
- * them is made, so a list handed to another thread shows all its elements. Claiming the end of the
- * array is a compare-and-set, so two threads appending to the same list each get a list of their
- * own.
+ * <p>Claiming the end of the array is a compare-and-set, so two threads appending to the same list
+ * each get a list of their own: one extends the array, the others copy. A list must show all its
+ * elements to a thread it reaches without synchronization, as any immutable value does, yet the
+ * elements before its end may have been written by other threads that appended earlier. So
+ * appending in place also requires that every append so far has finished writing
+ * ({@link Buffer#published}, read before the claim and written after the elements): the appending
+ * thread then has all earlier writes happen before it makes the new list, whose array and size are
+ * final fields, and the rules for final fields carry them to any thread that reads the list.
  */
 final class IssueList extends AbstractList<Issue> implements RandomAccess {
 
@@ -35,9 +39,13 @@ final class IssueList extends AbstractList<Issue> implements RandomAccess {
     private static final class Buffer extends AtomicInteger {
         final Issue[] slots;
 
+        /** How much of the array has been written, by appends that have finished. */
+        volatile int published;
+
         Buffer(Issue[] slots, int used) {
             super(used);
             this.slots = slots;
+            this.published = used;
         }
     }
 
@@ -91,8 +99,9 @@ final class IssueList extends AbstractList<Issue> implements RandomAccess {
         }
         int n = size;
         Issue[] slots = buffer.slots;
-        if (n + k <= slots.length && buffer.compareAndSet(n, n + k)) {
+        if (n + k <= slots.length && buffer.published == n && buffer.compareAndSet(n, n + k)) {
             System.arraycopy(more.buffer.slots, 0, slots, n, k);
+            buffer.published = n + k;
             return new IssueList(buffer, n + k);
         }
         var grown = new Issue[Math.max(n + k, 2 * n)];
@@ -111,14 +120,27 @@ final class IssueList extends AbstractList<Issue> implements RandomAccess {
         Objects.requireNonNull(issue, "issue");
         int n = size;
         Issue[] slots = buffer.slots;
-        if (n < slots.length && buffer.compareAndSet(n, n + 1)) {
+        if (n < slots.length && buffer.published == n && buffer.compareAndSet(n, n + 1)) {
             slots[n] = issue;
+            buffer.published = n + 1;
             return new IssueList(buffer, n + 1);
         }
         var grown = new Issue[Math.max(n + 1, 2 * n)];
         System.arraycopy(slots, 0, grown, 0, n);
         grown[n] = issue;
         return new IssueList(new Buffer(grown, n + 1), n + 1);
+    }
+
+    /**
+     * Whether this list and {@code other} are views of the same array, that is, whether one was
+     * made by appending in place to the other or to a list they share. For tests of which path an
+     * append took.
+     *
+     * @param other the other list
+     * @return whether they share an array
+     */
+    boolean sharesArrayWith(IssueList other) {
+        return buffer == other.buffer;
     }
 
     @Override
