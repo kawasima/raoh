@@ -297,6 +297,8 @@ class StringConversionGrammarTest {
             "-0000-01-01T00:00:00Z",
             "2016-12-31T24:00:01Z",       // only 24:00:00 is an end of day
             "2016-12-31T24:00:00.5Z",
+            "2016-12-31T24:00:00.0Z",     // hour 24 takes no fraction, all-zero or not
+            "2016-12-31T24:00:00.000000000+09:00",
             "2016-12-31T23:59:59+18:01",  // beyond the offset range
             "2016-13-01T00:00:00Z",
             "２０１６-12-31T23:59:59Z"

@@ -35,6 +35,19 @@ class CodePointOrderTest {
         assertEquals(0, CodePointOrder.compare("😀x", "😀x"));
     }
 
+    /**
+     * An unpaired surrogate is no scalar value, so no text holds one; a Java string can, and it is
+     * placed above every character of the basic plane, where the unit a pair starts with is.
+     */
+    @Test
+    void anUnpairedSurrogateComesAfterEveryBasicPlaneCharacter() {
+        assertTrue(CodePointOrder.compare("\uD800", "\uFFFF") > 0);
+        assertTrue(CodePointOrder.compare("\uDC00", "\uFFFF") > 0);
+        assertTrue(CodePointOrder.compare("\uFFFF", "\uD800") < 0);
+        assertTrue(CodePointOrder.compare("a\uD800", "a\uE000") > 0);
+        assertEquals(0, CodePointOrder.compare("\uD800", "\uD800"));
+    }
+
     @Test
     void sortedListsInCodePointOrder() {
         assertEquals(List.of("a", "Ａ", "😀"), CodePointOrder.sorted(Set.of("😀", "Ａ", "a")));

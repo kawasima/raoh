@@ -109,7 +109,7 @@ string().trim().toLowerCase().email().decode("not-email")
 string().minLength(3).maxLength(20).decode("ab")
 // ==> Err[/: must be at least 3 characters]
 
-string().pattern(Pattern.compile("^\\d{3}-\\d{4}$")).decode("123-4567")
+string().pattern("^\\d{3}-\\d{4}$").decode("123-4567")
 // ==> Ok[123-4567]
 
 string().uuid().decode("550e8400-e29b-41d4-a716-446655440000")
@@ -333,7 +333,7 @@ record Customer(String name, Address address) {}
 
 var addressDec = combine(
         field("city", string().nonBlank()),
-        field("zip", string().pattern(Pattern.compile("^\\d{3}-\\d{4}$")))
+        field("zip", string().pattern("^\\d{3}-\\d{4}$"))
 ).map(Address::new);
 
 var customerDec = combine(
@@ -696,7 +696,7 @@ var contactDec = oneOf(
         ).map((kind, value) -> (Contact) new EmailContact(value)),
         combine(
                 field("kind", literal("phone")),
-                field("value", string().pattern(Pattern.compile("^\\d{10,15}$")))
+                field("value", string().pattern("^\\d{10,15}$"))
         ).map((kind, value) -> (Contact) new PhoneContact(value))
 );
 
@@ -794,7 +794,7 @@ Decoder<Map<String, Object>, Payment> paymentDec = (in, path) -> {
     return switch (((Ok<String>) mr).value()) {
         case "credit_card" -> combine(
                 field("number", string().nonBlank()),
-                field("expiry", string().pattern(Pattern.compile("^\\d{2}/\\d{2}$")))
+                field("expiry", string().pattern("^\\d{2}/\\d{2}$"))
         ).map((n, e) -> (Payment) new CreditCard(n, e)).decode(in, path);
         case "bank_transfer" -> combine(
                 field("bankCode", string().nonBlank()),
@@ -1032,7 +1032,7 @@ var contactMethodDec = oneOf(
         ).map((k, v) -> (ContactMethod) new EmailMethod(v)),
         combine(
                 field("kind", literal("phone")),
-                field("value", string().pattern(Pattern.compile("^\\d{10,15}$")))
+                field("value", string().pattern("^\\d{10,15}$"))
         ).map((k, v) -> (ContactMethod) new PhoneMethod(v))
 );
 

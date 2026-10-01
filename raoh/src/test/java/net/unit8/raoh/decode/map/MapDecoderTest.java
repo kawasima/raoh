@@ -695,7 +695,7 @@ class MapDecoderTest {
                 ).map((kind, value) -> new EmailContact(new Email(value))),
                 combine(
                         field("kind", literal("phone")),
-                        field("value", string().pattern(java.util.regex.Pattern.compile("^\\d+$")))
+                        field("value", string().pattern("^\\d+$"))
                 ).map((kind, value) -> new Phone(value))
         );
 
@@ -762,7 +762,7 @@ class MapDecoderTest {
 
     @Test
     void customConstraintViaStringDecoderFrom() {
-        var sku = net.unit8.raoh.decode.builtin.StringDecoder.from(string()).pattern(java.util.regex.Pattern.compile("^[A-Z]{3}-\\d{4}$"));
+        var sku = net.unit8.raoh.decode.builtin.StringDecoder.from(string()).pattern("^[A-Z]{3}-\\d{4}$");
         var dec = field("sku", sku);
 
         assertEquals("ABC-1234", assertOk(dec.decode(Map.of("sku", "ABC-1234"))));
