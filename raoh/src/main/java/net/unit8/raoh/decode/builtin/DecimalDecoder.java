@@ -9,6 +9,7 @@ import net.unit8.raoh.Result;
 import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -243,6 +244,10 @@ public final class DecimalDecoder<I extends @Nullable Object> implements Decoder
     /**
      * Restricts the decoded value to be a multiple of {@code n}.
      *
+     * <p>Decided for any two decimals, however far apart their scales are: {@code 1E+100} is not a
+     * multiple of {@code 7E-2147483647}, and that is found without building the power of ten their
+     * scales differ by.
+     *
      * @param n       the required divisor
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#NOT_MULTIPLE_OF} if not a multiple
@@ -253,13 +258,51 @@ public final class DecimalDecoder<I extends @Nullable Object> implements Decoder
             throw new IllegalArgumentException("divisor must not be zero");
         }
         return chain((value, path) -> {
-            if (value.remainder(n).compareTo(BigDecimal.ZERO) != 0) {
+            if (!isMultiple(value, n)) {
                 var meta = Map.<String, Object>of("divisor", n, "actual", value);
                 return Result.failWith(path, ErrorCodes.NOT_MULTIPLE_OF, message,
                         String.format(Locale.ROOT, "must be a multiple of %s", n), meta);
             }
             return Result.ok(value);
         });
+    }
+
+    /**
+     * Whether {@code value} is an integer multiple of {@code divisor}, which is not zero.
+     *
+     * <p>With {@code value = u_v × 10^-s_v} and {@code divisor = u_d × 10^-s_d}, the quotient is
+     * {@code (u_v / u_d) × 10^d} with {@code d = s_d - s_v}. Where {@code d} is not negative it is
+     * an integer when {@code u_d} divides {@code u_v × 10^d}, which is asked modulo {@code |u_d|}
+     * with {@code 10^d} worked out by modular exponentiation. Where it is negative, {@code u_v} has
+     * to end in at least {@code -d} decimal zeros, which are counted and not built, and what is
+     * left of it has to be a multiple of {@code u_d}. {@link BigDecimal#remainder} instead aligns
+     * the two scales, building a power of ten as large as {@code d}, which for scales far apart is
+     * more than a {@code BigInteger} holds.
+     *
+     * <p>{@code d} is a {@code long}: the scales span the whole {@code int} range, and so does
+     * their difference twice over.
+     *
+     * @param value   the value
+     * @param divisor the divisor, not zero
+     * @return whether {@code value / divisor} is an integer
+     */
+    private static boolean isMultiple(BigDecimal value, BigDecimal divisor) {
+        BigInteger unscaled = value.unscaledValue();
+        if (unscaled.signum() == 0) {
+            return true;
+        }
+        BigInteger modulus = divisor.unscaledValue().abs();
+        long d = (long) divisor.scale() - value.scale();
+        if (d >= 0) {
+            BigInteger power = BigInteger.TEN.modPow(BigInteger.valueOf(d), modulus);
+            return unscaled.mod(modulus).multiply(power).mod(modulus).signum() == 0;
+        }
+        long zeros = -(long) new BigDecimal(unscaled).stripTrailingZeros().scale();
+        if (-d > zeros) {
+            return false;
+        }
+        // -d is at most the zeros u_v ends in, so this power is no longer than u_v.
+        return unscaled.divide(BigInteger.TEN.pow((int) -d)).mod(modulus).signum() == 0;
     }
 
     /**
