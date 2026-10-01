@@ -78,7 +78,7 @@ float_().decode(2.5f)
 // ==> Ok[2.5]
 
 bytes().decode(new byte[]{1, 2, 3})
-// ==> Ok[[1, 2, 3]]
+// ==> Ok[[B@...]  (the byte[] passed in, unchanged)
 ```
 
 Each method returns a `Decoder<Object, T>`. If the value is not the expected type, a `type_mismatch` error is returned.
@@ -191,12 +191,14 @@ date().before(LocalDate.of(2030, 1, 1)).decode(LocalDate.of(2035, 1, 1))
 
 date().between(LocalDate.of(2020, 1, 1), LocalDate.of(2030, 12, 31)).decode(LocalDate.of(2025, 6, 15))
 // ==> Ok[2025-06-15]
+```
 
-iso8601().past().decode(Instant.now().minusSeconds(3600))
-// ==> Ok[...]
+There is no `past()` or `future()`: a decoder does not read the clock, so the same input always decodes the same way. To compare with the current time, take the time where the request is handled and pass it as a bound:
 
-iso8601().future().decode(Instant.now().minusSeconds(3600))
-// ==> Err[/: must be in the future]
+```java
+var now = Instant.parse("2025-06-15T12:00:00Z"); // e.g. clock.instant() where the request is handled
+iso8601().before(now).decode(Instant.parse("2025-06-15T11:00:00Z"))
+// ==> Ok[2025-06-15T11:00:00Z]
 ```
 
 <!-- souther-section: coerce -->
@@ -348,7 +350,7 @@ customerDec.decode(Map.of(
         "name", "",
         "address", Map.of("city", "", "zip", "bad")
 ))
-// ==> Err[/name: is required, /address/city: is required, /address/zip: ...]
+// ==> Err[/name: must not be blank, /address/city: must not be blank, /address/zip: invalid format]
 ```
 
 ---
@@ -516,7 +518,7 @@ orderItemsDec.decode(Map.of("items", List.of(
         Map.of("productId", "A001", "quantity", 3),
         Map.of("productId", "", "quantity", -1)
 )))
-// ==> Err[/items/1/productId: is required, /items/1/quantity: must be positive]
+// ==> Err[/items/1/productId: must not be blank, /items/1/quantity: must be positive]
 ```
 
 List constraints beyond `nonempty()`:
@@ -526,10 +528,10 @@ field("tags", list(string()).minSize(1).maxSize(10)).decode(Map.of("tags", List.
 // ==> Ok[[a, b]]
 
 field("tags", list(string()).unique()).decode(Map.of("tags", List.of("a", "b", "a")))
-// ==> Err[/tags: contains duplicates: [a]]
+// ==> Err[/tags: must not contain duplicates: [a]]
 
 field("codes", list(string()).fixedSize(3)).decode(Map.of("codes", List.of("X", "Y")))
-// ==> Err[/codes: size must be exactly 3]
+// ==> Err[/codes: must have exactly 3 elements]
 ```
 
 The list constraints (`nonempty` / `minSize` / `maxSize` / `fixedSize` / `contains` / `unique`) and the record size constraints each take an optional trailing custom message, like the string/numeric constraints — handy for multi-select form validation:
@@ -721,7 +723,7 @@ record Circle(double radius) implements Shape {}
 record Rect(double width, double height) implements Shape {}
 
 Decoder<Map<String, Object>, Shape> shapeDec = discriminate("type",
-        variant("circle", field("radius", double_().positive()).map(Circle::new)),
+        variant("circle", field("radius", double_().positive()).map(Circle::new).asDecoder()),
         variant("rect", combine(
                 field("width", double_().positive()),
                 field("height", double_().positive())
@@ -738,6 +740,8 @@ shapeDec.decode(Map.of("type", "hexagon"))
 ```
 
 `discriminate()` reads the field value first and dispatches to the matching decoder — it does not try all candidates like `oneOf()`. This is more efficient and produces clearer error messages. Two variants sharing a tag fail with `IllegalArgumentException` at construction.
+
+`variant` takes a `Decoder`. A `combine(...).map(...)` is one, but a single `field(...)` is a `CombinePart`, so the circle arm turns it into a decoder with `asDecoder()`.
 
 To assemble the variant set at run time, the `Map`-taking form `discriminate("type", Map.of(...))` is still available (there each arm must be up-cast to the supertype). This mirrors `MapEncoders.variant(...)` / `discriminate(...)` on the encode side.
 
@@ -862,7 +866,7 @@ var rows = List.<Map<String, Object>>of(
 );
 
 Result.traverse(rows, orderDec::decode, Path.of("orders"))
-// ==> Err[/orders/1/order_id: is required, /orders/1/total: must be non-negative]
+// ==> Err[/orders/1/order_id: must not be blank, /orders/1/total: must be non-negative]
 ```
 
 Index-tagged paths (like `/orders/1/order_id`) tell you exactly which row failed.
@@ -926,7 +930,7 @@ apiRequestDec.decode(Map.of("action", "transfer", "amount", 100))
 // ==> Ok[ApiRequest[action=transfer, amount=100]]
 
 apiRequestDec.decode(Map.of("action", "transfer", "amount", 100, "extra", true))
-// ==> Err[/extra: unknown_field]
+// ==> Err[/extra: unknown field]
 ```
 
 ---
@@ -970,7 +974,7 @@ Raoh errors are structured and can be extracted in multiple representations depe
 var checkDec = combine(
         field("email", string().email()),
         field("age", int_().range(0, 150))
-).map((email, age) -> Map.of("email", email, "age", age));
+).map((email, age) -> Map.<String, Object>of("email", email, "age", age));
 
 var result = checkDec.decode(Map.of("email", "bad", "age", 300));
 ```
@@ -1043,7 +1047,7 @@ var userRegDec = combine(
         field("email", string().trim().toLowerCase().email().map(Email::new)),
         field("password", string().minLength(8).maxLength(128).map(Password::new)),
         field("role", withDefault(enumOf(Role.class), Role.MEMBER)),
-        field("contacts", list(contactMethodDec).nonempty())
+        field("contacts", list(nested(contactMethodDec)).nonempty())
 ).map(UserRegistration::new);
 
 userRegDec.decode(Map.of(
@@ -1067,7 +1071,7 @@ userRegDec.decode(Map.of(
                 Map.of("kind", "email", "value", "not-email")
         )
 ))
-// ==> Err[/email: not a valid email, /password: must be at least 8 characters, /contacts/0/value: not a valid email]
+// ==> Err[/email: not a valid email, /password: must be at least 8 characters, /contacts/0: no variant matched]
 ```
 
 For Spring MVC controllers receiving JSON input, swap in `JsonDecoders` (reference). Take the body as text and read it with `readTree`: binding it to `JsonNode` lets Spring's `ObjectMapper` turn every number with a fraction into a `double` first. `readTree` throws a Jackson `StreamReadException` for a body that is not JSON; `examples/spring` maps it to 400.

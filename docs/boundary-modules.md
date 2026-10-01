@@ -35,7 +35,7 @@ This module is a good fit when your application boundary is already Jackson-base
 Example:
 
 ```java
-JsonDecoder<List<String>> tags =
+CombinePart<JsonNode, List<String>> tags =
         field("tags", list(string().trim().nonBlank()).nonempty());
 ```
 
@@ -131,6 +131,6 @@ This module is a good fit when your application receives already-materialized da
 Example:
 
 ```java
-MapDecoder<Map<String, BigDecimal>> prices =
+CombinePart<Map<String, Object>, Map<String, BigDecimal>> prices =
         field("prices", map(decimal()).minSize(1));
 ```

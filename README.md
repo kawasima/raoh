@@ -197,7 +197,7 @@ That means the "happy path" looks like object construction, while the failure pa
 ```java
 import tools.jackson.databind.JsonNode;
 
-import net.unit8.raoh.json.JsonDecoder;
+import net.unit8.raoh.decode.Decoder;
 
 import static net.unit8.raoh.json.JsonDecoders.*;
 
@@ -205,15 +205,15 @@ record Email(String value) {}
 record Age(int value) {}
 record User(Email email, Age age) {}
 
-JsonDecoder<Email> email() {
+Decoder<JsonNode, Email> email() {
     return string().trim().toLowerCase().email().map(Email::new);
 }
 
-JsonDecoder<Age> age() {
+Decoder<JsonNode, Age> age() {
     return int_().range(0, 150).map(Age::new);
 }
 
-JsonDecoder<User> user() {
+Decoder<JsonNode, User> user() {
     return combine(
             field("email", email()),
             field("age", age())
@@ -262,13 +262,13 @@ Example failure shape:
 ```java
 import java.util.Map;
 
-import net.unit8.raoh.decode.map.MapDecoder;
+import net.unit8.raoh.decode.Decoder;
 
 import static net.unit8.raoh.decode.map.MapDecoders.*;
 
 record Config(String host, int port) {}
 
-MapDecoder<Config> config() {
+Decoder<Map<String, Object>, Config> config() {
     return combine(
             field("host", string().nonBlank()),
             field("port", int_().range(1, 65535))
@@ -335,7 +335,7 @@ Other:
 - `iso8601()`
 - `date()`
 - `time()`
-- `localDateTime()`
+- `dateTime()`
 - `offsetDateTime()`
 - `toInt()`
 - `toLong()`
@@ -343,15 +343,14 @@ Other:
 - `toBool()`
 - `StringDecoder.from(...)`
 
-Temporal decoders (`iso8601()`, `date()`, `time()`, `localDateTime()`, `offsetDateTime()`) return a `TemporalDecoder` that supports:
+Temporal decoders (`iso8601()`, `date()`, `time()`, `dateTime()`, `offsetDateTime()`) return a `TemporalDecoder` that supports:
 
 - `before(...)`
 - `after(...)`
 - `between(...)`
-- `past()`
-- `future()`
-- `pastOrPresent()`
-- `futureOrPresent()`
+
+There is no `past()` or `future()`: a decoder does not read the clock. Compare with a time you pass
+in, such as `iso8601().before(now)` built where `now` is known.
 
 ### Numeric Capabilities
 
@@ -459,7 +458,7 @@ import java.math.BigDecimal;
 
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
-import net.unit8.raoh.json.JsonDecoder;
+import net.unit8.raoh.decode.Decoder;
 
 import static net.unit8.raoh.json.JsonDecoders.*;
 
@@ -478,22 +477,22 @@ record Money(BigDecimal amount, Currency currency) {
 
 record User(UserId id, Email email, Money balance) {}
 
-JsonDecoder<Email> email() {
+Decoder<JsonNode, Email> email() {
     return string().trim().toLowerCase().email().map(Email::new);
 }
 
-JsonDecoder<UserId> userId() {
+Decoder<JsonNode, UserId> userId() {
     return string().uuid().map(UserId::new);
 }
 
-JsonDecoder<Money> money() {
+Decoder<JsonNode, Money> money() {
     return combine(
             field("amount", decimal()),
             field("currency", enumOf(Currency.class))
     ).flatMap(Money::parse);
 }
 
-JsonDecoder<User> user() {
+Decoder<JsonNode, User> user() {
     return combine(
             field("id", userId()),
             field("email", email()),
@@ -582,7 +581,8 @@ Use `lazy(...)` for recursive structures:
 ```java
 record Comment(String body, List<Comment> replies) {}
 
-JsonDecoder<Comment>[] self = new JsonDecoder[1];
+@SuppressWarnings("unchecked")
+Decoder<JsonNode, Comment>[] self = new Decoder[1];
 self[0] = combine(
         field("body", string().nonBlank()),
         field("replies", withDefault(list(lazy(() -> self[0])), List.of()))
@@ -743,10 +743,11 @@ combine(
 - cross-field validation
 
 ```java
+// Range.parse(int start, int end) returns Result<Range>, failing when start > end
 combine(
         field("start", int_()),
         field("end", int_())
-).flatMap(Period::parse);
+).flatMap(Range::parse);
 ```
 
 - defaults
