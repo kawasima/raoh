@@ -137,6 +137,17 @@ detailed from the current development cycle onward.
   of the same input as the issue that holds them, but `rebase()` changed only the outer path, so
   a `oneOf` run inside `flatMap` reported its candidates at paths missing the prefix. They are
   now rebased with it ([#167](https://github.com/raoh-project/raoh-java/issues/167)).
+- **Accumulating issues takes linear time.** `Issues.add` and `Issues.merge` copied every issue
+  already accumulated, so each decoder that accumulates one failure at a time took time in the
+  square of the failures: `list(int_())` over 100,000 failing elements, or `strict` over 100,000
+  unknown fields, took about ten seconds, which a single large invalid input could trigger. The
+  same held for `map`, the JSON `list` and `map`, `Result.traverse` and the combinators, and for a
+  caller's own loop over `merge`. `Issues` now keeps its issues in an array that `add` and
+  `merge` extend in place when they extend the most recent result, claiming its end with a
+  compare-and-set, and copy otherwise; the issues are still immutable, and a result appended to
+  twice gives two independent results. Those decodes now take about ten milliseconds. Putting
+  issues in front with `other.merge(this)` still copies `this`
+  ([#179](https://github.com/raoh-project/raoh-java/issues/179)).
 - **What is built from a collection or array keeps its own copy.** `Issues` is documented as
   immutable but kept the list it was given, so changing that list afterwards changed it; once
   `oneOf` started keeping its candidates' `Issues` to resolve them, the `candidates` metadata

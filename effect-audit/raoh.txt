@@ -110,10 +110,6 @@ net.unit8.raoh.IssueTree$IssueFrame#next -> java.util.List#get(int):java.lang.Ob
 net.unit8.raoh.IssueTree$IssueFrame#next -> java.util.List#isEmpty():boolean
 net.unit8.raoh.IssueTree$IssueFrame#next -> java.util.List#size():int
 net.unit8.raoh.IssueTree$ListFrame#<init> -> java.util.List#size():int
-net.unit8.raoh.Issues#add -> java.util.ArrayList#add(java.lang.Object):boolean
-net.unit8.raoh.Issues#add -> java.util.ArrayList#addAll(java.util.Collection):boolean
-net.unit8.raoh.Issues#add -> java.util.List#copyOf(java.util.Collection):java.util.List
-net.unit8.raoh.Issues#add -> java.util.List#size():int
 net.unit8.raoh.Issues#flatten -> java.util.List#stream():java.util.stream.Stream
 net.unit8.raoh.Issues#flatten -> java.util.stream.Collectors#groupingBy(java.util.function.Function,java.util.function.Supplier,java.util.stream.Collector):java.util.stream.Collector
 net.unit8.raoh.Issues#flatten -> java.util.stream.Collectors#mapping(java.util.function.Function,java.util.stream.Collector):java.util.stream.Collector
@@ -128,10 +124,7 @@ net.unit8.raoh.Issues#groupByPath -> java.util.List#stream():java.util.stream.St
 net.unit8.raoh.Issues#groupByPath -> java.util.stream.Collectors#groupingBy(java.util.function.Function,java.util.function.Supplier,java.util.stream.Collector):java.util.stream.Collector
 net.unit8.raoh.Issues#groupByPath -> java.util.stream.Stream#collect(java.util.stream.Collector):java.lang.Object
 net.unit8.raoh.Issues#isEmpty -> java.util.List#isEmpty():boolean
-net.unit8.raoh.Issues#merge -> java.util.ArrayList#addAll(java.util.Collection):boolean
-net.unit8.raoh.Issues#merge -> java.util.List#copyOf(java.util.Collection):java.util.List
 net.unit8.raoh.Issues#merge -> java.util.List#isEmpty():boolean
-net.unit8.raoh.Issues#merge -> java.util.List#size():int
 net.unit8.raoh.Issues#rebase -> java.util.List#stream():java.util.stream.Stream
 net.unit8.raoh.Issues#rebase -> java.util.stream.Stream#map(java.util.function.Function):java.util.stream.Stream
 net.unit8.raoh.Issues#rebase -> java.util.stream.Stream#toList():java.util.List
@@ -652,7 +645,10 @@ net.unit8.raoh.decode.combinator.CombinerSupport#strict -> java.lang.Throwable#t
 net.unit8.raoh.decode.combinator.DeclaredFields#merge -> java.lang.Throwable#toString():java.lang.String
 
 [copies a collection it is given when it is made, so that changing the collection afterwards changes nothing; the copy reads the elements and their hashCode and equals]
-net.unit8.raoh.Issues#<init> -> java.util.List#copyOf(java.util.Collection):java.util.List
+net.unit8.raoh.IssueList#copyOf -> java.util.Iterator#hasNext():boolean
+net.unit8.raoh.IssueList#copyOf -> java.util.Iterator#next():java.lang.Object
+net.unit8.raoh.IssueList#copyOf -> java.util.List#iterator():java.util.Iterator
+net.unit8.raoh.IssueList#copyOf -> java.util.List#size():int
 net.unit8.raoh.decode.Decoders#discriminate -> java.util.HashMap#<init>(java.util.Map)
 net.unit8.raoh.decode.Decoders#strict -> java.util.HashSet#<init>(java.util.Collection)
 net.unit8.raoh.decode.combinator.CombinerList#<init> -> java.util.List#copyOf(java.util.Collection):java.util.List

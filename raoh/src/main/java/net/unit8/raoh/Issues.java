@@ -13,6 +13,12 @@ import java.util.stream.Collectors;
  * <p>The list is copied when the {@code Issues} is created, so changing the list passed in
  * afterwards does not change it.
  *
+ * <p>{@link #add(Issue)} and {@link #merge(Issues)} take time in the issues added, not in the
+ * issues already here, when they extend the result of the previous {@code add} or {@code merge}:
+ * accumulating n issues one failure at a time takes time in n. Extending an {@code Issues} that
+ * was already extended, or putting issues in front with {@code other.merge(this)}, copies this
+ * one's issues.
+ *
  * @param asList the list of issues
  */
 public record Issues(List<Issue> asList) {
@@ -24,11 +30,11 @@ public record Issues(List<Issue> asList) {
      * @throws NullPointerException if {@code asList} or one of its issues is {@code null}
      */
     public Issues {
-        asList = List.copyOf(asList);
+        asList = IssueList.copyOf(asList);
     }
 
     /** An empty issues instance. */
-    public static final Issues EMPTY = new Issues(List.of());
+    public static final Issues EMPTY = new Issues(IssueList.EMPTY);
 
     /**
      * Returns {@code true} if this collection contains no issues.
@@ -46,10 +52,7 @@ public record Issues(List<Issue> asList) {
      * @return a new issues instance
      */
     public Issues add(Issue i) {
-        var copy = new ArrayList<Issue>(asList.size() + 1);
-        copy.addAll(asList);
-        copy.add(i);
-        return new Issues(List.copyOf(copy));
+        return new Issues(((IssueList) asList).append(i));
     }
 
     /**
@@ -61,10 +64,7 @@ public record Issues(List<Issue> asList) {
     public Issues merge(Issues other) {
         if (this.asList.isEmpty()) return other;
         if (other.asList.isEmpty()) return this;
-        var merged = new ArrayList<Issue>(asList.size() + other.asList.size());
-        merged.addAll(asList);
-        merged.addAll(other.asList);
-        return new Issues(List.copyOf(merged));
+        return new Issues(((IssueList) asList).append((IssueList) other.asList));
     }
 
     /**
