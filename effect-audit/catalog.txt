@@ -100,6 +100,7 @@ java.math.BigDecimal#<init>(java.lang.String)
 java.math.BigDecimal#ZERO:java.math.BigDecimal
 java.math.BigDecimal#valueOf(double):java.math.BigDecimal
 java.math.BigDecimal#valueOf(long):java.math.BigDecimal
+java.math.BigDecimal#valueOf(long,int):java.math.BigDecimal
 java.math.BigInteger#<init>(java.lang.String)
 java.math.BigInteger#TEN:java.math.BigInteger
 java.math.BigInteger#ZERO:java.math.BigInteger
@@ -371,6 +372,9 @@ tools.jackson.core.JsonParser#close():void
 tools.jackson.core.JsonParser#currentName():java.lang.String
 tools.jackson.core.JsonParser#currentToken():tools.jackson.core.JsonToken
 tools.jackson.core.JsonParser#getString():java.lang.String
+tools.jackson.core.JsonParser#getStringCharacters():char[]
+tools.jackson.core.JsonParser#getStringLength():int
+tools.jackson.core.JsonParser#getStringOffset():int
 tools.jackson.core.JsonParser#nextToken():tools.jackson.core.JsonToken
 tools.jackson.core.exc.StreamReadException#<init>(tools.jackson.core.JsonParser,java.lang.String)  -- asks the parser for its location
 tools.jackson.core.json.JsonFactory#createParser(tools.jackson.core.ObjectReadContext,java.io.InputStream):tools.jackson.core.JsonParser

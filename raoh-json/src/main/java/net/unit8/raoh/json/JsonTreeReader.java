@@ -55,7 +55,7 @@ final class JsonTreeReader {
             .disable(StreamReadFeature.AUTO_CLOSE_SOURCE)
             .build();
 
-    /** Integers with at most this many digits fit a {@code long}. */
+    /** Integers of at most this many digits fit a {@code long}. */
     private static final int LONG_DIGITS = 18;
 
     /** How much of a refused number or name an exception message quotes. */
@@ -171,23 +171,36 @@ final class JsonTreeReader {
     }
 
     private static JsonNode integer(JsonParser parser) {
-        String text = parser.getString();
-        boolean negative = text.startsWith("-");
-        int sign = negative || text.startsWith("+") ? 1 : 0;
-        if (text.length() - sign <= LONG_DIGITS) {
-            long value;
-            try {
-                value = Long.parseLong(text);
-            } catch (NumberFormatException e) {
-                throw notADecimal(parser, text);
+        // Most integers are short: read them from the parser's own buffer, building no String.
+        int length = parser.getStringLength();
+        if (length <= LONG_DIGITS + 1) {
+            char[] chars = parser.getStringCharacters();
+            int at = parser.getStringOffset();
+            int end = at + length;
+            boolean negative = at < end && chars[at] == '-';
+            if (at < end && (negative || chars[at] == '+')) {
+                at++;
             }
-            if (value == 0 && negative) {
-                return NegativeZeroIntNode.INSTANCE;
+            if (at < end && end - at <= LONG_DIGITS) {
+                long value = 0;
+                for (; at < end; at++) {
+                    char c = chars[at];
+                    if (c < '0' || c > '9') {
+                        throw notADecimal(parser, parser.getString());
+                    }
+                    value = value * 10 + (c - '0');
+                }
+                if (value == 0 && negative) {
+                    return NegativeZeroIntNode.INSTANCE;
+                }
+                long signed = negative ? -value : value;
+                return (int) signed == signed ? IntNode.valueOf((int) signed) : LongNode.valueOf(signed);
             }
-            return (int) value == value ? IntNode.valueOf((int) value) : LongNode.valueOf(value);
         }
         // Longer integers go through the decimal conversion, which does not take time quadratic in
         // the digits as new BigInteger(String) does (#161).
+        String text = parser.getString();
+        boolean negative = text.startsWith("-");
         BigDecimal written = DecimalConversion.toBigDecimal(text);
         if (written == null || written.scale() != 0) {
             throw notADecimal(parser, text);

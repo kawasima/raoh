@@ -68,6 +68,9 @@ net.unit8.raoh.json.JsonDecoders#optionalNullableField -> tools.jackson.databind
 net.unit8.raoh.json.JsonDecoders#typeMismatch -> tools.jackson.databind.JsonNode#getNodeType():tools.jackson.databind.node.JsonNodeType
 net.unit8.raoh.json.JsonTreeReader#decimal -> tools.jackson.core.JsonParser#getString():java.lang.String
 net.unit8.raoh.json.JsonTreeReader#integer -> tools.jackson.core.JsonParser#getString():java.lang.String
+net.unit8.raoh.json.JsonTreeReader#integer -> tools.jackson.core.JsonParser#getStringCharacters():char[]
+net.unit8.raoh.json.JsonTreeReader#integer -> tools.jackson.core.JsonParser#getStringLength():int
+net.unit8.raoh.json.JsonTreeReader#integer -> tools.jackson.core.JsonParser#getStringOffset():int
 net.unit8.raoh.json.JsonTreeReader#next -> tools.jackson.core.JsonParser#nextToken():tools.jackson.core.JsonToken
 net.unit8.raoh.json.JsonTreeReader#next -> tools.jackson.core.exc.StreamReadException#<init>(tools.jackson.core.JsonParser,java.lang.String)
 net.unit8.raoh.json.JsonTreeReader#notADecimal -> tools.jackson.core.exc.StreamReadException#<init>(tools.jackson.core.JsonParser,java.lang.String)

@@ -177,6 +177,11 @@ class ReadTreeTest {
     @Test
     void integersBecomeTheNodeOfTheSizeTheyNeed() {
         assertTrue(readTree("2147483647").isInt());
+        assertEquals(-2147483648, readTree("-2147483648").intValue());
+        // 18 digits are read from the parser's buffer, 19 through the decimal conversion.
+        assertEquals(999_999_999_999_999_999L, ok(long_(), "999999999999999999"));
+        assertEquals(-999_999_999_999_999_999L, ok(long_(), "-999999999999999999"));
+        assertEquals(Long.MIN_VALUE, ok(long_(), "-9223372036854775808"));
         assertTrue(readTree("2147483648").isLong());
         assertTrue(readTree("-9223372036854775808").isLong());
         assertTrue(readTree("9223372036854775808").isBigInteger());

@@ -39,6 +39,9 @@ public final class DecimalConversion {
      */
     private static final int DIRECT = 1024;
 
+    /** Coefficients of at most this many digits fit a {@code long}. */
+    private static final int LONG_DIGITS = 18;
+
     private DecimalConversion() {
     }
 
@@ -98,10 +101,35 @@ public final class DecimalConversion {
         if (scale < Integer.MIN_VALUE || scale > Integer.MAX_VALUE) {
             return null;
         }
+        int digitCount = (wholeTo - wholeFrom) + (fractionTo - fractionFrom);
+        if (digitCount <= LONG_DIGITS) {
+            // The common case: the coefficient fits a long, so no String or BigInteger is built.
+            long unscaled = accumulate(text, fractionFrom, fractionTo, accumulate(text, wholeFrom, wholeTo, 0));
+            return BigDecimal.valueOf(negative ? -unscaled : unscaled, (int) scale);
+        }
         String coefficient = text.substring(wholeFrom, wholeTo) + text.substring(fractionFrom, fractionTo);
-        // 10^(DIRECT · 2^j) at index j, worked out the first time a split asks for it.
-        BigInteger unscaled = magnitude(coefficient, 0, coefficient.length(), new BigInteger[32]);
+        BigInteger unscaled = coefficient.length() <= DIRECT
+                ? new BigInteger(coefficient)
+                // 10^(DIRECT · 2^j) at index j, worked out the first time a split asks for it.
+                : magnitude(coefficient, 0, coefficient.length(), new BigInteger[32]);
         return new BigDecimal(negative ? unscaled.negate() : unscaled, (int) scale);
+    }
+
+    /**
+     * Appends the ASCII digits {@code text[from, to)} to {@code value}.
+     *
+     * @param text  the text
+     * @param from  the first digit
+     * @param to    one past the last digit
+     * @param value the number the digits before {@code from} write
+     * @return the number all the digits write; the caller keeps it within {@link #LONG_DIGITS} digits
+     */
+    private static long accumulate(String text, int from, int to, long value) {
+        long v = value;
+        for (int at = from; at < to; at++) {
+            v = v * 10 + (text.charAt(at) - '0');
+        }
+        return v;
     }
 
     private static int digits(String text, int from) {

@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DecimalConversionTest {
 
@@ -88,6 +89,20 @@ class DecimalConversionTest {
             check(wrong, text);
         }
         assertEquals(List.of(), wrong);
+    }
+
+    /** Up to 18 digits the coefficient is built in a long; from 19 on, as a BigInteger. */
+    @Test
+    void readsBothSidesOfTheLongCoefficient() {
+        var wrong = new ArrayList<String>();
+        for (String text : List.of(
+                "999999999999999999", "-999999999999999999", "9999999999999999999", "-9999999999999999999",
+                "99999999.9999999999", "99999999.99999999999", "-.999999999999999999", ".9999999999999999999",
+                "000000000000000000", "0000000000000000001", "123456789012345678e-5", "1234567890123456789E+5",
+                "9223372036854775807", "-9223372036854775808", "1.", "-0.000000000000000001")) {
+            check(wrong, text);
+        }
+        assertTrue(wrong.isEmpty(), String.join("\n", wrong));
     }
 
     /** A value conversion: the sign of a zero is not a BigDecimal's to keep. */
