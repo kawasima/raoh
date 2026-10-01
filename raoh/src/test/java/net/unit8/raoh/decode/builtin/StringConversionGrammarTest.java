@@ -23,6 +23,9 @@ import static net.unit8.raoh.decode.ObjectDecoders.string;
 import static net.unit8.raoh.decode.builtin.BuiltinTestSupport.decodeErr;
 import static net.unit8.raoh.decode.builtin.BuiltinTestSupport.decodeOk;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Fixes the lexical language of the {@link StringDecoder} conversions (issue #137).
@@ -418,19 +421,58 @@ class StringConversionGrammarTest {
         assertEquals("not a valid URI", issue.message());
     }
 
+    /**
+     * A documented design divergence from the Raoh Specification (#183): its {@code uri} accepts
+     * these RFC 3986 URIs, and {@code uri()} refuses them because the {@link java.net.URI} it
+     * returns cannot hold them. {@link UriSyntax} still reads each one as a URI; only the step to
+     * {@code java.net.URI} refuses it.
+     *
+     * @param text a URI {@code java.net.URI} cannot hold
+     */
     @ParameterizedTest
     @ValueSource(strings = {
-            "a:",                                // empty scheme-specific part
-            "a:#f",
-            "a://",                              // empty authority followed by nothing
-            "http://[v1.abc]/",                  // IPvFuture
-            "http://[V1f.a:b]/",
-            "http://[::1]:2147483648/"           // IPv6 host with a port above Integer.MAX_VALUE
+            "a:",                                // R000869, empty path
+            "a:#f",                              // R000870
+            "a://",                              // R000871, empty authority
+            "http://[::1]:2147483648/",          // R000872, a port above Integer.MAX_VALUE
+            "http://[v1.abc]/",                  // R000873, IPvFuture
+            "http:",                             // R000874, empty path
+            "http://",                           // R000875, empty host
+            "https://",                          // R000876
+            "http://[V1.abc]/",                  // R000906
+            "http://[V1f.a:b]/"
     })
-    void uriRejectsRfc3986UrisThatJavaNetUriCannotHold(String text) {
+    void uriRefusesTheRfc3986UrisJavaNetUriCannotHold(String text) {
+        var parsed = UriSyntax.parse(text);
+        assertNotNull(parsed, "UriSyntax reads it as an RFC 3986 URI");
+        assertFalse(parsed.representableAsJavaUri());
+
         var issue = decodeErr(string().uri(), text);
         assertEquals(ErrorCodes.INVALID_FORMAT, issue.code());
+        assertEquals(MessageKeys.INVALID_FORMAT_URI, issue.messageKey());
         assertEquals("not a valid URI", issue.message());
+    }
+
+    /**
+     * The same divergence for {@code url()}: these meet RFC 9110's http requirements, which the
+     * specification's {@code url} adds to its {@code uri}, and {@code java.net.URI} cannot hold
+     * them. No specification case covers them yet.
+     *
+     * @param text an http URI {@code java.net.URI} cannot hold
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "http://[v1.abc]/",
+            "http://[::1]:2147483648/"
+    })
+    void urlRefusesTheHttpUrisJavaNetUriCannotHold(String text) {
+        var parsed = UriSyntax.parse(text);
+        assertNotNull(parsed);
+        assertTrue(parsed.schemeIs("http") && parsed.hasHost());
+        assertFalse(parsed.representableAsJavaUri());
+
+        var issue = decodeErr(string().url(), text);
+        assertEquals(MessageKeys.INVALID_FORMAT_URL, issue.messageKey());
     }
 
     @ParameterizedTest
@@ -459,7 +501,6 @@ class StringConversionGrammarTest {
             "http:///path",
             "http://user@/",
             "http://:80/",
-            "http://[v1.abc]/",
             "http://[fe80::1%25eth0]/",
             "example.com"
     })

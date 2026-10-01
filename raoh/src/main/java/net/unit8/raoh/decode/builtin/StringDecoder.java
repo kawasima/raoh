@@ -508,6 +508,11 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * {@code reg-name} this decoder accepts. Consumers with narrower URI requirements, including
      * some JDK networking APIs, may reject such a value.
      *
+     * <p>Like {@link #uri(String)}, this refuses what {@link URI} cannot hold, so an http URL with an
+     * {@code IPvFuture} host ({@code http://[v1.abc]/}) or a port above {@link Integer#MAX_VALUE}
+     * ({@code http://[::1]:2147483648/}) is rejected, although the Raoh Specification's {@code url}
+     * accepts it.
+     *
      * @param message custom error message, or {@code null} for the default
      * @return a decoder producing {@link URI} from validated http/https URLs
      */
@@ -903,11 +908,17 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      *
      * <p>{@link URI} follows the older RFC 2396 and RFC 2732 and cannot hold every RFC 3986 URI.
      * Those this decoder cannot return are rejected: an empty scheme-specific part
-     * ({@code a:}, {@code a:#f}), an empty authority followed by nothing ({@code a://}), an
-     * {@code IPvFuture} host ({@code http://[v1.abc]/}), and an IPv6 host with a port above
-     * {@link Integer#MAX_VALUE} ({@code http://[::1]:2147483648/}). The returned {@link URI} holds the accepted
-     * text, but its component accessors follow the RFC 2396 model, so {@link URI#getHost()} can be
-     * {@code null} for an RFC 3986 {@code reg-name} such as {@code my_host}.
+     * ({@code a:}, {@code http:}, {@code a:#f}), an empty authority followed by nothing
+     * ({@code a://}, {@code http://}), an {@code IPvFuture} host ({@code http://[v1.abc]/}), and an
+     * IPv6 host with a port above {@link Integer#MAX_VALUE} ({@code http://[::1]:2147483648/}). The
+     * returned {@link URI} holds the accepted text, but its component accessors follow the RFC 2396
+     * model, so {@link URI#getHost()} can be {@code null} for an RFC 3986 {@code reg-name} such as
+     * {@code my_host}.
+     *
+     * <p>This is a deliberate difference from the Raoh Specification, whose {@code uri} is the
+     * whole RFC 3986 {@code URI} production. raoh-java returns {@link URI}, the type Java code holds
+     * URIs in, so its {@code uri} is the part of the specification's domain that {@link URI} can
+     * hold, and the URIs above are refused instead of accepted.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a decoder producing {@link URI} from validated URI strings

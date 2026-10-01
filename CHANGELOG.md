@@ -38,6 +38,17 @@ detailed from the current development cycle onward.
 
 ### Changed
 
+- **`uri()` and `url()` keep returning `java.net.URI`, and differ from the Raoh Specification
+  0.9.0 on purpose.** The specification's `uri` is now the whole RFC 3986 `URI` production, so it
+  accepts `a:`, `http:`, `a://`, `http://`, an IPvFuture host and a port of any length, and its
+  `url` adds RFC 9110's http requirements to it. `java.net.URI` cannot hold those, and raoh-java
+  keeps it as the result type rather than making every domain model that holds a `URI` convert
+  from a type of Raoh's own. Nothing changes in what the decoders accept: they refuse those URIs
+  with `invalid_format`, as before. The Javadoc of `uri()` and `url()` now says this is a
+  difference from the specification, and the tests pin it for R000869–R000876 and R000906. It is
+  not yet declared in the specification's conformance terms, since raoh-java has no runner
+  ([#184](https://github.com/raoh-project/raoh-java/issues/184))
+  ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
 - **Breaking: `StringDecoder.pattern()` takes a pattern of the specification's language, as text.**
   `pattern(Pattern)`, `pattern(Pattern, String)` and `pattern(Pattern, String, String)` are removed;
   `pattern(String)`, `pattern(String, String)` and `pattern(String, String, String)` replace them.

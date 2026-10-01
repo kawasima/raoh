@@ -154,7 +154,7 @@ string().url().decode("ftp://example.com")
 // ==> Err[/: not a valid URL]
 ```
 
-`uri()` accepts RFC 3986 URI syntax of any scheme, subject to the restrictions of the `java.net.URI` it returns, which are listed in the Javadoc of `uri()`. The scheme itself is required, so a relative reference such as `foo/bar` is rejected. `url()` accepts what `uri()` accepts, with the `http` or `https` scheme (in any case) and a non-empty host. The host is the RFC 3986 host rather than a DNS name, so `http://my_host/` is accepted, and `URI#getHost()` returns `null` for it. The length is not limited; put `maxLength()` first, as in `string().maxLength(2048).url()`, to bound it. Both are terminal methods — they produce `URI`, not `String`.
+`uri()` accepts RFC 3986 URI syntax of any scheme, subject to the restrictions of the `java.net.URI` it returns, which are listed in the Javadoc of `uri()`. The Raoh Specification's `uri` accepts every RFC 3986 URI, so raoh-java differs from it here on purpose, to return the type Java code holds URIs in. The scheme itself is required, so a relative reference such as `foo/bar` is rejected. `url()` accepts what `uri()` accepts, with the `http` or `https` scheme (in any case) and a non-empty host. The host is the RFC 3986 host rather than a DNS name, so `http://my_host/` is accepted, and `URI#getHost()` returns `null` for it. The length is not limited; put `maxLength()` first, as in `string().maxLength(2048).url()`, to bound it. Both are terminal methods — they produce `URI`, not `String`.
 
 <!-- souther-section: numeric-constraints -->
 ### Numeric constraints
