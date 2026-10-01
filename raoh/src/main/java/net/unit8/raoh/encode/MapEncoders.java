@@ -245,11 +245,13 @@ public final class MapEncoders {
      */
     @SafeVarargs
     public static <T> Encoder<T, Map<String, @Nullable Object>> object(EntryEncoder<T>... entries) {
+        // A copy, so changing the array passed in afterwards does not change the encoder.
+        List<EntryEncoder<T>> written = List.of(entries);
         return value -> {
             // No pre-size: an EntryEncoder may write zero or many keys, so the entry count is not a
             // reliable bound on the output size.
             var map = new LinkedHashMap<String, @Nullable Object>();
-            for (var entry : entries) {
+            for (var entry : written) {
                 entry.encodeTo(value, map);
             }
             return map;

@@ -137,6 +137,17 @@ detailed from the current development cycle onward.
   of the same input as the issue that holds them, but `rebase()` changed only the outer path, so
   a `oneOf` run inside `flatMap` reported its candidates at paths missing the prefix. They are
   now rebased with it ([#167](https://github.com/raoh-project/raoh-java/issues/167)).
+- **What is built from a collection or array keeps its own copy.** `Issues` is documented as
+  immutable but kept the list it was given, so changing that list afterwards changed it; once
+  `oneOf` started keeping its candidates' `Issues` to resolve them, the `candidates` metadata
+  would have read whatever the list held when it was first read. The same held for the arrays
+  and collections given to `Decoders.oneOf`, `strict` (the known fields), `discriminate` with a
+  map of variants, `combine` with a list of parts (`CombinerList`), and `MapEncoders.object`:
+  changing them after building the decoder or encoder changed what it did. Each now copies what it
+  is given when it is made. `new Issues(list)` and `new CombinerList(parts)` now throw
+  `NullPointerException` for a `null` element, as `oneOf` and `object` do for a `null` candidate
+  or entry, when they are made rather than when used
+  ([#167](https://github.com/raoh-project/raoh-java/issues/167)).
 
 ## [0.8.0] - 2026-09-27
 

@@ -10,9 +10,22 @@ import java.util.stream.Collectors;
 /**
  * An immutable collection of {@link Issue}s accumulated during decoding.
  *
+ * <p>The list is copied when the {@code Issues} is created, so changing the list passed in
+ * afterwards does not change it.
+ *
  * @param asList the list of issues
  */
 public record Issues(List<Issue> asList) {
+
+    /**
+     * Creates the issues, copying {@code asList}.
+     *
+     * @param asList the list of issues
+     * @throws NullPointerException if {@code asList} or one of its issues is {@code null}
+     */
+    public Issues {
+        asList = List.copyOf(asList);
+    }
 
     /** An empty issues instance. */
     public static final Issues EMPTY = new Issues(List.of());

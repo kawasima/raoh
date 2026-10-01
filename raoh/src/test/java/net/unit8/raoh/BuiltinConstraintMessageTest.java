@@ -60,15 +60,25 @@ class BuiltinConstraintMessageTest {
             FloatDecoder.class, DecimalDecoder.class, BoolDecoder.class, ListDecoder.class,
             RecordDecoder.class, TemporalDecoder.class);
 
-    /** Public methods that are not constraints with a built-in message, and why. */
-    private static final Map<String, String> NOT_A_CONSTRAINT = Map.ofEntries(
-            Map.entry("decode", "the decoding protocol itself"),
-            Map.entry("refine", "the caller supplies the check, the code and the message"),
-            Map.entry("trim", "a transformation that cannot fail"),
-            Map.entry("toLowerCase", "a transformation that cannot fail"),
-            Map.entry("toUpperCase", "a transformation that cannot fail"),
-            Map.entry("normalize", "a transformation that cannot fail"),
-            Map.entry("toSet", "a conversion that cannot fail"));
+    /**
+     * Methods every decoder class has that are not constraints, and why. Only the protocol is
+     * excluded by name alone; anything else is excluded class by class below.
+     */
+    private static final Map<String, String> PROTOCOL = Map.of(
+            "decode", "the decoding protocol itself",
+            "refine", "the caller supplies the check, the code and the message");
+
+    /**
+     * Methods of one class that are not constraints with a built-in message, and why. Keyed by
+     * class and method, as the cases are, so a constraint of the same name added to another class
+     * still needs a case.
+     */
+    private static final Map<String, String> NOT_A_CONSTRAINT = Map.of(
+            "StringDecoder.trim", "a transformation that cannot fail",
+            "StringDecoder.toLowerCase", "a transformation that cannot fail",
+            "StringDecoder.toUpperCase", "a transformation that cannot fail",
+            "StringDecoder.normalize", "a transformation that cannot fail",
+            "ListDecoder.toSet", "a conversion that cannot fail");
 
     /**
      * A constraint and a decode it fails.
@@ -205,6 +215,22 @@ class BuiltinConstraintMessageTest {
         assertEquals(issue.message(), issue.resolve(BUNDLE, Locale.ENGLISH).message(), "English bundle");
     }
 
+    /** Each public instance method of the known built-in decoder classes, as class.method. */
+    private static Set<String> publicMethods() {
+        var ids = new TreeSet<String>();
+        for (Class<?> type : KNOWN_BUILT_IN_DECODERS) {
+            for (Method method : type.getDeclaredMethods()) {
+                int modifiers = method.getModifiers();
+                if (Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers)
+                        && !method.isSynthetic() && !method.isBridge()
+                        && !PROTOCOL.containsKey(method.getName())) {
+                    ids.add(type.getSimpleName() + "." + method.getName());
+                }
+            }
+        }
+        return ids;
+    }
+
     /**
      * Asserts that every public instance method of the known built-in decoder classes has a case
      * or a reason to have none, by declaring class and name.
@@ -213,21 +239,21 @@ class BuiltinConstraintMessageTest {
     void everyConstraintHasACase() {
         var covered = new TreeSet<String>();
         cases().forEach(testCase -> covered.add(testCase.toString()));
-        var missing = new TreeSet<String>();
-        for (Class<?> type : KNOWN_BUILT_IN_DECODERS) {
-            for (Method method : type.getDeclaredMethods()) {
-                int modifiers = method.getModifiers();
-                if (!Modifier.isPublic(modifiers) || Modifier.isStatic(modifiers)
-                        || method.isSynthetic() || method.isBridge()
-                        || NOT_A_CONSTRAINT.containsKey(method.getName())) {
-                    continue;
-                }
-                String id = type.getSimpleName() + "." + method.getName();
-                if (!covered.contains(id)) {
-                    missing.add(id);
-                }
-            }
-        }
+        var missing = new TreeSet<>(publicMethods());
+        missing.removeAll(covered);
+        missing.removeAll(NOT_A_CONSTRAINT.keySet());
         assertEquals(Set.of(), missing, "constraints without a case");
+    }
+
+    /**
+     * Asserts that the cases and the exclusions name methods that exist, so neither list keeps an
+     * entry for a method renamed or removed.
+     */
+    @Test
+    void casesAndExclusionsNameMethodsThatExist() {
+        var named = new TreeSet<String>(NOT_A_CONSTRAINT.keySet());
+        cases().forEach(testCase -> named.add(testCase.toString()));
+        named.removeAll(publicMethods());
+        assertEquals(Set.of(), named, "entries naming no public method");
     }
 }

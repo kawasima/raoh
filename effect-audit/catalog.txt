@@ -286,6 +286,7 @@ java.util.ArrayList#size():int
 java.util.Collection#iterator():java.util.Iterator
 java.util.Collection#stream():java.util.stream.Stream
 java.util.Collections#reverse(java.util.List):void  -- calls the list's own methods
+java.util.HashMap#<init>(java.util.Map)  -- iterates the argument's entries and calls each key's hashCode() and equals()
 java.util.HashMap#containsKey(java.lang.Object):boolean
 java.util.HashMap#get(java.lang.Object):java.lang.Object
 java.util.HashMap#keySet():java.util.Set

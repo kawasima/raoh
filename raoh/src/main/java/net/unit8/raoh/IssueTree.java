@@ -37,13 +37,43 @@ final class IssueTree {
     }
 
     /**
+     * A metadata value that holds issues, under its key, and what was made of each of its lists.
+     * The walk hands these over instead of a map by key, so no step looks a value up again.
+     *
+     * @param <B> what a list of issues becomes
+     */
+    private static final class Below<B> {
+        private final String key;
+        private final IssueBearingMeta value;
+        private final List<B> made;
+
+        Below(String key, IssueBearingMeta value, List<B> made) {
+            this.key = key;
+            this.value = value;
+            this.made = made;
+        }
+
+        String key() {
+            return key;
+        }
+
+        IssueBearingMeta value() {
+            return value;
+        }
+
+        List<B> made() {
+            return made;
+        }
+    }
+
+    /**
      * What to make of each issue and each list of issues, given what was made of everything below.
      *
      * @param <A> what an issue becomes
      * @param <B> what a list of issues becomes
      */
     private interface Fold<A, B> {
-        A issue(Issue issue, Map<String, List<B>> below);
+        A issue(Issue issue, List<Below<B>> below);
 
         B issues(Issues issues, List<A> each);
     }
@@ -59,7 +89,7 @@ final class IssueTree {
     static Issues map(Issues issues, Step local) {
         return fold(issues, new Fold<Issue, Issues>() {
             @Override
-            public Issue issue(Issue issue, Map<String, List<Issues>> below) {
+            public Issue issue(Issue issue, List<Below<Issues>> below) {
                 return local.apply(below.isEmpty() ? issue : withBelow(issue, below));
             }
 
@@ -91,12 +121,13 @@ final class IssueTree {
     static List<Map<String, Object>> project(Issues issues) {
         return fold(issues, new Fold<Map<String, Object>, List<Map<String, Object>>>() {
             @Override
-            public Map<String, Object> issue(Issue issue, Map<String, List<List<Map<String, Object>>>> below) {
+            public Map<String, Object> issue(Issue issue, List<Below<List<Map<String, Object>>>> below) {
                 Map<String, Object> meta = issue.meta();
                 if (!below.isEmpty()) {
-                    var plain = new LinkedHashMap<String, Object>();
-                    issue.meta().forEach((key, value) -> plain.put(key,
-                            value instanceof IssueBearingMeta nested ? nested.project(below.get(key)) : value));
+                    var plain = new LinkedHashMap<String, Object>(meta);
+                    for (Below<List<Map<String, Object>>> nested : below) {
+                        plain.put(nested.key(), nested.value().project(nested.made()));
+                    }
                     meta = Collections.unmodifiableMap(plain);
                 }
                 var m = new LinkedHashMap<String, Object>();
@@ -114,9 +145,11 @@ final class IssueTree {
         });
     }
 
-    private static Issue withBelow(Issue issue, Map<String, List<Issues>> below) {
+    private static Issue withBelow(Issue issue, List<Below<Issues>> below) {
         var meta = new LinkedHashMap<String, Object>(issue.meta());
-        below.forEach((key, children) -> meta.put(key, ((IssueBearingMeta) meta.get(key)).withChildren(children)));
+        for (Below<Issues> nested : below) {
+            meta.put(nested.key(), nested.value().withChildren(nested.made()));
+        }
         return new Issue(issue.path(), issue.code(), issue.messageKey(), issue.message(), meta, issue.customMessage());
     }
 
@@ -134,8 +167,9 @@ final class IssueTree {
     /** An issue, and what was made of the lists of issues its metadata holds, so far. */
     private static final class IssueFrame<B> {
         final Issue issue;
-        /** The keys whose values hold issues, in key order, and those values' lists. */
+        /** The keys whose values hold issues, in key order, those values, and their lists. */
         final List<String> keys = new ArrayList<>(1);
+        final List<IssueBearingMeta> values = new ArrayList<>(1);
         final List<List<Issues>> children = new ArrayList<>(1);
         /** What was made of each list, key by key; the last entry is the key under way. */
         final List<List<B>> made = new ArrayList<>(1);
@@ -145,6 +179,7 @@ final class IssueTree {
             issue.meta().forEach((k, v) -> {
                 if (v instanceof IssueBearingMeta nested) {
                     keys.add(k);
+                    values.add(nested);
                     children.add(nested.children());
                 }
             });
@@ -170,11 +205,11 @@ final class IssueTree {
             made.get(made.size() - 1).add(result);
         }
 
-        /** What was made below, by key. */
-        Map<String, List<B>> below() {
-            var below = new LinkedHashMap<String, List<B>>();
+        /** What was made below, value by value. */
+        List<Below<B>> below() {
+            var below = new ArrayList<Below<B>>(keys.size());
             for (int i = 0; i < keys.size(); i++) {
-                below.put(keys.get(i), made.get(i));
+                below.add(new Below<>(keys.get(i), values.get(i), made.get(i)));
             }
             return below;
         }
@@ -228,7 +263,7 @@ final class IssueTree {
                         stack.push(new IssueFrame<B>(issue));
                     } else {
                         // Most issues hold none: no frame for them.
-                        frame.done.add(fold.issue(issue, Map.of()));
+                        frame.done.add(fold.issue(issue, List.of()));
                     }
                     continue;
                 }
@@ -250,7 +285,7 @@ final class IssueTree {
                         List<Issue> leaves = next.asList();
                         var made = new ArrayList<A>(leaves.size());
                         for (Issue leaf : leaves) {
-                            made.add(fold.issue(leaf, Map.of()));
+                            made.add(fold.issue(leaf, List.of()));
                         }
                         frame.add(fold.issues(next, made));
                     }
