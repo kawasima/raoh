@@ -66,10 +66,48 @@ net.unit8.raoh.json.JsonDecoders#optionalNullableField -> tools.jackson.databind
 net.unit8.raoh.json.JsonDecoders#optionalNullableField -> tools.jackson.databind.JsonNode#isNull():boolean
 net.unit8.raoh.json.JsonDecoders#optionalNullableField -> tools.jackson.databind.JsonNode#isObject():boolean
 net.unit8.raoh.json.JsonDecoders#typeMismatch -> tools.jackson.databind.JsonNode#getNodeType():tools.jackson.databind.node.JsonNodeType
+net.unit8.raoh.json.JsonTreeReader#decimal -> tools.jackson.core.JsonParser#getString():java.lang.String
+net.unit8.raoh.json.JsonTreeReader#integer -> tools.jackson.core.JsonParser#getString():java.lang.String
+net.unit8.raoh.json.JsonTreeReader#integer -> tools.jackson.core.JsonParser#getStringCharacters():char[]
+net.unit8.raoh.json.JsonTreeReader#integer -> tools.jackson.core.JsonParser#getStringLength():int
+net.unit8.raoh.json.JsonTreeReader#integer -> tools.jackson.core.JsonParser#getStringOffset():int
+net.unit8.raoh.json.JsonTreeReader#next -> tools.jackson.core.JsonParser#nextToken():tools.jackson.core.JsonToken
+net.unit8.raoh.json.JsonTreeReader#next -> tools.jackson.core.exc.StreamReadException#<init>(tools.jackson.core.JsonParser,java.lang.String)
+net.unit8.raoh.json.JsonTreeReader#notADecimal -> tools.jackson.core.exc.StreamReadException#<init>(tools.jackson.core.JsonParser,java.lang.String)
+net.unit8.raoh.json.JsonTreeReader#readDocument -> tools.jackson.core.JsonParser#nextToken():tools.jackson.core.JsonToken
+net.unit8.raoh.json.JsonTreeReader#readDocument -> tools.jackson.core.exc.StreamReadException#<init>(tools.jackson.core.JsonParser,java.lang.String)
+net.unit8.raoh.json.JsonTreeReader#readValue -> tools.jackson.core.JsonParser#currentName():java.lang.String
+net.unit8.raoh.json.JsonTreeReader#readValue -> tools.jackson.core.JsonParser#currentToken():tools.jackson.core.JsonToken
+net.unit8.raoh.json.JsonTreeReader#readValue -> tools.jackson.core.JsonParser#getString():java.lang.String
+net.unit8.raoh.json.JsonTreeReader#readValue -> tools.jackson.core.JsonParser#nextToken():tools.jackson.core.JsonToken
+net.unit8.raoh.json.JsonTreeReader#readValue -> tools.jackson.core.exc.StreamReadException#<init>(tools.jackson.core.JsonParser,java.lang.String)
 
 [the receiver is an object Raoh created: a collection, map, iterator or stream it built, or the result of a JDK parser it called]
 net.unit8.raoh.json.JsonDecoders#list -> java.util.ArrayList#add(java.lang.Object):boolean
 net.unit8.raoh.json.JsonDecoders#map -> java.util.LinkedHashMap#put(java.lang.Object,java.lang.Object):java.lang.Object
+net.unit8.raoh.json.JsonTreeReader#decimal -> java.math.BigDecimal#signum():int
+net.unit8.raoh.json.JsonTreeReader#integer -> java.math.BigDecimal#scale():int
+net.unit8.raoh.json.JsonTreeReader#integer -> java.math.BigDecimal#unscaledValue():java.math.BigInteger
+net.unit8.raoh.json.JsonTreeReader#integer -> java.math.BigInteger#bitLength():int
+net.unit8.raoh.json.JsonTreeReader#integer -> java.math.BigInteger#intValue():int
+net.unit8.raoh.json.JsonTreeReader#integer -> java.math.BigInteger#longValue():long
+net.unit8.raoh.json.JsonTreeReader#integer -> java.math.BigInteger#signum():int
+net.unit8.raoh.json.JsonTreeReader#readValue -> java.util.ArrayDeque#element():java.lang.Object
+net.unit8.raoh.json.JsonTreeReader#readValue -> java.util.ArrayDeque#peek():java.lang.Object
+net.unit8.raoh.json.JsonTreeReader#readValue -> java.util.ArrayDeque#pop():java.lang.Object
+net.unit8.raoh.json.JsonTreeReader#readValue -> java.util.ArrayDeque#push(java.lang.Object):void
 
 [builds a map whose keys are String constants]
 net.unit8.raoh.json.JsonDecoders#typeMismatch -> java.util.Map#of(java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object):java.util.Map
+
+[the JSON reader works on a parser factory, a parser or tree nodes it created itself; the parser reads the caller's text, which is the input]
+net.unit8.raoh.json.JsonTreeReader#<clinit> -> tools.jackson.core.json.JsonFactoryBuilder#build():tools.jackson.core.json.JsonFactory
+net.unit8.raoh.json.JsonTreeReader#<clinit> -> tools.jackson.core.json.JsonFactoryBuilder#disable(tools.jackson.core.StreamReadFeature):tools.jackson.core.TSFBuilder
+net.unit8.raoh.json.JsonTreeReader#<clinit> -> tools.jackson.core.json.JsonFactoryBuilder#streamReadConstraints(tools.jackson.core.StreamReadConstraints):tools.jackson.core.TSFBuilder
+net.unit8.raoh.json.JsonTreeReader#read -> tools.jackson.core.JsonParser#close():void
+net.unit8.raoh.json.JsonTreeReader#read -> tools.jackson.core.json.JsonFactory#createParser(tools.jackson.core.ObjectReadContext,java.io.InputStream):tools.jackson.core.JsonParser
+net.unit8.raoh.json.JsonTreeReader#read -> tools.jackson.core.json.JsonFactory#createParser(tools.jackson.core.ObjectReadContext,java.io.Reader):tools.jackson.core.JsonParser
+net.unit8.raoh.json.JsonTreeReader#read -> tools.jackson.core.json.JsonFactory#createParser(tools.jackson.core.ObjectReadContext,java.lang.String):tools.jackson.core.JsonParser
+net.unit8.raoh.json.JsonTreeReader#readValue -> tools.jackson.databind.node.ArrayNode#add(tools.jackson.databind.JsonNode):tools.jackson.databind.node.ArrayNode
+net.unit8.raoh.json.JsonTreeReader#readValue -> tools.jackson.databind.node.ObjectNode#has(java.lang.String):boolean
+net.unit8.raoh.json.JsonTreeReader#readValue -> tools.jackson.databind.node.ObjectNode#set(java.lang.String,tools.jackson.databind.JsonNode):tools.jackson.databind.node.ObjectNode

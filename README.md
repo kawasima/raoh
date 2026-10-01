@@ -224,8 +224,13 @@ JsonDecoder<User> user() {
 Use it like this:
 
 ```java
-Result<User> result = user().decode(jsonNode);
+Result<User> result = user().decode(readTree(json));
 ```
+
+`readTree` reads the JSON text into the tree the decoders are specified on. It keeps each number as
+written (the scale of `0.0001`, every digit, the sign of `-0`) and refuses a member name that occurs
+twice; a tree from Jackson's `ObjectMapper` has already turned each number with a fraction into a
+`double`.
 
 Success case:
 

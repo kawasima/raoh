@@ -4,6 +4,15 @@
 
 `net.unit8.raoh.json.JsonDecoders` works with Jackson `JsonNode`.
 
+Read the input with `readTree(String | Reader | InputStream | JsonParser)`. It keeps each number as
+written: `decimal()` gets the exact value and scale, `float_()` rounds once from the decimal, and
+`-0`, `-0.0` and `-0e5` give `-0.0` to `double_()` and `float_()` while `int_()` reads `-0` as `0`.
+It throws a Jackson exception for an object with a member name written twice, for a number whose
+exponent is beyond what a `BigDecimal` holds, and for anything that is not one JSON value. The
+overloads that open a parser use Jackson's default `StreamReadConstraints`; pass your own
+`JsonParser` to read under other limits. A tree from your own `ObjectMapper` still decodes, but its
+numbers are whatever the mapper converted them to.
+
 Supported helpers include:
 
 - `string()`, `int_()`, `long_()`, `double_()`, `float_()`, `bool()`, `decimal()`

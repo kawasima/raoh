@@ -90,6 +90,7 @@ java.lang.StringBuilder#<init>()
 java.lang.StringBuilder#append(char):java.lang.StringBuilder
 java.lang.StringBuilder#append(java.lang.String):java.lang.StringBuilder
 java.lang.StringBuilder#toString():java.lang.String
+java.lang.Throwable#addSuppressed(java.lang.Throwable):void  -- final; stores the exception and calls nothing on it
 java.lang.invoke.ConstantBootstraps#nullConstant(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.Class):java.lang.Object
 java.lang.invoke.LambdaMetafactory#metafactory(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.MethodType,java.lang.invoke.MethodType,java.lang.invoke.MethodHandle,java.lang.invoke.MethodType):java.lang.invoke.CallSite  -- bootstrap; its arguments are class file constants, and the scanner records the handle it links
 java.lang.invoke.StringConcatFactory#makeConcatWithConstants(java.lang.invoke.MethodHandles$Lookup,java.lang.String,java.lang.invoke.MethodType,java.lang.String,java.lang.Object[]):java.lang.invoke.CallSite  -- bootstrap; its arguments are class file constants, and the scanner records the operand conversions
@@ -99,6 +100,7 @@ java.math.BigDecimal#<init>(java.lang.String)
 java.math.BigDecimal#ZERO:java.math.BigDecimal
 java.math.BigDecimal#valueOf(double):java.math.BigDecimal
 java.math.BigDecimal#valueOf(long):java.math.BigDecimal
+java.math.BigDecimal#valueOf(long,int):java.math.BigDecimal
 java.math.BigInteger#<init>(java.lang.String)
 java.math.BigInteger#TEN:java.math.BigInteger
 java.math.BigInteger#ZERO:java.math.BigInteger
@@ -120,6 +122,7 @@ java.time.LocalTime#toString():java.lang.String
 java.time.OffsetDateTime#of(java.time.LocalDateTime,java.time.ZoneOffset):java.time.OffsetDateTime
 java.time.OffsetDateTime#toString():java.lang.String
 java.time.ZoneOffset#UTC:java.time.ZoneOffset
+java.util.ArrayDeque#<init>()
 java.util.ArrayList#<init>()
 java.util.ArrayList#<init>(int)
 java.util.Collections#unmodifiableList(java.util.List):java.util.List  -- wraps the list; checks its class and calls none of its methods
@@ -189,8 +192,40 @@ org.jooq.types.UByte#toBigInteger():java.math.BigInteger
 org.jooq.types.UInteger#toBigInteger():java.math.BigInteger
 org.jooq.types.ULong#toBigInteger():java.math.BigInteger
 org.jooq.types.UShort#toBigInteger():java.math.BigInteger
+tools.jackson.core.JsonToken#END_ARRAY:tools.jackson.core.JsonToken
+tools.jackson.core.JsonToken#END_OBJECT:tools.jackson.core.JsonToken
+tools.jackson.core.JsonToken#PROPERTY_NAME:tools.jackson.core.JsonToken
+tools.jackson.core.JsonToken#START_ARRAY:tools.jackson.core.JsonToken
+tools.jackson.core.JsonToken#START_OBJECT:tools.jackson.core.JsonToken
+tools.jackson.core.JsonToken#VALUE_FALSE:tools.jackson.core.JsonToken
+tools.jackson.core.JsonToken#VALUE_NULL:tools.jackson.core.JsonToken
+tools.jackson.core.JsonToken#VALUE_NUMBER_FLOAT:tools.jackson.core.JsonToken
+tools.jackson.core.JsonToken#VALUE_NUMBER_INT:tools.jackson.core.JsonToken
+tools.jackson.core.JsonToken#VALUE_STRING:tools.jackson.core.JsonToken
+tools.jackson.core.JsonToken#VALUE_TRUE:tools.jackson.core.JsonToken
+tools.jackson.core.JsonToken#isScalarValue():boolean
+tools.jackson.core.JsonToken#name():java.lang.String
+tools.jackson.core.JsonToken#ordinal():int
+tools.jackson.core.JsonToken#values():tools.jackson.core.JsonToken[]
+tools.jackson.core.ObjectReadContext#empty():tools.jackson.core.ObjectReadContext
+tools.jackson.core.StreamReadConstraints#builder():tools.jackson.core.StreamReadConstraints$Builder
+tools.jackson.core.StreamReadConstraints$Builder#build():tools.jackson.core.StreamReadConstraints
+tools.jackson.core.StreamReadFeature#AUTO_CLOSE_SOURCE:tools.jackson.core.StreamReadFeature
+tools.jackson.core.json.JsonFactory#builder():tools.jackson.core.json.JsonFactoryBuilder
+tools.jackson.databind.node.ArrayNode#<init>(tools.jackson.databind.node.JsonNodeFactory)  -- stores the factory; calls nothing on it
+tools.jackson.databind.node.BigIntegerNode#valueOf(java.math.BigInteger):tools.jackson.databind.node.BigIntegerNode  -- stores the number; calls nothing on it
+tools.jackson.databind.node.BooleanNode#FALSE:tools.jackson.databind.node.BooleanNode
+tools.jackson.databind.node.BooleanNode#TRUE:tools.jackson.databind.node.BooleanNode
+tools.jackson.databind.node.DecimalNode#<init>(java.math.BigDecimal)  -- stores the number; calls nothing on it
+tools.jackson.databind.node.IntNode#<init>(int)
+tools.jackson.databind.node.IntNode#valueOf(int):tools.jackson.databind.node.IntNode
+tools.jackson.databind.node.JsonNodeFactory#instance:tools.jackson.databind.node.JsonNodeFactory
 tools.jackson.databind.node.JsonNodeType#name():java.lang.String
+tools.jackson.databind.node.LongNode#valueOf(long):tools.jackson.databind.node.LongNode
 tools.jackson.databind.node.MissingNode#getInstance():tools.jackson.databind.node.MissingNode
+tools.jackson.databind.node.NullNode#getInstance():tools.jackson.databind.node.NullNode
+tools.jackson.databind.node.ObjectNode#<init>(tools.jackson.databind.node.JsonNodeFactory)  -- stores the factory; calls nothing on it
+tools.jackson.databind.node.StringNode#valueOf(java.lang.String):tools.jackson.databind.node.StringNode
 
 [EXPLICIT]
 java.lang.String#toLowerCase(java.util.Locale):java.lang.String
@@ -236,6 +271,10 @@ java.time.LocalDate#parse(java.lang.CharSequence):java.time.LocalDate  -- reads 
 java.time.LocalDateTime#parse(java.lang.CharSequence):java.time.LocalDateTime  -- reads the CharSequence argument
 java.time.LocalTime#parse(java.lang.CharSequence):java.time.LocalTime  -- reads the CharSequence argument
 java.time.OffsetDateTime#parse(java.lang.CharSequence):java.time.OffsetDateTime  -- reads the CharSequence argument
+java.util.ArrayDeque#element():java.lang.Object
+java.util.ArrayDeque#peek():java.lang.Object
+java.util.ArrayDeque#pop():java.lang.Object
+java.util.ArrayDeque#push(java.lang.Object):void
 java.util.ArrayList#<init>(java.util.Collection)  -- calls the argument's toArray()
 java.util.ArrayList#add(java.lang.Object):boolean
 java.util.ArrayList#addAll(java.util.Collection):boolean
@@ -329,6 +368,21 @@ java.util.stream.Stream#sorted(java.util.Comparator):java.util.stream.Stream
 java.util.stream.Stream#toList():java.util.List
 org.jooq.Record#field(java.lang.String):org.jooq.Field
 org.jooq.Record#get(java.lang.String):java.lang.Object
+tools.jackson.core.JsonParser#close():void
+tools.jackson.core.JsonParser#currentName():java.lang.String
+tools.jackson.core.JsonParser#currentToken():tools.jackson.core.JsonToken
+tools.jackson.core.JsonParser#getString():java.lang.String
+tools.jackson.core.JsonParser#getStringCharacters():char[]
+tools.jackson.core.JsonParser#getStringLength():int
+tools.jackson.core.JsonParser#getStringOffset():int
+tools.jackson.core.JsonParser#nextToken():tools.jackson.core.JsonToken
+tools.jackson.core.exc.StreamReadException#<init>(tools.jackson.core.JsonParser,java.lang.String)  -- asks the parser for its location
+tools.jackson.core.json.JsonFactory#createParser(tools.jackson.core.ObjectReadContext,java.io.InputStream):tools.jackson.core.JsonParser
+tools.jackson.core.json.JsonFactory#createParser(tools.jackson.core.ObjectReadContext,java.io.Reader):tools.jackson.core.JsonParser
+tools.jackson.core.json.JsonFactory#createParser(tools.jackson.core.ObjectReadContext,java.lang.String):tools.jackson.core.JsonParser
+tools.jackson.core.json.JsonFactoryBuilder#build():tools.jackson.core.json.JsonFactory
+tools.jackson.core.json.JsonFactoryBuilder#disable(tools.jackson.core.StreamReadFeature):tools.jackson.core.TSFBuilder
+tools.jackson.core.json.JsonFactoryBuilder#streamReadConstraints(tools.jackson.core.StreamReadConstraints):tools.jackson.core.TSFBuilder
 tools.jackson.databind.JsonNode#asString():java.lang.String
 tools.jackson.databind.JsonNode#booleanValue():boolean
 tools.jackson.databind.JsonNode#get(int):tools.jackson.databind.JsonNode
@@ -346,6 +400,9 @@ tools.jackson.databind.JsonNode#numberValue():java.lang.Number
 tools.jackson.databind.JsonNode#properties():java.util.Set
 tools.jackson.databind.JsonNode#propertyNames():java.util.Collection
 tools.jackson.databind.JsonNode#size():int
+tools.jackson.databind.node.ArrayNode#add(tools.jackson.databind.JsonNode):tools.jackson.databind.node.ArrayNode
+tools.jackson.databind.node.ObjectNode#has(java.lang.String):boolean
+tools.jackson.databind.node.ObjectNode#set(java.lang.String,tools.jackson.databind.JsonNode):tools.jackson.databind.node.ObjectNode
 
 [AMBIENT]
 java.util.Locale#getDefault():java.util.Locale  -- reads the JVM default locale

@@ -25,8 +25,12 @@ import net.unit8.raoh.decode.builtin.StringDecoder;
 import net.unit8.raoh.decode.combinator.*;
 
 import org.jspecify.annotations.Nullable;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonParser;
 import tools.jackson.databind.JsonNode;
 
+import java.io.InputStream;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -47,7 +51,14 @@ import java.util.Set;
  *     field("name", string().minLength(1)),
  *     field("age", int_().range(0, 150))
  * ).map(User::new);
+ * Result<User> user = userDecoder.decode(readTree(json));
  * }</pre>
+ *
+ * <p><strong>Reading the input.</strong> The decoders accept any {@link JsonNode}, but read the
+ * input with {@link #readTree(String)} or one of its overloads: it keeps each number as written,
+ * which a tree from Jackson's {@code ObjectMapper} does not, and refuses a member name written
+ * twice. On a mapper's tree the numeric decoders see the value the mapper converted each number
+ * to.
  *
  * <p><strong>Temporals.</strong> There are intentionally no temporal primitives here
  * (no {@code date()} / {@code dateTime()} / {@code iso8601()} factory). A JSON temporal is
@@ -73,6 +84,96 @@ public final class JsonDecoders {
      */
     public static final InputFields<JsonNode> JSON_FIELDS =
             in -> in != null && in.isObject() ? in.propertyNames() : List.of();
+
+    // --- Reading JSON ---
+
+    /**
+     * Reads a JSON document into the tree the decoders here are specified on.
+     *
+     * <p>A tree from Jackson's own {@code ObjectMapper} has its numbers converted before any decoder
+     * sees them: a number with a fraction or an exponent becomes a {@code double} unless the mapper
+     * is configured otherwise, which loses the scale of {@code 0.0001}, digits past the
+     * seventeenth, and the sign of {@code -0}. This method keeps the number as written. An integer
+     * becomes an integer node; any other number becomes a decimal node holding the exact
+     * {@link java.math.BigDecimal} it writes, scale included; and a zero written with a minus sign
+     * ({@code -0}, {@code -0.0}, {@code -0e5}) keeps its sign, so {@link #double_()} and
+     * {@link #float_()} read it as {@code -0.0} while {@link #int_()} still reads {@code -0} as
+     * {@code 0}. Each decoder then rounds or checks the value once, as its own documentation says.
+     *
+     * <p>What the tree cannot hold is refused, not dropped: an object with the same member name
+     * twice, and a number whose exponent is beyond what a {@code BigDecimal} holds (such as
+     * {@code 1e3000000000}). The text must hold exactly one JSON value.
+     *
+     * <p>The parser is Jackson's, with its built-in {@code StreamReadConstraints}: limits on the
+     * length of a number, a string or a name and on nesting depth. These bound the resources
+     * parsing takes and are not Raoh decoder constraints; to read under other limits, pass a parser
+     * configured with them to {@link #readTree(JsonParser)}.
+     *
+     * @param content the JSON text
+     * @return the root node
+     * @throws JacksonException if the text is not one JSON value, exceeds a read constraint, or
+     *         holds something the tree cannot (see above)
+     */
+    public static JsonNode readTree(String content) {
+        return JsonTreeReader.read(content);
+    }
+
+    /**
+     * Reads a JSON document from {@code reader} into the tree the decoders here are specified on,
+     * as {@link #readTree(String)} does, reading to the end of the input. The reader is not closed.
+     *
+     * @param reader the JSON text
+     * @return the root node
+     * @throws JacksonException if the text is not one JSON value, exceeds a read constraint, holds
+     *         something the tree cannot (see {@link #readTree(String)}), or cannot be read
+     */
+    public static JsonNode readTree(Reader reader) {
+        return JsonTreeReader.read(reader);
+    }
+
+    /**
+     * Reads a JSON document from {@code in} into the tree the decoders here are specified on, as
+     * {@link #readTree(String)} does, reading to the end of the input. The encoding (UTF-8, UTF-16
+     * or UTF-32) is detected from the first bytes. The stream is not closed.
+     *
+     * @param in the JSON bytes
+     * @return the root node
+     * @throws JacksonException if the input is not one JSON value, exceeds a read constraint, holds
+     *         something the tree cannot (see {@link #readTree(String)}), or cannot be read
+     */
+    public static JsonNode readTree(InputStream in) {
+        return JsonTreeReader.read(in);
+    }
+
+    /**
+     * Reads one JSON value from a parser the caller owns, into the tree the decoders here are
+     * specified on, as {@link #readTree(String)} does.
+     *
+     * <p>The value starts at the parser's current token, or at its next token if the parser has not
+     * read one yet. The parser is left on the value's last token and is not closed, so a stream of
+     * values can be read one call at a time:
+     *
+     * <pre>{@code
+     * while (parser.nextToken() != null) {
+     *     Result<Order> order = orderDecoder.decode(JsonDecoders.readTree(parser));
+     * }
+     * }</pre>
+     *
+     * <p>The parser's own configuration decides what it reads: its {@code StreamReadConstraints}, its
+     * input, and its features. Its numbers are taken from the text it holds for them, so the tree is
+     * the same whichever of its accessors were called before. A member name that repeats is refused
+     * whatever the parser's {@code STRICT_DUPLICATE_DETECTION} says, since the tree has room for only
+     * one of them. The parser must read JSON text.
+     *
+     * @param parser the parser, on the first token of a value or before any token
+     * @return the value's node
+     * @throws JacksonException if the input ends before the value does, exceeds the parser's read
+     *         constraints, or holds something the tree cannot (see {@link #readTree(String)})
+     * @throws IllegalArgumentException if the parser is on a token that does not start a value
+     */
+    public static JsonNode readTree(JsonParser parser) {
+        return JsonTreeReader.readValue(parser);
+    }
 
     // --- Primitive decoders ---
 
@@ -103,6 +204,10 @@ public final class JsonDecoders {
     // here. Then it reads the admitted node's value with numberValue() and hands it to the
     // ObjectDecoders decoder, which owns the conversion to the target type: range checks,
     // rounding and each source-to-target rule are defined there only.
+    //
+    // A number value cannot say that a zero was written with a minus sign, so the nodes readTree
+    // builds for such a zero are NegativeZero, and double_() and float_() hand ObjectDecoders
+    // -0.0 for them instead of the node's value. That is the only place the sign is read.
     //
     // int_() and long_() must not leave a fractional literal to ObjectDecoders, which accepts an
     // integral BigDecimal: whether 1.0 arrives as a Double or a BigDecimal depends on the
@@ -165,6 +270,11 @@ public final class JsonDecoders {
      * missing node, and {@code type_mismatch} for a number whose magnitude is beyond the
      * {@code double} range (e.g. {@code 1e400}) and any other node type.
      *
+     * <p>On a tree from {@link #readTree(String)} the number is rounded once, from the decimal it
+     * was written as, and a zero written with a minus sign ({@code -0}, {@code -0.0}) gives
+     * {@code -0.0}. On a tree from Jackson's {@code ObjectMapper} it is whatever value the mapper
+     * already converted the number to.
+     *
      * @return a decoder that extracts a double value from a JSON node
      */
     public static DoubleDecoder<JsonNode> double_() {
@@ -175,6 +285,9 @@ public final class JsonDecoders {
             }
             if (!in.isNumber()) {
                 return typeMismatch(in, path, "double");
+            }
+            if (in instanceof NegativeZero) {
+                return base.decode(-0.0d, path);
             }
             return base.decode(in.numberValue(), path);
         });
@@ -187,6 +300,12 @@ public final class JsonDecoders {
      * {@link ObjectDecoders#float_()} does; a number whose magnitude is beyond the {@code float}
      * range (e.g. {@code 1e40}) fails with {@code type_mismatch}.
      *
+     * <p>On a tree from {@link #readTree(String)} the number is rounded to {@code float} once, from
+     * the decimal it was written as, not through a {@code double} first, and a zero written with a
+     * minus sign gives {@code -0.0f}. On a tree from Jackson's {@code ObjectMapper} a number with a
+     * fraction or an exponent has usually been rounded to {@code double} already, and is rounded a
+     * second time here.
+     *
      * @return a decoder that extracts a float value from a JSON node
      */
     public static FloatDecoder<JsonNode> float_() {
@@ -197,6 +316,9 @@ public final class JsonDecoders {
             }
             if (!in.isNumber()) {
                 return typeMismatch(in, path, "float");
+            }
+            if (in instanceof NegativeZero) {
+                return base.decode(-0.0f, path);
             }
             return base.decode(in.numberValue(), path);
         });
@@ -222,13 +344,15 @@ public final class JsonDecoders {
     /**
      * Creates a decimal (BigDecimal) decoder.
      *
-     * <p>Converts a JSON number as {@link ObjectDecoders#decimal()} does. How exact the result is
-     * depends on how the node was parsed: a JSON integer is exact, and so is a fractional number
-     * when the mapper keeps it as {@code BigDecimal}
-     * ({@code DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS});
-     * otherwise Jackson has already parsed it as a {@code double}, and the result is the decimal
-     * that {@code double} prints. Returns {@code required} for {@code null} or a missing node,
-     * and {@code type_mismatch} for any other node type.
+     * <p>Converts a JSON number as {@link ObjectDecoders#decimal()} does. On a tree from
+     * {@link #readTree(String)} the result is exactly the number as written, scale included:
+     * {@code 0.0001} gives {@code 0.0001} and {@code 1.50} gives {@code 1.50}. On a tree from
+     * Jackson's {@code ObjectMapper} a JSON integer is exact, and so is a fractional number when the
+     * mapper keeps it as {@code BigDecimal} ({@code DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS});
+     * otherwise Jackson has already parsed it
+     * as a {@code double}, and the result is the decimal that {@code double} prints. Returns
+     * {@code required} for {@code null} or a missing node, and {@code type_mismatch} for any other
+     * node type.
      *
      * @return a decoder that extracts a decimal value from a JSON node
      */
