@@ -64,26 +64,8 @@
             at a time until it says nothing about the change in front of you.
         -->
         <japicmp.baseline>0.8.0</japicmp.baseline>
-        <notation199x.version>0.1.0-SNAPSHOT</notation199x.version>
+        <notation199x.version>0.1.0</notation199x.version>
     </properties>
-
-    <!--
-        199x-notation has no release yet; its snapshots are in the Central Portal's snapshot
-        repository. Remove this together with the -SNAPSHOT in notation199x.version: a release of
-        Raoh cannot depend on a snapshot.
-    -->
-    <repositories>
-        <repository>
-            <id>central-portal-snapshots</id>
-            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
 
     <build>
         <pluginManagement>
@@ -272,8 +254,8 @@
             <build>
                 <plugins>
                     <!-- A release is permanent, so it must not depend on something that can change
-                         under the same coordinates: a -SNAPSHOT dependency (199x-notation while it
-                         has no release) or a snapshot repository. -->
+                         under the same coordinates: a -SNAPSHOT dependency or a snapshot
+                         repository. -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-enforcer-plugin</artifactId>

@@ -55,7 +55,7 @@ detailed from the current development cycle onward.
   argument only names the form
   ([#166](https://github.com/raoh-project/raoh-java/issues/166)).
 - **The text rules come from 199x-notation.** `raoh` now depends on
-  `net.unit8.199x:199x-notation`, the implementation of the text rules Raoh and Souther share:
+  `net.unit8.199x:199x-notation` 0.1.0, the implementation of the text rules Raoh and Souther share:
   case conversion, normalization, the `White_Space` set, order and length in scalar values, the
   temporal grammar and the pattern language. Raoh's own copies of the `White_Space` set and of
   the temporal regular expressions are gone. `iso8601()` no longer builds its value with
