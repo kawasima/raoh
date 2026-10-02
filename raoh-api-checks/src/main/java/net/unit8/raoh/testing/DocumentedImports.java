@@ -2,8 +2,8 @@ package net.unit8.raoh.testing;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.lang.reflect.Method;
 import java.lang.reflect.GenericArrayType;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -25,11 +25,22 @@ import java.util.stream.Stream;
  * The classes Raoh's documentation imports on demand together, read from the documentation itself.
  *
  * <p>A user who copies an example gets its imports, and Java puts the static methods of every class
- * imported on demand into one set of candidates. Which classes are imported together is therefore
- * what the documentation says, and is read from it rather than written down a second time: the
- * Javadoc of raoh, raoh-json and raoh-jooq, the README and {@code docs/}. A group is a run of
- * consecutive {@code import static net.unit8.raoh.….*;} lines of more than one class. Classes of
- * {@code net.unit8.raoh.examples} are not Raoh's API and are left out.
+ * one compilation unit imports on demand into one set of candidates, whatever stands between the
+ * import declarations. Which classes are imported together is therefore what the documentation's
+ * examples say, read from them rather than written down a second time: a group is every class one
+ * example imports with {@code import static net.unit8.raoh.….*;}, if there are two or more. An
+ * example is a code block:
+ *
+ * <ul>
+ *   <li>in the Javadoc of raoh, raoh-json and raoh-jooq, a {@code <pre>} block, or, for imports a
+ *       Javadoc comment has outside any {@code <pre>}, the comment;</li>
+ *   <li>in the README, the CHANGELOG and the Markdown under {@code docs/}, a fenced code block ({@code ```} or
+ *       {@code ~~~}), or an indented one.</li>
+ * </ul>
+ *
+ * <p>Only documentation is read: the source's own import declarations are how Raoh is written, not
+ * what it tells a user to write. Classes of {@code net.unit8.raoh.examples} are not Raoh's API and
+ * are left out. A nested class may be imported by its canonical name.
  */
 public final class DocumentedImports {
 
@@ -37,16 +48,17 @@ public final class DocumentedImports {
     private static final List<String> MODULES = List.of("raoh", "raoh-json", "raoh-jooq");
 
     private static final Pattern IMPORT = Pattern.compile(
-            "^\\s*(?:\\*\\s*)?import\\s+static\\s+(net\\.unit8\\.raoh\\.[\\w.]+)\\.\\*\\s*;");
+            "import\\s+static\\s+(net\\.unit8\\.raoh\\.[\\w.]+?)\\s*\\.\\s*\\*\\s*;");
 
-    private static final Pattern BLANK = Pattern.compile("^\\s*(?:\\*\\s*)?$");
+    private static final Pattern FENCE = Pattern.compile("^ {0,3}(`{3,}|~{3,})");
 
     private DocumentedImports() {
     }
 
     /**
      * The documentation of the repository whose root is given: the sources of raoh, raoh-json and
-     * raoh-jooq, the README and the Markdown under {@code docs/}.
+     * raoh-jooq, the README, the CHANGELOG and the Markdown under {@code docs/}. CLAUDE.md and
+     * CONTRIBUTING.md are for whoever works on Raoh, not for its users, and are not read.
      *
      * @param root the repository root
      * @return the files
@@ -55,6 +67,7 @@ public final class DocumentedImports {
     public static List<Path> documents(Path root) {
         List<Path> files = new ArrayList<>();
         files.add(root.resolve("README.md"));
+        files.add(root.resolve("CHANGELOG.md"));
         try {
             for (String module : MODULES) {
                 files.addAll(walk(root.resolve(module).resolve("src/main/java"), ".java"));
@@ -73,9 +86,10 @@ public final class DocumentedImports {
     }
 
     /**
-     * The groups of classes these files import on demand together, by binary name, each once.
+     * The groups of classes the examples in these files import on demand together, by the names
+     * the imports write, each group once.
      *
-     * @param files the documentation
+     * @param files the documentation, Java sources and Markdown
      * @return the groups
      * @throws UncheckedIOException if a file cannot be read
      */
@@ -88,97 +102,172 @@ public final class DocumentedImports {
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
-            Set<String> run = new LinkedHashSet<>();
-            for (String line : lines) {
-                Matcher m = IMPORT.matcher(line);
-                if (m.find()) {
-                    if (!m.group(1).startsWith("net.unit8.raoh.examples.")) {
-                        run.add(m.group(1));
-                    }
-                } else if (!BLANK.matcher(line).matches()) {
-                    addGroup(run, groups);
-                    run = new LinkedHashSet<>();
+            var examples = file.toString().endsWith(".java") ? javadocExamples(lines) : markdownExamples(lines);
+            for (List<String> example : examples) {
+                List<String> group = imported(example);
+                if (group.size() > 1) {
+                    groups.add(group);
                 }
             }
-            addGroup(run, groups);
         }
         return List.copyOf(groups);
     }
 
-    private static void addGroup(Set<String> run, Set<List<String>> groups) {
-        if (run.size() > 1) {
-            groups.add(run.stream().sorted().toList());
+    /**
+     * The classes an example imports on demand, sorted, each once.
+     *
+     * @param example the lines of the example
+     * @return the classes, by the names the imports write
+     */
+    static List<String> imported(List<String> example) {
+        Set<String> imported = new LinkedHashSet<>();
+        for (String line : example) {
+            Matcher m = IMPORT.matcher(line);
+            while (m.find()) {
+                if (!m.group(1).startsWith("net.unit8.raoh.examples.")) {
+                    imported.add(m.group(1));
+                }
+            }
         }
+        return imported.stream().sorted().toList();
     }
 
     /**
-     * The groups the module {@code anchor} is in checks, as classes. A group is checked by the one
-     * module that can load all of it: raoh-json for a group with a class of
-     * {@code net.unit8.raoh.json}, raoh-jooq for one with a class of {@code net.unit8.raoh.jooq},
-     * and raoh for any other. A group with classes of both raoh-json and raoh-jooq can be checked
-     * by none, and fails.
+     * The examples in a Java source's Javadoc: each {@code <pre>} block, and for each Javadoc
+     * comment the text outside its {@code <pre>} blocks. Nothing outside a Javadoc comment is read.
      *
-     * @param anchor a class of the module
-     * @param groups the documented groups, by binary name
-     * @return the module's groups
-     * @throws AssertionError if a group is the module's and names a class it cannot load, or if a
-     *                        group belongs to no one module
+     * @param lines the source
+     * @return the text of each example, by line
      */
-    public static List<List<Class<?>>> ofModule(Class<?> anchor, List<List<String>> groups) {
-        String module = moduleOf(anchor.getName());
-        List<List<Class<?>>> own = new ArrayList<>();
+    static List<List<String>> javadocExamples(List<String> lines) {
+        List<List<String>> examples = new ArrayList<>();
+        boolean inJavadoc = false;
+        boolean inPre = false;
+        List<String> pre = new ArrayList<>();
+        List<String> outside = new ArrayList<>();
+        for (String line : lines) {
+            String text = line;
+            if (!inJavadoc) {
+                int open = text.indexOf("/**");
+                if (open < 0) {
+                    continue;
+                }
+                inJavadoc = true;
+                text = text.substring(open + 3);
+            }
+            int close = text.indexOf("*/");
+            if (close >= 0) {
+                text = text.substring(0, close);
+            }
+            // A line may open or close a <pre> block, with text on either side of the tag.
+            while (true) {
+                String tag = inPre ? "</pre>" : "<pre>";
+                int at = text.indexOf(tag);
+                (inPre ? pre : outside).add(at < 0 ? text : text.substring(0, at));
+                if (at < 0) {
+                    break;
+                }
+                if (inPre) {
+                    examples.add(pre);
+                    pre = new ArrayList<>();
+                }
+                inPre = !inPre;
+                text = text.substring(at + tag.length());
+            }
+            if (close >= 0) {
+                if (inPre) {
+                    examples.add(pre);
+                    pre = new ArrayList<>();
+                    inPre = false;
+                }
+                examples.add(outside);
+                outside = new ArrayList<>();
+                inJavadoc = false;
+            }
+        }
+        return examples;
+    }
+
+    /**
+     * The examples in Markdown: each fenced code block, closed by a fence of the same character at
+     * least as long, and each indented code block outside a fence.
+     *
+     * @param lines the Markdown
+     * @return the lines of each example
+     */
+    static List<List<String>> markdownExamples(List<String> lines) {
+        List<List<String>> examples = new ArrayList<>();
+        String fence = null;
+        List<String> block = new ArrayList<>();
+        for (String line : lines) {
+            Matcher m = FENCE.matcher(line);
+            if (fence == null) {
+                if (m.find()) {
+                    examples.add(block);
+                    block = new ArrayList<>();
+                    fence = m.group(1);
+                } else if (line.startsWith("    ") || line.startsWith("\t") || line.isBlank() && !block.isEmpty()) {
+                    block.add(line);
+                } else if (!block.isEmpty()) {
+                    examples.add(block);
+                    block = new ArrayList<>();
+                }
+            } else if (m.find() && m.group(1).charAt(0) == fence.charAt(0) && m.group(1).length() >= fence.length()
+                    && line.strip().equals(m.group(1))) {
+                examples.add(block);
+                block = new ArrayList<>();
+                fence = null;
+            } else {
+                block.add(line);
+            }
+        }
+        examples.add(block);
+        return examples;
+    }
+
+    /**
+     * Loads the groups' classes. A nested class is written in an import by its canonical name,
+     * which is tried as a binary name with each trailing dot read as a {@code $} in turn.
+     *
+     * @param groups the documented groups, by the names the imports write
+     * @param loader the loader of raoh, raoh-json and raoh-jooq
+     * @return the groups, as classes
+     * @throws AssertionError if a group names a class that does not load
+     */
+    public static List<List<Class<?>>> load(List<List<String>> groups, ClassLoader loader) {
+        List<List<Class<?>>> loaded = new ArrayList<>();
         List<String> problems = new ArrayList<>();
         for (List<String> group : groups) {
-            Set<String> modules = new LinkedHashSet<>();
+            List<Class<?>> classes = new ArrayList<>();
             for (String name : group) {
-                String m = moduleOf(name);
-                if (!m.equals("raoh")) {
-                    modules.add(m);
+                Class<?> c = load(name, loader);
+                if (c == null) {
+                    problems.add(group + " names " + name + ", which is no class of raoh, raoh-json or raoh-jooq");
+                } else {
+                    classes.add(c);
                 }
             }
-            if (modules.size() > 1) {
-                problems.add(group + " has classes of " + modules + ", which no one module can load");
-                continue;
-            }
-            if (!module.equals(modules.isEmpty() ? "raoh" : modules.iterator().next())) {
-                continue;
-            }
-            List<Class<?>> loaded = new ArrayList<>();
-            for (String name : group) {
-                try {
-                    loaded.add(Class.forName(name, false, anchor.getClassLoader()));
-                } catch (ClassNotFoundException e) {
-                    problems.add(group + " names " + name + ", which " + module + " cannot load");
-                }
-            }
-            own.add(List.copyOf(loaded));
+            loaded.add(List.copyOf(classes));
         }
         if (!problems.isEmpty()) {
-            throw new AssertionError("The documentation imports classes together that cannot be checked:\n  "
-                    + String.join("\n  ", problems));
+            throw new AssertionError("The documentation imports what is not there:\n  " + String.join("\n  ", problems));
         }
-        return own;
+        return loaded;
     }
 
-    private static boolean mentionsTypeVariable(Type type) {
-        return switch (type) {
-            case TypeVariable<?> v -> true;
-            case ParameterizedType p -> Arrays.stream(p.getActualTypeArguments()).anyMatch(DocumentedImports::mentionsTypeVariable);
-            case GenericArrayType a -> mentionsTypeVariable(a.getGenericComponentType());
-            case WildcardType w -> Stream.concat(Arrays.stream(w.getUpperBounds()), Arrays.stream(w.getLowerBounds()))
-                    .anyMatch(DocumentedImports::mentionsTypeVariable);
-            default -> false;
-        };
-    }
-
-    private static String moduleOf(String className) {
-        if (className.startsWith("net.unit8.raoh.json.")) {
-            return "raoh-json";
+    private static Class<?> load(String canonicalName, ClassLoader loader) {
+        String name = canonicalName;
+        while (true) {
+            try {
+                return Class.forName(name, false, loader);
+            } catch (ClassNotFoundException e) {
+                int dot = name.lastIndexOf('.');
+                if (dot < 0) {
+                    return null;
+                }
+                name = name.substring(0, dot) + "$" + name.substring(dot + 1);
+            }
         }
-        if (className.startsWith("net.unit8.raoh.jooq.")) {
-            return "raoh-jooq";
-        }
-        return "raoh";
     }
 
     /**
@@ -233,4 +322,15 @@ public final class DocumentedImports {
         return List.copyOf(problems);
     }
 
+    private static boolean mentionsTypeVariable(Type type) {
+        return switch (type) {
+            case TypeVariable<?> v -> true;
+            case ParameterizedType p -> Arrays.stream(p.getActualTypeArguments())
+                    .anyMatch(DocumentedImports::mentionsTypeVariable);
+            case GenericArrayType a -> mentionsTypeVariable(a.getGenericComponentType());
+            case WildcardType w -> Stream.concat(Arrays.stream(w.getUpperBounds()), Arrays.stream(w.getLowerBounds()))
+                    .anyMatch(DocumentedImports::mentionsTypeVariable);
+            default -> false;
+        };
+    }
 }

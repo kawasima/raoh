@@ -171,17 +171,21 @@ public final class PublicVarargsOverloads {
     }
 
     /**
-     * Fails if the public classes of the module {@code anchor} is in, or the static-import groups,
-     * have a pair that is not allowed, or if an allowed pair is not there.
+     * Fails if the public classes of the modules the anchors are in, or the static-import groups,
+     * have a pair that is not allowed, if an allowed pair is not there, or if a pair is allowed
+     * twice.
      *
-     * @param anchor             a class of the module, whose classes are read from where it was loaded
+     * @param anchors            a class of each module, whose classes are read from where it was loaded
      * @param staticImportGroups the groups of classes a user imports on demand together
      * @param allowed            the pairs found safe
-     * @throws AssertionError        if a pair is not allowed or an allowed pair is gone
-     * @throws IllegalStateException if the module's classes cannot be read
+     * @throws AssertionError        if a pair is not allowed, an allowed pair is gone or a pair is
+     *                               allowed twice
+     * @throws IllegalStateException if a module's classes cannot be read
      */
-    public static void assertNone(Class<?> anchor, List<List<Class<?>>> staticImportGroups, Allowed... allowed) {
-        List<String> problems = problems(publicClasses(anchor), staticImportGroups, allowed);
+    public static void assertNone(List<Class<?>> anchors, List<List<Class<?>>> staticImportGroups,
+                                  Allowed... allowed) {
+        List<Class<?>> classes = anchors.stream().flatMap(a -> publicClasses(a).stream()).toList();
+        List<String> problems = problems(classes, staticImportGroups, allowed);
         if (!problems.isEmpty()) {
             throw new AssertionError("A method beside a varargs method of its name can take over its calls, "
                     + "changing what they mean without an error. Give it a name of its own, or list the pair "
@@ -433,6 +437,7 @@ public final class PublicVarargsOverloads {
             return files.map(root::relativize).map(Path::toString)
                     .filter(name -> name.endsWith(".class"))
                     .map(name -> name.replace(root.getFileSystem().getSeparator(), "/"))
+                    .filter(PublicVarargsOverloads::isClassFile)
                     .sorted().map(PublicVarargsOverloads::className).toList();
         }
     }
@@ -441,8 +446,21 @@ public final class PublicVarargsOverloads {
         try (JarFile file = new JarFile(jar.toFile())) {
             return file.stream().map(JarEntry::getName)
                     .filter(name -> name.endsWith(".class") && !name.startsWith("META-INF/"))
+                    .filter(PublicVarargsOverloads::isClassFile)
                     .sorted().map(PublicVarargsOverloads::className).toList();
         }
+    }
+
+    /**
+     * Whether a class file holds a class: {@code package-info} and {@code module-info} hold a
+     * package's or a module's declaration instead.
+     *
+     * @param path the class file's path in the module, separated by {@code /}
+     * @return {@code true} for a class
+     */
+    private static boolean isClassFile(String path) {
+        return !path.endsWith("/package-info.class") && !path.equals("package-info.class")
+                && !path.equals("module-info.class") && !path.endsWith("/module-info.class");
     }
 
     private static String className(String path) {
