@@ -1,115 +1,180 @@
 package net.unit8.raoh.testing;
 
 import java.io.IOException;
+import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.fail;
-
 /**
- * Checks that adding an overload to a public API cannot change what an existing call means.
+ * Keeps a public varargs method or constructor from sharing its name with a fixed-arity one,
+ * unless the pair is listed with the reason no call can fit both.
  *
- * <p>Java resolves a call without varargs first, so a fixed-arity method takes over every call to
- * a varargs method of the same name whose arguments it also accepts. Such a call compiled against
- * the varargs method keeps calling it, but the same source compiled again calls the other one,
- * with no error or warning. {@code containsAll(T...)} beside a {@code containsAll(List, String)}
- * would be one: with {@code T} of {@code Object}, {@code containsAll(someList, "tag")}, two
- * elements to require, would become a list and a message.
+ * <p>Java resolves a call without varargs first, by strict and then loose invocation, so a
+ * fixed-arity method takes over every call to a varargs method of the same name that it also
+ * accepts, boxing and primitive widening included. A call compiled against the varargs method
+ * keeps calling it, but the same source compiled again calls the other one, with no error or
+ * warning. {@code containsAll(T...)} beside a {@code containsAll(List, String)} would be one: with
+ * {@code T} of {@code Object}, {@code containsAll(someList, "tag")}, two elements to require,
+ * would become a list and a message. So would {@code f(long...)} beside an {@code f(int)}.
+ * Constructors are chosen the same way.
  *
- * <p>The check is on applicability, not on names: a varargs method and a fixed-arity one of the
- * same name are reported only when some call could fit both, each fixed parameter and each
- * varargs element being of a type the other method's parameter in that place may share. A type
- * parameter is read as its erasure, so {@code T...} may share anything. Two types may share an
- * instance when one is a subtype of the other, or one is an interface and the other a class that
- * is not final. {@code oneOf(String...)} beside {@code oneOf(Collection, String)} is therefore
- * fine: no {@code String} is a {@code Collection}.
+ * <p>This is a policy, not a model of overload resolution: every such pair is refused, and a pair
+ * a reviewer has found safe is listed with {@link Allowed}, its reason written down. Whether a
+ * call can fit both turns on invocation conversions and type inference, which a check here would
+ * have to reimplement to answer, and could answer wrongly. Methods the compiler generates, such as
+ * bridges, are not part of the source and are not considered. Static and instance methods are
+ * considered together, as Java considers them.
  *
- * <p>Each module that publishes an API runs this over its own classes.
+ * <p>Each module that publishes an API runs this over its own classes, from a test. It throws
+ * {@link AssertionError}, which a test framework reports as a failure.
  */
 public final class PublicVarargsOverloads {
+
+    /** The name {@link Allowed} gives the constructors of a class. */
+    public static final String CONSTRUCTOR = "<init>";
+
+    /**
+     * A varargs method or constructor and a fixed-arity one of its name that may share the name,
+     * and why no call can fit both.
+     *
+     * @param owner   the class that declares the varargs one
+     * @param name    the methods' name, or {@link #CONSTRUCTOR}
+     * @param varargs the varargs one's parameter types, its array last
+     * @param fixed   the fixed-arity one's parameter types
+     * @param reason  why no call of the varargs one can fit the fixed-arity one
+     */
+    public record Allowed(Class<?> owner, String name, List<Class<?>> varargs, List<Class<?>> fixed,
+                          String reason) {
+        /**
+         * Copies the parameter types and requires a reason.
+         *
+         * @param owner   the class that declares the varargs one
+         * @param name    the methods' name, or {@link #CONSTRUCTOR}
+         * @param varargs the varargs one's parameter types, its array last
+         * @param fixed   the fixed-arity one's parameter types
+         * @param reason  why no call of the varargs one can fit the fixed-arity one
+         */
+        public Allowed {
+            varargs = List.copyOf(varargs);
+            fixed = List.copyOf(fixed);
+            if (reason.isBlank()) {
+                throw new IllegalArgumentException("an allowed pair needs its reason");
+            }
+        }
+
+        private boolean is(Pair pair) {
+            return pair.varargs().getDeclaringClass() == owner && nameOf(pair.varargs()).equals(name)
+                    && Arrays.asList(pair.varargs().getParameterTypes()).equals(varargs)
+                    && Arrays.asList(pair.fixed().getParameterTypes()).equals(fixed);
+        }
+
+        @Override
+        public String toString() {
+            return owner.getName() + "#" + name + " " + varargs + " beside " + fixed;
+        }
+    }
+
+    /**
+     * A varargs method or constructor and a fixed-arity one of its name.
+     *
+     * @param varargs the varargs one
+     * @param fixed   the fixed-arity one
+     */
+    record Pair(Executable varargs, Executable fixed) {
+    }
 
     private PublicVarargsOverloads() {
     }
 
     /**
-     * Fails if a public class of the module {@code anchor} is in has a varargs method that a
-     * fixed-arity overload could capture a call of.
+     * Fails if a public class of the module {@code anchor} is in has a varargs method or
+     * constructor sharing its name with a fixed-arity one, unless the pair is allowed, and if an
+     * allowed pair is not there.
      *
-     * @param anchor a class of the module, whose classes are read from where it was loaded
+     * @param anchor  a class of the module, whose classes are read from where it was loaded
+     * @param allowed the pairs found safe
+     * @throws AssertionError if a pair is not allowed or an allowed pair is gone
      */
-    public static void assertNoneCapturable(Class<?> anchor) {
-        List<String> found = new ArrayList<>();
-        for (Class<?> c : publicClasses(anchor)) {
-            Method[] methods = c.getMethods();
-            for (Method varargs : methods) {
-                if (!varargs.isVarArgs()) {
-                    continue;
-                }
-                for (Method fixed : methods) {
-                    if (!fixed.isVarArgs() && fixed.getName().equals(varargs.getName())
-                            && Modifier.isStatic(fixed.getModifiers()) == Modifier.isStatic(varargs.getModifiers())
-                            && canCapture(fixed, varargs)) {
-                        found.add(c.getName() + ": " + fixed.toGenericString()
-                                + " can capture a call of " + varargs.toGenericString());
-                    }
-                }
-            }
-        }
-        if (!found.isEmpty()) {
-            fail("A fixed-arity overload can take over calls of a varargs method, changing what they "
-                    + "mean without an error. Give the overload a name of its own:\n  "
-                    + String.join("\n  ", found));
+    public static void assertNone(Class<?> anchor, Allowed... allowed) {
+        List<String> problems = problems(publicClasses(anchor), allowed);
+        if (!problems.isEmpty()) {
+            throw new AssertionError("A fixed-arity method of a varargs method's name can take over its "
+                    + "calls, changing what they mean without an error. Give it a name of its own, or list "
+                    + "the pair with the reason no call can fit both:\n  " + String.join("\n  ", problems));
         }
     }
 
     /**
-     * Whether a call of {@code varargs} could also fit {@code fixed}.
+     * What is wrong with these classes: each pair not allowed, and each allowed pair not there.
      *
-     * @param fixed   the fixed-arity method
-     * @param varargs the varargs method
-     * @return {@code true} if some call could fit both
+     * @param classes the classes
+     * @param allowed the pairs found safe
+     * @return the problems, empty when there are none
      */
-    static boolean canCapture(Method fixed, Method varargs) {
-        Class<?>[] v = varargs.getParameterTypes();
-        Class<?>[] f = fixed.getParameterTypes();
-        int leading = v.length - 1;
-        if (f.length < leading) {
-            return false;
-        }
-        Class<?> element = v[leading].getComponentType();
-        for (int i = 0; i < f.length; i++) {
-            if (!mayShare(i < leading ? v[i] : element, f[i])) {
-                return false;
+    static List<String> problems(List<Class<?>> classes, Allowed... allowed) {
+        List<String> problems = new ArrayList<>();
+        Set<Allowed> used = new LinkedHashSet<>();
+        for (Pair pair : pairs(classes)) {
+            Allowed match = Arrays.stream(allowed).filter(a -> a.is(pair)).findFirst().orElse(null);
+            if (match == null) {
+                problems.add(pair.fixed().toGenericString() + " shares its name with "
+                        + pair.varargs().toGenericString());
+            } else {
+                used.add(match);
             }
         }
-        return true;
+        for (Allowed a : allowed) {
+            if (!used.contains(a)) {
+                problems.add("allowed, but no such pair is there any more: " + a);
+            }
+        }
+        return problems;
     }
 
     /**
-     * Whether a value can be of both types.
+     * Every varargs method or constructor and fixed-arity one of its name among the public
+     * methods and constructors of these classes, each pair once however many classes inherit it.
      *
-     * @param a one type
-     * @param b the other
-     * @return {@code true} if some value can be of both
+     * @param classes the classes
+     * @return the pairs
      */
-    static boolean mayShare(Class<?> a, Class<?> b) {
-        if (a.isPrimitive() || b.isPrimitive()) {
-            return a == b;
+    static List<Pair> pairs(List<Class<?>> classes) {
+        Set<Pair> pairs = new LinkedHashSet<>();
+        for (Class<?> c : classes) {
+            addPairs(Arrays.asList(c.getMethods()), pairs);
+            addPairs(Arrays.asList(c.getConstructors()), pairs);
         }
-        if (a.isAssignableFrom(b) || b.isAssignableFrom(a)) {
-            return true;
-        }
-        return a.isInterface() && open(b) || b.isInterface() && open(a);
+        return List.copyOf(pairs);
     }
 
-    private static boolean open(Class<?> c) {
-        return !c.isArray() && !Modifier.isFinal(c.getModifiers());
+    private static void addPairs(List<? extends Executable> executables, Set<Pair> pairs) {
+        List<Executable> written = executables.stream()
+                .filter(e -> !e.isSynthetic() && !(e instanceof Method m && m.isBridge()))
+                .map(Executable.class::cast)
+                .toList();
+        for (Executable varargs : written) {
+            if (!varargs.isVarArgs()) {
+                continue;
+            }
+            for (Executable fixed : written) {
+                if (!fixed.isVarArgs() && nameOf(fixed).equals(nameOf(varargs))) {
+                    pairs.add(new Pair(varargs, fixed));
+                }
+            }
+        }
+    }
+
+    private static String nameOf(Executable executable) {
+        return executable instanceof Method ? executable.getName() : CONSTRUCTOR;
     }
 
     private static List<Class<?>> publicClasses(Class<?> anchor) {
@@ -128,7 +193,7 @@ public final class PublicVarargsOverloads {
                 String name = root.relativize(file).toString().replace(file.getFileSystem().getSeparator(), ".")
                         .replaceAll("\\.class$", "");
                 Class<?> c = Class.forName(name, false, anchor.getClassLoader());
-                if (Modifier.isPublic(c.getModifiers()) && !name.contains("$") || isPublicNested(c)) {
+                if (isPublic(c)) {
                     classes.add(c);
                 }
             }
@@ -141,12 +206,18 @@ public final class PublicVarargsOverloads {
         return classes;
     }
 
-    private static boolean isPublicNested(Class<?> c) {
+    /**
+     * Whether a class is reachable from outside.
+     *
+     * @param c the class
+     * @return {@code true} if it is public, named, and every class it is nested in is public
+     */
+    private static boolean isPublic(Class<?> c) {
         for (Class<?> k = c; k != null; k = k.getEnclosingClass()) {
-            if (!Modifier.isPublic(k.getModifiers())) {
+            if (!Modifier.isPublic(k.getModifiers()) || k.isAnonymousClass() || k.isLocalClass()) {
                 return false;
             }
         }
-        return c.getEnclosingClass() != null;
+        return true;
     }
 }

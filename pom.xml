@@ -38,6 +38,7 @@
 
     <modules>
         <module>raoh-effect-audit-maven-plugin</module>
+        <module>raoh-api-checks</module>
         <module>raoh</module>
         <module>raoh-json</module>
         <module>raoh-jooq</module>
@@ -246,6 +247,7 @@
                     <!-- Build-internal; the raoh modules use it while building, nobody else does. -->
                     <excludeArtifacts>
                         <artifact>raoh-effect-audit-maven-plugin</artifact>
+                        <artifact>raoh-api-checks</artifact>
                         <artifact>raoh-conformance</artifact>
                     </excludeArtifacts>
                 </configuration>
