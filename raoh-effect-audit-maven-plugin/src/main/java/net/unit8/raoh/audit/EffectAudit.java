@@ -3,6 +3,7 @@ package net.unit8.raoh.audit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +51,8 @@ public final class EffectAudit {
      * @param ambientInDecoder {@code AMBIENT} uses decoder code reaches, each with the chain of
      *                         methods from the decoder to the use
      * @param stale approvals that match no use
+     * @param overlisted uses listed under more reasons than the places the caller uses the member,
+     *                   so that at least one reason no longer has a use of its own, with the counts
      * @param needless approvals of a member whose effect needs none
      * @param problems code the scanner, the hierarchy or the walk could not account for
      */
@@ -60,6 +63,7 @@ public final class EffectAudit {
             Map<Approvals.Use, String> unapproved,
             Map<Approvals.Use, String> ambientInDecoder,
             Set<Approvals.Use> stale,
+            Map<Approvals.Use, String> overlisted,
             Set<Approvals.Use> needless,
             List<String> problems) {
 
@@ -70,7 +74,8 @@ public final class EffectAudit {
          */
         public boolean passed() {
             return unknown.isEmpty() && overridable.isEmpty() && unexplained.isEmpty() && unapproved.isEmpty()
-                    && ambientInDecoder.isEmpty() && stale.isEmpty() && needless.isEmpty() && problems.isEmpty();
+                    && ambientInDecoder.isEmpty() && stale.isEmpty() && overlisted.isEmpty() && needless.isEmpty()
+                    && problems.isEmpty();
         }
 
         /**
@@ -97,6 +102,9 @@ public final class EffectAudit {
                     + " says why it is acceptable here:", entries(unapproved, ""));
             section(out, "Approvals in " + approvalsName + " that match no use any more; remove them:",
                     stale.stream().map(Object::toString).toList());
+            section(out, "Approvals in " + approvalsName + " listed under more reasons than the places the caller"
+                    + " uses the member, so a reason no longer has a use of its own; remove the reason that no"
+                    + " longer applies:", entries(overlisted, ""));
             section(out, "Approvals in " + approvalsName + " of members that are CLOSED or EXPLICIT; remove them:",
                     needless.stream().map(Object::toString).toList());
             section(out, "Code the audit cannot account for:", problems);
@@ -136,12 +144,14 @@ public final class EffectAudit {
         var unapproved = new TreeMap<Approvals.Use, String>(USE_ORDER);
         var needless = new TreeSet<Approvals.Use>(USE_ORDER);
         var used = new LinkedHashSet<Approvals.Use>();
+        var places = new HashMap<Approvals.Use, Integer>();
         var problems = new ArrayList<>(scan.problems());
 
         for (var edge : scan.edges()) {
             var effect = catalog.effectOf(edge.callee());
             var use = useOf(edge, effect.orElse(null));
             used.add(use);
+            places.merge(use, scan.sites().getOrDefault(edge, 1), Integer::sum);
             if (effect.isEmpty()) {
                 unknown.putIfAbsent(edge.callee(), edge.caller());
                 continue;
@@ -189,12 +199,24 @@ public final class EffectAudit {
         problems.addAll(reach.problems());
 
         var stale = new TreeSet<Approvals.Use>(USE_ORDER);
+        var overlisted = new TreeMap<Approvals.Use, String>(USE_ORDER);
         for (var use : approvals.uses()) {
             if (!used.contains(use)) {
                 stale.add(use);
+                continue;
+            }
+            // A use is listed under each reason it is made for, and each reason needs a place of its
+            // own. The audit cannot tell which place a reason is for, but it can tell when there are
+            // fewer places than reasons.
+            int reasons = approvals.reasonsOf(use).size();
+            int at = places.getOrDefault(use, 0);
+            if (reasons > at) {
+                overlisted.put(use, "listed under " + reasons + " reasons, used at " + at
+                        + (at == 1 ? " place" : " places"));
             }
         }
-        return new Report(unknown, overridable, unexplained, unapproved, ambientInDecoder, stale, needless, problems);
+        return new Report(unknown, overridable, unexplained, unapproved, ambientInDecoder, stale, overlisted,
+                needless, problems);
     }
 
     /**

@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -113,12 +114,14 @@ public final class BytecodeScanner {
      * What a scan found.
      *
      * @param edges the external members the audited classes use, sorted by caller and callee
+     * @param sites for each edge, how many places in the audited code use it
      * @param graph the calls between internal methods, of the audited classes and of the
      *              internal classes they depend on
      * @param audited the binary names of the audited classes
      * @param problems code the scanner cannot account for, such as an unknown bootstrap method
      */
-    public record Result(List<Edge> edges, CallGraph graph, Set<String> audited, List<String> problems) {}
+    public record Result(List<Edge> edges, Map<Edge, Integer> sites, CallGraph graph, Set<String> audited,
+                         List<String> problems) {}
 
     /**
      * Scans every class file under a directory.
@@ -159,7 +162,7 @@ public final class BytecodeScanner {
         all.addAll(context);
         var attribution = attribution(all);
         var graph = new CallGraph();
-        var edges = new LinkedHashSet<Edge>();
+        var edges = new LinkedHashMap<Edge, Integer>();
         var problems = new ArrayList<String>();
         var audited = new LinkedHashSet<String>();
         for (var model : own) {
@@ -170,11 +173,11 @@ public final class BytecodeScanner {
             scanClass(model, attribution, graph, audited.contains(Member.typeName(model.thisClass().asSymbol())),
                     edges, problems);
         }
-        var sorted = edges.stream()
+        var sorted = edges.keySet().stream()
                 .sorted(Comparator.comparing(Edge::caller).thenComparing(e -> e.callee().toString())
                         .thenComparing(Edge::via))
                 .toList();
-        return new Result(sorted, graph, Set.copyOf(audited), List.copyOf(problems));
+        return new Result(sorted, Map.copyOf(edges), graph, Set.copyOf(audited), List.copyOf(problems));
     }
 
     /**
@@ -214,7 +217,7 @@ public final class BytecodeScanner {
     }
 
     private void scanClass(ClassModel model, Map<String, String> attribution, CallGraph graph,
-                           boolean audited, Set<Edge> edges, List<String> problems) {
+                           boolean audited, Map<Edge, Integer> edges, List<String> problems) {
         var classDesc = model.thisClass().asSymbol();
         var className = Member.typeName(classDesc);
         if (audited) {
@@ -306,11 +309,11 @@ public final class BytecodeScanner {
         private final String className;
         private final CallGraph graph;
         private final boolean audited;
-        private final Set<Edge> edges;
+        private final Map<Edge, Integer> edges;
         private final List<String> problems;
 
         Collector(String caller, Member self, String className, CallGraph graph, boolean audited,
-                  Set<Edge> edges, List<String> problems) {
+                  Map<Edge, Integer> edges, List<String> problems) {
             this.caller = caller;
             this.self = self;
             this.className = className;
@@ -359,7 +362,7 @@ public final class BytecodeScanner {
             }
             var edge = new Edge(caller, self, member, virtual, via);
             if (audited) {
-                edges.add(edge);
+                edges.merge(edge, 1, Integer::sum);
             }
             graph.addExternal(self, edge);
         }

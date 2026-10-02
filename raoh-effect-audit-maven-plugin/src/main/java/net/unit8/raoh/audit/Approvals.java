@@ -92,6 +92,16 @@ public final class Approvals {
     }
 
     /**
+     * The reasons a use is listed under.
+     *
+     * @param use the use
+     * @return its reasons; empty if it is not approved
+     */
+    public Set<String> reasonsOf(Use use) {
+        return Set.copyOf(reasons.getOrDefault(use, Set.of()));
+    }
+
+    /**
      * Every approved use, in file order.
      *
      * @return the approved uses
