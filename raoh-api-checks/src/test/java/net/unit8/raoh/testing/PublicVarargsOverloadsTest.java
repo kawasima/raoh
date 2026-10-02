@@ -86,6 +86,26 @@ class PublicVarargsOverloadsTest {
     public static class Visible extends Hidden {
     }
 
+    /** f(String[]) from one interface, f(String...) from another: f("x") reaches the second. */
+    public interface Fixed {
+        void f(String[] values);
+    }
+
+    public interface Varargs {
+        void f(String... values);
+    }
+
+    /** f(Object) takes over f("x"), whichever interface comes first. */
+    public abstract static class FixedFirst implements Fixed, Varargs {
+        public void f(Object value) {
+        }
+    }
+
+    public abstract static class VarargsFirst implements Varargs, Fixed {
+        public void f(Object value) {
+        }
+    }
+
     /** As oneOf is: no String is a Collection, so a reviewer may allow the pair. */
     @SuppressWarnings("unused")
     public static class Strings {
@@ -109,6 +129,24 @@ class PublicVarargsOverloadsTest {
         @Override
         public String m(Object... values) {
             return null;
+        }
+    }
+
+    /** A generic varargs method, which a subclass overrides at a type argument it gives. */
+    @SuppressWarnings("unused")
+    public static class GenericBase<T> {
+        @SafeVarargs
+        public final void g(T... values) {
+        }
+
+        @SuppressWarnings("unchecked")
+        public void f(T... values) {
+        }
+    }
+
+    public static class StringSub extends GenericBase<String> {
+        @Override
+        public void f(String... values) {
         }
     }
 
@@ -139,6 +177,23 @@ class PublicVarargsOverloadsTest {
     }
 
     @Test
+    void aVarargsMethodFromOneInterfaceIsKeptBesideAFixedOneFromAnother() {
+        for (Class<?> c : List.of(FixedFirst.class, VarargsFirst.class)) {
+            var problems = PublicVarargsOverloads.problems(List.of(c), List.of());
+            assertTrue(problems.stream().anyMatch(p -> p.contains("f(java.lang.Object)") && p.contains("java.lang.String...")),
+                    c.getSimpleName() + ": " + problems);
+        }
+    }
+
+    @Test
+    void anOverrideOfAGenericVarargsMethodIsOneMethod() {
+        var fs = PublicVarargsOverloads.methods(StringSub.class).stream().filter(m -> m.getName().equals("f")).toList();
+        assertEquals(1, fs.size(), fs.toString());
+        assertEquals(StringSub.class, fs.getFirst().getDeclaringClass());
+        assertEquals(List.of(), PublicVarargsOverloads.problems(List.of(StringSub.class), List.of()));
+    }
+
+    @Test
     void aBridgeIsNotAMethodOfTheSource() {
         var methods = PublicVarargsOverloads.methods(Covariant.class);
         assertEquals(1, methods.size());
@@ -160,6 +215,17 @@ class PublicVarargsOverloadsTest {
                 Signature.of(Strings.class, "any", Collection.class, String.class), "no String is a Collection");
 
         assertEquals(List.of(), PublicVarargsOverloads.problems(List.of(Strings.class), List.of(), allowed));
+    }
+
+    @Test
+    void aPairAllowedTwiceIsReportedAsSuch() {
+        var once = new Allowed(Signature.of(Strings.class, "any", String[].class),
+                Signature.of(Strings.class, "any", Collection.class, String.class), "no String is a Collection");
+        var again = new Allowed(Signature.of(Strings.class, "any", Collection.class, String.class),
+                Signature.of(Strings.class, "any", String[].class), "reworded");
+
+        assertEquals(List.of("allowed twice: " + again),
+                PublicVarargsOverloads.problems(List.of(Strings.class), List.of(), once, again));
     }
 
     @Test

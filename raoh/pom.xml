@@ -34,14 +34,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Checks on the shape of the published API (net.unit8.raoh.testing). -->
-        <dependency>
-            <groupId>net.unit8.raoh</groupId>
-            <artifactId>raoh-api-checks</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

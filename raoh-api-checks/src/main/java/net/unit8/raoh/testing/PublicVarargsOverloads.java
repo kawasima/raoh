@@ -3,8 +3,13 @@ package net.unit8.raoh.testing;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
+import java.lang.reflect.WildcardType;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,6 +23,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.stream.Stream;
 
 /**
@@ -57,9 +64,9 @@ import java.util.stream.Stream;
  *       looked for there; a class's own are found with the class.</li>
  * </ul>
  *
- * <p>raoh, raoh-json and raoh-jooq, the modules Raoh's API compatibility covers, run this over
- * their own classes from a test. It throws {@link AssertionError}, which a test framework reports as
- * a failure.
+ * <p>It checks raoh, raoh-json and raoh-jooq, the modules Raoh's API compatibility covers, from the
+ * tests of raoh-api-checks. It throws {@link AssertionError}, which a test framework reports as a
+ * failure.
  */
 public final class PublicVarargsOverloads {
 
@@ -184,8 +191,8 @@ public final class PublicVarargsOverloads {
     }
 
     /**
-     * What is wrong with these classes and groups: each pair not allowed, and each allowed pair
-     * not there.
+     * What is wrong with these classes and groups: each pair not allowed, each allowed pair not
+     * there, and each pair allowed twice.
      *
      * @param classes            the classes
      * @param staticImportGroups the groups of classes a user imports on demand together
@@ -203,6 +210,12 @@ public final class PublicVarargsOverloads {
             pairs.addAll(staticImportPairs(group));
         }
         List<String> problems = new ArrayList<>();
+        Set<Set<Signature>> listed = new LinkedHashSet<>();
+        for (Allowed a : allowed) {
+            if (!listed.add(Set.of(a.one(), a.other()))) {
+                problems.add("allowed twice: " + a);
+            }
+        }
         Set<Allowed> used = new LinkedHashSet<>();
         for (Pair pair : pairs) {
             Allowed match = Arrays.stream(allowed).filter(a -> a.is(pair)).findFirst().orElse(null);
@@ -213,7 +226,8 @@ public final class PublicVarargsOverloads {
             }
         }
         for (Allowed a : allowed) {
-            if (!used.contains(a)) {
+            if (!used.contains(a) && Arrays.stream(allowed).noneMatch(b -> b != a && used.contains(b)
+                    && Set.of(a.one(), a.other()).equals(Set.of(b.one(), b.other())))) {
                 problems.add("allowed, but no such pair is there any more: " + a);
             }
         }
@@ -264,16 +278,22 @@ public final class PublicVarargsOverloads {
 
     /**
      * The public methods the source declares for a class: its own, and those it inherits from its
-     * superclasses and interfaces, whether or not those are public, an override replacing what it
-     * overrides. Static methods of an interface are not inherited. No method the compiler generated
-     * is included, so a class whose public methods come from a package-private superclass is seen
-     * through those methods, not through the bridges the compiler adds for them.
+     * superclasses and interfaces, whether or not those are public. A method is left out when a
+     * subtype of its class declares one that overrides it: of its name and of its parameter types
+     * as the class sees them, with each type variable of a supertype replaced by the type the class
+     * gives it, so {@code f(String...)} in a {@code Sub extends Base<String>} overrides
+     * {@code Base<T>.f(T...)}. Two that unrelated interfaces declare are both kept, even when one is
+     * varargs and the other not, since a call can reach the class through either. Static methods of
+     * an interface are not inherited. No method the compiler generated is included, so a class
+     * whose public methods come from a package-private superclass is seen through those methods,
+     * not through the bridges the compiler adds for them.
      *
      * @param c the class
      * @return its methods
      */
     static List<Method> methods(Class<?> c) {
-        Map<String, Method> bySignature = new LinkedHashMap<>();
+        Map<TypeVariable<?>, Type> bindings = bindings(c);
+        Map<String, List<Method>> bySignature = new LinkedHashMap<>();
         Deque<Class<?>> types = new ArrayDeque<>();
         Set<Class<?>> seen = new LinkedHashSet<>();
         types.add(c);
@@ -290,14 +310,73 @@ public final class PublicVarargsOverloads {
                         || inherited && t.isInterface() && Modifier.isStatic(m.getModifiers())) {
                     continue;
                 }
-                bySignature.putIfAbsent(m.getName() + Arrays.toString(m.getParameterTypes()), m);
+                String key = m.getName() + Arrays.stream(m.getGenericParameterTypes())
+                        .map(type -> erasure(type, bindings).getName()).toList();
+                List<Method> same = bySignature.computeIfAbsent(key, k -> new ArrayList<>());
+                // A subtype's method overrides this one, and this one overrides a supertype's.
+                if (same.stream().noneMatch(o -> t.isAssignableFrom(o.getDeclaringClass()))) {
+                    same.removeIf(o -> o.getDeclaringClass().isAssignableFrom(t));
+                    same.add(m);
+                }
             }
             if (t.getSuperclass() != null) {
                 types.add(t.getSuperclass());
             }
             types.addAll(Arrays.asList(t.getInterfaces()));
         }
-        return List.copyOf(bySignature.values());
+        return bySignature.values().stream().flatMap(List::stream).toList();
+    }
+
+    /**
+     * The types a class gives the type variables of its supertypes, followed up the hierarchy.
+     *
+     * @param c the class
+     * @return each type variable of a supertype, with the type {@code c} gives it
+     */
+    private static Map<TypeVariable<?>, Type> bindings(Class<?> c) {
+        Map<TypeVariable<?>, Type> bindings = new LinkedHashMap<>();
+        Deque<Type> types = new ArrayDeque<>();
+        types.add(c);
+        Set<Type> seen = new LinkedHashSet<>();
+        while (!types.isEmpty()) {
+            Type t = types.removeFirst();
+            if (!seen.add(t)) {
+                continue;
+            }
+            Class<?> raw = t instanceof ParameterizedType p ? (Class<?>) p.getRawType() : (Class<?>) t;
+            if (t instanceof ParameterizedType p) {
+                TypeVariable<?>[] variables = raw.getTypeParameters();
+                Type[] arguments = p.getActualTypeArguments();
+                for (int i = 0; i < variables.length; i++) {
+                    bindings.putIfAbsent(variables[i], arguments[i]);
+                }
+            }
+            if (raw.getGenericSuperclass() != null) {
+                types.add(raw.getGenericSuperclass());
+            }
+            types.addAll(Arrays.asList(raw.getGenericInterfaces()));
+        }
+        return bindings;
+    }
+
+    /**
+     * The class a type is erased to once the class's bindings are applied.
+     *
+     * @param type     the type
+     * @param bindings the class's bindings
+     * @return its erasure
+     */
+    private static Class<?> erasure(Type type, Map<TypeVariable<?>, Type> bindings) {
+        return switch (type) {
+            case Class<?> k -> k;
+            case ParameterizedType p -> (Class<?>) p.getRawType();
+            case GenericArrayType a -> erasure(a.getGenericComponentType(), bindings).arrayType();
+            case TypeVariable<?> v -> bindings.containsKey(v) && bindings.get(v) != v
+                    ? erasure(bindings.get(v), bindings)
+                    : erasure(v.getBounds()[0], bindings);
+            case WildcardType w -> erasure(w.getUpperBounds()[0], bindings);
+            default -> throw new IllegalArgumentException("a type of no known kind: " + type);
+        };
     }
 
     private static List<Constructor<?>> constructors(Class<?> c) {
@@ -312,6 +391,13 @@ public final class PublicVarargsOverloads {
         return executable instanceof Method ? executable.getName() : CONSTRUCTOR;
     }
 
+    /**
+     * The public classes of the module a class was loaded from, a directory of classes or a jar.
+     *
+     * @param anchor a class of the module
+     * @return its public classes, by name
+     * @throws IllegalStateException if the module cannot be read or has no public class
+     */
     private static List<Class<?>> publicClasses(Class<?> anchor) {
         Path root;
         try {
@@ -319,26 +405,48 @@ public final class PublicVarargsOverloads {
         } catch (URISyntaxException e) {
             throw new IllegalStateException(e);
         }
-        if (!Files.isDirectory(root)) {
-            throw new IllegalStateException("the classes of " + anchor.getName() + " are not in a directory: " + root);
+        List<String> names;
+        try {
+            names = Files.isDirectory(root) ? classNamesIn(root) : classNamesInJar(root);
+        } catch (IOException e) {
+            throw new IllegalStateException("cannot read the classes of " + anchor.getName() + " at " + root, e);
         }
         List<Class<?>> classes = new ArrayList<>();
-        try (Stream<Path> files = Files.walk(root)) {
-            for (Path file : files.filter(p -> p.toString().endsWith(".class")).sorted().toList()) {
-                String name = root.relativize(file).toString().replace(file.getFileSystem().getSeparator(), ".")
-                        .replaceAll("\\.class$", "");
+        for (String name : names) {
+            try {
                 Class<?> c = Class.forName(name, false, anchor.getClassLoader());
                 if (isPublic(c)) {
                     classes.add(c);
                 }
+            } catch (ClassNotFoundException e) {
+                throw new IllegalStateException(e);
             }
-        } catch (IOException | ClassNotFoundException e) {
-            throw new IllegalStateException(e);
         }
         if (classes.isEmpty()) {
-            throw new IllegalStateException("no public class found under " + root);
+            throw new IllegalStateException("no public class found in " + root);
         }
         return classes;
+    }
+
+    private static List<String> classNamesIn(Path root) throws IOException {
+        try (Stream<Path> files = Files.walk(root)) {
+            return files.map(root::relativize).map(Path::toString)
+                    .filter(name -> name.endsWith(".class"))
+                    .map(name -> name.replace(root.getFileSystem().getSeparator(), "/"))
+                    .sorted().map(PublicVarargsOverloads::className).toList();
+        }
+    }
+
+    private static List<String> classNamesInJar(Path jar) throws IOException {
+        try (JarFile file = new JarFile(jar.toFile())) {
+            return file.stream().map(JarEntry::getName)
+                    .filter(name -> name.endsWith(".class") && !name.startsWith("META-INF/"))
+                    .sorted().map(PublicVarargsOverloads::className).toList();
+        }
+    }
+
+    private static String className(String path) {
+        return path.substring(0, path.length() - ".class".length()).replace('/', '.');
     }
 
     /**

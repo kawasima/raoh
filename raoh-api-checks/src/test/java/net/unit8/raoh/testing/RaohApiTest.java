@@ -1,5 +1,6 @@
-package net.unit8.raoh;
+package net.unit8.raoh.testing;
 
+import net.unit8.raoh.Result;
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.decode.Decoders;
 import net.unit8.raoh.decode.ObjectDecoders;
@@ -11,22 +12,21 @@ import net.unit8.raoh.decode.builtin.StringDecoder;
 import net.unit8.raoh.decode.map.MapDecoders;
 import net.unit8.raoh.encode.MapEncoders;
 import net.unit8.raoh.encode.ObjectEncoders;
-import net.unit8.raoh.testing.PublicVarargsOverloads;
 import net.unit8.raoh.testing.PublicVarargsOverloads.Allowed;
 import net.unit8.raoh.testing.PublicVarargsOverloads.Signature;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
 /** No public method of raoh can have its varargs calls taken over by a method of its name. */
-class PublicVarargsOverloadCompatibilityTest {
+class RaohApiTest {
 
-    /** The classes the documentation imports on demand together. */
-    private static final List<List<Class<?>>> STATIC_IMPORT_GROUPS = List.of(
-            List.of(ObjectDecoders.class, MapDecoders.class, Decoders.class),
-            List.of(ObjectEncoders.class, MapEncoders.class));
+    /** The classes Raoh's documentation imports on demand together that include one of this module's. */
+    private static final List<List<Class<?>>> STATIC_IMPORT_GROUPS = DocumentedImports.ofModule(Result.class,
+            DocumentedImports.groups(DocumentedImports.documents(Path.of(".."))));
 
     /**
      * {@code oneOf}'s values are of a final class that is not a {@code Collection}, so no call of
@@ -42,6 +42,11 @@ class PublicVarargsOverloadCompatibilityTest {
                 Signature.of(owner, "oneOf", Collection.class, String.class),
                 "under the @NullMarked contract a " + value.getSimpleName()
                         + " is never null, and as a final class that is not a Collection it is never one");
+    }
+
+    @Test
+    void theDocumentedImportsCanBeCalledUnqualified() {
+        DocumentedImports.assertCallable(STATIC_IMPORT_GROUPS);
     }
 
     @Test

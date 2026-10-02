@@ -87,16 +87,24 @@ Build a single module with `-am` (`mvn -pl raoh-json -am verify`) so the plugin 
 
 ## API Checks
 
-`raoh-api-checks` (build-internal, never published) holds checks on the shape of the published
-API, which `raoh`, `raoh-json` and `raoh-jooq` run from their tests.
+`raoh-api-checks` (build-internal, never published) checks the shape of the published API of
+`raoh`, `raoh-json` and `raoh-jooq` from its own tests (`RaohApiTest`, `RaohJsonApiTest`,
+`RaohJooqApiTest`). It depends on them, not they on it, so no published POM names it.
 
-- **`PublicVarargsOverloadCompatibilityTest` fails**: a public varargs method or constructor
-  shares its name with another one, in its class or across the classes a user imports on demand
-  together, and the other can take over existing calls without an error (`containsAll(T...)` beside
-  `containsAll(List, String)`). Give the new one a name of its own. List the pair as `Allowed`
-  only when no call the `@NullMarked` contract allows changes meaning because of it: none fits
-  both, or every one that does has gone to the same method since both have been there. Write that
-  reason; an `Allowed` pair that is gone fails too.
+- The classes a user imports on demand together are read from the documentation itself (the
+  Javadoc of the three modules, the README and `docs/`): each run of `import static
+  net.unit8.raoh.….*;` lines in an example is a group, checked by the module that can load all of
+  it. An example that imports classes together is therefore a promise the checks hold.
+- **`noMethodCanTakeOverAVarargsCall` fails**: a public varargs method or constructor shares its
+  name with another one, in its class or across a documented group, and the other can take over
+  existing calls without an error (`containsAll(T...)` beside `containsAll(List, String)`). Give
+  the new one a name of its own. List the pair as `Allowed` only when no call the `@NullMarked`
+  contract allows changes meaning because of it: none fits both, or every one that does has gone
+  to the same method since both have been there. Write that reason; an `Allowed` pair that is gone
+  fails too.
+- **`theDocumentedImportsCanBeCalledUnqualified` fails**: two classes of a documented group have
+  the same static method (`ObjectDecoders.int_()` and `ObjectEncoders.int_()`), so the example's
+  imports do not compile. Import them apart in the example.
 
 ## Tutorial Verification with jetshell
 
