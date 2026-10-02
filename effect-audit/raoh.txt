@@ -55,7 +55,7 @@ net.unit8.raoh.decode.ObjectDecoders#toInt -> java.math.BigInteger#intValue():in
 net.unit8.raoh.decode.ObjectDecoders#toLong -> java.math.BigInteger#bitLength():int
 net.unit8.raoh.decode.ObjectDecoders#toLong -> java.math.BigInteger#longValue():long
 
-[the receiver, or the collection a static call or constructor copies, is an object Raoh created: a collection, map, iterator or stream it built or copied, or the result of a JDK parser it called; a List.copyOf or Set.copyOf copy may be the JDK collection it was given; a copy that hashes or orders its elements does so only for elements of a JDK value type or of Raoh's own]
+[the receiver, or the collection a static call or constructor copies, is an object Raoh created: a collection, map, iterator or stream it built or copied, or the result of a JDK parser it called; a List.copyOf or Set.copyOf copy may be the JDK collection it was given; the elements it holds are values the caller configured or a decoder produced, and running their hashCode, equals or compareTo, as a set or a sorted set does, observes them]
 net.unit8.raoh.CodePointOrder#sorted -> java.util.Collection#stream():java.util.stream.Stream
 net.unit8.raoh.CodePointOrder#sorted -> java.util.stream.Stream#sorted(java.util.Comparator):java.util.stream.Stream
 net.unit8.raoh.CodePointOrder#sorted -> java.util.stream.Stream#toList():java.util.List
