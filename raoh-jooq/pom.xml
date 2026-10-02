@@ -43,6 +43,15 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- The checks every module that publishes an API shares (net.unit8.raoh.testing). -->
+        <dependency>
+            <groupId>net.unit8.raoh</groupId>
+            <artifactId>raoh</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

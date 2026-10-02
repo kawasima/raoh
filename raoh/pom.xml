@@ -44,6 +44,23 @@
 
     <build>
         <plugins>
+            <!--
+                The test classes as a jar, for raoh-json and raoh-jooq to run the checks every
+                module that publishes an API shares (net.unit8.raoh.testing). Repository-internal
+                test support, not an API.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>test-support</id>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <!-- Public API diff against ${japicmp.baseline}; configured in the parent POM. -->
             <plugin>
                 <groupId>com.github.siom79.japicmp</groupId>
