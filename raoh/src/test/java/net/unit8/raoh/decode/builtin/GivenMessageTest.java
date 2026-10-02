@@ -10,6 +10,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -105,6 +106,39 @@ class GivenMessageTest {
         assertThrows(IllegalArgumentException.class, () -> int_().oneOf(1, 1));
         // -0.0 and 0.0 are different values, so they are not given twice.
         assertEquals(-0.0, decodeOk(double_().oneOf(-0.0, 0.0), -0.0));
+    }
+
+    @Test
+    void containsAllTakesACollectionAndAMessage() {
+        // R000963
+        var issue = decodeErr(ObjectDecoders.list(int_()).containsAll(List.of(1, 3, 3), "m"), List.of(2));
+        assertGiven(issue, ErrorCodes.MISSING_ELEMENTS, ErrorCodes.MISSING_ELEMENTS, "m");
+        // An element given twice is required, and missing, twice (R000179).
+        assertEquals(Map.of("expected", List.of(1, 3, 3), "missing", List.of(1, 3, 3)), issue.meta());
+
+        assertEquals("must contain all of [1, 3] (missing: [3])",
+                decodeErr(ObjectDecoders.list(int_()).containsAll(List.of(1, 3), null), List.of(1)).message());
+        assertEquals("must contain all of [1, 3] (missing: [3])",
+                decodeErr(ObjectDecoders.list(int_()).containsAll(1, 3), List.of(1)).message());
+        // The message is of containsAll's own issue only, not of the elements' decoder.
+        assertDerived(decodeErr(ObjectDecoders.list(int_()).containsAll(List.of(1), "m"), List.of("x")),
+                ErrorCodes.TYPE_MISMATCH);
+    }
+
+    @Test
+    void containsAllCopiesTheCollection() {
+        var elements = new ArrayList<>(List.of(1));
+        var dec = ObjectDecoders.list(int_()).containsAll(elements, null);
+        elements.add(2);
+
+        assertEquals(List.of(1), decodeOk(dec, List.of(1)));
+    }
+
+    @Test
+    void containsAllRefusesNoElementsAndANullOne() {
+        assertThrows(IllegalArgumentException.class, () -> ObjectDecoders.list(int_()).containsAll(List.of(), "m"));
+        assertThrows(NullPointerException.class,
+                () -> ObjectDecoders.list(int_()).containsAll(Arrays.asList(1, null), null));
     }
 
     @Test

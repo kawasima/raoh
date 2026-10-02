@@ -10,6 +10,7 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -187,14 +188,34 @@ public final class ListDecoder<I extends @Nullable Object, T extends @Nullable O
     /**
      * Requires the list to contain all specified elements.
      *
+     * <p>See {@link #containsAll(Collection, String)}, which also takes a message.
+     *
      * @param elements the elements that must all be present
      * @return a new decoder that fails with {@link ErrorCodes#MISSING_ELEMENTS} if any element is absent
      * @throws IllegalArgumentException if {@code elements} is empty
+     * @throws NullPointerException     if an element is {@code null}
      */
     @SafeVarargs
     public final ListDecoder<I, T> containsAll(@NonNull T... elements) {
-        if (elements.length == 0) throw new IllegalArgumentException("elements must not be empty");
-        var required = List.of(elements);
+        return containsAll(List.of(elements), null);
+    }
+
+    /**
+     * Requires the list to contain all specified elements.
+     *
+     * <p>The elements are copied, so changing the collection passed in afterwards does not change
+     * what is required. An element given twice is required twice and listed twice in the issue's
+     * {@code expected} and {@code missing}; it is found when the list holds it once.
+     *
+     * @param elements the elements that must all be present
+     * @param message  custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#MISSING_ELEMENTS} if any element is absent
+     * @throws IllegalArgumentException if {@code elements} is empty
+     * @throws NullPointerException     if {@code elements} or one of its elements is {@code null}
+     */
+    public ListDecoder<I, T> containsAll(Collection<? extends @NonNull T> elements, @Nullable String message) {
+        List<T> required = List.copyOf(elements);
+        if (required.isEmpty()) throw new IllegalArgumentException("elements must not be empty");
         return chain((value, path) -> {
             var valueSet = new HashSet<>(value);
             var missing = new ArrayList<T>();
@@ -204,10 +225,11 @@ public final class ListDecoder<I extends @Nullable Object, T extends @Nullable O
                 }
             }
             if (!missing.isEmpty()) {
-                var missingList = List.copyOf(missing);
+                var missingList = Collections.unmodifiableList(missing);
                 var meta = Map.<String, Object>of("expected", required, "missing", missingList);
-                var message = String.format(Locale.ROOT, "must contain all of %s (missing: %s)", required, missingList);
-                return Result.fail(path, ErrorCodes.MISSING_ELEMENTS, message, meta);
+                return Result.failWith(path, ErrorCodes.MISSING_ELEMENTS, message,
+                        String.format(Locale.ROOT, "must contain all of %s (missing: %s)", required, missingList),
+                        meta);
             }
             return Result.ok(value);
         });

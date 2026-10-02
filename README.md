@@ -404,8 +404,9 @@ in, such as `iso8601().before(now)` built where `now` is known.
 - `maxSize(...)`
 - `fixedSize(...)`
 
-Each constraint above (except `containsAll` / `toSet`) also takes an optional trailing custom
-message, e.g. `list(string()).minSize(1, "select at least one")`.
+Each constraint above (except `toSet`) also takes an optional trailing custom message, e.g.
+`list(string()).minSize(1, "select at least one")`. A message cannot follow varargs, so
+`containsAll` takes it after a collection: `containsAll(List.of("a", "b"), "pick a and b")`.
 
 ## Object Decoding
 

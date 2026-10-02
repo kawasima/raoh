@@ -43,19 +43,22 @@ detailed from the current development cycle onward.
   `Decoders.literal(String, Decoder, String)` with the `enumOf(Class, String)` and
   `literal(String, String)` conveniences of `ObjectDecoders` and `JsonDecoders`, and
   `oneOf(Collection, String)` on `StringDecoder`, `IntDecoder`, `LongDecoder`, `FloatDecoder` and
-  `DoubleDecoder`, since a message cannot follow varargs. The message never reaches the issues of
-  the decoder before: `enumOf(Color.class, "pick a color")` still gives `type_mismatch` with its own
-  message for a number, and `nonBlank("...")` gives `required` with its own for a missing value.
+  `DoubleDecoder`, and `ListDecoder.containsAll(Collection, String)`, since a message cannot follow
+  varargs. The message never reaches the issues of the decoder before:
+  `enumOf(Color.class, "pick a color")` still gives `type_mismatch` with its own message for a
+  number, and `nonBlank("...")` gives `required` with its own for a missing value.
   `oneOf(Collection, String)` copies the collection and, like the varargs form, refuses a value
-  given twice ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
+  given twice. `containsAll(Collection, String)` copies the collection too and, like the varargs
+  form, keeps a value given twice, which is then required and reported missing twice
+  ([#183](https://github.com/raoh-project/raoh-java/issues/183),
+  [#189](https://github.com/raoh-project/raoh-java/issues/189)).
 - **A Raoh Specification runner and a conformance declaration.** raoh-java was checked against the
   specification only through cases ported into its unit tests by hand. The new `conformance`
   module, built only under the `conformance` profile and never published, runs the `core` and
   `encode` cases on raoh-java's API and writes a runner result; `scripts/conformance.sh` checks it
   with the `raoh-verify` of the specification commit `conformance/spec.lock` pins, against
   `conformance/conformance.json`. The declaration lists the nine `uri` cases as `design`
-  divergences and `operation.list.containsAll.message` as unsupported, since `containsAll` takes no
-  message. The `messages-en` and `messages-ja` profiles check the catalogues raoh-java ships. A
+  divergences, and no feature as unsupported. The `messages-en` and `messages-ja` profiles check the catalogues raoh-java ships. A
   new CI job runs the check and fails when a profile is non-conformant, a divergence included that
   raoh-java no longer has ([#184](https://github.com/raoh-project/raoh-java/issues/184)).
 - **`TemporalDecoder(Decoder, Comparator)`.** A temporal decoder holds the order its `before`,

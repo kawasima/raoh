@@ -7,11 +7,6 @@
     "messages-en",
     "messages-ja"
   ],
-  "unsupported_features": {
-    "operation.list.containsAll.message": {
-      "reason": "ListDecoder.containsAll takes no message argument, so a message cannot be given for missing_elements."
-    }
-  },
   "divergences": {
     "R000869": {
       "category": "design",

@@ -677,9 +677,8 @@ final class Bindings {
 
         op("list", "unique", list, 0, true, (d, v, t, m) -> d.unique(m));
         op("list", "contains", list, 1, true, (d, v, t, m) -> d.contains(value(element(t), v.get(0)), m));
-        // raoh-java's containsAll takes no message, so the facet is not bound.
-        op("list", "containsAll", list, 1, false,
-                (d, v, t, m) -> d.containsAll(listOf(element(t), v.get(0), Object.class).toArray()));
+        op("list", "containsAll", list, 1, true,
+                (d, v, t, m) -> d.containsAll(listOf(element(t), v.get(0), Object.class), m));
         op("list", "toSet", list, 0, null, false, t -> new SpecType.SetOf(element(t)), (d, v, t, m) -> d.toSet());
     }
 
