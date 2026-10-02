@@ -25,6 +25,7 @@ import static net.unit8.raoh.decode.builtin.BuiltinTestSupport.decodeOk;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -434,7 +435,7 @@ class StringConversionGrammarTest {
             "a:",                                // R000869, empty path
             "a:#f",                              // R000870
             "a://",                              // R000871, empty authority
-            "http://[::1]:2147483648/",          // R000872, a port above Integer.MAX_VALUE
+            "http://[::1]:2147483648/",          // R000872, an IPv6 host with a port above Integer.MAX_VALUE
             "http://[v1.abc]/",                  // R000873, IPvFuture
             "http:",                             // R000874, empty path
             "http://",                           // R000875, empty host
@@ -456,7 +457,8 @@ class StringConversionGrammarTest {
     /**
      * The same divergence for {@code url()}: these meet RFC 9110's http requirements, which the
      * specification's {@code url} adds to its {@code uri}, and {@code java.net.URI} cannot hold
-     * them. No specification case covers them yet.
+     * them: an IPvFuture host, and an IPv6 host with a port above {@link Integer#MAX_VALUE}. No
+     * specification case covers them yet.
      *
      * @param text an http URI {@code java.net.URI} cannot hold
      */
@@ -473,6 +475,28 @@ class StringConversionGrammarTest {
 
         var issue = decodeErr(string().url(), text);
         assertEquals(MessageKeys.INVALID_FORMAT_URL, issue.messageKey());
+    }
+
+    /**
+     * A port above {@link Integer#MAX_VALUE} after a host that is not an IP literal is no
+     * divergence: {@code java.net.URI} holds it, reading the authority as registry-based, so it has
+     * no host and no port.
+     *
+     * @param text an http URI with such a port
+     */
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "http://example.com:2147483648/",
+            "http://192.0.2.1:2147483648/",
+            "http://my_host:99999999999/"
+    })
+    void anOversizedPortAfterAnyOtherHostIsAccepted(String text) {
+        for (var decoder : List.of(string().uri(), string().url())) {
+            var uri = decodeOk(decoder, text);
+            assertEquals(text, uri.toString());
+            assertNull(uri.getHost());
+            assertEquals(-1, uri.getPort());
+        }
     }
 
     @ParameterizedTest
