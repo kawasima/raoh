@@ -75,7 +75,7 @@ public record Issues(List<Issue> asList) {
      * @return a new issues instance with rebased paths
      */
     public Issues rebase(Path prefix) {
-        return new Issues(asList.stream().map(i -> i.rebase(prefix)).toList());
+        return new Issues(((IssueList) asList).replacedBy(asList.stream().map(i -> i.rebase(prefix)).toList()));
     }
 
     /**
@@ -87,7 +87,7 @@ public record Issues(List<Issue> asList) {
      */
     public Issues resolve(MessageResolver resolver) {
         if (!IssueTree.anyHoldsIssues(asList)) {
-            return new Issues(asList.stream().map(i -> i.resolvedAlone(resolver)).toList());
+            return new Issues(((IssueList) asList).replacedBy(asList.stream().map(i -> i.resolvedAlone(resolver)).toList()));
         }
         return IssueTree.map(this, i -> i.resolvedAlone(resolver));
     }
@@ -101,7 +101,8 @@ public record Issues(List<Issue> asList) {
      */
     public Issues resolve(MessageResolver resolver, Locale locale) {
         if (!IssueTree.anyHoldsIssues(asList)) {
-            return new Issues(asList.stream().map(i -> i.resolvedAlone(resolver, locale)).toList());
+            return new Issues(((IssueList) asList).replacedBy(
+                    asList.stream().map(i -> i.resolvedAlone(resolver, locale)).toList()));
         }
         return IssueTree.map(this, i -> i.resolvedAlone(resolver, locale));
     }
