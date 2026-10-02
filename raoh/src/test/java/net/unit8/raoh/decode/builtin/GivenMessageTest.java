@@ -9,7 +9,6 @@ import net.unit8.raoh.decode.ObjectDecoders;
 import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -90,16 +89,6 @@ class GivenMessageTest {
     }
 
     @Test
-    void oneOfCopiesTheCollection() {
-        var allowed = new ArrayList<>(List.of("a"));
-        var dec = string().oneOf(allowed, null);
-        allowed.add("b");
-
-        decodeErr(dec, "b");
-        assertEquals("a", decodeOk(dec, "a"));
-    }
-
-    @Test
     void oneOfRefusesAValueGivenTwice() {
         assertThrows(IllegalArgumentException.class, () -> string().oneOf("a", "a"));
         assertThrows(IllegalArgumentException.class, () -> string().oneOf(List.of("a", "a"), "m"));
@@ -109,36 +98,49 @@ class GivenMessageTest {
     }
 
     @Test
-    void containsAllTakesACollectionAndAMessage() {
+    void containsAllOfTakesAListAndAMessage() {
         // R000963
-        var issue = decodeErr(ObjectDecoders.list(int_()).containsAll(List.of(1, 3, 3), "m"), List.of(2));
+        var issue = decodeErr(ObjectDecoders.list(int_()).containsAllOf(List.of(1, 3, 3), "m"), List.of(2));
         assertGiven(issue, ErrorCodes.MISSING_ELEMENTS, ErrorCodes.MISSING_ELEMENTS, "m");
-        // An element given twice is required, and missing, twice (R000179).
+        // A value given twice is kept twice in expected and, when absent, in missing (R000179).
         assertEquals(Map.of("expected", List.of(1, 3, 3), "missing", List.of(1, 3, 3)), issue.meta());
 
         assertEquals("must contain all of [1, 3] (missing: [3])",
-                decodeErr(ObjectDecoders.list(int_()).containsAll(List.of(1, 3), null), List.of(1)).message());
+                decodeErr(ObjectDecoders.list(int_()).containsAllOf(List.of(1, 3), null), List.of(1)).message());
         assertEquals("must contain all of [1, 3] (missing: [3])",
                 decodeErr(ObjectDecoders.list(int_()).containsAll(1, 3), List.of(1)).message());
-        // The message is of containsAll's own issue only, not of the elements' decoder.
-        assertDerived(decodeErr(ObjectDecoders.list(int_()).containsAll(List.of(1), "m"), List.of("x")),
+        // The message is of containsAllOf's own issue only, not of the elements' decoder.
+        assertDerived(decodeErr(ObjectDecoders.list(int_()).containsAllOf(List.of(1), "m"), List.of("x")),
                 ErrorCodes.TYPE_MISMATCH);
     }
 
     @Test
-    void containsAllCopiesTheCollection() {
-        var elements = new ArrayList<>(List.of(1));
-        var dec = ObjectDecoders.list(int_()).containsAll(elements, null);
-        elements.add(2);
-
-        assertEquals(List.of(1), decodeOk(dec, List.of(1)));
+    void oneOccurrenceSatisfiesAValueGivenTwice() {
+        // R000180: [1, 3, 3] does not ask for two 3s.
+        assertEquals(List.of(1, 3), decodeOk(ObjectDecoders.list(int_()).containsAllOf(List.of(1, 3, 3), "m"), List.of(1, 3)));
     }
 
     @Test
-    void containsAllRefusesNoElementsAndANullOne() {
-        assertThrows(IllegalArgumentException.class, () -> ObjectDecoders.list(int_()).containsAll(List.of(), "m"));
+    void containsAllOfRefusesNoElementsAndANullOne() {
+        assertThrows(IllegalArgumentException.class, () -> ObjectDecoders.list(int_()).containsAllOf(List.of(), "m"));
         assertThrows(NullPointerException.class,
-                () -> ObjectDecoders.list(int_()).containsAll(Arrays.asList(1, null), null));
+                () -> ObjectDecoders.list(int_()).containsAllOf(Arrays.asList(1, null), null));
+    }
+
+    /**
+     * A list and a string passed to the varargs {@code containsAll} are two elements to require,
+     * whatever the element type. An overload of {@code containsAll} taking a list and a message
+     * would take this call over when the element type is {@code Object}, which is why the message
+     * form is {@code containsAllOf}.
+     */
+    @Test
+    void containsAllOfAListAndAStringRequiresBoth() {
+        Decoder<@Nullable Object, Object> anything = (in, path) -> net.unit8.raoh.Result.ok(in);
+        var dec = ObjectDecoders.list(anything).containsAll(List.of(1), "x");
+
+        var issue = decodeErr(dec, List.of(1));
+        assertEquals(Map.of("expected", List.of(List.of(1), "x"), "missing", List.of(List.of(1), "x")), issue.meta());
+        assertEquals(List.of(List.of(1), "x"), decodeOk(dec, List.of(List.of(1), "x")));
     }
 
     @Test

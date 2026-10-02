@@ -177,10 +177,10 @@ net.unit8.raoh.decode.builtin.FloatDecoder#oneOf -> java.util.Set#size():int
 net.unit8.raoh.decode.builtin.IntDecoder#oneOf -> java.util.List#size():int
 net.unit8.raoh.decode.builtin.IntDecoder#oneOf -> java.util.Set#contains(java.lang.Object):boolean
 net.unit8.raoh.decode.builtin.IntDecoder#oneOf -> java.util.Set#size():int
-net.unit8.raoh.decode.builtin.ListDecoder#containsAll -> java.util.ArrayList#add(java.lang.Object):boolean
-net.unit8.raoh.decode.builtin.ListDecoder#containsAll -> java.util.ArrayList#isEmpty():boolean
-net.unit8.raoh.decode.builtin.ListDecoder#containsAll -> java.util.HashSet#contains(java.lang.Object):boolean
-net.unit8.raoh.decode.builtin.ListDecoder#containsAll -> java.util.List#isEmpty():boolean
+net.unit8.raoh.decode.builtin.ListDecoder#containsAllOf -> java.util.ArrayList#add(java.lang.Object):boolean
+net.unit8.raoh.decode.builtin.ListDecoder#containsAllOf -> java.util.ArrayList#isEmpty():boolean
+net.unit8.raoh.decode.builtin.ListDecoder#containsAllOf -> java.util.HashSet#contains(java.lang.Object):boolean
+net.unit8.raoh.decode.builtin.ListDecoder#containsAllOf -> java.util.List#copyOf(java.util.Collection):java.util.List
 net.unit8.raoh.decode.builtin.ListDecoder#unique -> java.util.ArrayList#<init>(java.util.Collection)
 net.unit8.raoh.decode.builtin.ListDecoder#unique -> java.util.HashSet#add(java.lang.Object):boolean
 net.unit8.raoh.decode.builtin.ListDecoder#unique -> java.util.LinkedHashSet#add(java.lang.Object):boolean
@@ -265,10 +265,7 @@ net.unit8.raoh.decode.builtin.DecimalDecoder#positive -> java.math.BigDecimal#co
 net.unit8.raoh.decode.builtin.DecimalDecoder#range -> java.math.BigDecimal#compareTo(java.math.BigDecimal):int
 net.unit8.raoh.decode.builtin.DecimalDecoder#scale -> java.math.BigDecimal#scale():int
 net.unit8.raoh.decode.builtin.ListDecoder#contains -> java.util.List#contains(java.lang.Object):boolean
-net.unit8.raoh.decode.builtin.ListDecoder#containsAll -> java.util.HashSet#<init>(java.util.Collection)
-net.unit8.raoh.decode.builtin.ListDecoder#containsAll -> java.util.Iterator#hasNext():boolean
-net.unit8.raoh.decode.builtin.ListDecoder#containsAll -> java.util.Iterator#next():java.lang.Object
-net.unit8.raoh.decode.builtin.ListDecoder#containsAll -> java.util.List#iterator():java.util.Iterator
+net.unit8.raoh.decode.builtin.ListDecoder#containsAllOf -> java.util.HashSet#<init>(java.util.Collection)
 net.unit8.raoh.decode.builtin.ListDecoder#fixedSize -> java.util.List#size():int
 net.unit8.raoh.decode.builtin.ListDecoder#maxSize -> java.util.List#size():int
 net.unit8.raoh.decode.builtin.ListDecoder#minSize -> java.util.List#size():int
@@ -299,6 +296,10 @@ net.unit8.raoh.decode.builtin.FloatDecoder#oneOf -> java.util.TreeSet#<init>(jav
 net.unit8.raoh.decode.builtin.IntDecoder#oneOf -> java.util.List#copyOf(java.util.Collection):java.util.List
 net.unit8.raoh.decode.builtin.IntDecoder#oneOf -> java.util.Set#copyOf(java.util.Collection):java.util.Set
 net.unit8.raoh.decode.builtin.IntDecoder#oneOf -> java.util.TreeSet#<init>(java.util.Collection)
+net.unit8.raoh.decode.builtin.ListDecoder#containsAllOf -> java.util.Iterator#hasNext():boolean
+net.unit8.raoh.decode.builtin.ListDecoder#containsAllOf -> java.util.Iterator#next():java.lang.Object
+net.unit8.raoh.decode.builtin.ListDecoder#containsAllOf -> java.util.List#isEmpty():boolean
+net.unit8.raoh.decode.builtin.ListDecoder#containsAllOf -> java.util.List#iterator():java.util.Iterator
 net.unit8.raoh.decode.builtin.LongDecoder#oneOf -> java.util.List#copyOf(java.util.Collection):java.util.List
 net.unit8.raoh.decode.builtin.LongDecoder#oneOf -> java.util.Set#copyOf(java.util.Collection):java.util.Set
 net.unit8.raoh.decode.builtin.LongDecoder#oneOf -> java.util.TreeSet#<init>(java.util.Collection)
@@ -397,7 +398,7 @@ net.unit8.raoh.decode.builtin.IntDecoder#oneOf -> java.lang.String#format(java.u
 net.unit8.raoh.decode.builtin.IntDecoder#oneOf -> java.lang.String#valueOf(java.lang.Object):java.lang.String
 net.unit8.raoh.decode.builtin.IntDecoder#range -> java.lang.String#format(java.util.Locale,java.lang.String,java.lang.Object[]):java.lang.String
 net.unit8.raoh.decode.builtin.ListDecoder#contains -> java.lang.String#format(java.util.Locale,java.lang.String,java.lang.Object[]):java.lang.String
-net.unit8.raoh.decode.builtin.ListDecoder#containsAll -> java.lang.String#format(java.util.Locale,java.lang.String,java.lang.Object[]):java.lang.String
+net.unit8.raoh.decode.builtin.ListDecoder#containsAllOf -> java.lang.String#format(java.util.Locale,java.lang.String,java.lang.Object[]):java.lang.String
 net.unit8.raoh.decode.builtin.ListDecoder#fixedSize -> java.lang.String#format(java.util.Locale,java.lang.String,java.lang.Object[]):java.lang.String
 net.unit8.raoh.decode.builtin.ListDecoder#maxSize -> java.lang.String#format(java.util.Locale,java.lang.String,java.lang.Object[]):java.lang.String
 net.unit8.raoh.decode.builtin.ListDecoder#minSize -> java.lang.String#format(java.util.Locale,java.lang.String,java.lang.Object[]):java.lang.String
@@ -469,7 +470,7 @@ net.unit8.raoh.decode.builtin.IntDecoder#oneOf -> java.util.Map#of(java.lang.Obj
 net.unit8.raoh.decode.builtin.IntDecoder#positive -> java.util.Map#of(java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object):java.util.Map
 net.unit8.raoh.decode.builtin.IntDecoder#range -> java.util.Map#of(java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object):java.util.Map
 net.unit8.raoh.decode.builtin.ListDecoder#contains -> java.util.Map#of(java.lang.Object,java.lang.Object):java.util.Map
-net.unit8.raoh.decode.builtin.ListDecoder#containsAll -> java.util.Map#of(java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object):java.util.Map
+net.unit8.raoh.decode.builtin.ListDecoder#containsAllOf -> java.util.Map#of(java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object):java.util.Map
 net.unit8.raoh.decode.builtin.ListDecoder#fixedSize -> java.util.Map#of(java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object):java.util.Map
 net.unit8.raoh.decode.builtin.ListDecoder#maxSize -> java.util.Map#of(java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object):java.util.Map
 net.unit8.raoh.decode.builtin.ListDecoder#minSize -> java.util.Map#of(java.lang.Object,java.lang.Object,java.lang.Object,java.lang.Object):java.util.Map
@@ -674,6 +675,6 @@ net.unit8.raoh.IssueList#copyOf -> java.util.List#iterator():java.util.Iterator
 net.unit8.raoh.IssueList#copyOf -> java.util.List#size():int
 net.unit8.raoh.decode.Decoders#discriminate -> java.util.HashMap#<init>(java.util.Map)
 net.unit8.raoh.decode.Decoders#strict -> java.util.HashSet#<init>(java.util.Collection)
-net.unit8.raoh.decode.builtin.ListDecoder#containsAll -> java.util.List#copyOf(java.util.Collection):java.util.List
+net.unit8.raoh.decode.builtin.ListDecoder#containsAllOf -> java.util.List#copyOf(java.util.Collection):java.util.List
 net.unit8.raoh.decode.combinator.CombinerList#<init> -> java.util.List#copyOf(java.util.Collection):java.util.List
 net.unit8.raoh.internal.IssueProvenance#unknownMembers -> java.util.List#copyOf(java.util.Collection):java.util.List

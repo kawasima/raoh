@@ -393,7 +393,7 @@ in, such as `iso8601().before(now)` built where `now` is known.
 - `maxSize(...)`
 - `fixedSize(...)`
 - `contains(...)`
-- `containsAll(...)`
+- `containsAll(...)` / `containsAllOf(list, message)`
 - `unique()`
 - `toSet()`
 
@@ -405,8 +405,8 @@ in, such as `iso8601().before(now)` built where `now` is known.
 - `fixedSize(...)`
 
 Each constraint above (except `toSet`) also takes an optional trailing custom message, e.g.
-`list(string()).minSize(1, "select at least one")`. A message cannot follow varargs, so
-`containsAll` takes it after a collection: `containsAll(List.of("a", "b"), "pick a and b")`.
+`list(string()).minSize(1, "select at least one")`. A message cannot follow varargs, so the
+elements of `containsAll` take one as a list: `containsAllOf(List.of("a", "b"), "pick a and b")`.
 
 ## Object Decoding
 

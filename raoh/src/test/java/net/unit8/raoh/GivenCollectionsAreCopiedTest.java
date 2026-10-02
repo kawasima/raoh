@@ -2,6 +2,7 @@ package net.unit8.raoh;
 
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.decode.Decoders;
+import net.unit8.raoh.decode.ObjectDecoders;
 import net.unit8.raoh.decode.combinator.CombinePart;
 import net.unit8.raoh.decode.map.MapDecoders;
 import net.unit8.raoh.encode.MapEncoders;
@@ -64,6 +65,29 @@ class GivenCollectionsAreCopiedTest {
         Decoder<Object, Object> dec = Decoders.oneOf(candidates);
         candidates[1] = int_();
         assertEquals("x", dec.decode("x", Path.ROOT).getOrThrow());
+    }
+
+    @Test
+    void oneOfKeepsItsOwnAllowedValues() {
+        var allowed = new ArrayList<>(List.of("a"));
+        var dec = string().oneOf(allowed, null);
+        allowed.add("b");
+        assertInstanceOf(Err.class, dec.decode("b", Path.ROOT));
+        assertEquals("a", dec.decode("a", Path.ROOT).getOrThrow());
+    }
+
+    @Test
+    void containsAllKeepsItsOwnElements() {
+        Integer[] array = {1};
+        var fromArray = ObjectDecoders.list(int_()).containsAll(array);
+        array[0] = 2;
+        assertEquals(List.of(1), fromArray.decode(List.of(1), Path.ROOT).getOrThrow());
+
+        var list = new ArrayList<>(List.of(1));
+        var fromList = ObjectDecoders.list(int_()).containsAllOf(list, null);
+        list.add(2);
+        list.set(0, 3);
+        assertEquals(List.of(1), fromList.decode(List.of(1), Path.ROOT).getOrThrow());
     }
 
     @Test
