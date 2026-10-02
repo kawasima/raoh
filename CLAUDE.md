@@ -60,8 +60,11 @@ paste.
   the existing `[reason]` it fits. An `AMBIENT` use names its caller exactly, descriptor included,
   so one method's approval never covers an overload. A method that uses one member for more than
   one reason (`List#iterator` over the decoded value and over the values it was configured with)
-  lists the use under each reason; the audit refuses only a use listed twice under one reason. Do
-  not reshape code so that a use fits one line. Add a new reason only when none fits, and never approve a
+  lists the use under each reason; the audit refuses a use listed twice under one reason, and one
+  listed under more reasons than the places the method uses the member, since a reason without a
+  place of its own is stale. Do not reshape code so that a use fits one line. A copy made with
+  `List.copyOf` or `Set.copyOf` is filed with what Raoh created; the call that copies what the
+  caller passed, under the reason for copies. Add a new reason only when none fits, and never approve a
   delegation that adopts the input's behaviour as the meaning of a conversion; fix the code
   instead (#152 is the model).
 - **`AMBIENT` reached from a decoder package**: cannot be approved, whether the decoder reads it
@@ -79,6 +82,17 @@ paste.
   anything; do not add it to the known set without the expansion.
 
 Build a single module with `-am` (`mvn -pl raoh-json -am verify`) so the plugin is built too.
+
+## API Checks
+
+`raoh-api-checks` (build-internal, never published) holds checks on the shape of the published
+API, which `raoh`, `raoh-json` and `raoh-jooq` run from their tests.
+
+- **`PublicVarargsOverloadCompatibilityTest` fails**: a public varargs method or constructor
+  shares its name with a fixed-arity one, which can take over existing calls without an error
+  (`containsAll(T...)` beside `containsAll(List, String)`). Give the fixed-arity one a name of its
+  own. List the pair as `Allowed` only when no call can fit both, with the reason; an `Allowed`
+  pair that is gone fails too.
 
 ## Tutorial Verification with jetshell
 
