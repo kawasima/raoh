@@ -142,6 +142,36 @@
           }
         ]
       }
+    },
+    "R001008": {
+      "category": "design",
+      "reason": "url() gives a java.net.URI, which cannot hold this RFC 3986 URI: an IPvFuture host, or an IPv6 host with a port above Integer.MAX_VALUE. raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses these URLs with invalid_format, as uri() refuses the URIs it cannot hold.",
+      "observed": {
+        "issues": [
+          {
+            "path": "",
+            "code": "invalid_format",
+            "message_key": "invalid_format.url",
+            "message": "not a valid URL",
+            "meta": {}
+          }
+        ]
+      }
+    },
+    "R001009": {
+      "category": "design",
+      "reason": "url() gives a java.net.URI, which cannot hold this RFC 3986 URI: an IPvFuture host, or an IPv6 host with a port above Integer.MAX_VALUE. raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses these URLs with invalid_format, as uri() refuses the URIs it cannot hold.",
+      "observed": {
+        "issues": [
+          {
+            "path": "",
+            "code": "invalid_format",
+            "message_key": "invalid_format.url",
+            "message": "not a valid URL",
+            "meta": {}
+          }
+        ]
+      }
     }
   }
 }
