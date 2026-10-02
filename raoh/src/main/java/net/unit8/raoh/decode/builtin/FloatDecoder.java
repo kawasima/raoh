@@ -8,6 +8,7 @@ import net.unit8.raoh.Result;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -140,10 +141,21 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if not positive
      */
     public FloatDecoder<I> positive() {
+        return positive(null);
+    }
+
+    /**
+     * Restricts the decoded value to be strictly positive.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if not positive
+     */
+    public FloatDecoder<I> positive(@Nullable String message) {
         return chain((value, path) -> {
             if (Float.compare(value, 0.0f) <= 0) {
-                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_POSITIVE, "must be positive",
-                        Map.of("min", 0.0f, "actual", value));
+                var meta = Map.<String, Object>of("min", 0.0f, "actual", value);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_POSITIVE,
+                        message, "must be positive", meta);
             }
             return Result.ok(value);
         });
@@ -155,10 +167,21 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if not negative
      */
     public FloatDecoder<I> negative() {
+        return negative(null);
+    }
+
+    /**
+     * Restricts the decoded value to be strictly negative.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if not negative
+     */
+    public FloatDecoder<I> negative(@Nullable String message) {
         return chain((value, path) -> {
             if (Float.compare(value, 0.0f) >= 0) {
-                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_NEGATIVE, "must be negative",
-                        Map.of("max", 0.0f, "actual", value));
+                var meta = Map.<String, Object>of("max", 0.0f, "actual", value);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_NEGATIVE,
+                        message, "must be negative", meta);
             }
             return Result.ok(value);
         });
@@ -170,10 +193,21 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if negative
      */
     public FloatDecoder<I> nonNegative() {
+        return nonNegative(null);
+    }
+
+    /**
+     * Restricts the decoded value to be zero or positive.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if negative
+     */
+    public FloatDecoder<I> nonNegative(@Nullable String message) {
         return chain((value, path) -> {
             if (Float.compare(value, 0.0f) < 0) {
-                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_NON_NEGATIVE, "must be non-negative",
-                        Map.of("min", 0.0f, "actual", value));
+                var meta = Map.<String, Object>of("min", 0.0f, "actual", value);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_NON_NEGATIVE,
+                        message, "must be non-negative", meta);
             }
             return Result.ok(value);
         });
@@ -185,10 +219,21 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
      * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if positive
      */
     public FloatDecoder<I> nonPositive() {
+        return nonPositive(null);
+    }
+
+    /**
+     * Restricts the decoded value to be zero or negative.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#OUT_OF_RANGE} if positive
+     */
+    public FloatDecoder<I> nonPositive(@Nullable String message) {
         return chain((value, path) -> {
             if (Float.compare(value, 0.0f) > 0) {
-                return Result.fail(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_NON_POSITIVE, "must be non-positive",
-                        Map.of("max", 0.0f, "actual", value));
+                var meta = Map.<String, Object>of("max", 0.0f, "actual", value);
+                return Result.failWith(path, ErrorCodes.OUT_OF_RANGE, MessageKeys.OUT_OF_RANGE_NON_POSITIVE,
+                        message, "must be non-positive", meta);
             }
             return Result.ok(value);
         });
@@ -197,17 +242,47 @@ public final class FloatDecoder<I extends @Nullable Object> implements Decoder<I
     /**
      * Restricts the decoded value to one of the specified allowed values.
      *
-     * @param allowed the set of allowed float values
+     * <p>The issue lists the allowed values in ascending order.
+     *
+     * <p>Values are compared with {@link Float#equals(Object)}: {@code -0.0} and {@code 0.0} differ,
+     * and {@code NaN} is {@code NaN}.
+     *
+     * @param allowed the allowed float values, distinct
      * @return a new decoder that fails with {@link ErrorCodes#NOT_ALLOWED} if the value is not in the set
+     * @throws IllegalArgumentException if a value occurs twice
+     * @throws NullPointerException     if one of the values is {@code null}
      */
     public FloatDecoder<I> oneOf(Float... allowed) {
-        var allowedSet = Set.of(allowed);
+        return oneOf(List.of(allowed), null);
+    }
+
+    /**
+     * Restricts the decoded value to one of the specified allowed values.
+     *
+     * <p>The issue lists the allowed values in ascending order.
+     *
+     * <p>Values are compared with {@link Float#equals(Object)}: {@code -0.0} and {@code 0.0} differ,
+     * and {@code NaN} is {@code NaN}. The collection is copied, so changing it afterwards does not
+     * change the decoder.
+     *
+     * @param allowed the allowed float values, distinct
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#NOT_ALLOWED} if the value is not in the set
+     * @throws IllegalArgumentException if a value occurs twice
+     * @throws NullPointerException     if {@code allowed} or one of its values is {@code null}
+     */
+    public FloatDecoder<I> oneOf(Collection<? extends Float> allowed, @Nullable String message) {
+        var values = List.<Float>copyOf(allowed);
+        var allowedSet = Set.copyOf(values);
+        if (allowedSet.size() != values.size()) {
+            throw new IllegalArgumentException("the allowed values must be distinct: " + values);
+        }
         var sortedAllowed = List.copyOf(new TreeSet<>(allowedSet));
-        var message = String.format(Locale.ROOT, "must be one of %s", sortedAllowed);
+        var defaultMessage = String.format(Locale.ROOT, "must be one of %s", sortedAllowed);
         return chain((value, path) -> {
             if (!allowedSet.contains(value)) {
                 var meta = Map.<String, Object>of("allowed", sortedAllowed, "actual", value);
-                return Result.fail(path, ErrorCodes.NOT_ALLOWED, message, meta);
+                return Result.failWith(path, ErrorCodes.NOT_ALLOWED, message, defaultMessage, meta);
             }
             return Result.ok(value);
         });

@@ -718,6 +718,27 @@ public final class Decoders {
      *                                  case-insensitive matching
      */
     public static <I extends @Nullable Object, E extends Enum<E>> Decoder<I, E> enumOf(Class<E> cls, Decoder<I, String> stringDec) {
+        return enumOf(cls, stringDec, null);
+    }
+
+    /**
+     * Decodes a string into an enum constant (ASCII case-insensitive), with a custom message.
+     *
+     * <p>Matches as {@link #enumOf(Class, Decoder)} does. The message replaces that of the
+     * {@code invalid_format} issue for a string that names no constant; an issue {@code stringDec}
+     * gives keeps its own message.
+     *
+     * @param <I>       the input type
+     * @param <E>       the enum type
+     * @param cls       the enum class
+     * @param stringDec the string decoder to use
+     * @param message   custom error message, or {@code null} for the default
+     * @return a decoder that produces enum constants
+     * @throws IllegalArgumentException if two constant names are equal under ASCII
+     *                                  case-insensitive matching
+     */
+    public static <I extends @Nullable Object, E extends Enum<E>> Decoder<I, E> enumOf(
+            Class<E> cls, Decoder<I, String> stringDec, @Nullable String message) {
         // Build lookup table and allowed-list once at decoder construction time.
         var lookup = new HashMap<String, E>();
         for (var c : cls.getEnumConstants()) {
@@ -737,9 +758,8 @@ public final class Decoders {
                 case Ok<String> ok -> {
                     var constant = lookup.get(asciiLowerCase(ok.value()));
                     if (constant != null) yield Result.ok(constant);
-                    yield Result.fail(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_ENUM,
-                            "invalid value",
-                            Map.of("allowed", allowed));
+                    yield Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_ENUM,
+                            message, "invalid value", Map.of("allowed", allowed));
                 }
             };
         };
@@ -893,15 +913,31 @@ public final class Decoders {
      * @return a decoder that succeeds only when the string matches
      */
     public static <I extends @Nullable Object> Decoder<I, String> literal(String expected, Decoder<I, String> stringDec) {
+        return literal(expected, stringDec, null);
+    }
+
+    /**
+     * Decodes a string and asserts it equals the expected value, with a custom message.
+     *
+     * <p>The message replaces that of the {@code invalid_format} issue for a string other than
+     * {@code expected}; an issue {@code stringDec} gives keeps its own message.
+     *
+     * @param <I>       the input type
+     * @param expected  the expected string value
+     * @param stringDec the string decoder to use
+     * @param message   custom error message, or {@code null} for the default
+     * @return a decoder that succeeds only when the string matches
+     */
+    public static <I extends @Nullable Object> Decoder<I, String> literal(
+            String expected, Decoder<I, String> stringDec, @Nullable String message) {
         return (in, path) -> {
             var r = stringDec.decode(in, path);
             return switch (r) {
                 case Err<String> err -> err.coerce();
                 case Ok<String> ok -> {
                     if (!expected.equals(ok.value())) {
-                        yield Result.fail(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_LITERAL,
-                                "invalid value",
-                                Map.of("expected", expected));
+                        yield Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_LITERAL,
+                                message, "invalid value", Map.of("expected", expected));
                     }
                     yield Result.ok(ok.value());
                 }
