@@ -106,6 +106,13 @@ public final class RunnerMain {
     /**
      * Runs one case.
      *
+     * <p>Whatever raoh-java throws while the case's decoder or encoder is built or run is the
+     * case's outcome, an error, so that one case cannot stop the others from being run: an
+     * exception, checked or not, and an error such as {@link AssertionError},
+     * {@link ExceptionInInitializerError} or {@link StackOverflowError}. A
+     * {@link VirtualMachineError} other than a stack overflow, such as running out of memory, is
+     * not: after it the runner cannot be trusted to run anything, so it ends the run.
+     *
      * @return its outcome
      * @throws Bindings.UnboundFeature if the case needs a feature the runner does not bind
      */
@@ -121,7 +128,10 @@ public final class RunnerMain {
             return OutcomeWriter.encoded(encoder.encoder().encode(value));
         } catch (Bindings.UnboundFeature e) {
             throw e;
-        } catch (RuntimeException | StackOverflowError e) {
+        } catch (Throwable e) {
+            if (e instanceof VirtualMachineError && !(e instanceof StackOverflowError)) {
+                throw e;
+            }
             return OutcomeWriter.error(e);
         }
     }

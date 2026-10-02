@@ -29,6 +29,9 @@ REPOSITORY="$(jq -er .repository "$LOCK")"
 REVISION="$(jq -er .revision "$LOCK")"
 
 mkdir -p "$OUT"
+# What this run writes, removed first, so that a run that fails before writing them never leaves
+# an earlier run's result or report to be read as this one's.
+rm -f "$OUT/runner-result.json" "$OUT/conformance-report.json"
 
 if [[ -n "${RAOH_SPECIFICATION_DIR:-}" ]]; then
     SPEC="$(cd "$RAOH_SPECIFICATION_DIR" && pwd)"
@@ -63,7 +66,9 @@ fi
 (cd "$SPEC" && go build -o "$OUT/raoh-verify" ./cmd/raoh-verify)
 DIGEST="$("$OUT/raoh-verify" manifest "$SPEC")"
 
-mvn -B --no-transfer-progress -q -f "$ROOT/pom.xml" -Pconformance -pl conformance -am package -DskipTests
+# The runner's own tests run; the modules it is built with are tested by the default build.
+mvn -B --no-transfer-progress -q -f "$ROOT/pom.xml" -Pconformance -pl conformance -am package \
+    -Dtest='net.unit8.raoh.conformance.**' -Dsurefire.failIfNoSpecifiedTests=false -Djacoco.skip=true
 
 IMPLEMENTATION_REVISION="$(git -C "$ROOT" rev-parse HEAD)"
 if [[ -n "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ]]; then
