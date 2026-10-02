@@ -123,6 +123,70 @@ jobs:
       - name: NullAway check
         run: mvn -B --no-transfer-progress -Pnullcheck compile
 
+  conformance:
+    name: Raoh Specification conformance (JDK 25)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      # The suite and the verifier both come from the revision conformance/spec.lock pins, never
+      # from a branch: a check that passed on a commit must pass on it again.
+      - name: Read the pinned specification
+        id: spec
+        run: |
+          echo "repository=$(jq -er .repository conformance/spec.lock)" >> "$GITHUB_OUTPUT"
+          echo "revision=$(jq -er .revision conformance/spec.lock)" >> "$GITHUB_OUTPUT"
+      - name: Check out the specification
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.spec.outputs.repository }}
+          ref: ${{ steps.spec.outputs.revision }}
+          path: raoh-specification
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: raoh-specification/go.mod
+      # Exits non-zero when a profile is non-conformant, which includes a stale divergence in
+      # conformance/conformance.json, and when raoh-verify cannot trust its input.
+      - name: Run the suite and verify
+        run: RAOH_SPECIFICATION_DIR=raoh-specification scripts/conformance.sh
+      # The report is what supports a statement of conformance, so a run that wrote none has
+      # checked nothing, whatever its exit status.
+      - name: Verify the conformance report
+        if: success()
+        run: |
+          if [ ! -s conformance/target/conformance-report.json ]; then
+            echo "::error::raoh-verify wrote no conformance report"
+            exit 1
+          fi
+      - name: Conformance summary
+        if: always()
+        # Reporting only: never let a summary-formatting hiccup red an otherwise-green build.
+        continue-on-error: true
+        run: |
+          report=conformance/target/conformance-report.json
+          [ -s "$report" ] || exit 0
+          {
+            echo "## Raoh Specification $(jq -r .specification.version "$report") conformance"
+            echo "| Profile | Status | Matched | Divergent | Unsupported | Failed |"
+            echo "|---|---|---|---|---|---|"
+            jq -r '.profiles | to_entries[] | "| \(.key) | \(.value.status) | \(.value.matched) | \(.value.divergent) | \(.value.unsupported) | \(.value.failed) |"' "$report"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the runner result and the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: raoh-specification-conformance
+          path: |
+            conformance/target/runner-result.json
+            conformance/target/conformance-report.json
+          if-no-files-found: warn
+
   examples:
     name: Build examples (JDK 25)
     runs-on: ubuntu-24.04

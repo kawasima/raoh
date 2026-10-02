@@ -48,6 +48,16 @@ detailed from the current development cycle onward.
   message for a number, and `nonBlank("...")` gives `required` with its own for a missing value.
   `oneOf(Collection, String)` copies the collection and, like the varargs form, refuses a value
   given twice ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
+- **A Raoh Specification runner and a conformance declaration.** raoh-java was checked against the
+  specification only through cases ported into its unit tests by hand. The new `conformance`
+  module, built only under the `conformance` profile and never published, runs the `core` and
+  `encode` cases on raoh-java's API and writes a runner result; `scripts/conformance.sh` checks it
+  with the `raoh-verify` of the specification commit `conformance/spec.lock` pins, against
+  `conformance/conformance.json`. The declaration lists the nine `uri` cases as `design`
+  divergences and `operation.list.containsAll.message` as unsupported, since `containsAll` takes no
+  message. The `messages-en` and `messages-ja` profiles check the catalogues raoh-java ships. A
+  new CI job runs the check and fails when a profile is non-conformant, a divergence included that
+  raoh-java no longer has ([#184](https://github.com/raoh-project/raoh-java/issues/184)).
 - **`TemporalDecoder(Decoder, Comparator)`.** A temporal decoder holds the order its `before`,
   `after` and `between` compare by, and keeps it through every constraint and `refine` chained on
   it. The one-argument constructor keeps the natural ordering
@@ -87,10 +97,10 @@ detailed from the current development cycle onward.
   the decoders accept: they refuse those URIs with `invalid_format`, as before. The Javadoc of
   `uri()` and `url()` now says this is a difference from the specification, and the tests pin it
   for R000869–R000876 and R000906. A test now checks against `java.net.URI` in both directions
-  which accepted URIs it can hold, so the four kinds are exactly what it refuses. It is not yet
-  declared in the specification's conformance terms, since raoh-java has no runner
-  ([#184](https://github.com/raoh-project/raoh-java/issues/184))
-  ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
+  which accepted URIs it can hold, so the four kinds are exactly what it refuses. Those nine cases
+  are declared `design` divergences in `conformance/conformance.json`
+  ([#183](https://github.com/raoh-project/raoh-java/issues/183),
+  [#184](https://github.com/raoh-project/raoh-java/issues/184)).
 - **Breaking: `StringDecoder.pattern()` takes a pattern of the specification's language, as text.**
   `pattern(Pattern)`, `pattern(Pattern, String)` and `pattern(Pattern, String, String)` are removed;
   `pattern(String)`, `pattern(String, String)` and `pattern(String, String, String)` replace them.
