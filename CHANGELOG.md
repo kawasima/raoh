@@ -35,25 +35,25 @@ detailed from the current development cycle onward.
   token. Containers are kept on a stack of their own, so the nesting depth does not reach the call
   stack. The decoders still accept a mapper's tree, with the numbers the mapper made
   ([#170](https://github.com/raoh-project/raoh-java/issues/170)).
-- **Every constraint that reports an issue takes a message.** The Raoh Specification 0.9.0 gives
-  every such operation an optional message, which replaces the message of that operation's own
-  issues. The overloads raoh-java lacked are added: `positive(String)`, `negative(String)`,
-  `nonNegative(String)` and `nonPositive(String)` on `FloatDecoder` and `DoubleDecoder`,
-  `StringDecoder.nonBlank(String)`, `Decoders.enumOf(Class, Decoder, String)` and
-  `Decoders.literal(String, Decoder, String)` with the `enumOf(Class, String)` and
-  `literal(String, String)` conveniences of `ObjectDecoders` and `JsonDecoders`, and
+- **Every constraint that reports an issue takes a message**, `containsAll` through its list form
+  `containsAllOf`. The Raoh Specification 0.9.0 gives every such operation an optional message,
+  which replaces the message of that operation's own issues. The overloads raoh-java lacked are
+  added: `positive(String)`, `negative(String)`, `nonNegative(String)` and `nonPositive(String)` on
+  `FloatDecoder` and `DoubleDecoder`, `StringDecoder.nonBlank(String)`, `Decoders.enumOf(Class,
+  Decoder, String)` and `Decoders.literal(String, Decoder, String)` with the `enumOf(Class, String)`
+  and `literal(String, String)` conveniences of `ObjectDecoders` and `JsonDecoders`, and
   `oneOf(Collection, String)` on `StringDecoder`, `IntDecoder`, `LongDecoder`, `FloatDecoder` and
   `DoubleDecoder`, since a message cannot follow varargs, and `ListDecoder.containsAllOf(List,
-  String)`. The message never reaches the issues of the decoder before:
-  `enumOf(Color.class, "pick a color")` still gives `type_mismatch` with its own message for a
-  number, and `nonBlank("...")` gives `required` with its own for a missing value.
-  `oneOf(Collection, String)` copies the collection and, like the varargs form, refuses a value
-  given twice. `containsAllOf` is the list form of `containsAll(T...)`, under a name of its own: a
-  `containsAll(List, String)` would take over an existing call such as
-  `containsAll(someList, "tag")`, two elements to require, whenever the elements are of a type both
-  are, with no error. It copies the list, whose order is the order of `expected` and `missing`, and
-  keeps a value given twice in `expected` and, when absent, in `missing`; one occurrence in the
-  decoded list is enough for both ([#183](https://github.com/raoh-project/raoh-java/issues/183),
+  String)`. The message never reaches the issues of the decoder before: `enumOf(Color.class, "pick a
+  color")` still gives `type_mismatch` with its own message for a number, and `nonBlank("...")`
+  gives `required` with its own for a missing value. `oneOf(Collection, String)` copies the
+  collection and, like the varargs form, refuses a value given twice. `containsAllOf` is the list
+  form of `containsAll(T...)`, under a name of its own: a `containsAll(List, String)` would take
+  over an existing call such as `containsAll(someList, "tag")`, two elements to require, whenever
+  the elements are of a type both are, with no error. It copies the list, whose order is the order
+  of `expected` and `missing`, and keeps a value given twice in `expected` and, when absent, in
+  `missing`; one occurrence in the decoded list is enough for both
+  ([#183](https://github.com/raoh-project/raoh-java/issues/183),
   [#189](https://github.com/raoh-project/raoh-java/issues/189)).
 - **A Raoh Specification runner and a conformance declaration.** raoh-java was checked against the
   specification only through cases ported into its unit tests by hand. The new `conformance`

@@ -55,7 +55,7 @@ net.unit8.raoh.decode.ObjectDecoders#toInt -> java.math.BigInteger#intValue():in
 net.unit8.raoh.decode.ObjectDecoders#toLong -> java.math.BigInteger#bitLength():int
 net.unit8.raoh.decode.ObjectDecoders#toLong -> java.math.BigInteger#longValue():long
 
-[the receiver, or the collection a static call or constructor copies, is an object Raoh created: a collection, map, iterator or stream it built or copied, or the result of a JDK parser it called; a List.copyOf or Set.copyOf copy may be the JDK collection it was given; the elements it holds are values the caller configured or a decoder produced, and running their hashCode, equals or compareTo, as a set or a sorted set does, observes them]
+[the receiver, or the collection a static call or constructor copies, is an object Raoh created: a collection, map, iterator or stream it built or copied, or the result of a JDK parser it called; a List.copyOf or Set.copyOf copy may be the JDK collection it was given; the elements it holds are Raoh's own, values the caller configured, or values a decoder produced, and running their hashCode, equals or compareTo, as a set or a sorted set does, observes them]
 net.unit8.raoh.CodePointOrder#sorted -> java.util.Collection#stream():java.util.stream.Stream
 net.unit8.raoh.CodePointOrder#sorted -> java.util.stream.Stream#sorted(java.util.Comparator):java.util.stream.Stream
 net.unit8.raoh.CodePointOrder#sorted -> java.util.stream.Stream#toList():java.util.List
@@ -658,7 +658,7 @@ net.unit8.raoh.ResourceBundleMessageResolver#resolve(net.unit8.raoh.Issue):java.
 net.unit8.raoh.decode.combinator.CombinerSupport#strict -> java.lang.Throwable#toString():java.lang.String
 net.unit8.raoh.decode.combinator.DeclaredFields#merge -> java.lang.Throwable#toString():java.lang.String
 
-[copies a collection it is given when it is made, so that changing the collection afterwards changes nothing; the copy reads the elements and their hashCode and equals]
+[copies a collection it is given when it is made, so that changing the collection afterwards changes nothing; the copy reads the elements, and a set or map copy their hashCode and equals]
 net.unit8.raoh.IssueList#copyOf -> java.util.Iterator#hasNext():boolean
 net.unit8.raoh.IssueList#copyOf -> java.util.Iterator#next():java.lang.Object
 net.unit8.raoh.IssueList#copyOf -> java.util.List#iterator():java.util.Iterator

@@ -28,6 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Every operation that gives an issue takes a message, which replaces the message of that
  * operation's own issues only (Raoh Specification 0.9.0, {@code <form>.message}).
+ * {@code containsAll} takes it through its list form, {@code containsAllOf}, since a message
+ * cannot follow varargs.
  */
 class GivenMessageTest {
 
