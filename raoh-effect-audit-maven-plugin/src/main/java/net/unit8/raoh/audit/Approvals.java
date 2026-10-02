@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The uses of {@link Effect#DELEGATED} and {@link Effect#AMBIENT} members that were reviewed in
@@ -21,7 +23,11 @@ import java.util.Map;
  * net.unit8.raoh.decode.ObjectDecoders#list -> java.util.List#get(int):java.lang.Object
  * </pre>
  *
- * <p>A reviewer reads the few reasons and checks that each use fits the one it is filed under.
+ * <p>A reviewer reads the few reasons and checks that each use fits the one it is filed under. A
+ * caller can use one member for more than one reason, such as {@code List#iterator} over the
+ * decoded value and over the values it was configured with, and since the key cannot tell those
+ * calls apart, the use is listed under each reason it is made for. Listing it twice under one
+ * reason says nothing more, and is refused.
  */
 public final class Approvals {
 
@@ -38,9 +44,9 @@ public final class Approvals {
         }
     }
 
-    private final Map<Use, String> reasons;
+    private final Map<Use, Set<String>> reasons;
 
-    private Approvals(Map<Use, String> reasons) {
+    private Approvals(Map<Use, Set<String>> reasons) {
         this.reasons = reasons;
     }
 
@@ -54,21 +60,22 @@ public final class Approvals {
      * @param file the approval file
      * @return the approvals
      * @throws IOException if the file cannot be read
-     * @throws IllegalArgumentException if an entry is malformed or listed twice
+     * @throws IllegalArgumentException if an entry is malformed or listed twice under one reason
      */
     public static Approvals read(Path file) throws IOException {
         if (!Files.exists(file)) {
             return none();
         }
-        var reasons = new LinkedHashMap<Use, String>();
+        var reasons = new LinkedHashMap<Use, Set<String>>();
         for (var entry : SectionedFile.read(file)) {
             var parts = entry.text().split(" -> ", -1);
             if (parts.length != 2) {
                 throw new IllegalArgumentException(file + ":" + entry.line() + ": expected 'caller -> member'");
             }
             var use = new Use(parts[0].strip(), Member.parse(parts[1].strip()));
-            if (reasons.put(use, entry.heading()) != null) {
-                throw new IllegalArgumentException(file + ":" + entry.line() + ": " + use + " is listed twice");
+            if (!reasons.computeIfAbsent(use, u -> new LinkedHashSet<>()).add(entry.heading())) {
+                throw new IllegalArgumentException(
+                        file + ":" + entry.line() + ": " + use + " is listed twice under [" + entry.heading() + "]");
             }
         }
         return new Approvals(reasons);

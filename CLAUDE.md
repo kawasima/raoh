@@ -58,7 +58,10 @@ paste.
   (`ct.sym`), so the result does not depend on the JDK running Maven.
 - **Use without an approval in `effect-audit/<module>.txt`**: file the `caller -> member` line under
   the existing `[reason]` it fits. An `AMBIENT` use names its caller exactly, descriptor included,
-  so one method's approval never covers an overload. Add a new reason only when none fits, and never approve a
+  so one method's approval never covers an overload. A method that uses one member for more than
+  one reason (`List#iterator` over the decoded value and over the values it was configured with)
+  lists the use under each reason; the audit refuses only a use listed twice under one reason. Do
+  not reshape code so that a use fits one line. Add a new reason only when none fits, and never approve a
   delegation that adopts the input's behaviour as the meaning of a conversion; fix the code
   instead (#152 is the model).
 - **`AMBIENT` reached from a decoder package**: cannot be approved, whether the decoder reads it
