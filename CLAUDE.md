@@ -58,13 +58,15 @@ paste.
   (`ct.sym`), so the result does not depend on the JDK running Maven.
 - **Use without an approval in `effect-audit/<module>.txt`**: file the `caller -> member` line under
   the existing `[reason]` it fits. An `AMBIENT` use names its caller exactly, descriptor included,
-  so one method's approval never covers an overload. A method that uses one member for more than
-  one reason (`List#iterator` over the decoded value and over the values it was configured with)
-  lists the use under each reason; the audit refuses a use listed twice under one reason, and one
-  listed under more reasons than the places the method uses the member, since a reason without a
-  place of its own is stale. Do not reshape code so that a use fits one line. A copy made with
-  `List.copyOf` or `Set.copyOf` is filed with what Raoh created; the call that copies what the
-  caller passed, under the reason for copies. Add a new reason only when none fits, and never approve a
+  so one method's approval never covers an overload. An approval covers the caller's use of the
+  member as a whole, not a place in its code: the key cannot tell two calls in one method apart, so
+  a use is listed once, and its reason states what holds of every call the caller makes to the
+  member (a copy "of a collection the caller passed, or of one Raoh built"). The audit checks the
+  use mechanically; whether every call still satisfies the reason is the reviewer's to check. Do
+  not reshape code to fit a reason; write the reason that covers the use. A call that copies what
+  the caller passed is filed under the reason for copies, and a call on such a copy (a
+  `List.copyOf` or `Set.copyOf` result may be the JDK collection it was given) or on a collection
+  Raoh built under what Raoh created. Add a new reason only when none fits, and never approve a
   delegation that adopts the input's behaviour as the meaning of a conversion; fix the code
   instead (#152 is the model).
 - **`AMBIENT` reached from a decoder package**: cannot be approved, whether the decoder reads it
@@ -89,10 +91,12 @@ Build a single module with `-am` (`mvn -pl raoh-json -am verify`) so the plugin 
 API, which `raoh`, `raoh-json` and `raoh-jooq` run from their tests.
 
 - **`PublicVarargsOverloadCompatibilityTest` fails**: a public varargs method or constructor
-  shares its name with a fixed-arity one, which can take over existing calls without an error
-  (`containsAll(T...)` beside `containsAll(List, String)`). Give the fixed-arity one a name of its
-  own. List the pair as `Allowed` only when no call can fit both, with the reason; an `Allowed`
-  pair that is gone fails too.
+  shares its name with another one, in its class or across the classes a user imports on demand
+  together, and the other can take over existing calls without an error (`containsAll(T...)` beside
+  `containsAll(List, String)`). Give the new one a name of its own. List the pair as `Allowed`
+  only when no call the `@NullMarked` contract allows changes meaning because of it: none fits
+  both, or every one that does has gone to the same method since both have been there. Write that
+  reason; an `Allowed` pair that is gone fails too.
 
 ## Tutorial Verification with jetshell
 

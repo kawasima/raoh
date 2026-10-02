@@ -4,10 +4,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * The uses of {@link Effect#DELEGATED} and {@link Effect#AMBIENT} members that were reviewed in
@@ -23,11 +21,11 @@ import java.util.Set;
  * net.unit8.raoh.decode.ObjectDecoders#list -> java.util.List#get(int):java.lang.Object
  * </pre>
  *
- * <p>A reviewer reads the few reasons and checks that each use fits the one it is filed under. A
- * caller can use one member for more than one reason, such as {@code List#iterator} over the
- * decoded value and over the values it was configured with, and since the key cannot tell those
- * calls apart, the use is listed under each reason it is made for. Listing it twice under one
- * reason says nothing more, and is refused.
+ * <p>A reviewer reads the few reasons and checks that each use fits the one it is filed under.
+ * An approval covers a caller's use of a member as a whole, not a place in the caller's code: the
+ * key cannot tell two calls in one method apart, so its one reason states what holds of every call
+ * the caller makes to the member. The audit checks the use mechanically; whether every call still
+ * satisfies the reason is the reviewer's to check.
  */
 public final class Approvals {
 
@@ -44,9 +42,9 @@ public final class Approvals {
         }
     }
 
-    private final Map<Use, Set<String>> reasons;
+    private final Map<Use, String> reasons;
 
-    private Approvals(Map<Use, Set<String>> reasons) {
+    private Approvals(Map<Use, String> reasons) {
         this.reasons = reasons;
     }
 
@@ -60,22 +58,21 @@ public final class Approvals {
      * @param file the approval file
      * @return the approvals
      * @throws IOException if the file cannot be read
-     * @throws IllegalArgumentException if an entry is malformed or listed twice under one reason
+     * @throws IllegalArgumentException if an entry is malformed or listed twice
      */
     public static Approvals read(Path file) throws IOException {
         if (!Files.exists(file)) {
             return none();
         }
-        var reasons = new LinkedHashMap<Use, Set<String>>();
+        var reasons = new LinkedHashMap<Use, String>();
         for (var entry : SectionedFile.read(file)) {
             var parts = entry.text().split(" -> ", -1);
             if (parts.length != 2) {
                 throw new IllegalArgumentException(file + ":" + entry.line() + ": expected 'caller -> member'");
             }
             var use = new Use(parts[0].strip(), Member.parse(parts[1].strip()));
-            if (!reasons.computeIfAbsent(use, u -> new LinkedHashSet<>()).add(entry.heading())) {
-                throw new IllegalArgumentException(
-                        file + ":" + entry.line() + ": " + use + " is listed twice under [" + entry.heading() + "]");
+            if (reasons.put(use, entry.heading()) != null) {
+                throw new IllegalArgumentException(file + ":" + entry.line() + ": " + use + " is listed twice");
             }
         }
         return new Approvals(reasons);
@@ -89,16 +86,6 @@ public final class Approvals {
      */
     public boolean contains(Use use) {
         return reasons.containsKey(use);
-    }
-
-    /**
-     * The reasons a use is listed under.
-     *
-     * @param use the use
-     * @return its reasons; empty if it is not approved
-     */
-    public Set<String> reasonsOf(Use use) {
-        return Set.copyOf(reasons.getOrDefault(use, Set.of()));
     }
 
     /**

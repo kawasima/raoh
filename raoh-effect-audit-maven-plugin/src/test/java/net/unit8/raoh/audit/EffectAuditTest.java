@@ -251,29 +251,6 @@ class EffectAuditTest {
     }
 
     @Test
-    void aUseListedUnderTwoReasonsNeedsTwoPlaces() throws IOException {
-        var catalog = BASE_CATALOG + "[DELEGATED]\njava.util.List#get(int):java.lang.Object\n";
-        var approvals = """
-                [observes the input]
-                fixture.A#g -> java.util.List#get(int):java.lang.Object
-
-                [reads what the caller configured]
-                fixture.A#g -> java.util.List#get(int):java.lang.Object
-                """;
-        var both = audit(Map.of("A", """
-                class A { Object g(java.util.List<?> in, java.util.List<?> configured) {
-                    return in.get(0) == null ? configured.get(0) : in.get(0); } }"""), catalog, approvals);
-        assertTrue(both.passed(), () -> both.describe("catalog", "approvals"));
-
-        // The read of what the caller configured is gone, but its reason is still listed.
-        var one = audit(Map.of("A", "class A { Object g(java.util.List<?> in) { return in.get(0); } }"),
-                catalog, approvals);
-        var use = new Approvals.Use("fixture.A#g", Member.parse("java.util.List#get(int):java.lang.Object"));
-        assertEquals(Map.of(use, "listed under 2 reasons, used at 1 place"), one.overlisted());
-        assertTrue(one.stale().isEmpty());
-    }
-
-    @Test
     void failsOnAnApprovalOfAClosedMember() throws IOException {
         var report = audit(Map.of("A", "class A { String t(String s) { return s.trim(); } }"), BASE_CATALOG,
                 "[no reason needed]\nfixture.A#t -> java.lang.String#trim():java.lang.String\n");
