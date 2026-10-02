@@ -75,12 +75,12 @@ java.lang.String#codePointCount(int,int):int
 java.lang.String#compareTo(java.lang.String):int
 java.lang.String#endsWith(java.lang.String):boolean
 java.lang.String#equals(java.lang.Object):boolean  -- checks instanceof String before reading the argument
-java.lang.String#regionMatches(boolean,int,java.lang.String,int,int):boolean
 java.lang.String#hashCode():int
 java.lang.String#indexOf(int):int
 java.lang.String#indexOf(int,int):int
 java.lang.String#isEmpty():boolean
 java.lang.String#length():int
+java.lang.String#regionMatches(boolean,int,java.lang.String,int,int):boolean
 java.lang.String#startsWith(java.lang.String):boolean
 java.lang.String#substring(int):java.lang.String
 java.lang.String#substring(int,int):java.lang.String
@@ -122,6 +122,7 @@ java.time.LocalDateTime#toString():java.lang.String
 java.time.LocalTime#of(int,int,int,int):java.time.LocalTime
 java.time.LocalTime#toString():java.lang.String
 java.time.OffsetDateTime#of(java.time.LocalDateTime,java.time.ZoneOffset):java.time.OffsetDateTime
+java.time.OffsetDateTime#timeLineOrder():java.util.Comparator
 java.time.OffsetDateTime#toString():java.lang.String
 java.time.ZoneOffset#UTC:java.time.ZoneOffset
 java.util.AbstractList#<init>()
@@ -131,6 +132,7 @@ java.util.ArrayList#<init>(int)
 java.util.Collections#unmodifiableList(java.util.List):java.util.List  -- wraps the list; checks its class and calls none of its methods
 java.util.Collections#unmodifiableMap(java.util.Map):java.util.Map  -- wraps the map; checks its class and calls none of its methods
 java.util.Collections#unmodifiableSet(java.util.Set):java.util.Set  -- wraps the set; checks its class and calls none of its methods
+java.util.Comparator#naturalOrder():java.util.Comparator  -- returns a comparator; calling it is Comparator#compare, filed on its own
 java.util.HashMap#<init>()
 java.util.HashMap#newHashMap(int):java.util.HashMap
 java.util.HashSet#<init>()
@@ -291,6 +293,7 @@ java.util.ArrayList#size():int
 java.util.Collection#iterator():java.util.Iterator
 java.util.Collection#stream():java.util.stream.Stream
 java.util.Collections#reverse(java.util.List):void  -- calls the list's own methods
+java.util.Comparator#compare(java.lang.Object,java.lang.Object):int
 java.util.HashMap#<init>(java.util.Map)  -- iterates the argument's entries and calls each key's hashCode() and equals()
 java.util.HashMap#containsKey(java.lang.Object):boolean
 java.util.HashMap#get(java.lang.Object):java.lang.Object
@@ -351,6 +354,7 @@ java.util.Set#hashCode():int
 java.util.Set#iterator():java.util.Iterator
 java.util.Set#of(java.lang.Object):java.util.Set  -- calls the element's hashCode()
 java.util.Set#of(java.lang.Object[]):java.util.Set  -- calls the elements' hashCode() and equals()
+java.util.Set#size():int
 java.util.Set#stream():java.util.stream.Stream
 java.util.Set#toString():java.lang.String
 java.util.TreeMap#<init>(java.util.Map)  -- iterates the argument's entries and orders the keys with their compareTo()

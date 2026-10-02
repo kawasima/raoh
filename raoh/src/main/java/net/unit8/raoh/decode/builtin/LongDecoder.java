@@ -8,6 +8,7 @@ import net.unit8.raoh.Result;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -234,17 +235,41 @@ public final class LongDecoder<I extends @Nullable Object> implements Decoder<I,
     /**
      * Restricts the decoded value to one of the specified allowed values.
      *
-     * @param allowed the set of allowed long values
+     * <p>The issue lists the allowed values in ascending order.
+     *
+     * @param allowed the allowed long values, distinct
      * @return a new decoder that fails with {@link ErrorCodes#NOT_ALLOWED} if the value is not in the set
+     * @throws IllegalArgumentException if a value occurs twice
+     * @throws NullPointerException     if one of the values is {@code null}
      */
     public LongDecoder<I> oneOf(Long... allowed) {
-        var allowedSet = Set.of(allowed);
+        return oneOf(List.of(allowed), null);
+    }
+
+    /**
+     * Restricts the decoded value to one of the specified allowed values.
+     *
+     * <p>The issue lists the allowed values in ascending order. The collection is copied, so changing it afterwards does not
+     * change the decoder.
+     *
+     * @param allowed the allowed long values, distinct
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#NOT_ALLOWED} if the value is not in the set
+     * @throws IllegalArgumentException if a value occurs twice
+     * @throws NullPointerException     if {@code allowed} or one of its values is {@code null}
+     */
+    public LongDecoder<I> oneOf(Collection<? extends Long> allowed, @Nullable String message) {
+        var values = List.<Long>copyOf(allowed);
+        var allowedSet = Set.copyOf(values);
+        if (allowedSet.size() != values.size()) {
+            throw new IllegalArgumentException("the allowed values must be distinct: " + values);
+        }
         var sortedAllowed = List.copyOf(new TreeSet<>(allowedSet));
-        var message = String.format(Locale.ROOT, "must be one of %s", sortedAllowed);
+        var defaultMessage = String.format(Locale.ROOT, "must be one of %s", sortedAllowed);
         return chain((value, path) -> {
             if (!allowedSet.contains(value)) {
                 var meta = Map.<String, Object>of("allowed", sortedAllowed, "actual", value);
-                return Result.fail(path, ErrorCodes.NOT_ALLOWED, message, meta);
+                return Result.failWith(path, ErrorCodes.NOT_ALLOWED, message, defaultMessage, meta);
             }
             return Result.ok(value);
         });

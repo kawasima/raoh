@@ -673,6 +673,21 @@ public final class JsonDecoders {
     }
 
     /**
+     * Like {@link #enumOf(Class)}, with a custom message for a string that names no constant.
+     * An issue of the string decoder, such as {@code type_mismatch}, keeps its own message.
+     *
+     * @param <E>     the enum type
+     * @param cls     the enum class
+     * @param message custom error message, or {@code null} for the default
+     * @return a decoder that produces enum constants from string input
+     * @throws IllegalArgumentException if two enum constant names are equal under ASCII
+     *                                  case-insensitive matching
+     */
+    public static <E extends Enum<E>> Decoder<JsonNode, E> enumOf(Class<E> cls, @Nullable String message) {
+        return Decoders.<JsonNode, E>enumOf(cls, string(), message);
+    }
+
+    /**
      * Decodes a JSON string and asserts it equals the expected value.
      *
      * @param expected the expected string value
@@ -680,6 +695,19 @@ public final class JsonDecoders {
      */
     public static Decoder<JsonNode, String> literal(String expected) {
         return Decoders.<JsonNode>literal(expected, string());
+    }
+
+    /**
+     * Like {@link #literal(String)}, with a custom message for a string other than
+     * {@code expected}. An issue of the string decoder, such as {@code type_mismatch}, keeps its
+     * own message.
+     *
+     * @param expected the expected string value
+     * @param message  custom error message, or {@code null} for the default
+     * @return a decoder that succeeds only when the input matches {@code expected}
+     */
+    public static Decoder<JsonNode, String> literal(String expected, @Nullable String message) {
+        return Decoders.<JsonNode>literal(expected, string(), message);
     }
 
     // --- discriminate ---

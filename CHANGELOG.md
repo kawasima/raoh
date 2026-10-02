@@ -35,23 +35,60 @@ detailed from the current development cycle onward.
   token. Containers are kept on a stack of their own, so the nesting depth does not reach the call
   stack. The decoders still accept a mapper's tree, with the numbers the mapper made
   ([#170](https://github.com/raoh-project/raoh-java/issues/170)).
+- **Every constraint that reports an issue takes a message.** The Raoh Specification 0.9.0 gives
+  every such operation an optional message, which replaces the message of that operation's own
+  issues. The overloads raoh-java lacked are added: `positive(String)`, `negative(String)`,
+  `nonNegative(String)` and `nonPositive(String)` on `FloatDecoder` and `DoubleDecoder`,
+  `StringDecoder.nonBlank(String)`, `Decoders.enumOf(Class, Decoder, String)` and
+  `Decoders.literal(String, Decoder, String)` with the `enumOf(Class, String)` and
+  `literal(String, String)` conveniences of `ObjectDecoders` and `JsonDecoders`, and
+  `oneOf(Collection, String)` on `StringDecoder`, `IntDecoder`, `LongDecoder`, `FloatDecoder` and
+  `DoubleDecoder`, since a message cannot follow varargs. The message never reaches the issues of
+  the decoder before: `enumOf(Color.class, "pick a color")` still gives `type_mismatch` with its own
+  message for a number, and `nonBlank("...")` gives `required` with its own for a missing value.
+  `oneOf(Collection, String)` copies the collection and, like the varargs form, refuses a value
+  given twice ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
+- **`TemporalDecoder(Decoder, Comparator)`.** A temporal decoder holds the order its `before`,
+  `after` and `between` compare by, and keeps it through every constraint and `refine` chained on
+  it. The one-argument constructor keeps the natural ordering
+  ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
 
 ### Changed
 
+- **Offset date-times compare by instant alone.** `before`, `after` and `between` on
+  `StringDecoder.offsetDateTime()` and `ObjectDecoders.offsetDateTime()`, and `between`'s check
+  that its bounds are ordered, used `OffsetDateTime.compareTo`, which orders two values at the same
+  instant by their local date-time. So `before(10:00+01:00)` accepted `09:00Z`, the same instant,
+  and `between(10:00+01:00, 09:00Z)` was refused as reversed. They now use
+  `OffsetDateTime.timeLineOrder()`, as the Raoh Specification 0.9.0 says: neither of two values at
+  one instant is before the other, so `before(10:00+01:00)` refuses `09:00Z` and
+  `between(10:00+01:00, 10:00+01:00)` accepts it. The decoded value keeps the offset it was written
+  with ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
+- **`email()` accepts an ASCII profile of RFC 5321's Mailbox.** It used a regular expression that
+  required a top-level label of two or more letters and allowed only `.`, `_`, `%`, `+` and `-`
+  besides letters and digits in the local part, with no rule on where the dots go. It now accepts
+  `Dot-string "@" Domain` as the Raoh Specification 0.9.0 defines it: a local part of RFC 5322
+  `atext` atoms joined by single dots, at most 64 octets; labels that start and end with a letter
+  or digit, at most 63 octets each; at most 254 octets in all. Newly accepted are a single-label or
+  all-digit domain (`a@localhost`, `a@123`) and the other `atext` symbols (`o'brien@example.com`).
+  Newly refused are a dot at either end of the local part or two in a row (`.a@b.co`, `a..b@b.co`),
+  a label that starts or ends with a hyphen (`a@-b.co`) and an empty label (`a@b..co`). A trailing
+  dot after the domain, a quoted local part, an address literal and non-ASCII characters stay
+  refused ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
 - **`uri()` and `url()` keep returning `java.net.URI`, and differ from the Raoh Specification
   0.9.0 on purpose.** The specification's `uri` is now the whole RFC 3986 `URI` production, and
-  its `url` adds RFC 9110's http requirements to it. `java.net.URI` cannot hold four kinds of those
-  URIs: an empty path with no authority and no query (`a:`, `http:`, `a:#f`), an empty authority
-  with nothing after it (`a://`, `http://`), an IPvFuture host (`http://[v1.abc]/`), and an IPv6
-  host with a port above `Integer.MAX_VALUE` (`http://[::1]:2147483648/`). After any other host,
-  such a port is held, with no host and no port, so `http://example.com:2147483648/` is accepted
-  by both decoders. raoh-java keeps `java.net.URI` as the result type rather than making every domain model that holds a `URI` convert
-  from a type of Raoh's own. Nothing changes in what the decoders accept: they refuse those URIs
-  with `invalid_format`, as before. The Javadoc of `uri()` and `url()` now says this is a
-  difference from the specification, and the tests pin it for R000869–R000876 and R000906. A
-  test now checks against `java.net.URI` in both directions which accepted URIs it can hold, so
-  the four kinds are exactly what it refuses. It is
-  not yet declared in the specification's conformance terms, since raoh-java has no runner
+  its `url` adds RFC 9110's http requirements to it. `java.net.URI` cannot hold four kinds of
+  those URIs: an empty path with no authority and no query (`a:`, `http:`, `a:#f`), an empty
+  authority with nothing after it (`a://`, `http://`), an IPvFuture host (`http://[v1.abc]/`), and
+  an IPv6 host with a port above `Integer.MAX_VALUE` (`http://[::1]:2147483648/`). After any other
+  host, such a port is held, with no host and no port, so `http://example.com:2147483648/` is
+  accepted by both decoders. raoh-java keeps `java.net.URI` as the result type rather than making
+  every domain model that holds a `URI` convert from a type of Raoh's own. Nothing changes in what
+  the decoders accept: they refuse those URIs with `invalid_format`, as before. The Javadoc of
+  `uri()` and `url()` now says this is a difference from the specification, and the tests pin it
+  for R000869–R000876 and R000906. A test now checks against `java.net.URI` in both directions
+  which accepted URIs it can hold, so the four kinds are exactly what it refuses. It is not yet
+  declared in the specification's conformance terms, since raoh-java has no runner
   ([#184](https://github.com/raoh-project/raoh-java/issues/184))
   ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
 - **Breaking: `StringDecoder.pattern()` takes a pattern of the specification's language, as text.**
@@ -140,6 +177,16 @@ detailed from the current development cycle onward.
 
 ### Fixed
 
+- **A `strict` inside a `strict` reports an unknown field once.** Each `strict` reported every
+  field it did not know, so `strict(strict(d, Set.of("a")), Set.of("a"))` gave `unknown_field` at
+  `/b` twice for `{"a":1,"b":2}`, and so did a `strict` around a `discriminate` whose variants are
+  `strict`. A field is now reported by the innermost `strict` that does not know it, and nested
+  `strict`s still accept only fields every one of them knows, as the Raoh Specification 0.9.0 says.
+  Only an issue a `strict` made keeps the field from being reported again: an `unknown_field` that
+  a decoder of your own returns, an issue of another code at the field's path, and the issues
+  inside a `one_of_failed` issue's candidates do not. `Issue` is unchanged; the list of an `Issues`
+  records which issues a `strict` made, and equality and serialization ignore it
+  ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
 - **`ulid()` accepts either case and refuses a value past 128 bits.** It matched
   `[0-9A-HJKMNP-TV-Z]{26}`, so a lower-case ULID was refused although Crockford's base 32 is
   case-insensitive, and `80000000000000000000000000`, which needs 130 bits, was accepted. It now

@@ -7,13 +7,16 @@ import net.unit8.raoh.Issue;
 import net.unit8.raoh.Issues;
 import net.unit8.raoh.MessageKeys;
 import net.unit8.raoh.Ok;
+import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.internal.CandidateFailures;
+import net.unit8.raoh.internal.IssueProvenance;
 
 import net.unit8.raoh.decode.combinator.*;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -619,9 +622,21 @@ public final class Decoders {
      * {@code Map}, a {@code JsonNode}, or something else. {@code MapDecoders.strict} and
      * {@code JsonDecoders.strict} are the boundary-specific conveniences over this one.
      *
-     * <p>Unknown fields are reported as {@link ErrorCodes#UNKNOWN_FIELD} issues at the field's path
-     * and merged with whatever {@code dec} itself reports, so a payload with both an unknown field
-     * and an invalid known one produces both.
+     * <p>Unknown fields are reported as {@link ErrorCodes#UNKNOWN_FIELD} issues at the field's path,
+     * in the order {@code inputFields} gives the names, after whatever {@code dec} itself reports, so
+     * a payload with both an unknown field and an invalid known one produces both. The result of
+     * {@code dec} is discarded when there is an unknown field. The field names are read before
+     * {@code dec} runs, so a {@code dec} that changes a mutable input does not change which fields
+     * are checked.
+     *
+     * <p>A field is reported once, by the innermost {@code strict} that does not know it: a field
+     * {@code dec} already reported as unknown at the same path, through a {@code strict} inside it,
+     * is not reported again. So {@code strict(strict(d, K1), K2)} accepts only fields in both
+     * {@code K1} and {@code K2}, and reports each other field once. Only an issue a {@code strict}
+     * made counts: an {@code unknown_field} issue that a decoder of your own returns, or an issue
+     * of another code at the field's path, does not keep the field from being reported. Issues
+     * inside another issue's metadata, such as a {@code one_of_failed} issue's candidates, do not
+     * count either.
      *
      * @param <I>         the input type
      * @param <T>         the output type
@@ -635,24 +650,52 @@ public final class Decoders {
         // A copy, so changing the set passed in afterwards does not change which fields are known.
         Set<String> known = new HashSet<>(knownFields);
         return (in, path) -> {
-            var issues = Issues.EMPTY;
-            for (var name : inputFields.fieldNames(in)) {
-                if (!known.contains(name)) {
-                    issues = issues.add(Issue.of(path.append(name), ErrorCodes.UNKNOWN_FIELD,
+            // The names are read before dec runs: dec may be code of the caller's that changes a
+            // mutable input, and strict checks the input it was given. Only reporting waits for dec.
+            List<String> names = new ArrayList<>(inputFields.fieldNames(in));
+            var decResult = dec.decode(in, path);
+            var reported = decResult instanceof Err<T> err ? unknownFieldsReported(err.issues()) : Set.<Path>of();
+
+            var unknown = new ArrayList<Issue>();
+            for (var name : names) {
+                var fieldPath = path.append(name);
+                if (!known.contains(name) && !reported.contains(fieldPath)) {
+                    unknown.add(Issue.of(fieldPath, ErrorCodes.UNKNOWN_FIELD,
                             "unknown field", Map.of("field", name)));
                 }
             }
-
-            var decResult = dec.decode(in, path);
-            if (issues.isEmpty()) {
+            if (unknown.isEmpty()) {
                 return decResult;
             }
 
+            var issues = new Issues(IssueProvenance.unknownMembers(unknown));
             return switch (decResult) {
                 case Ok<T> _ -> Result.err(issues);
                 case Err<T> err -> Result.err(err.issues().merge(issues));
             };
         };
+    }
+
+    /**
+     * The paths at which a {@code strict} has already reported an unknown field, among the issues
+     * themselves and not the issues their metadata holds.
+     *
+     * @param issues the issues the inner decoder gave
+     * @return the paths of the {@code unknown_field} issues a {@code strict} made
+     */
+    private static Set<Path> unknownFieldsReported(Issues issues) {
+        var list = issues.asList();
+        if (!(list instanceof IssueProvenance provenance)) {
+            return Set.of();
+        }
+        var paths = new HashSet<Path>();
+        for (int i = 0; i < list.size(); i++) {
+            var issue = list.get(i);
+            if (provenance.fromUnknownMembers(i) && issue.code().equals(ErrorCodes.UNKNOWN_FIELD)) {
+                paths.add(issue.path());
+            }
+        }
+        return paths;
     }
 
     /**
@@ -675,6 +718,27 @@ public final class Decoders {
      *                                  case-insensitive matching
      */
     public static <I extends @Nullable Object, E extends Enum<E>> Decoder<I, E> enumOf(Class<E> cls, Decoder<I, String> stringDec) {
+        return enumOf(cls, stringDec, null);
+    }
+
+    /**
+     * Decodes a string into an enum constant (ASCII case-insensitive), with a custom message.
+     *
+     * <p>Matches as {@link #enumOf(Class, Decoder)} does. The message replaces that of the
+     * {@code invalid_format} issue for a string that names no constant; an issue {@code stringDec}
+     * gives keeps its own message.
+     *
+     * @param <I>       the input type
+     * @param <E>       the enum type
+     * @param cls       the enum class
+     * @param stringDec the string decoder to use
+     * @param message   custom error message, or {@code null} for the default
+     * @return a decoder that produces enum constants
+     * @throws IllegalArgumentException if two constant names are equal under ASCII
+     *                                  case-insensitive matching
+     */
+    public static <I extends @Nullable Object, E extends Enum<E>> Decoder<I, E> enumOf(
+            Class<E> cls, Decoder<I, String> stringDec, @Nullable String message) {
         // Build lookup table and allowed-list once at decoder construction time.
         var lookup = new HashMap<String, E>();
         for (var c : cls.getEnumConstants()) {
@@ -694,9 +758,8 @@ public final class Decoders {
                 case Ok<String> ok -> {
                     var constant = lookup.get(asciiLowerCase(ok.value()));
                     if (constant != null) yield Result.ok(constant);
-                    yield Result.fail(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_ENUM,
-                            "invalid value",
-                            Map.of("allowed", allowed));
+                    yield Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_ENUM,
+                            message, "invalid value", Map.of("allowed", allowed));
                 }
             };
         };
@@ -850,15 +913,31 @@ public final class Decoders {
      * @return a decoder that succeeds only when the string matches
      */
     public static <I extends @Nullable Object> Decoder<I, String> literal(String expected, Decoder<I, String> stringDec) {
+        return literal(expected, stringDec, null);
+    }
+
+    /**
+     * Decodes a string and asserts it equals the expected value, with a custom message.
+     *
+     * <p>The message replaces that of the {@code invalid_format} issue for a string other than
+     * {@code expected}; an issue {@code stringDec} gives keeps its own message.
+     *
+     * @param <I>       the input type
+     * @param expected  the expected string value
+     * @param stringDec the string decoder to use
+     * @param message   custom error message, or {@code null} for the default
+     * @return a decoder that succeeds only when the string matches
+     */
+    public static <I extends @Nullable Object> Decoder<I, String> literal(
+            String expected, Decoder<I, String> stringDec, @Nullable String message) {
         return (in, path) -> {
             var r = stringDec.decode(in, path);
             return switch (r) {
                 case Err<String> err -> err.coerce();
                 case Ok<String> ok -> {
                     if (!expected.equals(ok.value())) {
-                        yield Result.fail(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_LITERAL,
-                                "invalid value",
-                                Map.of("expected", expected));
+                        yield Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_LITERAL,
+                                message, "invalid value", Map.of("expected", expected));
                     }
                     yield Result.ok(ok.value());
                 }

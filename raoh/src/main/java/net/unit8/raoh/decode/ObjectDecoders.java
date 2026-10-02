@@ -444,6 +444,9 @@ public final class ObjectDecoders {
      * {@code required} if the value is {@code null}, {@code invalid_format} if the text does not
      * parse, and {@code type_mismatch} for any other type.
      *
+     * <p>The decoder's temporal constraints compare by instant alone
+     * ({@link OffsetDateTime#timeLineOrder()}); see {@link TemporalDecoder}.
+     *
      * @return a temporal decoder for {@code Object} input producing {@link OffsetDateTime}
      */
     public static TemporalDecoder<@Nullable Object, OffsetDateTime> offsetDateTime() {
@@ -453,7 +456,7 @@ public final class ObjectDecoders {
             case OffsetDateTime odt -> Result.ok(odt);
             case String s -> text.decode(s, path);
             default -> typeMismatch(path, "offset-date-time", in);
-        });
+        }, OffsetDateTime.timeLineOrder());
     }
 
     private static <T> Result<T> typeMismatch(Path path, String expected, Object actual) {
@@ -679,6 +682,21 @@ public final class ObjectDecoders {
     }
 
     /**
+     * Like {@link #enumOf(Class)}, with a custom message for a string that names no constant.
+     * An issue of the string decoder, such as {@code type_mismatch}, keeps its own message.
+     *
+     * @param <E>     the enum type
+     * @param cls     the enum class
+     * @param message custom error message, or {@code null} for the default
+     * @return a decoder that produces enum constants from string input
+     * @throws IllegalArgumentException if two enum constant names are equal under ASCII
+     *                                  case-insensitive matching
+     */
+    public static <E extends Enum<E>> Decoder<@Nullable Object, E> enumOf(Class<E> cls, @Nullable String message) {
+        return Decoders.<@Nullable Object, E>enumOf(cls, string(), message);
+    }
+
+    /**
      * Creates a decoder that accepts only the given literal string value.
      *
      * @param expected the expected string value
@@ -686,5 +704,18 @@ public final class ObjectDecoders {
      */
     public static Decoder<@Nullable Object, String> literal(String expected) {
         return Decoders.<@Nullable Object>literal(expected, string());
+    }
+
+    /**
+     * Like {@link #literal(String)}, with a custom message for a string other than
+     * {@code expected}. An issue of the string decoder, such as {@code type_mismatch}, keeps its
+     * own message.
+     *
+     * @param expected the expected string value
+     * @param message  custom error message, or {@code null} for the default
+     * @return a decoder that succeeds only when the input matches {@code expected}
+     */
+    public static Decoder<@Nullable Object, String> literal(String expected, @Nullable String message) {
+        return Decoders.<@Nullable Object>literal(expected, string(), message);
     }
 }

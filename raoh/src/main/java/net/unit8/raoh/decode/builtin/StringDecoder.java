@@ -25,6 +25,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -47,10 +48,6 @@ import java.util.function.Predicate;
  */
 public final class StringDecoder<I extends @Nullable Object> implements Decoder<I, String> {
 
-    private static final int MAX_EMAIL_LENGTH = 254;
-
-    private static final Pattern EMAIL_PATTERN = Pattern.compile(
-            "^[a-zA-Z0-9._%+\\-]{1,64}@[a-zA-Z0-9.\\-]{1,255}\\.[a-zA-Z]{2,}$");
     private static final Pattern CUID_PATTERN = Pattern.compile(
             "^c[a-z0-9]{24}$");
     // Crockford's base 32 in either case. 26 characters hold 130 bits, and a ULID is 128: the first
@@ -108,9 +105,23 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * @return a new decoder that fails with {@link ErrorCodes#BLANK} for blank values
      */
     public StringDecoder<I> nonBlank() {
+        return nonBlank(null);
+    }
+
+    /**
+     * Restricts the string to contain at least one non-whitespace character.
+     *
+     * <p>See {@link #nonBlank()} for what counts as whitespace. The message replaces that of the
+     * {@link ErrorCodes#BLANK} issue only; an issue the decoders before this one give, such as
+     * {@code required} for a missing value, keeps its own.
+     *
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#BLANK} for blank values
+     */
+    public StringDecoder<I> nonBlank(@Nullable String message) {
         return chain((value, path) -> {
             if (Whitespace.isBlank(value)) {
-                return Result.fail(path, ErrorCodes.BLANK, "must not be blank");
+                return Result.failWith(path, ErrorCodes.BLANK, message, "must not be blank", Map.of());
             }
             return Result.ok(value);
         });
@@ -223,17 +234,39 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      *
      * <p>The issue lists the allowed values in {@link CodePointOrder code point order}.
      *
-     * @param allowed the set of allowed string values
+     * @param allowed the allowed string values, distinct
      * @return a new decoder that fails with {@link ErrorCodes#NOT_ALLOWED} if the value is not in the set
+     * @throws IllegalArgumentException if a value occurs twice
+     * @throws NullPointerException     if one of the values is {@code null}
      */
     public StringDecoder<I> oneOf(String... allowed) {
-        var allowedSet = Set.of(allowed);
+        return oneOf(List.of(allowed), null);
+    }
+
+    /**
+     * Restricts the decoded value to one of the specified allowed values.
+     *
+     * <p>The issue lists the allowed values in {@link CodePointOrder code point order}. The collection is copied, so changing it afterwards does not
+     * change the decoder.
+     *
+     * @param allowed the allowed string values, distinct
+     * @param message custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#NOT_ALLOWED} if the value is not in the set
+     * @throws IllegalArgumentException if a value occurs twice
+     * @throws NullPointerException     if {@code allowed} or one of its values is {@code null}
+     */
+    public StringDecoder<I> oneOf(Collection<? extends String> allowed, @Nullable String message) {
+        var values = List.<String>copyOf(allowed);
+        var allowedSet = Set.copyOf(values);
+        if (allowedSet.size() != values.size()) {
+            throw new IllegalArgumentException("the allowed values must be distinct: " + values);
+        }
         var sortedAllowed = CodePointOrder.sorted(allowedSet);
-        var message = String.format(Locale.ROOT, "must be one of %s", sortedAllowed);
+        var defaultMessage = String.format(Locale.ROOT, "must be one of %s", sortedAllowed);
         return chain((value, path) -> {
             if (!allowedSet.contains(value)) {
                 var meta = Map.<String, Object>of("allowed", sortedAllowed, "actual", value);
-                return Result.fail(path, ErrorCodes.NOT_ALLOWED, message, meta);
+                return Result.failWith(path, ErrorCodes.NOT_ALLOWED, message, defaultMessage, meta);
             }
             return Result.ok(value);
         });
@@ -456,7 +489,8 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     // --- Preset constraints ---
 
     /**
-     * Validates that the string is a well-formed email address.
+     * Validates that the string is an email address.
+     * See {@link #email(String)} for the accepted text.
      *
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid email
      */
@@ -465,14 +499,30 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
     }
 
     /**
-     * Validates that the string is a well-formed email address.
+     * Validates that the string is an email address.
+     *
+     * <p>The accepted text is an ASCII profile of RFC 5321's {@code Mailbox}, {@code Dot-string "@"
+     * Domain}:
+     * <ul>
+     *   <li>The local part is one or more atoms of RFC 5322 {@code atext} ({@code A-Z}, {@code a-z},
+     *       {@code 0-9} and {@code !#$%&'*+-/=?^_`{|}~}) joined by single dots, at most 64 octets.</li>
+     *   <li>The domain is one or more labels joined by single dots. A label starts and ends with a
+     *       letter or digit, holds letters, digits and hyphens, and is at most 63 octets.</li>
+     *   <li>The whole address is at most 254 octets.</li>
+     * </ul>
+     *
+     * <p>A quoted local part ({@code "a b"@example.com}), an address literal
+     * ({@code a@[127.0.0.1]}), non-ASCII characters and a trailing dot after the domain are rejected.
+     * Only the syntax is checked: a single-label or all-digit domain ({@code a@localhost},
+     * {@code a@123}) is accepted, and whether the domain exists is not checked. The value is given
+     * as written; case is not changed.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a new decoder that fails with {@link ErrorCodes#INVALID_FORMAT} if the value is not a valid email
      */
     public StringDecoder<I> email(@Nullable String message) {
         return chain((value, path) -> {
-            if (value.length() > MAX_EMAIL_LENGTH || !EMAIL_PATTERN.matcher(value).matches()) {
+            if (!EmailSyntax.isMailbox(value)) {
                 return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_EMAIL,
                         message, "not a valid email", Map.of());
             }
@@ -1102,6 +1152,9 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * hours only ({@code +09}) is rejected. {@code +00:00} and {@code -00:00} are read as
      * {@code Z}.
      *
+     * <p>The decoder's temporal constraints compare by instant alone
+     * ({@link OffsetDateTime#timeLineOrder()}); see {@link TemporalDecoder}.
+     *
      * @param message custom error message, or {@code null} for the default
      * @return a temporal decoder producing {@link OffsetDateTime}
      */
@@ -1113,7 +1166,7 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
             }
             return Result.failWith(path, ErrorCodes.INVALID_FORMAT, MessageKeys.INVALID_FORMAT_OFFSET_DATE_TIME,
                     message, "not a valid ISO-8601 offset date-time (e.g., 2024-01-15T10:30:00+09:00)", Map.of());
-        }));
+        }), OffsetDateTime.timeLineOrder());
     }
 
     // --- Numeric / boolean type conversions ---
