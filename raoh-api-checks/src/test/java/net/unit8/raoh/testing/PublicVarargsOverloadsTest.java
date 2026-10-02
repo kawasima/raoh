@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PublicVarargsOverloadsTest {
@@ -106,6 +107,27 @@ class PublicVarargsOverloadsTest {
         }
     }
 
+    /** One method, which C inherits from S as the implementation of I's: not a pair. */
+    public interface Declares {
+        void f(String... values);
+    }
+
+    @SuppressWarnings("unused")
+    public static class Implements {
+        public void f(String... values) {
+        }
+    }
+
+    public static class InheritsTheImplementation extends Implements implements Declares {
+    }
+
+    public interface AlsoDeclares {
+        void f(String... values);
+    }
+
+    public abstract static class DeclaredTwice implements Declares, AlsoDeclares {
+    }
+
     /** As oneOf is: no String is a Collection, so a reviewer may allow the pair. */
     @SuppressWarnings("unused")
     public static class Strings {
@@ -191,6 +213,21 @@ class PublicVarargsOverloadsTest {
         assertEquals(1, fs.size(), fs.toString());
         assertEquals(StringSub.class, fs.getFirst().getDeclaringClass());
         assertEquals(List.of(), PublicVarargsOverloads.problems(List.of(StringSub.class), List.of()));
+    }
+
+    @Test
+    void oneMethodReachedAlongTwoPathsIsOne() {
+        for (Class<?> c : List.of(InheritsTheImplementation.class, DeclaredTwice.class)) {
+            assertEquals(List.of(), PublicVarargsOverloads.problems(List.of(c), List.of()), c.getSimpleName());
+        }
+    }
+
+    @Test
+    void anAllowedPairNamesTwoMethodsOfOneName() {
+        var any = Signature.of(Strings.class, "any", String[].class);
+        assertThrows(IllegalArgumentException.class, () -> new Allowed(any, any, "the same method twice"));
+        assertThrows(IllegalArgumentException.class, () -> new Allowed(any,
+                Signature.of(Strings.class, "other", String.class), "two names"));
     }
 
     @Test

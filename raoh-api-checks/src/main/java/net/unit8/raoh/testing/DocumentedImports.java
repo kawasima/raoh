@@ -40,7 +40,8 @@ import java.util.stream.Stream;
  *
  * <p>Only documentation is read: the source's own import declarations are how Raoh is written, not
  * what it tells a user to write. Classes of {@code net.unit8.raoh.examples} are not Raoh's API and
- * are left out. A nested class may be imported by its canonical name.
+ * are left out. A nested class may be imported by its canonical name, and an import may leave out its
+ * semicolon, as jshell lets it.
  */
 public final class DocumentedImports {
 
@@ -48,7 +49,7 @@ public final class DocumentedImports {
     private static final List<String> MODULES = List.of("raoh", "raoh-json", "raoh-jooq");
 
     private static final Pattern IMPORT = Pattern.compile(
-            "import\\s+static\\s+(net\\.unit8\\.raoh\\.[\\w.]+?)\\s*\\.\\s*\\*\\s*;");
+            "import\\s+static\\s+(net\\.unit8\\.raoh\\.[\\w.]+?)\\s*\\.\\s*\\*\\s*;?");
 
     private static final Pattern FENCE = Pattern.compile("^ {0,3}(`{3,}|~{3,})");
 
@@ -272,13 +273,13 @@ public final class DocumentedImports {
 
     /**
      * Fails if two classes of a group have a static method of one name and the same parameter
-     * types, none of which mentions a type variable: with both imported on demand, a call fits
-     * both and neither is more specific, so neither can be called without its class and the
-     * documented imports do not work ({@code ObjectDecoders.int_()} beside
-     * {@code ObjectEncoders.int_()}). Two generic methods are not compared: which is more specific
-     * turns on type inference, and a pair neither of which is would fail to compile at the call,
-     * not change its meaning. {@code MapDecoders.combine(CombinePart<Map<String, Object>, A>, ...)}
-     * beside {@code Decoders.combine(CombinePart<I, A>, ...)} is fine: the first is more specific.
+     * types: with both imported on demand, a call fits both and neither is more specific, so
+     * neither can be called without its class and the documented imports do not compile
+     * ({@code ObjectDecoders.int_()} beside {@code ObjectEncoders.int_()}). Parameter types are
+     * compared as written, a method's own type variables by their place and bounds, so two generic
+     * methods of the same shape clash, while
+     * {@code MapDecoders.combine(CombinePart<Map<String, Object>, A>, ...)} beside
+     * {@code Decoders.combine(CombinePart<I, A>, ...)} does not: the first is more specific.
      *
      * @param groups the groups
      * @throws AssertionError if a group has such a pair
@@ -293,8 +294,8 @@ public final class DocumentedImports {
     }
 
     /**
-     * The static methods of one name and parameter types, with no type variable in them, that
-     * different classes of a group have.
+     * The static methods of one name and parameter types, as {@link #assertCallable} compares them,
+     * that different classes of a group have.
      *
      * @param groups the groups
      * @return each clash, empty when there is none
@@ -302,18 +303,13 @@ public final class DocumentedImports {
     static List<String> clashes(List<List<Class<?>>> groups) {
         Set<String> problems = new LinkedHashSet<>();
         for (List<Class<?>> group : groups) {
-            List<Method> statics = group.stream()
-                    .flatMap(c -> PublicVarargsOverloads.methods(c).stream())
-                    .filter(m -> Modifier.isStatic(m.getModifiers()))
-                    .distinct()
-                    .toList();
+            List<Method> statics = PublicVarargsOverloads.staticMethods(group);
             for (int i = 0; i < statics.size(); i++) {
                 for (int j = i + 1; j < statics.size(); j++) {
                     Method a = statics.get(i);
                     Method b = statics.get(j);
                     if (a.getDeclaringClass() != b.getDeclaringClass() && a.getName().equals(b.getName())
-                            && Arrays.equals(a.getGenericParameterTypes(), b.getGenericParameterTypes())
-                            && Arrays.stream(a.getGenericParameterTypes()).noneMatch(DocumentedImports::mentionsTypeVariable)) {
+                            && shape(a).equals(shape(b))) {
                         problems.add(a.toGenericString() + " and " + b.toGenericString());
                     }
                 }
@@ -322,15 +318,35 @@ public final class DocumentedImports {
         return List.copyOf(problems);
     }
 
-    private static boolean mentionsTypeVariable(Type type) {
+    /**
+     * A method's parameter types as written, its own type variables by their place and bounds, so
+     * that two methods whose parameters differ only in the names of their type variables have the
+     * same shape.
+     *
+     * @param m the method
+     * @return its shape
+     */
+    static String shape(Method m) {
+        List<TypeVariable<Method>> own = List.of(m.getTypeParameters());
+        StringBuilder out = new StringBuilder("<");
+        for (TypeVariable<Method> v : own) {
+            out.append(Arrays.stream(v.getBounds()).map(b -> render(b, own)).toList());
+        }
+        out.append(">(");
+        out.append(Arrays.stream(m.getGenericParameterTypes()).map(t -> render(t, own)).toList());
+        return out.append(m.isVarArgs() ? "...)" : ")").toString();
+    }
+
+    private static String render(Type type, List<TypeVariable<Method>> own) {
         return switch (type) {
-            case TypeVariable<?> v -> true;
-            case ParameterizedType p -> Arrays.stream(p.getActualTypeArguments())
-                    .anyMatch(DocumentedImports::mentionsTypeVariable);
-            case GenericArrayType a -> mentionsTypeVariable(a.getGenericComponentType());
-            case WildcardType w -> Stream.concat(Arrays.stream(w.getUpperBounds()), Arrays.stream(w.getLowerBounds()))
-                    .anyMatch(DocumentedImports::mentionsTypeVariable);
-            default -> false;
+            case Class<?> k -> k.getName();
+            case TypeVariable<?> v -> own.contains(v) ? "#" + own.indexOf(v) : v.getGenericDeclaration() + "." + v.getName();
+            case ParameterizedType p -> render(p.getRawType(), own) + Arrays.stream(p.getActualTypeArguments())
+                    .map(a -> render(a, own)).toList();
+            case GenericArrayType a -> render(a.getGenericComponentType(), own) + "[]";
+            case WildcardType w -> "?" + Arrays.stream(w.getUpperBounds()).map(b -> render(b, own)).toList()
+                    + Arrays.stream(w.getLowerBounds()).map(b -> render(b, own)).toList();
+            default -> throw new IllegalArgumentException("a type of no known kind: " + type);
         };
     }
 }

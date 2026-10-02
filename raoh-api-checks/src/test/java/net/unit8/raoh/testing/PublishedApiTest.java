@@ -15,6 +15,8 @@ import net.unit8.raoh.testing.PublicVarargsOverloads.Allowed;
 import net.unit8.raoh.testing.PublicVarargsOverloads.Signature;
 import org.junit.jupiter.api.Test;
 
+import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
@@ -31,7 +33,26 @@ class PublishedApiTest {
 
     /** The classes the documentation's examples import on demand together. */
     private static final List<List<Class<?>>> STATIC_IMPORT_GROUPS = DocumentedImports.load(
-            DocumentedImports.groups(DocumentedImports.documents(Path.of(".."))), Result.class.getClassLoader());
+            DocumentedImports.groups(DocumentedImports.documents(repositoryRoot())), Result.class.getClassLoader());
+
+    /**
+     * The repository root, found from where this class was loaded, raoh-api-checks/target/test-classes,
+     * so that it does not depend on the directory the tests run in.
+     *
+     * @return the root
+     */
+    private static Path repositoryRoot() {
+        try {
+            Path root = Path.of(PublishedApiTest.class.getProtectionDomain().getCodeSource().getLocation().toURI())
+                    .getParent().getParent().getParent();
+            if (!Files.isRegularFile(root.resolve("raoh-api-checks/pom.xml"))) {
+                throw new IllegalStateException("not the repository root: " + root);
+            }
+            return root;
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException(e);
+        }
+    }
 
     /**
      * {@code oneOf}'s values are of a final class that is not a {@code Collection}, so no call of

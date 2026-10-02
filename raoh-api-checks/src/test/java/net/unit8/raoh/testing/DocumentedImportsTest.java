@@ -61,6 +61,16 @@ class DocumentedImportsTest {
     }
 
     @Test
+    void anImportMayLeaveOutItsSemicolonAsInJshell() throws IOException {
+        assertEquals(List.of(List.of(OBJECT, MAP)), groupsOf("j.md", """
+                ```
+                jshell> import static net.unit8.raoh.decode.ObjectDecoders.*
+                jshell> import static net.unit8.raoh.decode.map.MapDecoders.*
+                ```
+                """));
+    }
+
+    @Test
     void separateExamplesAreSeparateGroups() throws IOException {
         assertEquals(List.of(), groupsOf("c.md", """
                 ```java
@@ -189,6 +199,24 @@ class DocumentedImportsTest {
         assertEquals(1, clashes.size(), clashes.toString());
     }
 
+    /** Two generic methods of one shape, whose type variables only are named apart. */
+    public static class GenericA {
+        public static <T> T first(List<T> values) {
+            return null;
+        }
+    }
+
+    public static class GenericB {
+        public static <U> U first(List<U> values) {
+            return null;
+        }
+    }
+
+    @Test
+    void genericMethodsOfOneShapeClash() {
+        assertEquals(1, DocumentedImports.clashes(List.of(List.of(GenericA.class, GenericB.class))).size());
+    }
+
     /** As Decoders.combine and MapDecoders.combine: the second is more specific, so a call goes to it. */
     public static class AnyInput {
         public static <I> Object combine(List<I> parts) {
@@ -203,7 +231,7 @@ class DocumentedImportsTest {
     }
 
     @Test
-    void genericMethodsAreNotCompared() {
+    void aMoreSpecificGenericMethodIsNoClash() {
         assertEquals(List.of(), DocumentedImports.clashes(List.of(List.of(AnyInput.class, MapInput.class))));
     }
 }

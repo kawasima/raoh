@@ -130,11 +130,18 @@ public final class PublicVarargsOverloads {
          * @param one    one of them
          * @param other  the other
          * @param reason why no call the API's contract allows changes meaning because of them
-         * @throws IllegalArgumentException if the reason is blank
+         * @throws IllegalArgumentException if the reason is blank, or the two signatures are the
+         *                                  same or of different names
          */
         public Allowed {
             if (reason.isBlank()) {
                 throw new IllegalArgumentException("an allowed pair needs its reason");
+            }
+            if (one.equals(other)) {
+                throw new IllegalArgumentException("an allowed pair names one method twice: " + one);
+            }
+            if (!one.name().equals(other.name())) {
+                throw new IllegalArgumentException("an allowed pair names methods of two names: " + one + ", " + other);
             }
         }
 
@@ -266,13 +273,8 @@ public final class PublicVarargsOverloads {
      * @return the pairs
      */
     static Set<Pair> staticImportPairs(List<Class<?>> group) {
-        List<Method> statics = group.stream()
-                .flatMap(c -> methods(c).stream())
-                .filter(m -> Modifier.isStatic(m.getModifiers()))
-                .distinct()
-                .toList();
         Set<Pair> pairs = new LinkedHashSet<>();
-        for (Pair pair : pairsIn(statics)) {
+        for (Pair pair : pairsIn(staticMethods(group))) {
             if (pair.one().getDeclaringClass() != pair.other().getDeclaringClass()) {
                 pairs.add(pair);
             }
@@ -281,13 +283,29 @@ public final class PublicVarargsOverloads {
     }
 
     /**
+     * The public static methods of a static-import group's classes, each once however many of them
+     * have it.
+     *
+     * @param group the classes imported on demand together
+     * @return the methods
+     */
+    static List<Method> staticMethods(List<Class<?>> group) {
+        return group.stream()
+                .flatMap(c -> methods(c).stream())
+                .filter(m -> Modifier.isStatic(m.getModifiers()))
+                .distinct()
+                .toList();
+    }
+
+    /**
      * The public methods the source declares for a class: its own, and those it inherits from its
      * superclasses and interfaces, whether or not those are public. A method is left out when a
      * subtype of its class declares one that overrides it: of its name and of its parameter types
      * as the class sees them, with each type variable of a supertype replaced by the type the class
      * gives it, so {@code f(String...)} in a {@code Sub extends Base<String>} overrides
-     * {@code Base<T>.f(T...)}. Two that unrelated interfaces declare are both kept, even when one is
-     * varargs and the other not, since a call can reach the class through either. Static methods of
+     * {@code Base<T>.f(T...)}. Of those unrelated types declare with one name and parameter types,
+     * one varargs and one of fixed arity are kept, since a call can reach the class through either;
+     * the same method reached along two paths is one. Static methods of
      * an interface are not inherited. No method the compiler generated is included, so a class
      * whose public methods come from a package-private superclass is seen through those methods,
      * not through the bridges the compiler adds for them.
@@ -318,8 +336,12 @@ public final class PublicVarargsOverloads {
                         .map(type -> erasure(type, bindings).getName()).toList();
                 List<Method> same = bySignature.computeIfAbsent(key, k -> new ArrayList<>());
                 // A subtype's method overrides this one, and this one overrides a supertype's.
-                if (same.stream().noneMatch(o -> t.isAssignableFrom(o.getDeclaringClass()))) {
-                    same.removeIf(o -> o.getDeclaringClass().isAssignableFrom(t));
+                if (same.stream().anyMatch(o -> t.isAssignableFrom(o.getDeclaringClass()))) {
+                    continue;
+                }
+                same.removeIf(o -> o.getDeclaringClass().isAssignableFrom(t));
+                // From unrelated types, one of each arity kind: the same method reached twice is one.
+                if (same.stream().noneMatch(o -> o.isVarArgs() == m.isVarArgs())) {
                     same.add(m);
                 }
             }

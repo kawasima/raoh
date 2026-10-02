@@ -18,8 +18,6 @@
     <description>jOOQ Record decoder for Raoh</description>
     <url>https://github.com/raoh-project/raoh-java</url>
 
-    <properties>
-    </properties>
 
     <dependencies>
         <dependency>
