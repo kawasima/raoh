@@ -75,7 +75,22 @@ detailed from the current development cycle onward.
   a label that starts or ends with a hyphen (`a@-b.co`) and an empty label (`a@b..co`). A trailing
   dot after the domain, a quoted local part, an address literal and non-ASCII characters stay
   refused ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
-
+- **`uri()` and `url()` keep returning `java.net.URI`, and differ from the Raoh Specification
+  0.9.0 on purpose.** The specification's `uri` is now the whole RFC 3986 `URI` production, and
+  its `url` adds RFC 9110's http requirements to it. `java.net.URI` cannot hold four kinds of
+  those URIs: an empty path with no authority and no query (`a:`, `http:`, `a:#f`), an empty
+  authority with nothing after it (`a://`, `http://`), an IPvFuture host (`http://[v1.abc]/`), and
+  an IPv6 host with a port above `Integer.MAX_VALUE` (`http://[::1]:2147483648/`). After any other
+  host, such a port is held, with no host and no port, so `http://example.com:2147483648/` is
+  accepted by both decoders. raoh-java keeps `java.net.URI` as the result type rather than making
+  every domain model that holds a `URI` convert from a type of Raoh's own. Nothing changes in what
+  the decoders accept: they refuse those URIs with `invalid_format`, as before. The Javadoc of
+  `uri()` and `url()` now says this is a difference from the specification, and the tests pin it
+  for R000869–R000876 and R000906. A test now checks against `java.net.URI` in both directions
+  which accepted URIs it can hold, so the four kinds are exactly what it refuses. It is not yet
+  declared in the specification's conformance terms, since raoh-java has no runner
+  ([#184](https://github.com/raoh-project/raoh-java/issues/184))
+  ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
 - **Breaking: `StringDecoder.pattern()` takes a pattern of the specification's language, as text.**
   `pattern(Pattern)`, `pattern(Pattern, String)` and `pattern(Pattern, String, String)` are removed;
   `pattern(String)`, `pattern(String, String)` and `pattern(String, String, String)` replace them.

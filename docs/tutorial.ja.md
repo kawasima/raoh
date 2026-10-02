@@ -153,7 +153,7 @@ string().url().decode("ftp://example.com")
 // ==> Err[/: not a valid URL]
 ```
 
-`uri()` は RFC 3986 の URI 構文を受け入れ、`java.net.URI` を返します。ただし `java.net.URI` で保持できない形は受け付けません。その一覧は `uri()` の Javadoc にあります。スキームの種類は問いませんが、スキームがあることは必須なので、`foo/bar` のような相対参照は拒否します。`url()` は `uri()` が受け付けるもののうち、`http` または `https` スキーム（大文字小文字は区別しません）と空でないホストを持つものを受け付けます。ホストは DNS 名ではなく RFC 3986 の host なので `http://my_host/` も通りますが、このとき `URI#getHost()` は `null` を返します。長さは制限しないので、上限が必要なら `string().maxLength(2048).url()` のように前に `maxLength()` を置いてください。どちらも終端メソッドで、`String` ではなく `URI` を返します。
+`uri()` は RFC 3986 の URI 構文を受け入れ、`java.net.URI` を返します。ただし `java.net.URI` で保持できない形は受け付けません。その一覧は `uri()` の Javadoc にあります。Raoh Specification の `uri` は RFC 3986 の URI をすべて受け付けますが、raoh-java は Java のコードが URI を持つ型を返すために、ここを意図して仕様と違えています。スキームの種類は問いませんが、スキームがあることは必須なので、`foo/bar` のような相対参照は拒否します。`url()` は `uri()` が受け付けるもののうち、`http` または `https` スキーム（大文字小文字は区別しません）と空でないホストを持つものを受け付けます。ホストは DNS 名ではなく RFC 3986 の host なので `http://my_host/` も通りますが、このとき `URI#getHost()` は `null` を返します。長さは制限しないので、上限が必要なら `string().maxLength(2048).url()` のように前に `maxLength()` を置いてください。どちらも終端メソッドで、`String` ではなく `URI` を返します。
 
 <!-- souther-section: numeric-constraints -->
 ### 数値の制約

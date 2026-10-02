@@ -554,9 +554,15 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      * {@link #maxLength(int)} before this conversion to bound it.
      *
      * <p>The returned {@link URI} holds the accepted text, but its component accessors follow the
-     * RFC 2396 model of {@code java.net.URI}, so {@link URI#getHost()} can be {@code null} for a
-     * {@code reg-name} this decoder accepts. Consumers with narrower URI requirements, including
+     * RFC 2396 model of {@code java.net.URI}; see {@link #uri(String)} for when
+     * {@link URI#getHost()} is {@code null}. Consumers with narrower URI requirements, including
      * some JDK networking APIs, may reject such a value.
+     *
+     * <p>Like {@link #uri(String)}, this refuses what {@link URI} cannot hold, so an http URL with an
+     * {@code IPvFuture} host ({@code http://[v1.abc]/}) or with an IPv6 host and a port above
+     * {@link Integer#MAX_VALUE} ({@code http://[::1]:2147483648/}) is rejected, although the Raoh
+     * Specification's {@code url} accepts it. A port that large after any other host is accepted
+     * ({@code http://example.com:2147483648/}).
      *
      * @param message custom error message, or {@code null} for the default
      * @return a decoder producing {@link URI} from validated http/https URLs
@@ -953,11 +959,22 @@ public final class StringDecoder<I extends @Nullable Object> implements Decoder<
      *
      * <p>{@link URI} follows the older RFC 2396 and RFC 2732 and cannot hold every RFC 3986 URI.
      * Those this decoder cannot return are rejected: an empty scheme-specific part
-     * ({@code a:}, {@code a:#f}), an empty authority followed by nothing ({@code a://}), an
-     * {@code IPvFuture} host ({@code http://[v1.abc]/}), and an IPv6 host with a port above
-     * {@link Integer#MAX_VALUE} ({@code http://[::1]:2147483648/}). The returned {@link URI} holds the accepted
-     * text, but its component accessors follow the RFC 2396 model, so {@link URI#getHost()} can be
-     * {@code null} for an RFC 3986 {@code reg-name} such as {@code my_host}.
+     * ({@code a:}, {@code http:}, {@code a:#f}), an empty authority followed by nothing
+     * ({@code a://}, {@code http://}), an {@code IPvFuture} host ({@code http://[v1.abc]/}), and an
+     * IPv6 host with a port above {@link Integer#MAX_VALUE} ({@code http://[::1]:2147483648/}). The
+     * IPv6 host is the only one {@link URI} cannot hold with such a port: after any other host, a
+     * port above {@link Integer#MAX_VALUE} is accepted ({@code http://example.com:2147483648/}).
+     *
+     * <p>The returned {@link URI} holds the accepted text, but its component accessors follow the
+     * RFC 2396 model. When it reads the authority as registry-based, {@link URI#getHost()} is
+     * {@code null} and {@link URI#getPort()} is {@code -1}: for a {@code reg-name} that is not an
+     * RFC 2396 host name, such as {@code my_host}, and for a port above {@link Integer#MAX_VALUE}
+     * after any host but an IPv6 one, as in {@code http://example.com:2147483648/}.
+     *
+     * <p>This is a deliberate difference from the Raoh Specification, whose {@code uri} is the
+     * whole RFC 3986 {@code URI} production. raoh-java returns {@link URI}, the type Java code holds
+     * URIs in, so its {@code uri} is the part of the specification's domain that {@link URI} can
+     * hold, and the URIs above are refused instead of accepted.
      *
      * @param message custom error message, or {@code null} for the default
      * @return a decoder producing {@link URI} from validated URI strings

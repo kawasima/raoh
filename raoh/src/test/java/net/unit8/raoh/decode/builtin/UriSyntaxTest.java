@@ -16,30 +16,50 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Checks {@link UriSyntax} and {@link IpSyntax} over every string up to a bounded length drawn from
  * a small alphabet (issue #144).
  *
- * <p>The JDK is not the oracle for what is accepted. {@link java.net.URI} is used in one direction
- * only: every text the grammar accepts and marks as representable must build a {@code URI} whose
- * text is unchanged. The IPv6 rule is compared with a regular expression transcribed from the
+ * <p>The JDK is not the oracle for what is accepted. {@link java.net.URI} is the oracle for what is
+ * representable, in both directions: among the texts the grammar accepts, those marked
+ * representable must build a {@code URI} whose text is unchanged, and those marked otherwise must
+ * be refused by it. So the URIs {@code uri()} refuses only because of {@code java.net.URI} are
+ * exactly those it cannot hold, and the list in the Javadoc cannot drift wider. The IPv6 rule is compared with a regular expression transcribed from the
  * RFC 3986 ABNF, which shares no code with the scanner.
  */
 class UriSyntaxTest {
 
     @Test
-    void everyAcceptedRepresentableUriBuildsAJavaUriWithTheSameText() {
+    void anAcceptedUriIsMarkedRepresentableExactlyWhenJavaNetUriHoldsIt() {
         var failures = new ArrayList<String>();
         Consumer<String> check = text -> {
             var parsed = UriSyntax.parse(text);
-            if (parsed == null || !parsed.representableAsJavaUri()) {
+            if (parsed == null) {
                 return;
             }
+            boolean representable = parsed.representableAsJavaUri();
             try {
                 var uri = new URI(text);
-                if (!uri.toString().equals(text)) {
+                if (!representable) {
+                    failures.add(text + " is marked unrepresentable, but java.net.URI holds it");
+                } else if (!uri.toString().equals(text)) {
                     failures.add(text + " -> " + uri);
                 }
             } catch (URISyntaxException e) {
-                failures.add(text + " -> " + e.getMessage());
+                if (representable) {
+                    failures.add(text + " -> " + e.getMessage());
+                }
             }
         };
+        // Every kind of host with a port that does or does not fit an int: java.net.URI reads an
+        // authority with an oversized port as registry-based, which a bracketed host cannot be.
+        for (var host : List.of("", "h", "my_host", "example.com", "1.2.3.4", "[::1]", "[v1.x]")) {
+            for (var port : List.of("", ":", ":0", ":2147483647", ":2147483648", ":99999999999")) {
+                for (var rest : List.of("", "/", "/p", "?q", "#f")) {
+                    check.accept("http://" + host + port + rest);
+                    check.accept("a://u@" + host + port + rest);
+                }
+            }
+        }
+        for (var text : List.of("a:", "a:#f", "a:?q", "a:p", "http:", "http:#f", "a://", "a://#f", "a://?q", "http://")) {
+            check.accept(text);
+        }
         var alphabet = "a:/?#[]@%1v.F-!'_";
         for (var prefix : List.of("", "a:", "a://", "a://u@", "a://[v1.x]", "a://[::1]")) {
             enumerate(alphabet, prefix.isEmpty() ? 5 : 4, s -> check.accept(prefix + s));
