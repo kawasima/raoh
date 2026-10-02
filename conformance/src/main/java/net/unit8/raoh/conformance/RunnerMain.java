@@ -113,6 +113,8 @@ public final class RunnerMain {
      * {@link VirtualMachineError} other than a stack overflow, such as running out of memory, is
      * not: after it the runner cannot be trusted to run anything, so it ends the run.
      *
+     * @param bindings the bindings
+     * @param c        the case
      * @return its outcome
      * @throws Bindings.UnboundFeature if the case needs a feature the runner does not bind
      */
@@ -145,6 +147,10 @@ public final class RunnerMain {
     /**
      * Reads a JSON file with the reader the decoders are specified on, so that a case's input
      * reaches its decoder with its lexemes as the file writes them.
+     *
+     * @param file the file
+     * @return its JSON
+     * @throws IOException if it cannot be read
      */
     private static JsonNode read(Path file) throws IOException {
         try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
@@ -157,6 +163,11 @@ public final class RunnerMain {
      * template of a message key under {@link MessageResolver#KEY_PREFIX} followed by the key, which
      * is where {@code ResourceBundleMessageResolver} looks it up; a property without the prefix is
      * no message key, and is refused rather than left out.
+     *
+     * @param resource the bundle's resource name, next to {@link net.unit8.raoh.Issue}
+     * @return each message key with its template
+     * @throws IOException if the bundle is missing, cannot be read, or has a property that is not
+     *                     a message key
      */
     private static ObjectNode catalog(String resource) throws IOException {
         Properties properties = new Properties();

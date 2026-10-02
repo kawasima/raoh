@@ -20,46 +20,75 @@ sealed interface SpecType {
      */
     String kind();
 
-    /** A scalar type: one with no type arguments. */
+    /**
+     * A scalar type: one with no type arguments. Each is represented in raoh-java by one Java
+     * class, which this table is the only place to say.
+     */
     enum Scalar implements SpecType {
         /** {@code bool}. */
-        BOOL("bool"),
+        BOOL("bool", Boolean.class),
         /** {@code int32}. */
-        INT32("int32"),
+        INT32("int32", Integer.class),
         /** {@code int64}. */
-        INT64("int64"),
+        INT64("int64", Long.class),
         /** {@code float32}. */
-        FLOAT32("float32"),
+        FLOAT32("float32", Float.class),
         /** {@code float64}. */
-        FLOAT64("float64"),
+        FLOAT64("float64", Double.class),
         /** {@code decimal}. */
-        DECIMAL("decimal"),
+        DECIMAL("decimal", java.math.BigDecimal.class),
         /** {@code string}. */
-        STRING("string"),
+        STRING("string", String.class),
         /** {@code uuid}. */
-        UUID("uuid"),
+        UUID("uuid", java.util.UUID.class),
         /** {@code uri}. */
-        URI("uri"),
+        URI("uri", java.net.URI.class),
         /** {@code date}. */
-        DATE("date"),
+        DATE("date", java.time.LocalDate.class),
         /** {@code time}. */
-        TIME("time"),
+        TIME("time", java.time.LocalTime.class),
         /** {@code datetime}. */
-        DATETIME("datetime"),
+        DATETIME("datetime", java.time.LocalDateTime.class),
         /** {@code offset_datetime}. */
-        OFFSET_DATETIME("offset_datetime"),
+        OFFSET_DATETIME("offset_datetime", java.time.OffsetDateTime.class),
         /** {@code instant}. */
-        INSTANT("instant");
+        INSTANT("instant", java.time.Instant.class);
 
         private final String kind;
+        private final Class<?> javaType;
 
-        Scalar(String kind) {
+        Scalar(String kind, Class<?> javaType) {
             this.kind = kind;
+            this.javaType = javaType;
         }
 
         @Override
         public String kind() {
             return kind;
+        }
+
+        /**
+         * The class of raoh-java's values of this type.
+         *
+         * @return the class
+         */
+        Class<?> javaType() {
+            return javaType;
+        }
+
+        /**
+         * The scalar type a Java value represents, by its class.
+         *
+         * @param value the value
+         * @return the type, or empty when the value is of no scalar type's class
+         */
+        static java.util.Optional<Scalar> of(Object value) {
+            for (Scalar s : values()) {
+                if (s.javaType.isInstance(value)) {
+                    return java.util.Optional.of(s);
+                }
+            }
+            return java.util.Optional.empty();
         }
     }
 

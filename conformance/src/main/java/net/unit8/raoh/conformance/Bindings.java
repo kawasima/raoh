@@ -1,6 +1,7 @@
 package net.unit8.raoh.conformance;
 
 import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.Issues;
 import net.unit8.raoh.decode.Decoder;
 import net.unit8.raoh.decode.Decoders;
 import net.unit8.raoh.decode.builtin.BoolDecoder;
@@ -32,6 +33,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 /**
  * Binds the forms of the specification's decoder language ({@code decoder-language.md}) to
@@ -42,9 +46,14 @@ import java.util.TreeSet;
  * form whose binding takes a message. What the runner can run and what it says it binds therefore
  * come from the same place.
  *
- * <p>Building a form that needs a feature no table has throws {@link UnboundFeature}, and the case
- * is not run. Anything else that goes wrong while building is raoh-java refusing the decoder, or a
- * defect, and the case records an error.
+ * <p>A form is built in two phases. Planning walks the whole form, finds the binding of every
+ * feature it needs and the type of every part, and calls nothing of raoh-java's; a feature no table
+ * has throws {@link UnboundFeature} there. Only a form that planned completely is built: its value
+ * arguments are read and raoh-java's decoders and encoders are constructed. So whether a case runs
+ * depends on its features alone, never on how far building got before raoh-java refused something:
+ * a case that needs an unbound feature is never run, and one that is run records whatever raoh-java
+ * did. Planning itself fails otherwise only for a form that does not type-check, which the verifier
+ * rejects, or for a defect of the runner.
  */
 final class Bindings {
 
@@ -70,61 +79,95 @@ final class Bindings {
     static final class UnboundFeature extends RuntimeException {
         private final String feature;
 
+        /**
+         * Creates the exception. It has no stack trace: it says which feature a form needs, not
+         * where the runner found that out.
+         *
+         * @param feature the feature's ID
+         */
         UnboundFeature(String feature) {
             super(feature, null, false, false);
             this.feature = feature;
         }
 
+        /**
+         * The feature.
+         *
+         * @return its ID
+         */
         String feature() {
             return feature;
         }
     }
 
-    @FunctionalInterface
+    /**
+     * A part of a form that has been planned: its type, and how to build it once the whole form
+     * has been planned.
+     *
+     * @param type  the type of the part: of a decoder's result, or of what an encoder or property
+     *              takes
+     * @param build builds raoh-java's object for the part
+     * @param <J>   the class of that object
+     */
+    private record Plan<J>(SpecType type, Supplier<J> build) {
+    }
+
     private interface Constructor {
-        BoundDecoder build(List<JsonNode> args, @Nullable String message);
-    }
-
-    /** A constructor: its required arguments, and whether a message may follow them. */
-    private record ConstructorBinding(int arity, boolean message, Constructor build) {
-    }
-
-    @FunctionalInterface
-    private interface Operation {
-        BoundDecoder apply(BoundDecoder receiver, List<JsonNode> values, @Nullable String message);
+        Plan<Decoder<JsonNode, ?>> plan(List<JsonNode> args, @Nullable String message);
     }
 
     /**
-     * An operation on one kind of receiver: how many value arguments it takes, the value a missing
-     * optional one stands for, and whether a message may follow them.
+     * A constructor: its required arguments, whether a message may follow them, and its planning.
+     *
+     * @param arity   the number of required arguments
+     * @param message whether it takes a message
+     * @param plan    plans the decoder
      */
-    private record OperationBinding(int arity, @Nullable JsonNode defaultLast, boolean message, Operation apply) {
+    private record ConstructorBinding(int arity, boolean message, Constructor plan) {
     }
 
-    @FunctionalInterface
+    private interface Operation {
+        Plan<Decoder<JsonNode, ?>> plan(Plan<Decoder<JsonNode, ?>> receiver, List<JsonNode> values,
+                                         @Nullable String message);
+    }
+
+    /**
+     * An operation on one kind of receiver.
+     *
+     * @param arity       the number of value arguments
+     * @param defaultLast the value a missing last argument stands for, when it is optional
+     * @param message     whether a message may follow the values
+     * @param plan        plans the decoder
+     */
+    private record OperationBinding(int arity, @Nullable JsonNode defaultLast, boolean message, Operation plan) {
+    }
+
+    /**
+     * A field of an object, as a component of raoh-java's {@code combine}.
+     *
+     * @param part   the component
+     * @param member the member it reads, or {@code null} for one that reads the whole input
+     */
+    private record Part(CombinePart<JsonNode, ?> part, @Nullable String member) {
+    }
+
     private interface Field {
-        Part build(@Nullable String name, BoundDecoder decoder);
+        Plan<Part> plan(@Nullable JsonNode name, Plan<Decoder<JsonNode, ?>> decoder);
     }
 
-    /** A field of an object, as a component of raoh-java's {@code combine}. */
-    private record Part(CombinePart<JsonNode, ?> part, SpecType type, @Nullable String member) {
-    }
-
-    @FunctionalInterface
     private interface EncoderBinding {
-        BoundEncoder build(List<JsonNode> args);
+        Plan<Encoder<Object, ?>> plan(List<JsonNode> args);
     }
 
-    @FunctionalInterface
     private interface Property {
-        BoundProperty build(List<JsonNode> args);
+        Plan<PropertyEncoder<Object>> plan(List<JsonNode> args);
     }
 
-    private record BoundProperty(PropertyEncoder<Object> property, SpecType input) {
-    }
-
-    /** An operation on a receiver of raoh-java's decoder class {@code D}, giving another decoder. */
-    @FunctionalInterface
+    /**
+     * An operation on a receiver of raoh-java's decoder class {@code D}, giving another decoder.
+     *
+     * @param <D> the receiver's class
+     */
     private interface TypedOperation<D> {
         Decoder<?, ?> apply(D receiver, List<JsonNode> values, SpecType type, @Nullable String message);
     }
@@ -139,6 +182,7 @@ final class Bindings {
     private final Map<String, EncoderBinding> encoders = new LinkedHashMap<>();
     private final Map<String, Property> properties = new LinkedHashMap<>();
 
+    /** Creates the tables of every feature the runner binds. */
     Bindings() {
         bindScalarConstructors();
         bindStructuralConstructors();
@@ -181,13 +225,32 @@ final class Bindings {
     // --- Interpreting forms ---
 
     /**
-     * Builds the decoder a decoder form names.
+     * Plans the decoder a decoder form names, then builds it.
      *
      * @param form the form
      * @return the decoder and its result type
-     * @throws UnboundFeature if the form needs a feature the runner does not bind
+     * @throws UnboundFeature if the form needs a feature the runner does not bind, before anything
+     *                        of raoh-java's is called
      */
     BoundDecoder decoder(JsonNode form) {
+        Plan<Decoder<JsonNode, ?>> plan = planDecoder(form);
+        return new BoundDecoder(plan.build().get(), plan.type());
+    }
+
+    /**
+     * Plans the encoder an encoder form names, then builds it.
+     *
+     * @param form the form
+     * @return the encoder and its input type
+     * @throws UnboundFeature if the form needs a feature the runner does not bind, before anything
+     *                        of raoh-java's is called
+     */
+    BoundEncoder encoder(JsonNode form) {
+        Plan<Encoder<Object, ?>> plan = planEncoder(form);
+        return new BoundEncoder(plan.build().get(), plan.type());
+    }
+
+    private Plan<Decoder<JsonNode, ?>> planDecoder(JsonNode form) {
         String name = formName(form);
         String id = "decoder." + name;
         ConstructorBinding c = constructors.get(id);
@@ -204,14 +267,14 @@ final class Bindings {
             message = form.get(next).stringValue();
             next++;
         }
-        BoundDecoder bound = c.build().build(args, message);
+        Plan<Decoder<JsonNode, ?>> plan = c.plan().plan(args, message);
         for (int i = next; i < form.size(); i++) {
-            bound = operation(bound, form.get(i));
+            plan = planOperation(plan, form.get(i));
         }
-        return bound;
+        return plan;
     }
 
-    private BoundDecoder operation(BoundDecoder receiver, JsonNode form) {
+    private Plan<Decoder<JsonNode, ?>> planOperation(Plan<Decoder<JsonNode, ?>> receiver, JsonNode form) {
         String name = formName(form);
         String id = "operation." + receiver.type().kind() + "." + name;
         OperationBinding o = operations.get(id);
@@ -239,142 +302,172 @@ final class Bindings {
         if (args.size() != o.arity()) {
             throw new IllegalArgumentException(name + " takes " + o.arity() + " arguments: " + form);
         }
-        return o.apply().apply(receiver, args, message);
+        return o.plan().plan(receiver, args, message);
     }
 
-    /**
-     * Builds the encoder an encoder form names.
-     *
-     * @param form the form
-     * @return the encoder and its input type
-     * @throws UnboundFeature if the form needs a feature the runner does not bind
-     */
-    BoundEncoder encoder(JsonNode form) {
+    private Plan<Encoder<Object, ?>> planEncoder(JsonNode form) {
         String id = "encoder." + formName(form);
         EncoderBinding e = encoders.get(id);
         if (e == null) {
             throw new UnboundFeature(id);
         }
-        return e.build(slice(form, 1, form.size()));
+        return e.plan(slice(form, 1, form.size()));
+    }
+
+    private Plan<Part> planField(JsonNode form) {
+        String id = "field." + formName(form);
+        Field f = fields.get(id);
+        if (f == null) {
+            throw new UnboundFeature(id);
+        }
+        // A field form is [kind, name, decoder], or [kind, decoder] for one that reads no member.
+        return switch (form.size()) {
+            case 3 -> f.plan(form.get(1), planDecoder(form.get(2)));
+            case 2 -> f.plan(null, planDecoder(form.get(1)));
+            default -> throw new IllegalArgumentException("not a field form: " + form);
+        };
+    }
+
+    private Plan<PropertyEncoder<Object>> planProperty(JsonNode form) {
+        String id = "property." + formName(form);
+        Property p = properties.get(id);
+        if (p == null) {
+            throw new UnboundFeature(id);
+        }
+        return p.plan(slice(form, 1, form.size()));
     }
 
     // --- Constructors ---
 
     private void bindScalarConstructors() {
-        constructor("string", 0, false, (a, m) -> new BoundDecoder(JsonDecoders.string(), STRING));
-        constructor("int", 0, false, (a, m) -> new BoundDecoder(JsonDecoders.int_(), INT32));
-        constructor("long", 0, false, (a, m) -> new BoundDecoder(JsonDecoders.long_(), SpecType.Scalar.INT64));
-        constructor("float", 0, false, (a, m) -> new BoundDecoder(JsonDecoders.float_(), SpecType.Scalar.FLOAT32));
-        constructor("double", 0, false, (a, m) -> new BoundDecoder(JsonDecoders.double_(), SpecType.Scalar.FLOAT64));
-        constructor("decimal", 0, false, (a, m) -> new BoundDecoder(JsonDecoders.decimal(), SpecType.Scalar.DECIMAL));
-        constructor("bool", 0, false, (a, m) -> new BoundDecoder(JsonDecoders.bool(), SpecType.Scalar.BOOL));
+        constructor("string", 0, false, (a, m) -> new Plan<>(STRING, JsonDecoders::string));
+        constructor("int", 0, false, (a, m) -> new Plan<>(INT32, JsonDecoders::int_));
+        constructor("long", 0, false, (a, m) -> new Plan<>(SpecType.Scalar.INT64, JsonDecoders::long_));
+        constructor("float", 0, false, (a, m) -> new Plan<>(SpecType.Scalar.FLOAT32, JsonDecoders::float_));
+        constructor("double", 0, false, (a, m) -> new Plan<>(SpecType.Scalar.FLOAT64, JsonDecoders::double_));
+        constructor("decimal", 0, false, (a, m) -> new Plan<>(SpecType.Scalar.DECIMAL, JsonDecoders::decimal));
+        constructor("bool", 0, false, (a, m) -> new Plan<>(SpecType.Scalar.BOOL, JsonDecoders::bool));
     }
 
     private void bindStructuralConstructors() {
         constructor("list", 1, false, (a, m) -> {
-            BoundDecoder element = decoder(a.get(0));
-            return new BoundDecoder(JsonDecoders.list(of(element)), new SpecType.ListOf(element.type()));
+            var element = planDecoder(a.get(0));
+            return new Plan<>(new SpecType.ListOf(element.type()), () -> JsonDecoders.list(build(element)));
         });
         constructor("dict", 1, false, (a, m) -> {
-            BoundDecoder value = decoder(a.get(0));
-            return new BoundDecoder(JsonDecoders.map(of(value)), new SpecType.MapOf(value.type()));
+            var value = planDecoder(a.get(0));
+            return new Plan<>(new SpecType.MapOf(value.type()), () -> JsonDecoders.map(build(value)));
         });
         constructor("object", 1, false, (a, m) -> object(a.get(0), false));
         constructor("strictObject", 1, false, (a, m) -> object(a.get(0), true));
         constructor("strict", 2, false, (a, m) -> {
-            BoundDecoder inner = decoder(a.get(0));
-            Set<String> known = new LinkedHashSet<>(strings(a.get(1)));
-            return new BoundDecoder(JsonDecoders.strict(of(inner), known), inner.type());
+            var inner = planDecoder(a.get(0));
+            return new Plan<>(inner.type(),
+                    () -> JsonDecoders.strict(build(inner), new LinkedHashSet<>(strings(a.get(1)))));
         });
         constructor("nullable", 1, false, (a, m) -> {
-            BoundDecoder inner = decoder(a.get(0));
-            return new BoundDecoder(JsonDecoders.nullable(of(inner)), new SpecType.NullableOf(inner.type()));
+            var inner = planDecoder(a.get(0));
+            return new Plan<>(new SpecType.NullableOf(inner.type()), () -> JsonDecoders.nullable(build(inner)));
         });
         constructor("enum", 2, true, (a, m) -> {
+            // The symbols are the type, so they are read while planning.
             List<String> symbols = strings(a.get(0));
-            Decoder<JsonNode, String> string = stringDecoder(decoder(a.get(1)));
-            return new BoundDecoder(enumOf(Symbols.enumOf(symbols), string, m), new SpecType.Symbol(symbols));
+            var string = planString(a.get(1));
+            return new Plan<>(new SpecType.Symbol(symbols),
+                    () -> enumOf(Symbols.enumOf(symbols), buildString(string), m));
         });
         constructor("literal", 2, true, (a, m) -> {
-            String literal = (String) ValueCodec.materialize(STRING, a.get(0));
-            Decoder<JsonNode, String> string = stringDecoder(decoder(a.get(1)));
-            return new BoundDecoder(Decoders.literal(literal, string, m), STRING);
+            var string = planString(a.get(1));
+            return new Plan<>(STRING, () -> Decoders.literal(string(a.get(0)), buildString(string), m));
         });
         constructor("discriminate", 2, false, (a, m) -> {
-            String field = (String) ValueCodec.materialize(STRING, a.get(0));
-            Variants variants = variants(a.get(1));
-            return new BoundDecoder(JsonDecoders.discriminate(field, variants.decoders()), variants.type());
+            Map<String, Plan<Decoder<JsonNode, ?>>> variants = planVariants(a.get(1));
+            return new Plan<>(common(variants.values()),
+                    () -> JsonDecoders.discriminate(string(a.get(0)), buildVariants(variants)));
         });
         constructor("discriminateBy", 3, false, (a, m) -> {
-            String field = (String) ValueCodec.materialize(STRING, a.get(0));
-            Decoder<JsonNode, String> tag = stringDecoder(decoder(a.get(1)));
-            Variants variants = variants(a.get(2));
-            return new BoundDecoder(Decoders.discriminate(field, tag, variants.decoders()), variants.type());
+            var tag = planString(a.get(1));
+            Map<String, Plan<Decoder<JsonNode, ?>>> variants = planVariants(a.get(2));
+            return new Plan<>(common(variants.values()),
+                    () -> Decoders.discriminate(string(a.get(0)), buildString(tag), buildVariants(variants)));
         });
         constructor("oneOf", 1, false, (a, m) -> {
-            List<BoundDecoder> candidates = new ArrayList<>();
+            List<Plan<Decoder<JsonNode, ?>>> candidates = new ArrayList<>();
             for (JsonNode candidate : a.get(0)) {
-                candidates.add(decoder(candidate));
+                candidates.add(planDecoder(candidate));
             }
-            SpecType type = common(candidates.stream().map(BoundDecoder::type).toList());
-            @SuppressWarnings("unchecked")
-            Decoder<JsonNode, Object>[] decoders = candidates.stream().map(Bindings::of).toArray(Decoder[]::new);
-            return new BoundDecoder(Decoders.oneOf(decoders), type);
+            return new Plan<>(common(candidates), () -> {
+                @SuppressWarnings("unchecked")
+                Decoder<JsonNode, Object>[] decoders = candidates.stream().map(Bindings::build).toArray(Decoder[]::new);
+                return Decoders.oneOf(decoders);
+            });
         });
         constructor("withDefault", 2, false, (a, m) -> {
-            BoundDecoder inner = decoder(a.get(0));
-            Object fallback = ValueCodec.materialize(inner.type(), a.get(1));
-            return new BoundDecoder(JsonDecoders.withDefault(of(inner), fallback), inner.type());
+            var inner = planDecoder(a.get(0));
+            return new Plan<>(inner.type(),
+                    () -> JsonDecoders.withDefault(build(inner), ValueCodec.materialize(inner.type(), a.get(1))));
         });
         constructor("recover", 2, false, (a, m) -> {
-            BoundDecoder inner = decoder(a.get(0));
-            Object fallback = ValueCodec.materialize(inner.type(), a.get(1));
-            return new BoundDecoder(Decoders.recover(of(inner), fallback), inner.type());
+            var inner = planDecoder(a.get(0));
+            return new Plan<>(inner.type(), () -> {
+                Object fallback = ValueCodec.materialize(inner.type(), a.get(1));
+                return Decoders.recover(build(inner), fallback);
+            });
         });
         constructor("recoverWith", 2, false, (a, m) -> {
-            BoundDecoder inner = decoder(a.get(0));
+            var inner = planDecoder(a.get(0));
             Fixtures.RecoverFixture recovery = fixture(a.get(1), Fixtures.RecoverFixture.class);
             requireType(recovery.output(), inner.type());
-            return new BoundDecoder(recoverWith(of(inner), recovery.fn()), inner.type());
+            return new Plan<>(inner.type(), () -> recoverWith(build(inner), recovery.fn()));
         });
     }
 
     /**
      * {@code object} and {@code strictObject}: every object is one {@code combine} over a list of
      * components, whatever the number of fields, giving the product of their values.
+     *
+     * @param fieldForms the field forms
+     * @param strict     whether a member no field reads is refused
+     * @return the plan
      */
-    private BoundDecoder object(JsonNode fieldForms, boolean strict) {
-        List<CombinePart<JsonNode, ?>> parts = new ArrayList<>();
+    private Plan<Decoder<JsonNode, ?>> object(JsonNode fieldForms, boolean strict) {
+        List<Plan<Part>> fieldPlans = new ArrayList<>();
         List<SpecType> types = new ArrayList<>();
-        Set<String> members = new LinkedHashSet<>();
         for (JsonNode fieldForm : fieldForms) {
-            Part part = field(fieldForm);
-            parts.add(part.part());
-            types.add(part.type());
-            if (part.member() == null) {
-                if (strict) {
-                    throw new IllegalArgumentException("a strictObject cannot have a flat field");
-                }
-            } else {
-                members.add(part.member());
+            if (strict && fieldForm.size() == 2) {
+                throw new IllegalArgumentException("a strictObject cannot have a field that reads no member");
             }
+            Plan<Part> field = planField(fieldForm);
+            fieldPlans.add(field);
+            types.add(field.type());
         }
-        Decoder<JsonNode, List<@Nullable Object>> product = JsonDecoders.combine(parts).map(ValueCodec::product);
-        return new BoundDecoder(strict ? JsonDecoders.strict(product, members) : product, new SpecType.Product(types));
+        return new Plan<>(new SpecType.Product(types), () -> {
+            List<CombinePart<JsonNode, ?>> parts = new ArrayList<>();
+            Set<String> members = new LinkedHashSet<>();
+            for (Plan<Part> field : fieldPlans) {
+                Part part = field.build().get();
+                parts.add(part.part());
+                if (part.member() != null) {
+                    members.add(part.member());
+                }
+            }
+            Decoder<JsonNode, List<@Nullable Object>> product = JsonDecoders.combine(parts).map(ValueCodec::product);
+            return strict ? JsonDecoders.strict(product, members) : product;
+        });
     }
 
-    private record Variants(Map<String, Decoder<JsonNode, ?>> decoders, SpecType type) {
-    }
-
-    private Variants variants(JsonNode variantForms) {
-        Map<String, Decoder<JsonNode, ?>> decoders = new LinkedHashMap<>();
-        List<SpecType> types = new ArrayList<>();
+    private Map<String, Plan<Decoder<JsonNode, ?>>> planVariants(JsonNode variantForms) {
+        Map<String, Plan<Decoder<JsonNode, ?>>> variants = new LinkedHashMap<>();
         for (Map.Entry<String, JsonNode> e : variantForms.properties()) {
-            BoundDecoder variant = decoder(e.getValue());
-            decoders.put(e.getKey(), variant.decoder());
-            types.add(variant.type());
+            variants.put(e.getKey(), planDecoder(e.getValue()));
         }
-        return new Variants(decoders, common(types));
+        return variants;
+    }
+
+    private static Map<String, Decoder<JsonNode, ?>> buildVariants(Map<String, Plan<Decoder<JsonNode, ?>>> variants) {
+        Map<String, Decoder<JsonNode, ?>> decoders = new LinkedHashMap<>();
+        variants.forEach((tag, plan) -> decoders.put(tag, plan.build().get()));
+        return decoders;
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -383,35 +476,38 @@ final class Bindings {
         return Decoders.enumOf((Class) cls, string, message);
     }
 
+    /**
+     * {@code recoverWith}, typed so that the function cannot be read as the fallback value of
+     * {@link Decoders#recover(Decoder, Object)}.
+     *
+     * @param inner the decoder
+     * @param fn    the function from the issues of a failure
+     * @param <T>   the type of the decoder's result
+     * @return the recovering decoder
+     */
+    private static <T> Decoder<JsonNode, T> recoverWith(Decoder<JsonNode, T> inner, Function<Issues, T> fn) {
+        return Decoders.recover(inner, fn);
+    }
+
     // --- Fields ---
 
     private void bindFields() {
-        fields.put("field.field", (name, d) -> new Part(JsonDecoders.field(member(name), of(d)), d.type(), name));
-        fields.put("field.optionalField", (name, d) ->
-                new Part(JsonDecoders.optionalField(member(name), of(d)), new SpecType.OptionalOf(d.type()), name));
-        fields.put("field.optionalNullableField", (name, d) ->
-                new Part(JsonDecoders.optionalNullableField(member(name), of(d)), new SpecType.PresenceOf(d.type()), name));
-        fields.put("field.flat", (name, d) -> new Part(JsonDecoders.flat(of(d)), d.type(), null));
+        fields.put("field.field", (name, d) -> new Plan<>(d.type(), () -> {
+            String member = string(member(name));
+            return new Part(JsonDecoders.field(member, build(d)), member);
+        }));
+        fields.put("field.optionalField", (name, d) -> new Plan<>(new SpecType.OptionalOf(d.type()), () -> {
+            String member = string(member(name));
+            return new Part(JsonDecoders.optionalField(member, build(d)), member);
+        }));
+        fields.put("field.optionalNullableField", (name, d) -> new Plan<>(new SpecType.PresenceOf(d.type()), () -> {
+            String member = string(member(name));
+            return new Part(JsonDecoders.optionalNullableField(member, build(d)), member);
+        }));
+        fields.put("field.flat", (name, d) -> new Plan<>(d.type(), () -> new Part(JsonDecoders.flat(build(d)), null)));
     }
 
-    private Part field(JsonNode form) {
-        String kind = formName(form);
-        String id = "field." + kind;
-        Field f = fields.get(id);
-        if (f == null) {
-            throw new UnboundFeature(id);
-        }
-        // A field form is [kind, name, decoder], or [kind, decoder] for one that reads no member.
-        if (form.size() == 3) {
-            return f.build((String) ValueCodec.materialize(STRING, form.get(1)), decoder(form.get(2)));
-        }
-        if (form.size() == 2) {
-            return f.build(null, decoder(form.get(1)));
-        }
-        throw new IllegalArgumentException("not a field form: " + form);
-    }
-
-    private static String member(@Nullable String name) {
+    private static JsonNode member(@Nullable JsonNode name) {
         if (name == null) {
             throw new IllegalArgumentException("this field reads a member and needs its name");
         }
@@ -421,260 +517,213 @@ final class Bindings {
     // --- Operations on strings ---
 
     private void bindStringOperations() {
-        stringOp("trim", 0, false, (d, v, t, m) -> d.trim());
-        stringOp("toLowerCase", 0, false, (d, v, t, m) -> d.toLowerCase());
-        stringOp("toUpperCase", 0, false, (d, v, t, m) -> d.toUpperCase());
+        Class<StringDecoder<JsonNode>> s = decoderClass(StringDecoder.class);
+        String kind = STRING.kind();
+        op(kind, "trim", s, 0, false, (d, v, t, m) -> d.trim());
+        op(kind, "toLowerCase", s, 0, false, (d, v, t, m) -> d.toLowerCase());
+        op(kind, "toUpperCase", s, 0, false, (d, v, t, m) -> d.toUpperCase());
         // normalize's one argument is optional and stands for NFC when left out.
-        operations.put("operation.string.normalize", new OperationBinding(1,
-                JsonNodeFactory.instance.stringNode("NFC"), false,
-                (r, v, m) -> new BoundDecoder(
-                        typed(stringClass(), r, "operation.string.normalize")
-                                .normalize(Normalizer.Form.valueOf(string(v.get(0)))),
-                        r.type())));
-        stringOp("nonBlank", 0, true, (d, v, t, m) -> d.nonBlank(m));
-        stringOp("minLength", 1, true, (d, v, t, m) -> d.minLength(int32(v.get(0)), m));
-        stringOp("maxLength", 1, true, (d, v, t, m) -> d.maxLength(int32(v.get(0)), m));
-        stringOp("fixedLength", 1, true, (d, v, t, m) -> d.fixedLength(int32(v.get(0)), m));
-        stringOp("oneOf", 1, true, (d, v, t, m) -> d.oneOf(strings(v.get(0)), m));
-        stringOp("startsWith", 1, true, (d, v, t, m) -> d.startsWith(string(v.get(0)), m));
-        stringOp("endsWith", 1, true, (d, v, t, m) -> d.endsWith(string(v.get(0)), m));
-        stringOp("includes", 1, true, (d, v, t, m) -> d.includes(string(v.get(0)), m));
-        stringOp("pattern", 1, true, (d, v, t, m) -> d.pattern(string(v.get(0)), ErrorCodes.INVALID_FORMAT, m));
-        stringOp("email", 0, true, (d, v, t, m) -> d.email(m));
-        stringOp("ipv4", 0, true, (d, v, t, m) -> d.ipv4(m));
-        stringOp("ipv6", 0, true, (d, v, t, m) -> d.ipv6(m));
-        stringOp("ip", 0, true, (d, v, t, m) -> d.ip(m));
-        stringOp("ulid", 0, true, (d, v, t, m) -> d.ulid(m));
-        stringOp("cuid", 0, true, (d, v, t, m) -> d.cuid(m));
-        convertingStringOp("uuid", SpecType.Scalar.UUID, (d, m) -> d.uuid(m));
-        convertingStringOp("url", SpecType.Scalar.URI, (d, m) -> d.url(m));
-        convertingStringOp("uri", SpecType.Scalar.URI, (d, m) -> d.uri(m));
-        convertingStringOp("toInt", INT32, (d, m) -> d.toInt(m));
-        convertingStringOp("toLong", SpecType.Scalar.INT64, (d, m) -> d.toLong(m));
-        convertingStringOp("toDecimal", SpecType.Scalar.DECIMAL, (d, m) -> d.toDecimal(m));
-        convertingStringOp("toBool", SpecType.Scalar.BOOL, (d, m) -> d.toBool(m));
-        convertingStringOp("iso8601", SpecType.Scalar.INSTANT, (d, m) -> d.iso8601(m));
-        convertingStringOp("date", SpecType.Scalar.DATE, (d, m) -> d.date(m));
-        convertingStringOp("time", SpecType.Scalar.TIME, (d, m) -> d.time(m));
-        convertingStringOp("dateTime", SpecType.Scalar.DATETIME, (d, m) -> d.dateTime(m));
-        convertingStringOp("offsetDateTime", SpecType.Scalar.OFFSET_DATETIME, (d, m) -> d.offsetDateTime(m));
+        op(kind, "normalize", s, 1, JsonNodeFactory.instance.stringNode("NFC"), false, UnaryOperator.identity(),
+                (d, v, t, m) -> d.normalize(Normalizer.Form.valueOf(string(v.get(0)))));
+        op(kind, "nonBlank", s, 0, true, (d, v, t, m) -> d.nonBlank(m));
+        op(kind, "minLength", s, 1, true, (d, v, t, m) -> d.minLength(int32(v.get(0)), m));
+        op(kind, "maxLength", s, 1, true, (d, v, t, m) -> d.maxLength(int32(v.get(0)), m));
+        op(kind, "fixedLength", s, 1, true, (d, v, t, m) -> d.fixedLength(int32(v.get(0)), m));
+        op(kind, "oneOf", s, 1, true, (d, v, t, m) -> d.oneOf(strings(v.get(0)), m));
+        op(kind, "startsWith", s, 1, true, (d, v, t, m) -> d.startsWith(string(v.get(0)), m));
+        op(kind, "endsWith", s, 1, true, (d, v, t, m) -> d.endsWith(string(v.get(0)), m));
+        op(kind, "includes", s, 1, true, (d, v, t, m) -> d.includes(string(v.get(0)), m));
+        op(kind, "pattern", s, 1, true, (d, v, t, m) -> d.pattern(string(v.get(0)), ErrorCodes.INVALID_FORMAT, m));
+        op(kind, "email", s, 0, true, (d, v, t, m) -> d.email(m));
+        op(kind, "ipv4", s, 0, true, (d, v, t, m) -> d.ipv4(m));
+        op(kind, "ipv6", s, 0, true, (d, v, t, m) -> d.ipv6(m));
+        op(kind, "ip", s, 0, true, (d, v, t, m) -> d.ip(m));
+        op(kind, "ulid", s, 0, true, (d, v, t, m) -> d.ulid(m));
+        op(kind, "cuid", s, 0, true, (d, v, t, m) -> d.cuid(m));
+        conversion("uuid", SpecType.Scalar.UUID, (d, v, t, m) -> d.uuid(m));
+        conversion("url", SpecType.Scalar.URI, (d, v, t, m) -> d.url(m));
+        conversion("uri", SpecType.Scalar.URI, (d, v, t, m) -> d.uri(m));
+        conversion("toInt", INT32, (d, v, t, m) -> d.toInt(m));
+        conversion("toLong", SpecType.Scalar.INT64, (d, v, t, m) -> d.toLong(m));
+        conversion("toDecimal", SpecType.Scalar.DECIMAL, (d, v, t, m) -> d.toDecimal(m));
+        conversion("toBool", SpecType.Scalar.BOOL, (d, v, t, m) -> d.toBool(m));
+        conversion("iso8601", SpecType.Scalar.INSTANT, (d, v, t, m) -> d.iso8601(m));
+        conversion("date", SpecType.Scalar.DATE, (d, v, t, m) -> d.date(m));
+        conversion("time", SpecType.Scalar.TIME, (d, v, t, m) -> d.time(m));
+        conversion("dateTime", SpecType.Scalar.DATETIME, (d, v, t, m) -> d.dateTime(m));
+        conversion("offsetDateTime", SpecType.Scalar.OFFSET_DATETIME, (d, v, t, m) -> d.offsetDateTime(m));
     }
 
-    private void stringOp(String name, int arity, boolean message, TypedOperation<StringDecoder<JsonNode>> op) {
-        String id = "operation.string." + name;
-        operations.put(id, new OperationBinding(arity, null, message,
-                (r, v, m) -> new BoundDecoder(cast(op.apply(typed(stringClass(), r, id), v, r.type(), m)), r.type())));
-    }
-
-    @FunctionalInterface
-    private interface Conversion {
-        Decoder<JsonNode, ?> apply(StringDecoder<JsonNode> receiver, @Nullable String message);
-    }
-
-    private void convertingStringOp(String name, SpecType result, Conversion conversion) {
-        String id = "operation.string." + name;
-        operations.put(id, new OperationBinding(0, null, true,
-                (r, v, m) -> new BoundDecoder(conversion.apply(typed(stringClass(), r, id), m), result)));
-    }
-
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private static Class<StringDecoder<JsonNode>> stringClass() {
-        return (Class) StringDecoder.class;
+    private void conversion(String name, SpecType result, TypedOperation<StringDecoder<JsonNode>> op) {
+        op(STRING.kind(), name, decoderClass(StringDecoder.class), 0, null, true, t -> result, op);
     }
 
     // --- Operations on numbers ---
 
-    private void bindNumericOperations() {
-        numericOps("int32", IntDecoder.class);
-        operations.put("operation.int32.oneOf", typedOp("operation.int32.oneOf", IntDecoder.class, 1,
-                (d, v, t, m) -> ((IntDecoder<JsonNode>) d).oneOf(listOf(t, v.get(0), Integer.class), m)));
-        operations.put("operation.int32.multipleOf", typedOp("operation.int32.multipleOf", IntDecoder.class, 1,
-                (d, v, t, m) -> ((IntDecoder<JsonNode>) d).multipleOf((Integer) value(t, v.get(0)), m)));
+    private interface Bound<D> {
+        Decoder<?, ?> apply(D receiver, Object bound, @Nullable String message);
+    }
 
-        numericOps("int64", LongDecoder.class);
-        operations.put("operation.int64.oneOf", typedOp("operation.int64.oneOf", LongDecoder.class, 1,
-                (d, v, t, m) -> ((LongDecoder<JsonNode>) d).oneOf(listOf(t, v.get(0), Long.class), m)));
-        operations.put("operation.int64.multipleOf", typedOp("operation.int64.multipleOf", LongDecoder.class, 1,
-                (d, v, t, m) -> ((LongDecoder<JsonNode>) d).multipleOf((Long) value(t, v.get(0)), m)));
+    private interface Range<D> {
+        Decoder<?, ?> apply(D receiver, Object min, Object max, @Nullable String message);
+    }
 
-        numericOps("float32", FloatDecoder.class);
-        operations.put("operation.float32.oneOf", typedOp("operation.float32.oneOf", FloatDecoder.class, 1,
-                (d, v, t, m) -> ((FloatDecoder<JsonNode>) d).oneOf(listOf(t, v.get(0), Float.class), m)));
-
-        numericOps("float64", DoubleDecoder.class);
-        operations.put("operation.float64.oneOf", typedOp("operation.float64.oneOf", DoubleDecoder.class, 1,
-                (d, v, t, m) -> ((DoubleDecoder<JsonNode>) d).oneOf(listOf(t, v.get(0), Double.class), m)));
-
-        numericOps("decimal", DecimalDecoder.class);
-        operations.put("operation.decimal.multipleOf", typedOp("operation.decimal.multipleOf", DecimalDecoder.class, 1,
-                (d, v, t, m) -> ((DecimalDecoder<JsonNode>) d).multipleOf((BigDecimal) value(t, v.get(0)), m)));
-        operations.put("operation.decimal.scale", typedOp("operation.decimal.scale", DecimalDecoder.class, 1,
-                (d, v, t, m) -> ((DecimalDecoder<JsonNode>) d).scale(int32(v.get(0)), m)));
+    private interface Sign<D> {
+        Decoder<?, ?> apply(D receiver, @Nullable String message);
     }
 
     /**
-     * The bounds every numeric receiver has. raoh-java gives each numeric type a decoder class of
-     * its own with the same methods, overloaded on the primitive, so each is called on its class.
+     * How the bounds every numeric receiver has are called on one of raoh-java's numeric decoder
+     * classes. They share no interface, so each class says once how it is called, and the bounds
+     * are registered from that for every class alike.
+     *
+     * @param kind        the receiver kind
+     * @param cls         the decoder class
+     * @param min         {@code min}
+     * @param max         {@code max}
+     * @param range       {@code range}
+     * @param positive    {@code positive}
+     * @param negative    {@code negative}
+     * @param nonNegative {@code nonNegative}
+     * @param nonPositive {@code nonPositive}
+     * @param <D>         the decoder class
      */
-    private void numericOps(String kind, Class<?> cls) {
-        bound(kind, cls, "min", 1, (d, v, t, m) -> switch (d) {
-            case IntDecoder<?> i -> i.min((Integer) value(t, v.get(0)), m);
-            case LongDecoder<?> l -> l.min((Long) value(t, v.get(0)), m);
-            case FloatDecoder<?> f -> f.min((Float) value(t, v.get(0)), m);
-            case DoubleDecoder<?> f -> f.min((Double) value(t, v.get(0)), m);
-            case DecimalDecoder<?> b -> b.min((BigDecimal) value(t, v.get(0)), m);
-            default -> throw unexpected(d);
-        });
-        bound(kind, cls, "max", 1, (d, v, t, m) -> switch (d) {
-            case IntDecoder<?> i -> i.max((Integer) value(t, v.get(0)), m);
-            case LongDecoder<?> l -> l.max((Long) value(t, v.get(0)), m);
-            case FloatDecoder<?> f -> f.max((Float) value(t, v.get(0)), m);
-            case DoubleDecoder<?> f -> f.max((Double) value(t, v.get(0)), m);
-            case DecimalDecoder<?> b -> b.max((BigDecimal) value(t, v.get(0)), m);
-            default -> throw unexpected(d);
-        });
-        bound(kind, cls, "range", 2, (d, v, t, m) -> switch (d) {
-            case IntDecoder<?> i -> i.range((Integer) value(t, v.get(0)), (Integer) value(t, v.get(1)), m);
-            case LongDecoder<?> l -> l.range((Long) value(t, v.get(0)), (Long) value(t, v.get(1)), m);
-            case FloatDecoder<?> f -> f.range((Float) value(t, v.get(0)), (Float) value(t, v.get(1)), m);
-            case DoubleDecoder<?> f -> f.range((Double) value(t, v.get(0)), (Double) value(t, v.get(1)), m);
-            case DecimalDecoder<?> b -> b.range((BigDecimal) value(t, v.get(0)), (BigDecimal) value(t, v.get(1)), m);
-            default -> throw unexpected(d);
-        });
-        bound(kind, cls, "positive", 0, (d, v, t, m) -> switch (d) {
-            case IntDecoder<?> i -> i.positive(m);
-            case LongDecoder<?> l -> l.positive(m);
-            case FloatDecoder<?> f -> f.positive(m);
-            case DoubleDecoder<?> f -> f.positive(m);
-            case DecimalDecoder<?> b -> b.positive(m);
-            default -> throw unexpected(d);
-        });
-        bound(kind, cls, "negative", 0, (d, v, t, m) -> switch (d) {
-            case IntDecoder<?> i -> i.negative(m);
-            case LongDecoder<?> l -> l.negative(m);
-            case FloatDecoder<?> f -> f.negative(m);
-            case DoubleDecoder<?> f -> f.negative(m);
-            case DecimalDecoder<?> b -> b.negative(m);
-            default -> throw unexpected(d);
-        });
-        bound(kind, cls, "nonNegative", 0, (d, v, t, m) -> switch (d) {
-            case IntDecoder<?> i -> i.nonNegative(m);
-            case LongDecoder<?> l -> l.nonNegative(m);
-            case FloatDecoder<?> f -> f.nonNegative(m);
-            case DoubleDecoder<?> f -> f.nonNegative(m);
-            case DecimalDecoder<?> b -> b.nonNegative(m);
-            default -> throw unexpected(d);
-        });
-        bound(kind, cls, "nonPositive", 0, (d, v, t, m) -> switch (d) {
-            case IntDecoder<?> i -> i.nonPositive(m);
-            case LongDecoder<?> l -> l.nonPositive(m);
-            case FloatDecoder<?> f -> f.nonPositive(m);
-            case DoubleDecoder<?> f -> f.nonPositive(m);
-            case DecimalDecoder<?> b -> b.nonPositive(m);
-            default -> throw unexpected(d);
-        });
+    private record Numeric<D>(SpecType.Scalar kind, Class<D> cls, Bound<D> min, Bound<D> max, Range<D> range,
+                              Sign<D> positive, Sign<D> negative, Sign<D> nonNegative, Sign<D> nonPositive) {
     }
 
-    private void bound(String kind, Class<?> cls, String name, int arity, TypedOperation<Object> op) {
-        String id = "operation." + kind + "." + name;
-        operations.put(id, typedOp(id, cls, arity, op));
+    private void bindNumericOperations() {
+        Numeric<IntDecoder<JsonNode>> int32 = new Numeric<>(SpecType.Scalar.INT32, decoderClass(IntDecoder.class),
+                (d, b, m) -> d.min((Integer) b, m), (d, b, m) -> d.max((Integer) b, m),
+                (d, lo, hi, m) -> d.range((Integer) lo, (Integer) hi, m),
+                IntDecoder::positive, IntDecoder::negative, IntDecoder::nonNegative, IntDecoder::nonPositive);
+        Numeric<LongDecoder<JsonNode>> int64 = new Numeric<>(SpecType.Scalar.INT64, decoderClass(LongDecoder.class),
+                (d, b, m) -> d.min((Long) b, m), (d, b, m) -> d.max((Long) b, m),
+                (d, lo, hi, m) -> d.range((Long) lo, (Long) hi, m),
+                LongDecoder::positive, LongDecoder::negative, LongDecoder::nonNegative, LongDecoder::nonPositive);
+        Numeric<FloatDecoder<JsonNode>> float32 = new Numeric<>(SpecType.Scalar.FLOAT32, decoderClass(FloatDecoder.class),
+                (d, b, m) -> d.min((Float) b, m), (d, b, m) -> d.max((Float) b, m),
+                (d, lo, hi, m) -> d.range((Float) lo, (Float) hi, m),
+                FloatDecoder::positive, FloatDecoder::negative, FloatDecoder::nonNegative, FloatDecoder::nonPositive);
+        Numeric<DoubleDecoder<JsonNode>> float64 = new Numeric<>(SpecType.Scalar.FLOAT64, decoderClass(DoubleDecoder.class),
+                (d, b, m) -> d.min((Double) b, m), (d, b, m) -> d.max((Double) b, m),
+                (d, lo, hi, m) -> d.range((Double) lo, (Double) hi, m),
+                DoubleDecoder::positive, DoubleDecoder::negative, DoubleDecoder::nonNegative, DoubleDecoder::nonPositive);
+        Numeric<DecimalDecoder<JsonNode>> decimal = new Numeric<>(SpecType.Scalar.DECIMAL, decoderClass(DecimalDecoder.class),
+                (d, b, m) -> d.min((BigDecimal) b, m), (d, b, m) -> d.max((BigDecimal) b, m),
+                (d, lo, hi, m) -> d.range((BigDecimal) lo, (BigDecimal) hi, m),
+                DecimalDecoder::positive, DecimalDecoder::negative, DecimalDecoder::nonNegative, DecimalDecoder::nonPositive);
+        for (Numeric<?> n : List.of(int32, int64, float32, float64, decimal)) {
+            bindNumeric(n);
+        }
+
+        op("int32", "oneOf", int32.cls(), 1, true, (d, v, t, m) -> d.oneOf(listOf(t, v.get(0), Integer.class), m));
+        op("int32", "multipleOf", int32.cls(), 1, true, (d, v, t, m) -> d.multipleOf((Integer) value(t, v.get(0)), m));
+        op("int64", "oneOf", int64.cls(), 1, true, (d, v, t, m) -> d.oneOf(listOf(t, v.get(0), Long.class), m));
+        op("int64", "multipleOf", int64.cls(), 1, true, (d, v, t, m) -> d.multipleOf((Long) value(t, v.get(0)), m));
+        op("float32", "oneOf", float32.cls(), 1, true, (d, v, t, m) -> d.oneOf(listOf(t, v.get(0), Float.class), m));
+        op("float64", "oneOf", float64.cls(), 1, true, (d, v, t, m) -> d.oneOf(listOf(t, v.get(0), Double.class), m));
+        op("decimal", "multipleOf", decimal.cls(), 1, true,
+                (d, v, t, m) -> d.multipleOf((BigDecimal) value(t, v.get(0)), m));
+        op("decimal", "scale", decimal.cls(), 1, true, (d, v, t, m) -> d.scale(int32(v.get(0)), m));
+    }
+
+    private <D> void bindNumeric(Numeric<D> n) {
+        String kind = n.kind().kind();
+        op(kind, "min", n.cls(), 1, true, (d, v, t, m) -> n.min().apply(d, value(t, v.get(0)), m));
+        op(kind, "max", n.cls(), 1, true, (d, v, t, m) -> n.max().apply(d, value(t, v.get(0)), m));
+        op(kind, "range", n.cls(), 2, true,
+                (d, v, t, m) -> n.range().apply(d, value(t, v.get(0)), value(t, v.get(1)), m));
+        op(kind, "positive", n.cls(), 0, true, (d, v, t, m) -> n.positive().apply(d, m));
+        op(kind, "negative", n.cls(), 0, true, (d, v, t, m) -> n.negative().apply(d, m));
+        op(kind, "nonNegative", n.cls(), 0, true, (d, v, t, m) -> n.nonNegative().apply(d, m));
+        op(kind, "nonPositive", n.cls(), 0, true, (d, v, t, m) -> n.nonPositive().apply(d, m));
     }
 
     // --- Operations on booleans, lists, maps and temporal values ---
 
     private void bindBoolOperations() {
-        operations.put("operation.bool.isTrue", typedOp("operation.bool.isTrue", BoolDecoder.class, 0,
-                (d, v, t, m) -> ((BoolDecoder<JsonNode>) d).isTrue(m)));
+        Class<BoolDecoder<JsonNode>> bool = decoderClass(BoolDecoder.class);
+        op("bool", "isTrue", bool, 0, true, (d, v, t, m) -> d.isTrue(m));
     }
 
-    @SuppressWarnings("unchecked")
-    private void bindCollectionOperations() {
-        for (String kind : List.of("list", "map")) {
-            bound(kind, kind.equals("list") ? ListDecoder.class : RecordDecoder.class, "nonempty", 0,
-                    (d, v, t, m) -> switch (d) {
-                        case ListDecoder<?, ?> l -> l.nonempty(m);
-                        case RecordDecoder<?, ?> r -> r.nonempty(m);
-                        default -> throw unexpected(d);
-                    });
-            bound(kind, kind.equals("list") ? ListDecoder.class : RecordDecoder.class, "minSize", 1,
-                    (d, v, t, m) -> switch (d) {
-                        case ListDecoder<?, ?> l -> l.minSize(int32(v.get(0)), m);
-                        case RecordDecoder<?, ?> r -> r.minSize(int32(v.get(0)), m);
-                        default -> throw unexpected(d);
-                    });
-            bound(kind, kind.equals("list") ? ListDecoder.class : RecordDecoder.class, "maxSize", 1,
-                    (d, v, t, m) -> switch (d) {
-                        case ListDecoder<?, ?> l -> l.maxSize(int32(v.get(0)), m);
-                        case RecordDecoder<?, ?> r -> r.maxSize(int32(v.get(0)), m);
-                        default -> throw unexpected(d);
-                    });
-            bound(kind, kind.equals("list") ? ListDecoder.class : RecordDecoder.class, "fixedSize", 1,
-                    (d, v, t, m) -> switch (d) {
-                        case ListDecoder<?, ?> l -> l.fixedSize(int32(v.get(0)), m);
-                        case RecordDecoder<?, ?> r -> r.fixedSize(int32(v.get(0)), m);
-                        default -> throw unexpected(d);
-                    });
-        }
-        bound("list", ListDecoder.class, "unique", 0, (d, v, t, m) -> ((ListDecoder<JsonNode, ?>) d).unique(m));
-        bound("list", ListDecoder.class, "contains", 1, (d, v, t, m) -> ((ListDecoder<JsonNode, Object>) d)
-                .contains(nonNull(value(((SpecType.ListOf) t).element(), v.get(0))), m));
-        // raoh-java's containsAll takes no message, so the facet is not bound.
-        operations.put("operation.list.containsAll", new OperationBinding(1, null, false,
-                (r, v, m) -> new BoundDecoder(
-                        ((ListDecoder<JsonNode, Object>) typed(ListDecoder.class, r, "operation.list.containsAll"))
-                                .containsAll(listOf(((SpecType.ListOf) r.type()).element(), v.get(0), Object.class).toArray()),
-                        r.type())));
-        operations.put("operation.list.toSet", new OperationBinding(0, null, false,
-                (r, v, m) -> new BoundDecoder(
-                        ((ListDecoder<JsonNode, ?>) typed(ListDecoder.class, r, "operation.list.toSet")).toSet(),
-                        new SpecType.SetOf(((SpecType.ListOf) r.type()).element()))));
-    }
-
-    private void bindTemporalOperations() {
-        for (SpecType.Scalar kind : List.of(SpecType.Scalar.INSTANT, SpecType.Scalar.DATE, SpecType.Scalar.TIME,
-                SpecType.Scalar.DATETIME, SpecType.Scalar.OFFSET_DATETIME)) {
-            bound(kind.kind(), TemporalDecoder.class, "before", 1,
-                    (d, v, t, m) -> temporal(d).before(comparable(t, v.get(0)), m));
-            bound(kind.kind(), TemporalDecoder.class, "after", 1,
-                    (d, v, t, m) -> temporal(d).after(comparable(t, v.get(0)), m));
-            bound(kind.kind(), TemporalDecoder.class, "between", 2,
-                    (d, v, t, m) -> temporal(d).between(comparable(t, v.get(0)), comparable(t, v.get(1)), m));
-        }
+    private interface Size<D> {
+        Decoder<?, ?> apply(D receiver, int size, @Nullable String message);
     }
 
     /**
-     * {@code recoverWith}, typed so that the function cannot be read as the fallback value of
-     * {@link Decoders#recover(Decoder, Object)}.
+     * How the size checks lists and maps both have are called on one of raoh-java's decoder
+     * classes, as {@link Numeric} does for the bounds.
+     *
+     * @param kind      the receiver kind
+     * @param cls       the decoder class
+     * @param nonempty  {@code nonempty}
+     * @param minSize   {@code minSize}
+     * @param maxSize   {@code maxSize}
+     * @param fixedSize {@code fixedSize}
+     * @param <D>       the decoder class
      */
-    private static <T> Decoder<JsonNode, T> recoverWith(Decoder<JsonNode, T> inner,
-                                                         java.util.function.Function<net.unit8.raoh.Issues, T> fn) {
-        return Decoders.recover(inner, fn);
+    private record Sized<D>(String kind, Class<D> cls, Sign<D> nonempty, Size<D> minSize, Size<D> maxSize,
+                            Size<D> fixedSize) {
     }
 
-    /** The receiver of a temporal operation, whose bound the materialized value matches. */
-    @SuppressWarnings("rawtypes")
-    private static TemporalDecoder temporal(Object d) {
-        return (TemporalDecoder) d;
+    private void bindCollectionOperations() {
+        Class<ListDecoder<JsonNode, Object>> list = decoderClass(ListDecoder.class);
+        Class<RecordDecoder<JsonNode, Object>> map = decoderClass(RecordDecoder.class);
+        bindSized(new Sized<>("list", list, ListDecoder::nonempty, ListDecoder::minSize, ListDecoder::maxSize,
+                ListDecoder::fixedSize));
+        bindSized(new Sized<>("map", map, RecordDecoder::nonempty, RecordDecoder::minSize, RecordDecoder::maxSize,
+                RecordDecoder::fixedSize));
+
+        op("list", "unique", list, 0, true, (d, v, t, m) -> d.unique(m));
+        op("list", "contains", list, 1, true, (d, v, t, m) -> d.contains(value(element(t), v.get(0)), m));
+        // raoh-java's containsAll takes no message, so the facet is not bound.
+        op("list", "containsAll", list, 1, false,
+                (d, v, t, m) -> d.containsAll(listOf(element(t), v.get(0), Object.class).toArray()));
+        op("list", "toSet", list, 0, null, false, t -> new SpecType.SetOf(element(t)), (d, v, t, m) -> d.toSet());
+    }
+
+    private <D> void bindSized(Sized<D> s) {
+        op(s.kind(), "nonempty", s.cls(), 0, true, (d, v, t, m) -> s.nonempty().apply(d, m));
+        op(s.kind(), "minSize", s.cls(), 1, true, (d, v, t, m) -> s.minSize().apply(d, int32(v.get(0)), m));
+        op(s.kind(), "maxSize", s.cls(), 1, true, (d, v, t, m) -> s.maxSize().apply(d, int32(v.get(0)), m));
+        op(s.kind(), "fixedSize", s.cls(), 1, true, (d, v, t, m) -> s.fixedSize().apply(d, int32(v.get(0)), m));
+    }
+
+    /**
+     * The temporal bounds. A bound is read at the receiver's type, so its class is the one the
+     * receiver's {@link TemporalDecoder} compares.
+     */
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private void bindTemporalOperations() {
+        Class<TemporalDecoder> temporal = TemporalDecoder.class;
+        for (SpecType.Scalar kind : List.of(SpecType.Scalar.INSTANT, SpecType.Scalar.DATE, SpecType.Scalar.TIME,
+                SpecType.Scalar.DATETIME, SpecType.Scalar.OFFSET_DATETIME)) {
+            op(kind.kind(), "before", temporal, 1, true,
+                    (d, v, t, m) -> d.before((Comparable) value(t, v.get(0)), m));
+            op(kind.kind(), "after", temporal, 1, true,
+                    (d, v, t, m) -> d.after((Comparable) value(t, v.get(0)), m));
+            op(kind.kind(), "between", temporal, 2, true,
+                    (d, v, t, m) -> d.between((Comparable) value(t, v.get(0)), (Comparable) value(t, v.get(1)), m));
+        }
     }
 
     // --- Operations on every type ---
 
-    @SuppressWarnings("unchecked")
     private void bindAnyOperations() {
         operations.put("operation.any.map", new OperationBinding(1, null, false, (r, v, m) -> {
             Fixtures.MapFixture f = fixture(v.get(0), Fixtures.MapFixture.class);
-            SpecType output = f.output().apply(r.type());
-            return new BoundDecoder(of(r).map(f.fn()), output);
+            return new Plan<>(f.output().apply(r.type()), () -> build(r).map(f.fn()));
         }));
         operations.put("operation.any.refine", new OperationBinding(1, null, false, (r, v, m) -> {
             Fixtures.RefineFixture f = fixture(v.get(0), Fixtures.RefineFixture.class);
             requireType(f.input(), r.type());
-            return new BoundDecoder(of(r).refine(f.holds(), f.code(), f.message(), f.meta()), r.type());
+            return new Plan<>(r.type(), () -> build(r).refine(f.holds(), f.code(), f.message(), f.meta()));
         }));
         operations.put("operation.any.flatMap", new OperationBinding(1, null, false, (r, v, m) -> {
             Fixtures.FlatMapFixture f = fixture(v.get(0), Fixtures.FlatMapFixture.class);
             requireType(f.input(), r.type());
-            return new BoundDecoder(of(r).flatMap(f.fn()), f.output());
+            return new Plan<>(f.output(), () -> build(r).flatMap(f.fn()));
         }));
     }
 
@@ -684,40 +733,29 @@ final class Bindings {
     private void bindEncoders() {
         encoders.put("encoder.string", a -> {
             requireArity("string", 0, a);
-            return new BoundEncoder((Encoder<Object, ?>) (Encoder<?, ?>) ObjectEncoders.string(), STRING);
+            return new Plan<>(STRING, () -> (Encoder<Object, ?>) (Encoder<?, ?>) ObjectEncoders.string());
         });
         encoders.put("encoder.object", a -> {
             requireArity("object", 1, a);
-            List<PropertyEncoder<Object>> props = new ArrayList<>();
-            List<SpecType> inputs = new ArrayList<>();
+            List<Plan<PropertyEncoder<Object>>> props = new ArrayList<>();
             for (JsonNode propertyForm : a.get(0)) {
-                BoundProperty p = property(propertyForm);
-                props.add(p.property());
-                inputs.add(p.input());
+                props.add(planProperty(propertyForm));
             }
-            @SuppressWarnings("rawtypes")
-            PropertyEncoder<Object>[] array = props.toArray(new PropertyEncoder[0]);
-            return new BoundEncoder((Encoder<Object, ?>) (Encoder<?, ?>) MapEncoders.object(array), common(inputs));
+            return new Plan<>(common(props), () -> {
+                @SuppressWarnings("rawtypes")
+                PropertyEncoder<Object>[] array = props.stream().map(p -> p.build().get())
+                        .toArray(PropertyEncoder[]::new);
+                return (Encoder<Object, ?>) (Encoder<?, ?>) MapEncoders.object(array);
+            });
         });
         properties.put("property.propertyWithDefault", a -> {
             requireArity("propertyWithDefault", 4, a);
-            String name = string(a.get(0));
             Fixtures.GetterFixture getter = fixture(a.get(1), Fixtures.GetterFixture.class);
-            BoundEncoder value = encoder(a.get(2));
-            Object fallback = ValueCodec.materialize(value.input(), a.get(3));
-            PropertyEncoder<Object> property = MapEncoders.propertyWithDefault(
-                    name, getter.fn(), (Encoder<Object, Object>) (Encoder<?, ?>) value.encoder(), fallback);
-            return new BoundProperty(property, getter.input().apply(value.input()));
+            Plan<Encoder<Object, ?>> value = planEncoder(a.get(2));
+            return new Plan<>(getter.input().apply(value.type()), () -> MapEncoders.propertyWithDefault(
+                    string(a.get(0)), getter.fn(), (Encoder<Object, Object>) value.build().get(),
+                    ValueCodec.materialize(value.type(), a.get(3))));
         });
-    }
-
-    private BoundProperty property(JsonNode form) {
-        String id = "property." + formName(form);
-        Property p = properties.get(id);
-        if (p == null) {
-            throw new UnboundFeature(id);
-        }
-        return p.build(slice(form, 1, form.size()));
     }
 
     private static void requireArity(String name, int arity, List<JsonNode> args) {
@@ -728,50 +766,107 @@ final class Bindings {
 
     // --- Helpers ---
 
-    private void constructor(String name, int arity, boolean message, Constructor build) {
-        constructors.put("decoder." + name, new ConstructorBinding(arity, message, build));
+    private void constructor(String name, int arity, boolean message, Constructor plan) {
+        constructors.put("decoder." + name, new ConstructorBinding(arity, message, plan));
     }
 
-    private OperationBinding typedOp(String id, Class<?> cls, int arity, TypedOperation<Object> op) {
-        return new OperationBinding(arity, null, true, (r, v, m) -> {
-            Object receiver = typed(cls, r, id);
-            return new BoundDecoder(cast(op.apply(receiver, v, r.type(), m)), r.type());
-        });
+    private <D> void op(String kind, String name, Class<D> cls, int arity, boolean message, TypedOperation<D> op) {
+        op(kind, name, cls, arity, null, message, UnaryOperator.identity(), op);
     }
 
-    /** A decoder a typed operation gave, which reads the same input as its receiver. */
+    /**
+     * Registers an operation called on a receiver of one of raoh-java's decoder classes.
+     *
+     * @param kind        the receiver kind
+     * @param name        the operation's name
+     * @param cls         the decoder class the operation is a method of
+     * @param arity       the number of value arguments
+     * @param defaultLast the value a missing last argument stands for, or {@code null}
+     * @param message     whether it takes a message
+     * @param result      the result type for the receiver's type
+     * @param op          calls the method
+     * @param <D>         the decoder class
+     */
+    private <D> void op(String kind, String name, Class<D> cls, int arity, @Nullable JsonNode defaultLast,
+                        boolean message, UnaryOperator<SpecType> result, TypedOperation<D> op) {
+        String id = "operation." + kind + "." + name;
+        operations.put(id, new OperationBinding(arity, defaultLast, message, (r, v, m) -> new Plan<>(
+                result.apply(r.type()),
+                () -> cast(op.apply(typed(cls, r.build().get(), id), v, r.type(), m)))));
+    }
+
+    /**
+     * A decoder a typed operation gave, which reads the same input as its receiver.
+     *
+     * @param decoder the decoder
+     * @return the same decoder
+     */
     @SuppressWarnings("unchecked")
     private static Decoder<JsonNode, ?> cast(Decoder<?, ?> decoder) {
         return (Decoder<JsonNode, ?>) decoder;
     }
 
     /**
+     * One of raoh-java's generic decoder classes, at the type arguments the runner uses.
+     *
+     * @param cls the raw class
+     * @param <D> the parameterized class
+     * @return the same class
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static <D> Class<D> decoderClass(Class cls) {
+        return (Class<D>) cls;
+    }
+
+    /**
      * The receiver as the decoder class raoh-java gives the operation on.
      *
+     * @param cls     the class
+     * @param decoder the receiver
+     * @param id      the operation's feature
+     * @param <D>     the class
+     * @return the receiver
      * @throws IllegalStateException if raoh-java gives another class here, so that the operation
      *                               cannot be called on it
      */
-    private static <D> D typed(Class<D> cls, BoundDecoder receiver, String id) {
-        if (!cls.isInstance(receiver.decoder())) {
+    private static <D> D typed(Class<D> cls, Decoder<JsonNode, ?> decoder, String id) {
+        if (!cls.isInstance(decoder)) {
             throw new IllegalStateException(id + " is a method of " + cls.getSimpleName()
-                    + ", but raoh-java gives a " + receiver.decoder().getClass().getName() + " here");
+                    + ", but raoh-java gives a " + decoder.getClass().getName() + " here");
         }
-        return cls.cast(receiver.decoder());
+        return cls.cast(decoder);
     }
 
     @SuppressWarnings("unchecked")
-    private static Decoder<JsonNode, Object> of(BoundDecoder bound) {
-        return (Decoder<JsonNode, Object>) bound.decoder();
+    private static Decoder<JsonNode, Object> build(Plan<Decoder<JsonNode, ?>> plan) {
+        return (Decoder<JsonNode, Object>) plan.build().get();
+    }
+
+    private Plan<Decoder<JsonNode, ?>> planString(JsonNode form) {
+        Plan<Decoder<JsonNode, ?>> plan = planDecoder(form);
+        requireType(STRING, plan.type());
+        return plan;
     }
 
     @SuppressWarnings("unchecked")
-    private static Decoder<JsonNode, String> stringDecoder(BoundDecoder bound) {
-        requireType(STRING, bound.type());
-        return (Decoder<JsonNode, String>) bound.decoder();
+    private static Decoder<JsonNode, String> buildString(Plan<Decoder<JsonNode, ?>> plan) {
+        return (Decoder<JsonNode, String>) plan.build().get();
     }
 
-    private <F extends Fixtures.Fixture> F fixture(JsonNode name, Class<F> kind) {
-        String id = "fixture." + string(name);
+    /**
+     * The fixture a fixture argument names. Its name is not a value, so it is read while planning.
+     *
+     * @param name the argument
+     * @param kind the kind of fixture the argument takes
+     * @param <F>  that kind
+     * @return the fixture
+     * @throws UnboundFeature if the runner does not bind the fixture
+     */
+    private static <F extends Fixtures.Fixture> F fixture(JsonNode name, Class<F> kind) {
+        if (!name.isString()) {
+            throw new IllegalArgumentException("not a fixture name: " + name);
+        }
+        String id = "fixture." + name.stringValue();
         Fixtures.Fixture f = Fixtures.ALL.get(id);
         if (f == null) {
             throw new UnboundFeature(id);
@@ -782,29 +877,46 @@ final class Bindings {
         return kind.cast(f);
     }
 
-    private static Object value(SpecType type, JsonNode observation) {
-        return nonNull(ValueCodec.materialize(type, observation));
-    }
-
-    /** A list argument whose elements have the given type, none of them null. */
-    private static <T> List<T> listOf(SpecType elementType, JsonNode observation, Class<T> element) {
-        List<T> values = new ArrayList<>();
-        for (Object v : (List<?>) ValueCodec.materialize(new SpecType.ListOf(elementType), observation)) {
-            values.add(element.cast(nonNull(v)));
+    private static SpecType element(SpecType listType) {
+        if (!(listType instanceof SpecType.ListOf l)) {
+            throw new IllegalArgumentException("not a list: " + listType);
         }
-        return values;
+        return l.element();
     }
 
-    @SuppressWarnings("rawtypes")
-    private static Comparable comparable(SpecType type, JsonNode observation) {
-        return (Comparable) value(type, observation);
-    }
-
-    private static Object nonNull(@Nullable Object value) {
+    /**
+     * A value argument, which raoh-java's methods take only when it is not null.
+     *
+     * @param type        the type to read it at
+     * @param observation the argument
+     * @return the value
+     */
+    private static Object value(SpecType type, JsonNode observation) {
+        Object value = ValueCodec.materialize(type, observation);
         if (value == null) {
             throw new IllegalArgumentException("raoh-java takes no null here");
         }
         return value;
+    }
+
+    /**
+     * A list argument whose elements have the given type, none of them null.
+     *
+     * @param elementType the type of the elements
+     * @param observation the argument
+     * @param element     the class of the elements
+     * @param <T>         that class
+     * @return the elements
+     */
+    private static <T> List<T> listOf(SpecType elementType, JsonNode observation, Class<T> element) {
+        List<T> values = new ArrayList<>();
+        for (Object v : (List<?>) value(new SpecType.ListOf(elementType), observation)) {
+            if (v == null) {
+                throw new IllegalArgumentException("raoh-java takes no null element here");
+            }
+            values.add(element.cast(v));
+        }
+        return values;
     }
 
     private static String string(JsonNode node) {
@@ -820,21 +932,21 @@ final class Bindings {
         return (List<String>) value(LIST_OF_STRING, node);
     }
 
-    private static SpecType common(List<SpecType> types) {
-        if (types.isEmpty() || types.stream().distinct().count() != 1) {
-            throw new IllegalArgumentException("the decoders give different types: " + types);
+    private static SpecType common(Iterable<? extends Plan<?>> plans) {
+        Set<SpecType> types = new LinkedHashSet<>();
+        for (Plan<?> plan : plans) {
+            types.add(plan.type());
         }
-        return types.getFirst();
+        if (types.size() != 1) {
+            throw new IllegalArgumentException("the parts have different types: " + types);
+        }
+        return types.iterator().next();
     }
 
     private static void requireType(SpecType expected, SpecType actual) {
         if (!expected.equals(actual)) {
             throw new IllegalArgumentException("expected " + expected + ", got " + actual);
         }
-    }
-
-    private static IllegalStateException unexpected(Object decoder) {
-        return new IllegalStateException("unexpected decoder " + decoder.getClass().getName());
     }
 
     private static String formName(JsonNode form) {

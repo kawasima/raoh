@@ -62,6 +62,19 @@ if [[ -n "$DIRTY" ]]; then
     exit 1
 fi
 
+# The revision of raoh-java the result describes, read before anything is built, since a build can
+# change files in the working tree. A change to a tracked file, or a file git does not ignore and
+# does not track, means the runner is built from something no commit is; the checkout of the
+# specification is not part of raoh-java, and is left out when it sits inside the working tree.
+EXCLUDE=()
+if [[ "$SPEC" == "$ROOT"/* ]]; then
+    EXCLUDE=(":(exclude)${SPEC#"$ROOT"/}")
+fi
+IMPLEMENTATION_REVISION="$(git -C "$ROOT" rev-parse HEAD)"
+if [[ -n "$(git -C "$ROOT" status --porcelain --untracked-files=all -- . ${EXCLUDE[@]+"${EXCLUDE[@]}"})" ]]; then
+    IMPLEMENTATION_REVISION="$IMPLEMENTATION_REVISION-dirty"
+fi
+
 # The verifier of the pinned revision, not whichever raoh-verify is on PATH.
 (cd "$SPEC" && go build -o "$OUT/raoh-verify" ./cmd/raoh-verify)
 DIGEST="$("$OUT/raoh-verify" manifest "$SPEC")"
@@ -69,11 +82,6 @@ DIGEST="$("$OUT/raoh-verify" manifest "$SPEC")"
 # The runner's own tests run; the modules it is built with are tested by the default build.
 mvn -B --no-transfer-progress -q -f "$ROOT/pom.xml" -Pconformance -pl conformance -am package \
     -Dtest='net.unit8.raoh.conformance.**' -Dsurefire.failIfNoSpecifiedTests=false -Djacoco.skip=true
-
-IMPLEMENTATION_REVISION="$(git -C "$ROOT" rev-parse HEAD)"
-if [[ -n "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ]]; then
-    IMPLEMENTATION_REVISION="$IMPLEMENTATION_REVISION-dirty"
-fi
 
 java -cp "$ROOT/conformance/target/classes:$(cat "$ROOT/conformance/target/classpath.txt")" \
     net.unit8.raoh.conformance.RunnerMain \

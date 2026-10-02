@@ -14,15 +14,9 @@ import tools.jackson.databind.node.ObjectNode;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.net.URI;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.function.Function;
 
 /**
@@ -101,13 +95,13 @@ final class OutcomeWriter {
      * Writes an issue's metadata value as the observation of its value-model type.
      *
      * <p>Unlike a decoder's result, a metadata value comes with no {@link SpecType}: raoh-java
-     * keeps it as an {@code Object}. Its Java class stands for the type, so each class maps to the
-     * observation {@link ValueCodec} writes for the type it represents ({@link BigDecimal} is a
-     * {@code decimal}, written as a string; a {@link Float} a {@code float32}, with its tags). Only
-     * the classes raoh-java gives metadata as are known; any other is refused rather than written
-     * in some form of its own, such as its {@code toString}. The lists and maps are the ones the
-     * value model has, and also the candidates of {@code one_of_failed}, which raoh-java gives as a
-     * list of maps whose issues have no message key, as the specification writes them.
+     * keeps it as an {@code Object}. Its Java class stands for the type: a scalar's class is
+     * looked up in {@link SpecType.Scalar}, an enum constant is a symbol of its enum, and the value
+     * is then written by {@link ValueCodec#observe}, so that a metadata value and a decoded value of
+     * one type are written by the same rules. The lists and maps are the ones the value model has,
+     * and also the candidates of {@code one_of_failed}, which raoh-java gives as a list of maps whose
+     * issues have no message key, as the specification writes them. Any other class is refused
+     * rather than written in some form of its own, such as its {@code toString}.
      *
      * @param value the value
      * @return its observation
@@ -116,26 +110,20 @@ final class OutcomeWriter {
     private static JsonNode meta(@Nullable Object value) {
         return switch (value) {
             case null -> NODES.nullNode();
-            case Boolean b -> NODES.booleanNode(b);
-            case Integer i -> NODES.numberNode(i);
-            case Long l -> NODES.numberNode(l);
-            case Float f -> ValueCodec.float32(f);
-            case Double d -> ValueCodec.float64(d);
-            case BigDecimal d -> NODES.stringNode(d.toString());
-            case String s -> NODES.stringNode(s);
-            case Enum<?> e -> NODES.stringNode(e.name());
-            case UUID u -> NODES.stringNode(u.toString());
-            case URI u -> NODES.stringNode(u.toString());
-            case LocalDate d -> NODES.stringNode(d.toString());
-            case LocalTime t -> NODES.stringNode(t.toString());
-            case LocalDateTime d -> NODES.stringNode(d.toString());
-            case OffsetDateTime d -> NODES.stringNode(d.toString());
-            case Instant i -> NODES.stringNode(i.toString());
             case List<?> list -> array(list, OutcomeWriter::meta);
             case Map<?, ?> map -> object(map, OutcomeWriter::meta);
-            default -> throw new IllegalStateException(
-                    "no observation is known for a " + value.getClass().getName());
+            case Enum<?> e -> ValueCodec.observe(symbolOf(e), e);
+            default -> ValueCodec.observe(SpecType.Scalar.of(value).orElseThrow(() -> new IllegalStateException(
+                    "no observation is known for a " + value.getClass().getName())), value);
         };
+    }
+
+    private static SpecType symbolOf(Enum<?> constant) {
+        List<String> names = new ArrayList<>();
+        for (Enum<?> c : constant.getDeclaringClass().getEnumConstants()) {
+            names.add(c.name());
+        }
+        return new SpecType.Symbol(names);
     }
 
     /**

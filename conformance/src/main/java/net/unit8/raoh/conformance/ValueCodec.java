@@ -8,7 +8,6 @@ import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 import java.math.BigDecimal;
-import java.net.URI;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,17 +23,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * Converts between raoh-java's values and their observations (the specification's
  * {@code observation.md}), directed by the value's {@link SpecType}.
  *
- * <p>The Java value a type has is fixed here and nowhere else: {@code int32} is an {@link Integer},
- * {@code decimal} a {@link BigDecimal}, {@code product} the list {@link #product} makes,
- * {@code nullable<T>} a {@code T} or {@code null}, {@code presence<T>} a {@link Presence}. A value
- * that is not what its type says is a defect of the runner or of raoh-java, never something to
- * write down: both directions throw on one.
+ * <p>The Java value a type has is fixed here and in {@link SpecType.Scalar}, nowhere else:
+ * {@code int32} is an {@link Integer}, {@code decimal} a {@link BigDecimal}, {@code product} the
+ * list {@link #product} makes, {@code nullable<T>} a {@code T} or {@code null},
+ * {@code presence<T>} a {@link Presence}. A value that is not what its type says is a defect of the
+ * runner or of raoh-java, never something to write down: {@link #observe} throws on one.
+ *
+ * <p>{@link #materialize} reads observations the suite gives, and does not check that they are
+ * observations: whether one is (a float in its type's range and written as its canonical decimal,
+ * a set with no element twice) is what {@code raoh-verify check-suite} decides, and a run on a suite
+ * that fails it is invalid whatever the runner wrote. Checking again here would be a second reading
+ * of {@code observation.md}.
  */
 final class ValueCodec {
 
@@ -119,21 +123,17 @@ final class ValueCodec {
     }
 
     private static JsonNode scalar(SpecType.Scalar type, @Nullable Object value) {
+        Object v = cast(type, value, type.javaType());
         return switch (type) {
-            case BOOL -> NODES.booleanNode(cast(type, value, Boolean.class));
-            case INT32 -> NODES.numberNode(cast(type, value, Integer.class));
-            case INT64 -> NODES.numberNode(cast(type, value, Long.class));
-            case FLOAT32 -> float32(cast(type, value, Float.class));
-            case FLOAT64 -> float64(cast(type, value, Double.class));
-            case DECIMAL -> NODES.stringNode(cast(type, value, BigDecimal.class).toString());
-            case STRING -> NODES.stringNode(cast(type, value, String.class));
-            case UUID -> NODES.stringNode(cast(type, value, UUID.class).toString());
-            case URI -> NODES.stringNode(cast(type, value, URI.class).toString());
-            case DATE -> NODES.stringNode(cast(type, value, LocalDate.class).toString());
-            case TIME -> NODES.stringNode(cast(type, value, LocalTime.class).toString());
-            case DATETIME -> NODES.stringNode(cast(type, value, LocalDateTime.class).toString());
-            case OFFSET_DATETIME -> NODES.stringNode(cast(type, value, OffsetDateTime.class).toString());
-            case INSTANT -> NODES.stringNode(cast(type, value, Instant.class).toString());
+            case BOOL -> NODES.booleanNode((Boolean) v);
+            case INT32 -> NODES.numberNode((Integer) v);
+            case INT64 -> NODES.numberNode((Long) v);
+            case FLOAT32 -> float32((Float) v);
+            case FLOAT64 -> float64((Double) v);
+            case DECIMAL -> NODES.stringNode(((BigDecimal) v).toString());
+            // Each of these is written as its toString: a string itself, the lower-case UUID, the
+            // URI as written, and the ISO 8601 forms observation.md lists for the temporal types.
+            case STRING, UUID, URI, DATE, TIME, DATETIME, OFFSET_DATETIME, INSTANT -> NODES.stringNode(v.toString());
         };
     }
 
@@ -307,7 +307,12 @@ final class ValueCodec {
         };
     }
 
-    /** The tag of a float observation, or the empty string for a number. */
+    /**
+     * The tag of a float observation.
+     *
+     * @param observation the observation
+     * @return its tag, or the empty string for a number
+     */
     private static String floatTagOf(JsonNode observation) {
         if (observation.isObject() && observation.size() == 1 && observation.get("float") != null
                 && observation.get("float").isString()) {

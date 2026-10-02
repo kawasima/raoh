@@ -15,7 +15,12 @@ import java.util.Set;
 final class Symbols {
 
     /** {@code ["RED", "GREEN"]}. */
-    enum RedGreen { RED, GREEN }
+    enum RedGreen {
+        /** {@code RED}. */
+        RED,
+        /** {@code GREEN}. */
+        GREEN
+    }
 
     private static final List<Class<? extends Enum<?>>> ENUMS = List.of(RedGreen.class);
 
