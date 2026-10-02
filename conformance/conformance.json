@@ -10,7 +10,7 @@
   "divergences": {
     "R000869": {
       "category": "design",
-      "reason": "uri() gives a java.net.URI, which cannot hold this RFC 3986 URI: an empty path with no authority and no query, an empty authority with nothing after it, an IPvFuture host, or an IPv6 host with a port above Integer.MAX_VALUE. raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses these URIs with invalid_format.",
+      "reason": "uri() gives a java.net.URI, which cannot hold a URI whose path is empty and that has no authority and no query (a:). raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses with invalid_format what it cannot hold.",
       "observed": {
         "issues": [
           {
@@ -25,7 +25,7 @@
     },
     "R000870": {
       "category": "design",
-      "reason": "uri() gives a java.net.URI, which cannot hold this RFC 3986 URI: an empty path with no authority and no query, an empty authority with nothing after it, an IPvFuture host, or an IPv6 host with a port above Integer.MAX_VALUE. raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses these URIs with invalid_format.",
+      "reason": "uri() gives a java.net.URI, which cannot hold a URI whose path is empty and that has no authority and no query (a:#f). raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses with invalid_format what it cannot hold.",
       "observed": {
         "issues": [
           {
@@ -40,7 +40,7 @@
     },
     "R000871": {
       "category": "design",
-      "reason": "uri() gives a java.net.URI, which cannot hold this RFC 3986 URI: an empty path with no authority and no query, an empty authority with nothing after it, an IPvFuture host, or an IPv6 host with a port above Integer.MAX_VALUE. raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses these URIs with invalid_format.",
+      "reason": "uri() gives a java.net.URI, which cannot hold a URI whose authority is empty with nothing after it (a://). raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses with invalid_format what it cannot hold.",
       "observed": {
         "issues": [
           {
@@ -55,7 +55,7 @@
     },
     "R000872": {
       "category": "design",
-      "reason": "uri() gives a java.net.URI, which cannot hold this RFC 3986 URI: an empty path with no authority and no query, an empty authority with nothing after it, an IPvFuture host, or an IPv6 host with a port above Integer.MAX_VALUE. raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses these URIs with invalid_format.",
+      "reason": "uri() gives a java.net.URI, which cannot hold a port above Integer.MAX_VALUE after an IPv6 host (http://[::1]:2147483648/). raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses with invalid_format what it cannot hold.",
       "observed": {
         "issues": [
           {
@@ -70,7 +70,7 @@
     },
     "R000873": {
       "category": "design",
-      "reason": "uri() gives a java.net.URI, which cannot hold this RFC 3986 URI: an empty path with no authority and no query, an empty authority with nothing after it, an IPvFuture host, or an IPv6 host with a port above Integer.MAX_VALUE. raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses these URIs with invalid_format.",
+      "reason": "uri() gives a java.net.URI, which cannot hold an IPvFuture host (http://[v1.abc]/). raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses with invalid_format what it cannot hold.",
       "observed": {
         "issues": [
           {
@@ -85,7 +85,7 @@
     },
     "R000874": {
       "category": "design",
-      "reason": "uri() gives a java.net.URI, which cannot hold this RFC 3986 URI: an empty path with no authority and no query, an empty authority with nothing after it, an IPvFuture host, or an IPv6 host with a port above Integer.MAX_VALUE. raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses these URIs with invalid_format.",
+      "reason": "uri() gives a java.net.URI, which cannot hold a URI whose path is empty and that has no authority and no query (http:). raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses with invalid_format what it cannot hold.",
       "observed": {
         "issues": [
           {
@@ -100,7 +100,7 @@
     },
     "R000875": {
       "category": "design",
-      "reason": "uri() gives a java.net.URI, which cannot hold this RFC 3986 URI: an empty path with no authority and no query, an empty authority with nothing after it, an IPvFuture host, or an IPv6 host with a port above Integer.MAX_VALUE. raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses these URIs with invalid_format.",
+      "reason": "uri() gives a java.net.URI, which cannot hold a URI whose authority is empty with nothing after it (http://). raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses with invalid_format what it cannot hold.",
       "observed": {
         "issues": [
           {
@@ -115,7 +115,7 @@
     },
     "R000876": {
       "category": "design",
-      "reason": "uri() gives a java.net.URI, which cannot hold this RFC 3986 URI: an empty path with no authority and no query, an empty authority with nothing after it, an IPvFuture host, or an IPv6 host with a port above Integer.MAX_VALUE. raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses these URIs with invalid_format.",
+      "reason": "uri() gives a java.net.URI, which cannot hold a URI whose authority is empty with nothing after it (https://). raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses with invalid_format what it cannot hold.",
       "observed": {
         "issues": [
           {
@@ -130,7 +130,7 @@
     },
     "R000906": {
       "category": "design",
-      "reason": "uri() gives a java.net.URI, which cannot hold this RFC 3986 URI: an empty path with no authority and no query, an empty authority with nothing after it, an IPvFuture host, or an IPv6 host with a port above Integer.MAX_VALUE. raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses these URIs with invalid_format.",
+      "reason": "uri() gives a java.net.URI, which cannot hold an IPvFuture host (http://[V1.abc]/). raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses with invalid_format what it cannot hold.",
       "observed": {
         "issues": [
           {
@@ -145,7 +145,7 @@
     },
     "R001008": {
       "category": "design",
-      "reason": "url() gives a java.net.URI, which cannot hold this RFC 3986 URI: an IPvFuture host, or an IPv6 host with a port above Integer.MAX_VALUE. raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses these URLs with invalid_format, as uri() refuses the URIs it cannot hold.",
+      "reason": "url() gives a java.net.URI, which cannot hold an IPvFuture host (http://[v1.abc]/). raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses with invalid_format what it cannot hold.",
       "observed": {
         "issues": [
           {
@@ -160,7 +160,7 @@
     },
     "R001009": {
       "category": "design",
-      "reason": "url() gives a java.net.URI, which cannot hold this RFC 3986 URI: an IPvFuture host, or an IPv6 host with a port above Integer.MAX_VALUE. raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses these URLs with invalid_format, as uri() refuses the URIs it cannot hold.",
+      "reason": "url() gives a java.net.URI, which cannot hold a port above Integer.MAX_VALUE after an IPv6 host (http://[::1]:2147483648/). raoh-java keeps java.net.URI as the result type, so that a domain model holding a URI need not convert from a type of its own, and refuses with invalid_format what it cannot hold.",
       "observed": {
         "issues": [
           {
