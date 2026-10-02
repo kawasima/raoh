@@ -23,8 +23,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The published API of raoh, raoh-json and raoh-jooq keeps every existing call's meaning when a
- * method is added, and the documentation's imports can be used as written.
+ * Two checks on the published API of raoh, raoh-json and raoh-jooq: no method may take over an
+ * existing call of a varargs method of its name, in its class or across the classes a documentation
+ * example imports on demand together; and no two classes such an example imports may share a static
+ * method of one shape, which the example could then not call. A method added beside a fixed-arity
+ * one of its name can still take over that one's calls ({@code f(String)} beside {@code f(Object)});
+ * neither check covers that.
  */
 class PublishedApiTest {
 
@@ -33,7 +37,8 @@ class PublishedApiTest {
 
     /** The classes the documentation's examples import on demand together. */
     private static final List<List<Class<?>>> STATIC_IMPORT_GROUPS = DocumentedImports.load(
-            DocumentedImports.groups(DocumentedImports.documents(repositoryRoot())), Result.class.getClassLoader());
+            DocumentedImports.groups(DocumentedImports.documents(repositoryRoot(), Result.class.getClassLoader())),
+            Result.class.getClassLoader());
 
     /**
      * The repository root, found from where this class was loaded, raoh-api-checks/target/test-classes,

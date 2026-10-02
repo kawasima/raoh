@@ -32,14 +32,21 @@ import java.util.stream.Stream;
  * example is a code block:
  *
  * <ul>
- *   <li>in the Javadoc of raoh, raoh-json and raoh-jooq, a {@code <pre>} block, or, for imports a
- *       Javadoc comment has outside any {@code <pre>}, the comment;</li>
- *   <li>in the README, the CHANGELOG and the Markdown under {@code docs/}, a fenced code block ({@code ```} or
+ *   <li>in the published Javadoc of raoh, raoh-json and raoh-jooq, a {@code <pre>} block, or, for
+ *       imports a Javadoc comment has outside any {@code <pre>}, the comment;</li>
+ *   <li>in the README and the Markdown under {@code docs/}, a fenced code block ({@code ```} or
  *       {@code ~~~}), or an indented one.</li>
  * </ul>
  *
+ * <p>This is the documentation of the current API, which a user follows now. The CHANGELOG records
+ * what earlier versions were and how to move off them, and its examples may name classes this
+ * version no longer has, so it is not read.
+ *
  * <p>Only documentation is read: the source's own import declarations are how Raoh is written, not
- * what it tells a user to write. Classes of {@code net.unit8.raoh.examples} are not Raoh's API and
+ * what it tells a user to write. The published Javadoc is that of the public top-level types and the
+ * {@code package-info} of every package but {@code net.unit8.raoh.internal}, which the release's
+ * Javadoc leaves out; it is chosen by source file, so a non-public member's comment in such a file
+ * is read too. Classes of {@code net.unit8.raoh.examples} are not Raoh's API and
  * are left out. A nested class may be imported by its canonical name, and an import may leave out its
  * semicolon, as jshell lets it.
  */
@@ -57,27 +64,60 @@ public final class DocumentedImports {
     }
 
     /**
-     * The documentation of the repository whose root is given: the sources of raoh, raoh-json and
-     * raoh-jooq, the README, the CHANGELOG and the Markdown under {@code docs/}. CLAUDE.md and
-     * CONTRIBUTING.md are for whoever works on Raoh, not for its users, and are not read.
+     * The documentation of the repository whose root is given: the README, the Markdown under
+     * {@code docs/}, and the sources of raoh, raoh-json and raoh-jooq whose Javadoc is published.
+     * The CHANGELOG is a record of earlier versions, and CLAUDE.md and CONTRIBUTING.md are for
+     * whoever works on Raoh, not for its users; none of them is read.
      *
-     * @param root the repository root
+     * @param root   the repository root
+     * @param loader the loader of raoh, raoh-json and raoh-jooq, to tell which types are public
      * @return the files
      * @throws UncheckedIOException if they cannot be listed
+     * @throws AssertionError       if a source's type does not load
      */
-    public static List<Path> documents(Path root) {
+    public static List<Path> documents(Path root, ClassLoader loader) {
         List<Path> files = new ArrayList<>();
         files.add(root.resolve("README.md"));
-        files.add(root.resolve("CHANGELOG.md"));
         try {
             for (String module : MODULES) {
-                files.addAll(walk(root.resolve(module).resolve("src/main/java"), ".java"));
+                Path sources = root.resolve(module).resolve("src/main/java");
+                for (Path source : walk(sources, ".java")) {
+                    if (published(sources.relativize(source), loader)) {
+                        files.add(source);
+                    }
+                }
             }
             files.addAll(walk(root.resolve("docs"), ".md"));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
         return files;
+    }
+
+    /**
+     * Whether a source's Javadoc is published: a {@code package-info} or a public top-level type,
+     * outside {@code net.unit8.raoh.internal}.
+     *
+     * @param source the source's path under its source root
+     * @param loader the loader of its module
+     * @return {@code true} if it is published
+     * @throws AssertionError if the source's type does not load
+     */
+    static boolean published(Path source, ClassLoader loader) {
+        String name = source.toString().replace(source.getFileSystem().getSeparator(), ".")
+                .replaceAll("\\.java$", "");
+        String simple = name.substring(name.lastIndexOf('.') + 1);
+        if (name.startsWith("net.unit8.raoh.internal.") || simple.equals("module-info")) {
+            return false;
+        }
+        if (simple.equals("package-info")) {
+            return true;
+        }
+        try {
+            return Modifier.isPublic(Class.forName(name, false, loader).getModifiers());
+        } catch (ClassNotFoundException e) {
+            throw new AssertionError("the source " + source + " has no type " + name + " that loads", e);
+        }
     }
 
     private static List<Path> walk(Path dir, String suffix) throws IOException {

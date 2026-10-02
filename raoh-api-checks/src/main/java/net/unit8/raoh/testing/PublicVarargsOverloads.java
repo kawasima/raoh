@@ -33,14 +33,14 @@ import java.util.stream.Stream;
  *
  * <p>Java resolves a call by fixed-arity applicability first, strict and then loose, and only then
  * by variable arity, taking the most specific method at each phase. So a method added beside a
- * varargs method of the same name takes over every existing call that it also accepts: a
- * fixed-arity one at an earlier phase, boxing and primitive widening included, and another varargs
- * one when it is more specific. A call compiled against the old method keeps calling it, but the
- * same source compiled again calls the new one, with no error or warning. {@code containsAll(T...)}
- * beside a {@code containsAll(List, String)} would be one: with {@code T} of {@code Object},
- * {@code containsAll(someList, "tag")}, two elements to require, would become a list and a message.
- * So would {@code f(long...)} beside an {@code f(int)}, and {@code f(Object...)} beside an
- * {@code f(String, Object...)}. Constructors are chosen the same way.
+ * varargs method of the same name takes over existing calls: a fixed-arity one every call it also
+ * accepts, which it takes at an earlier phase, boxing and primitive widening included; another
+ * varargs one the calls it accepts and is more specific for. A call compiled against the old method
+ * keeps calling it, but the same source compiled again calls the new one, with no error or warning.
+ * {@code containsAll(T...)} beside a {@code containsAll(List, String)} would be one: with {@code T}
+ * of {@code Object}, {@code containsAll(someList, "tag")}, two elements to require, would become a
+ * list and a message. So would {@code f(long...)} beside an {@code f(int)}, and
+ * {@code f(Object...)} beside an {@code f(String, Object...)}. Constructors are chosen the same way.
  *
  * <p>This is a policy, not a model of overload resolution: every such pair is refused, and a pair
  * a reviewer has found safe is listed with {@link Allowed}, its reason written down. Safe means

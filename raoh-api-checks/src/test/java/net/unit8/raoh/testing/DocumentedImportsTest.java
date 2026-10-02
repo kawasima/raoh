@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DocumentedImportsTest {
 
@@ -147,18 +148,32 @@ class DocumentedImportsTest {
     }
 
     @Test
-    void theDocumentationIsTheReadmeTheChangelogDocsAndTheModulesSources() throws IOException {
+    void theDocumentationIsTheReadmeDocsAndThePublishedJavadoc() throws IOException {
+        String pkg = "net/unit8/raoh/testing/";
         for (String file : List.of("README.md", "CHANGELOG.md", "CLAUDE.md", "docs/guide.md",
-                "raoh/src/main/java/A.java", "raoh-json/src/main/java/B.java", "raoh-jooq/src/main/java/C.java",
-                "raoh-gsh/src/main/java/D.java")) {
+                "raoh/src/main/java/" + pkg + "PublishedFixture.java",
+                "raoh/src/main/java/" + pkg + "HiddenFixture.java",
+                "raoh/src/main/java/" + pkg + "package-info.java",
+                "raoh-json/src/main/java/net/unit8/raoh/internal/Internal.java",
+                "raoh-jooq/src/main/java/module-info.java",
+                "raoh-gsh/src/main/java/" + pkg + "PublishedFixture.java")) {
             Files.createDirectories(dir.resolve(file).getParent());
             Files.writeString(dir.resolve(file), "");
         }
 
-        var documents = DocumentedImports.documents(dir).stream().map(p -> dir.relativize(p).toString()).toList();
+        var documents = DocumentedImports.documents(dir, getClass().getClassLoader()).stream()
+                .map(p -> dir.relativize(p).toString().replace(dir.getFileSystem().getSeparator(), "/")).toList();
 
-        assertEquals(List.of("README.md", "CHANGELOG.md", "raoh/src/main/java/A.java",
-                "raoh-json/src/main/java/B.java", "raoh-jooq/src/main/java/C.java", "docs/guide.md"), documents);
+        // The CHANGELOG records earlier versions, CLAUDE.md is for whoever works on Raoh, and the
+        // Javadoc of a type that is not public or of the internal package is not published.
+        assertEquals(List.of("README.md", "raoh/src/main/java/" + pkg + "PublishedFixture.java",
+                "raoh/src/main/java/" + pkg + "package-info.java", "docs/guide.md"), documents);
+    }
+
+    @Test
+    void aSourceWhoseTypeDoesNotLoadFails() {
+        assertThrows(AssertionError.class, () -> DocumentedImports.published(
+                Path.of("net/unit8/raoh/testing/NoSuchType.java"), getClass().getClassLoader()));
     }
 
     /** A nested class, imported by its canonical name. */

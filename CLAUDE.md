@@ -91,11 +91,14 @@ Build a single module with `-am` (`mvn -pl raoh-json -am verify`) so the plugin 
 `raoh`, `raoh-json` and `raoh-jooq` from its own test, `PublishedApiTest`. It depends on them, not
 they on it, so no published POM names it.
 
-- The classes a user imports on demand together are read from the documentation itself (the
-  Javadoc of the three modules, the README, the CHANGELOG and `docs/`): every class one code
-  example imports with `import static net.unit8.raoh.….*;` is a group, whatever stands between the
-  imports, as in Java. A code example is a Javadoc `<pre>` block, a Markdown fence or an indented
-  block. An example that imports classes together is therefore a promise the checks hold.
+- The classes a user imports on demand together are read from the documentation of the current
+  API: the published Javadoc of the three modules (public top-level types and `package-info`,
+  outside `net.unit8.raoh.internal`), the README and `docs/`; not the CHANGELOG, which records
+  earlier versions. Every class one code example imports with `import static net.unit8.raoh.….*;`
+  is a group, whatever stands between the imports, as in Java. A code example is a Javadoc `<pre>`
+  block (or, for imports outside one, the Javadoc comment), a Markdown fence or an indented block. The checks cover varargs calls being taken over and static
+  methods of one shape; a method added beside a fixed-arity one of its name, which can also take
+  over calls, is not checked.
 - **`noMethodCanTakeOverAVarargsCall` fails**: a public varargs method or constructor shares its
   name with another one, in its class or across a documented group, and the other can take over
   existing calls without an error (`containsAll(T...)` beside `containsAll(List, String)`). Give
