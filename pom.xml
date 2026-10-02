@@ -246,6 +246,7 @@
                     <!-- Build-internal; the raoh modules use it while building, nobody else does. -->
                     <excludeArtifacts>
                         <artifact>raoh-effect-audit-maven-plugin</artifact>
+                        <artifact>raoh-conformance</artifact>
                     </excludeArtifacts>
                 </configuration>
             </plugin>
@@ -253,6 +254,17 @@
     </build>
 
     <profiles>
+        <!--
+            The Raoh Specification runner. Kept out of the default reactor: it checks
+            raoh-java against an external specification and is not part of what is built or
+            published. scripts/conformance.sh activates it.
+        -->
+        <profile>
+            <id>conformance</id>
+            <modules>
+                <module>conformance</module>
+            </modules>
+        </profile>
         <profile>
             <id>release</id>
             <build>
