@@ -18,6 +18,10 @@ import java.util.RandomAccess;
  * the issues ignore it. {@code add}, {@code merge}, {@code rebase} and {@code resolve} keep it; a list
  * built anew from the issues, as a user's decoder would, does not.
  *
+ * <p>Only Raoh's own lists are believed: {@link net.unit8.raoh.Issues} takes the marks of the list
+ * {@link #unknownMembers(List)} returns and keeps those of its own, and ignores what any other
+ * implementation of this interface claims.
+ *
  * <p>Not part of Raoh's API. It is public only so that Raoh's other packages can use it, and it
  * may change or go in any release.
  */

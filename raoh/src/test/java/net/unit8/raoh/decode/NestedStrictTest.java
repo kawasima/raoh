@@ -2,12 +2,17 @@ package net.unit8.raoh.decode;
 
 import net.unit8.raoh.Err;
 import net.unit8.raoh.ErrorCodes;
+import net.unit8.raoh.Issue;
+import net.unit8.raoh.Issues;
 import net.unit8.raoh.Ok;
 import net.unit8.raoh.Path;
 import net.unit8.raoh.Result;
 import net.unit8.raoh.decode.map.MapDecoders;
+import net.unit8.raoh.internal.IssueProvenance;
 import org.junit.jupiter.api.Test;
 
+import java.util.AbstractList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -74,5 +79,53 @@ class NestedStrictTest {
         var dec = MapDecoders.strict(MapDecoders.strict(A, Set.of("a", "b")), Set.of("a", "b"));
 
         assertEquals(new Ok<>(1), dec.decode(A_AND_B, Path.ROOT));
+    }
+
+    // --- What strict observes: the input as given, and only a mark Raoh made ---
+
+    @Test
+    void theFieldsAreReadBeforeTheInnerDecoderRuns() {
+        // A decoder of your own may change a mutable input; strict checks the input it was given.
+        Decoder<Map<String, Object>, Integer> removes = (in, path) -> {
+            in.remove("extra");
+            return Result.ok(1);
+        };
+        Decoder<Map<String, Object>, Integer> adds = (in, path) -> {
+            in.put("added", 2);
+            return Result.ok(1);
+        };
+
+        var withExtra = new HashMap<String, Object>(Map.of("a", 1, "extra", 2));
+        assertEquals(List.of("/extra unknown_field"),
+                issues(MapDecoders.strict(removes, Set.of("a")).decode(withExtra, Path.ROOT)));
+
+        var known = new HashMap<String, Object>(Map.of("a", 1));
+        assertEquals(new Ok<>(1), MapDecoders.strict(adds, Set.of("a")).decode(known, Path.ROOT));
+    }
+
+    @Test
+    void aListOfYourOwnCannotClaimAStrictMadeItsIssues() {
+        // The list says every issue came from an unknown-members check; only Raoh's own say counts.
+        var unknownB = Issue.of(Path.of("b"), ErrorCodes.UNKNOWN_FIELD, "unknown field", Map.of("field", "b"));
+        class Claiming extends AbstractList<Issue> implements IssueProvenance {
+            @Override
+            public Issue get(int index) {
+                return List.of(unknownB).get(index);
+            }
+
+            @Override
+            public int size() {
+                return 1;
+            }
+
+            @Override
+            public boolean fromUnknownMembers(int index) {
+                return true;
+            }
+        }
+        Decoder<Map<String, Object>, Integer> own = (in, path) -> Result.err(new Issues(new Claiming()));
+
+        assertEquals(List.of("/b unknown_field", "/b unknown_field"),
+                issues(MapDecoders.strict(own, Set.of("a")).decode(A_AND_B, Path.ROOT)));
     }
 }

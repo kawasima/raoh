@@ -73,7 +73,8 @@ final class IssueList extends AbstractList<Issue> implements IssueProvenance, Ra
 
     /**
      * {@code list} as an {@code IssueList}: itself when it is one, a copy otherwise. A copy keeps
-     * the marks of a list that is an {@link IssueProvenance}.
+     * the marks of a list {@link IssueProvenance#unknownMembers(List)} made, and of no other: a list
+     * of the caller's own could claim any mark, and only Raoh says what a {@code strict} made.
      *
      * @param list the issues
      * @return the issues as an {@code IssueList}
@@ -88,7 +89,7 @@ final class IssueList extends AbstractList<Issue> implements IssueProvenance, Ra
             return EMPTY;
         }
         var slots = new Object[n];
-        var provenance = list instanceof IssueProvenance p ? p : null;
+        var provenance = list instanceof IssueProvenance.UnknownMembers p ? p : null;
         int i = 0;
         for (Issue issue : list) {
             Objects.requireNonNull(issue, "issue");

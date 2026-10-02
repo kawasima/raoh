@@ -625,7 +625,9 @@ public final class Decoders {
      * <p>Unknown fields are reported as {@link ErrorCodes#UNKNOWN_FIELD} issues at the field's path,
      * in the order {@code inputFields} gives the names, after whatever {@code dec} itself reports, so
      * a payload with both an unknown field and an invalid known one produces both. The result of
-     * {@code dec} is discarded when there is an unknown field.
+     * {@code dec} is discarded when there is an unknown field. The field names are read before
+     * {@code dec} runs, so a {@code dec} that changes a mutable input does not change which fields
+     * are checked.
      *
      * <p>A field is reported once, by the innermost {@code strict} that does not know it: a field
      * {@code dec} already reported as unknown at the same path, through a {@code strict} inside it,
@@ -648,11 +650,14 @@ public final class Decoders {
         // A copy, so changing the set passed in afterwards does not change which fields are known.
         Set<String> known = new HashSet<>(knownFields);
         return (in, path) -> {
+            // The names are read before dec runs: dec may be code of the caller's that changes a
+            // mutable input, and strict checks the input it was given. Only reporting waits for dec.
+            List<String> names = new ArrayList<>(inputFields.fieldNames(in));
             var decResult = dec.decode(in, path);
             var reported = decResult instanceof Err<T> err ? unknownFieldsReported(err.issues()) : Set.<Path>of();
 
             var unknown = new ArrayList<Issue>();
-            for (var name : inputFields.fieldNames(in)) {
+            for (var name : names) {
                 var fieldPath = path.append(name);
                 if (!known.contains(name) && !reported.contains(fieldPath)) {
                     unknown.add(Issue.of(fieldPath, ErrorCodes.UNKNOWN_FIELD,
