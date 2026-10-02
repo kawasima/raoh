@@ -822,6 +822,27 @@ The intended workflow is:
 
 This avoids passing partially-valid data deeper into the application and keeps the domain model focused on valid states.
 
+## Raoh Specification
+
+[Raoh Specification](https://github.com/raoh-project/raoh-specification) defines the decoders
+across implementations and gives the cases each implementation is checked against. raoh-java is
+checked by its runner, the `conformance` module: it maps the specification's input model onto
+`JsonDecoders.readTree` and `JsonDecoders`, binds each feature of the decoder language to
+raoh-java's API, runs the cases, and leaves the judgement to the specification's verifier,
+`raoh-verify`. `MapDecoders`, `raoh-jooq` and the other adapters for values of a host language are
+outside what the specification covers.
+
+[`conformance/conformance.json`](conformance/conformance.json) declares where raoh-java differs on
+purpose and what it does not support, and
+[`conformance/spec.lock`](conformance/spec.lock) pins the specification commit it is checked
+against. CI runs the check on every pull request; to run it locally (it needs git, jq and Go):
+
+```bash
+scripts/conformance.sh
+```
+
+It writes the runner result and the verifier's report to `conformance/target/`.
+
 ## Upgrading
 
 Breaking changes and the migration for each are recorded in the **Compatibility** section of
