@@ -189,6 +189,7 @@ class BuiltinConstraintMessageTest {
                 c(ListDecoder.class, "unique", list(string()).unique().decode(List.of("a", "a"), Path.ROOT)),
                 c(ListDecoder.class, "contains", list(string()).contains("z").decode(List.of("a"), Path.ROOT)),
                 c(ListDecoder.class, "containsAll", list(string()).containsAll("y", "z").decode(List.of("a"), Path.ROOT)),
+                c(ListDecoder.class, "containsAllOf", list(string()).containsAllOf(List.of("y", "z"), null).decode(List.of("a"), Path.ROOT)),
 
                 c(RecordDecoder.class, "minSize", map(string()).minSize(2).decode(Map.of("a", "x"), Path.ROOT)),
                 c(RecordDecoder.class, "maxSize", map(string()).maxSize(1).decode(Map.of("a", "x", "b", "y"), Path.ROOT)),

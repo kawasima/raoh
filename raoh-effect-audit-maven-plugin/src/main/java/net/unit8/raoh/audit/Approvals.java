@@ -22,6 +22,10 @@ import java.util.Map;
  * </pre>
  *
  * <p>A reviewer reads the few reasons and checks that each use fits the one it is filed under.
+ * An approval covers a caller's use of a member as a whole, not a place in the caller's code: the
+ * key cannot tell two calls in one method apart, so its one reason states what holds of every call
+ * the caller makes to the member. The audit checks the use mechanically; whether every call still
+ * satisfies the reason is the reviewer's to check.
  */
 public final class Approvals {
 

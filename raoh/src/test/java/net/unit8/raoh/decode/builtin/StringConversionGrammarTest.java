@@ -457,15 +457,16 @@ class StringConversionGrammarTest {
     /**
      * The same divergence for {@code url()}: these meet RFC 9110's http requirements, which the
      * specification's {@code url} adds to its {@code uri}, and {@code java.net.URI} cannot hold
-     * them: an IPvFuture host, and an IPv6 host with a port above {@link Integer#MAX_VALUE}. No
-     * specification case covers them yet.
+     * them: an IPvFuture host, and an IPv6 host with a port above {@link Integer#MAX_VALUE}. The
+     * specification's {@code url} accepts both (R001008, R001009), and
+     * {@code conformance/conformance.json} declares the difference.
      *
      * @param text an http URI {@code java.net.URI} cannot hold
      */
     @ParameterizedTest
     @ValueSource(strings = {
-            "http://[v1.abc]/",
-            "http://[::1]:2147483648/"
+            "http://[v1.abc]/",                  // R001008, IPvFuture host
+            "http://[::1]:2147483648/"           // R001009, port above 2147483647 after an IPv6 host
     })
     void urlRefusesTheHttpUrisJavaNetUriCannotHold(String text) {
         var parsed = UriSyntax.parse(text);

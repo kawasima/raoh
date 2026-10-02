@@ -29,22 +29,27 @@ import java.util.function.Supplier;
  *
  * <p>This is the encoding counterpart of
  * {@link net.unit8.raoh.decode.map.MapDecoders MapDecoders}. The API mirrors the decoder side
- * deliberately so that decoder and encoder definitions can be written side by side:
+ * deliberately so that a decoder and its encoder read as mirror images. Each is written in a class
+ * of its own, since the decoder and encoder classes share names ({@code int_()},
+ * {@code discriminate}) and cannot all be imported on demand into one:
  *
  * <pre>{@code
+ * // Decoder: Map → Table
  * import static net.unit8.raoh.decode.map.MapDecoders.*;
  * import static net.unit8.raoh.decode.ObjectDecoders.*;
- * import static net.unit8.raoh.encode.MapEncoders.*;
- * import static net.unit8.raoh.encode.ObjectEncoders.*;
  *
- * // Decoder: Map → Table
  * static final Decoder<Map<String, Object>, Table> TABLE_DECODER = combine(
  *     field("id",           long_()).map(TableId::new),
  *     field("table_number", int_()),
  *     field("capacity",     int_())
  * ).map(Table::new);
+ * }</pre>
  *
+ * <pre>{@code
  * // Encoder: Table → Map  (mirror image)
+ * import static net.unit8.raoh.encode.MapEncoders.*;
+ * import static net.unit8.raoh.encode.ObjectEncoders.*;
+ *
  * static final Encoder<Table, Map<String, @Nullable Object>> TABLE_ENCODER = object(
  *     property("id",           Table::id,          long_().contramap(TableId::value)),
  *     property("table_number", Table::tableNumber, int_()),

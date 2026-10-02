@@ -41,6 +41,7 @@
         <module>raoh</module>
         <module>raoh-json</module>
         <module>raoh-jooq</module>
+        <module>raoh-api-checks</module>
         <module>raoh-gsh</module>
         <module>raoh-gsh-weaver</module>
         <module>raoh-gsh-maven-plugin</module>
@@ -52,6 +53,7 @@
         <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jackson.version>3.1.0</jackson.version>
+        <jooq.version>3.20.3</jooq.version>
         <junit.version>5.11.4</junit.version>
         <!-- The Maven plugin toolchain of raoh-gsh-maven-plugin and raoh-effect-audit-maven-plugin. -->
         <maven-plugin-api.version>3.9.9</maven-plugin-api.version>
@@ -246,6 +248,7 @@
                     <!-- Build-internal; the raoh modules use it while building, nobody else does. -->
                     <excludeArtifacts>
                         <artifact>raoh-effect-audit-maven-plugin</artifact>
+                        <artifact>raoh-api-checks</artifact>
                         <artifact>raoh-conformance</artifact>
                     </excludeArtifacts>
                 </configuration>

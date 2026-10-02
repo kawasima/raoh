@@ -45,6 +45,7 @@ FILES=(
     "$ROOT/raoh-gsh-weaver/pom.xml"
     "$ROOT/raoh-gsh-maven-plugin/pom.xml"
     "$ROOT/raoh-effect-audit-maven-plugin/pom.xml"
+    "$ROOT/raoh-api-checks/pom.xml"
     "$ROOT/conformance/pom.xml"
     "$ROOT/examples/spring/pom.xml"
     "$ROOT/examples/schema-versioning/pom.xml"

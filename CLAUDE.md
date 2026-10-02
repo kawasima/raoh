@@ -58,7 +58,15 @@ paste.
   (`ct.sym`), so the result does not depend on the JDK running Maven.
 - **Use without an approval in `effect-audit/<module>.txt`**: file the `caller -> member` line under
   the existing `[reason]` it fits. An `AMBIENT` use names its caller exactly, descriptor included,
-  so one method's approval never covers an overload. Add a new reason only when none fits, and never approve a
+  so one method's approval never covers an overload. An approval covers the caller's use of the
+  member as a whole, not a place in its code: the key cannot tell two calls in one method apart, so
+  a use is listed once, and its reason states what holds of every call the caller makes to the
+  member (a copy "of a collection the caller passed, or of one Raoh built"). The audit checks the
+  use mechanically; whether every call still satisfies the reason is the reviewer's to check. Do
+  not reshape code to fit a reason; write the reason that covers the use. A call that copies what
+  the caller passed is filed under the reason for copies, and a call on such a copy (a
+  `List.copyOf` or `Set.copyOf` result may be the JDK collection it was given) or on a collection
+  Raoh built under what Raoh created. Add a new reason only when none fits, and never approve a
   delegation that adopts the input's behaviour as the meaning of a conversion; fix the code
   instead (#152 is the model).
 - **`AMBIENT` reached from a decoder package**: cannot be approved, whether the decoder reads it
@@ -76,6 +84,31 @@ paste.
   anything; do not add it to the known set without the expansion.
 
 Build a single module with `-am` (`mvn -pl raoh-json -am verify`) so the plugin is built too.
+
+## API Checks
+
+`raoh-api-checks` (build-internal, never published) checks the shape of the published API of
+`raoh`, `raoh-json` and `raoh-jooq` from its own test, `PublishedApiTest`. It depends on them, not
+they on it, so no published POM names it.
+
+- The classes a user imports on demand together are read from the documentation of the current
+  API: the published Javadoc of the three modules (public top-level types and `package-info`,
+  outside `net.unit8.raoh.internal`), the README and `docs/`; not the CHANGELOG, which records
+  earlier versions. Every class one code example imports with `import static net.unit8.raoh.….*;`
+  is a group, whatever stands between the imports, as in Java. A code example is a Javadoc `<pre>`
+  block (or, for imports outside one, the Javadoc comment), a Markdown fence or an indented block. The checks cover varargs calls being taken over and static
+  methods of one shape; a method added beside a fixed-arity one of its name, which can also take
+  over calls, is not checked.
+- **`noMethodCanTakeOverAVarargsCall` fails**: a public varargs method or constructor shares its
+  name with another one, in its class or across a documented group, and the other can take over
+  existing calls without an error (`containsAll(T...)` beside `containsAll(List, String)`). Give
+  the new one a name of its own. List the pair as `Allowed` only when no call the `@NullMarked`
+  contract allows changes meaning because of it: none fits both, or every one that does has gone
+  to the same method since both have been there. Write that reason; an `Allowed` pair that is gone
+  fails too.
+- **`theDocumentedImportsCanBeCalledUnqualified` fails**: two classes of a documented group have
+  the same static method (`ObjectDecoders.int_()` and `ObjectEncoders.int_()`), so the example's
+  imports do not compile. Import them apart in the example.
 
 ## Tutorial Verification with jetshell
 

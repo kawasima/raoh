@@ -35,29 +35,37 @@ detailed from the current development cycle onward.
   token. Containers are kept on a stack of their own, so the nesting depth does not reach the call
   stack. The decoders still accept a mapper's tree, with the numbers the mapper made
   ([#170](https://github.com/raoh-project/raoh-java/issues/170)).
-- **Every constraint that reports an issue takes a message.** The Raoh Specification 0.9.0 gives
-  every such operation an optional message, which replaces the message of that operation's own
-  issues. The overloads raoh-java lacked are added: `positive(String)`, `negative(String)`,
-  `nonNegative(String)` and `nonPositive(String)` on `FloatDecoder` and `DoubleDecoder`,
-  `StringDecoder.nonBlank(String)`, `Decoders.enumOf(Class, Decoder, String)` and
-  `Decoders.literal(String, Decoder, String)` with the `enumOf(Class, String)` and
-  `literal(String, String)` conveniences of `ObjectDecoders` and `JsonDecoders`, and
+- **Every constraint that reports an issue takes a message**, `containsAll` through its list form
+  `containsAllOf`. The Raoh Specification 0.9.0 gives every such operation an optional message,
+  which replaces the message of that operation's own issues. The overloads raoh-java lacked are
+  added: `positive(String)`, `negative(String)`, `nonNegative(String)` and `nonPositive(String)` on
+  `FloatDecoder` and `DoubleDecoder`, `StringDecoder.nonBlank(String)`, `Decoders.enumOf(Class,
+  Decoder, String)` and `Decoders.literal(String, Decoder, String)` with the `enumOf(Class, String)`
+  and `literal(String, String)` conveniences of `ObjectDecoders` and `JsonDecoders`, and
   `oneOf(Collection, String)` on `StringDecoder`, `IntDecoder`, `LongDecoder`, `FloatDecoder` and
-  `DoubleDecoder`, since a message cannot follow varargs. The message never reaches the issues of
-  the decoder before: `enumOf(Color.class, "pick a color")` still gives `type_mismatch` with its own
-  message for a number, and `nonBlank("...")` gives `required` with its own for a missing value.
-  `oneOf(Collection, String)` copies the collection and, like the varargs form, refuses a value
-  given twice ([#183](https://github.com/raoh-project/raoh-java/issues/183)).
+  `DoubleDecoder`, since a message cannot follow varargs, and `ListDecoder.containsAllOf(List,
+  String)`. The message never reaches the issues of the decoder before: `enumOf(Color.class, "pick a
+  color")` still gives `type_mismatch` with its own message for a number, and `nonBlank("...")`
+  gives `required` with its own for a missing value. `oneOf(Collection, String)` copies the
+  collection and, like the varargs form, refuses a value given twice. `containsAllOf` is the list
+  form of `containsAll(T...)`, under a name of its own: a `containsAll(List, String)` would take
+  over an existing call such as `containsAll(someList, "tag")`, two elements to require, whenever
+  the elements are of a type both are, with no error. It copies the list, whose order is the order
+  of `expected` and `missing`, and keeps a value given twice in `expected` and, when absent, in
+  `missing`; one occurrence in the decoded list is enough for both
+  ([#183](https://github.com/raoh-project/raoh-java/issues/183),
+  [#189](https://github.com/raoh-project/raoh-java/issues/189)).
 - **A Raoh Specification runner and a conformance declaration.** raoh-java was checked against the
   specification only through cases ported into its unit tests by hand. The new `conformance`
   module, built only under the `conformance` profile and never published, runs the `core` and
   `encode` cases on raoh-java's API and writes a runner result; `scripts/conformance.sh` checks it
   with the `raoh-verify` of the specification commit `conformance/spec.lock` pins, against
-  `conformance/conformance.json`. The declaration lists the nine `uri` cases as `design`
-  divergences and `operation.list.containsAll.message` as unsupported, since `containsAll` takes no
-  message. The `messages-en` and `messages-ja` profiles check the catalogues raoh-java ships. A
-  new CI job runs the check and fails when a profile is non-conformant, a divergence included that
-  raoh-java no longer has ([#184](https://github.com/raoh-project/raoh-java/issues/184)).
+  `conformance/conformance.json`. The declaration lists the eleven `uri` and `url` cases
+  `java.net.URI` cannot hold as `design` divergences, each with the form it has, and no feature as
+  unsupported. The `messages-en` and `messages-ja` profiles check the catalogues raoh-java ships.
+  A new CI job runs the check and fails when a profile is non-conformant, a divergence included
+  that raoh-java no longer has ([#184](https://github.com/raoh-project/raoh-java/issues/184),
+  [#189](https://github.com/raoh-project/raoh-java/issues/189)).
 - **`TemporalDecoder(Decoder, Comparator)`.** A temporal decoder holds the order its `before`,
   `after` and `between` compare by, and keeps it through every constraint and `refine` chained on
   it. The one-argument constructor keeps the natural ordering
@@ -97,10 +105,12 @@ detailed from the current development cycle onward.
   the decoders accept: they refuse those URIs with `invalid_format`, as before. The Javadoc of
   `uri()` and `url()` now says this is a difference from the specification, and the tests pin it
   for R000869–R000876 and R000906. A test now checks against `java.net.URI` in both directions
-  which accepted URIs it can hold, so the four kinds are exactly what it refuses. Those nine cases
-  are declared `design` divergences in `conformance/conformance.json`
+  which accepted URIs it can hold, so the four kinds are exactly what it refuses. Those nine cases,
+  and R001008 and R001009, the specification's `url` cases for an IPvFuture host and a large port
+  after an IPv6 host, are declared `design` divergences in `conformance/conformance.json`
   ([#183](https://github.com/raoh-project/raoh-java/issues/183),
-  [#184](https://github.com/raoh-project/raoh-java/issues/184)).
+  [#184](https://github.com/raoh-project/raoh-java/issues/184),
+  [#189](https://github.com/raoh-project/raoh-java/issues/189)).
 - **Breaking: `StringDecoder.pattern()` takes a pattern of the specification's language, as text.**
   `pattern(Pattern)`, `pattern(Pattern, String)` and `pattern(Pattern, String, String)` are removed;
   `pattern(String)`, `pattern(String, String)` and `pattern(String, String, String)` replace them.

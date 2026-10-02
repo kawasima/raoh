@@ -187,14 +187,41 @@ public final class ListDecoder<I extends @Nullable Object, T extends @Nullable O
     /**
      * Requires the list to contain all specified elements.
      *
+     * <p>See {@link #containsAllOf(List, String)}, which takes the elements as a list and a
+     * message.
+     *
      * @param elements the elements that must all be present
      * @return a new decoder that fails with {@link ErrorCodes#MISSING_ELEMENTS} if any element is absent
      * @throws IllegalArgumentException if {@code elements} is empty
+     * @throws NullPointerException     if an element is {@code null}
      */
     @SafeVarargs
     public final ListDecoder<I, T> containsAll(@NonNull T... elements) {
-        if (elements.length == 0) throw new IllegalArgumentException("elements must not be empty");
-        var required = List.of(elements);
+        return containsAllOf(List.of(elements), null);
+    }
+
+    /**
+     * Requires the list to contain every value in {@code elements}.
+     *
+     * <p>This is the list form of {@link #containsAll(Object[])}, and also takes the message of
+     * its issue. It has a name of its own: an overload of {@code containsAll} that takes a list and
+     * a string would capture a call such as {@code containsAll(someList, "tag")} that is meant to
+     * require two elements, whenever the elements are of a type both are.
+     *
+     * <p>The list is copied, so changing it afterwards does not change what is required. Its order
+     * is the order of {@code expected} and {@code missing} in the issue and of its default
+     * message. A value given twice is kept twice in {@code expected}, and in {@code missing} when
+     * it is absent; one occurrence in the decoded list is enough for both.
+     *
+     * @param elements the elements that must all be present
+     * @param message  custom error message, or {@code null} for the default
+     * @return a new decoder that fails with {@link ErrorCodes#MISSING_ELEMENTS} if any element is absent
+     * @throws IllegalArgumentException if {@code elements} is empty
+     * @throws NullPointerException     if {@code elements} or one of its elements is {@code null}
+     */
+    public ListDecoder<I, T> containsAllOf(List<? extends @NonNull T> elements, @Nullable String message) {
+        List<T> required = List.copyOf(elements);
+        if (required.isEmpty()) throw new IllegalArgumentException("elements must not be empty");
         return chain((value, path) -> {
             var valueSet = new HashSet<>(value);
             var missing = new ArrayList<T>();
@@ -206,8 +233,9 @@ public final class ListDecoder<I extends @Nullable Object, T extends @Nullable O
             if (!missing.isEmpty()) {
                 var missingList = List.copyOf(missing);
                 var meta = Map.<String, Object>of("expected", required, "missing", missingList);
-                var message = String.format(Locale.ROOT, "must contain all of %s (missing: %s)", required, missingList);
-                return Result.fail(path, ErrorCodes.MISSING_ELEMENTS, message, meta);
+                return Result.failWith(path, ErrorCodes.MISSING_ELEMENTS, message,
+                        String.format(Locale.ROOT, "must contain all of %s (missing: %s)", required, missingList),
+                        meta);
             }
             return Result.ok(value);
         });

@@ -84,7 +84,7 @@ public final class ErrorCodes {
     /** List does not contain a required element (used by {@code contains}). */
     public static final String MISSING_ELEMENT = "missing_element";
 
-    /** List does not contain all required elements (used by {@code containsAll}). */
+    /** List does not contain all required elements (used by {@code containsAll} and {@code containsAllOf}). */
     public static final String MISSING_ELEMENTS = "missing_elements";
 
     /** List contains duplicate elements. */
